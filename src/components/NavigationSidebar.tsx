@@ -14,11 +14,13 @@ import {
     ChevronRight,
     Wallet,
     Trophy,
-    Target
+    Target,
+    LogOut
 } from 'lucide-react';
 import { ZinergiaLogo } from './ui/ZinergiaLogo';
 import { motion } from 'framer-motion';
 import { crmService } from '@/services/crmService';
+import { logout } from '@/app/auth/actions';
 
 const navItems = [
     { name: 'Inicio', href: '/dashboard', icon: Home },
@@ -93,8 +95,16 @@ export const NavigationSidebar = ({ isMobile = false, onItemClick }: NavSidebarP
                 })}
             </nav>
 
-            {/* Gamification Widget */}
-            <div className="p-6 border-t border-slate-50">
+            {/* Gamification Widget & Logout */}
+            <div className="p-6 border-t border-slate-50 flex flex-col gap-4">
+                <button
+                    onClick={() => logout()}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-rose-600 transition-all group w-full"
+                >
+                    <LogOut size={18} className="text-slate-400 group-hover:text-rose-500 transition-colors" />
+                    <span className="text-sm font-semibold">Cerrar Sesión</span>
+                </button>
+
                 <div className="bg-slate-900 rounded-2xl p-4 text-white relative overflow-hidden group shadow-xl shadow-slate-900/10">
                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 

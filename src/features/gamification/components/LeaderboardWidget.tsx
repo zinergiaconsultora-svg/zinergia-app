@@ -50,20 +50,20 @@ export const LeaderboardWidget = () => {
     };
 
     return (
-        <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-xl relative overflow-hidden h-full border border-slate-800">
+        <div className="bg-slate-900 rounded-[2rem] p-4 text-white shadow-xl relative overflow-hidden h-full border border-slate-800">
             {/* Background Decorations */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/20 rounded-full blur-[80px] pointer-events-none -mr-16 -mt-16"></div>
             <div className="absolute bottom-0 left-0 w-40 h-40 bg-purple-600/10 rounded-full blur-[60px] pointer-events-none -ml-10 -mb-10"></div>
 
             <div className="relative z-10 flex flex-col h-full">
-                <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-gradient-to-br from-yellow-400 to-amber-600 p-2.5 rounded-xl shadow-lg shadow-yellow-500/20">
-                            <Trophy size={20} className="text-white" />
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <div className="bg-gradient-to-br from-yellow-400 to-amber-600 p-1.5 rounded-lg shadow-lg shadow-yellow-500/20">
+                            <Trophy size={16} className="text-white" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-lg leading-tight text-white">Ranking</h3>
-                            <p className="text-xs text-slate-400 font-medium">Top Agentes del Mes</p>
+                            <h3 className="font-bold text-sm leading-tight text-white">Ranking</h3>
+                            <p className="text-[10px] text-slate-400 font-medium">Top Agentes</p>
                         </div>
                     </div>
                 </div>
@@ -81,17 +81,17 @@ export const LeaderboardWidget = () => {
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: index * 0.1 }}
-                                className={`flex items-center gap-4 p-3 rounded-2xl border transition-all hover:bg-white/5 group ${index === 0 ? 'bg-gradient-to-r from-yellow-500/10 to-transparent border-yellow-500/30' : 'bg-white/5 border-white/5'
+                                className={`flex items-center gap-2 p-1.5 rounded-xl border transition-all hover:bg-white/5 group ${index === 0 ? 'bg-gradient-to-r from-yellow-500/10 to-transparent border-yellow-500/30' : 'bg-white/5 border-white/5'
                                     }`}
                             >
                                 {/* Rank Badge */}
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 border-2 ${rankStyle}`}>
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-[10px] shrink-0 border-2 ${rankStyle}`}>
                                     {index + 1}
                                 </div>
 
                                 {/* Avatar */}
                                 <div className="relative">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs ring-2 ring-offset-2 ring-offset-slate-900 ${index === 0 ? 'bg-yellow-100 text-yellow-700 ring-yellow-500' :
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] ring-2 ring-offset-1 ring-offset-slate-900 ${index === 0 ? 'bg-yellow-100 text-yellow-700 ring-yellow-500' :
                                         index === 1 ? 'bg-slate-100 text-slate-700 ring-slate-400' :
                                             index === 2 ? 'bg-amber-100 text-amber-800 ring-amber-700' :
                                                 'bg-slate-700 text-slate-300 ring-slate-700'
@@ -103,27 +103,27 @@ export const LeaderboardWidget = () => {
                                         )}
                                     </div>
                                     {index === 0 && (
-                                        <div className="absolute -top-3 -right-1 text-yellow-400 drop-shadow-lg animate-bounce-slow">
-                                            <Crown size={14} fill="currentColor" />
+                                        <div className="absolute -top-2 -right-1 text-yellow-400 drop-shadow-lg animate-bounce-slow">
+                                            <Crown size={10} fill="currentColor" />
                                         </div>
                                     )}
                                 </div>
 
                                 {/* Info */}
                                 <div className="flex-1 min-w-0">
-                                    <p className={`text-sm font-bold truncate ${index === 0 ? 'text-yellow-100' : 'text-slate-100'}`}>
+                                    <p className={`text-xs font-bold truncate ${index === 0 ? 'text-yellow-100' : 'text-slate-100'}`}>
                                         {user.name || 'Agente'}
                                     </p>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                        <div className="flex items-center gap-1 bg-indigo-500/20 px-2 py-0.5 rounded-full border border-indigo-500/30">
-                                            <Star size={10} className="text-indigo-400 fill-indigo-400" />
-                                            <span className="text-[10px] font-bold text-indigo-200">{user.points} XP</span>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                        <div className="flex items-center gap-0.5 bg-indigo-500/20 px-1.5 py-0.5 rounded-full border border-indigo-500/30">
+                                            <Star size={8} className="text-indigo-400 fill-indigo-400" />
+                                            <span className="text-[9px] font-bold text-indigo-200">{user.points} XP</span>
                                         </div>
                                         {/* Badge Icons */}
                                         {user.badges && user.badges.length > 0 && (
                                             <div className="flex -space-x-1">
                                                 {user.badges.slice(0, 3).map((badge, i) => (
-                                                    <div key={i} className="w-4 h-4 bg-slate-800 rounded-full border border-slate-600 flex items-center justify-center text-[8px]" title={badge}>
+                                                    <div key={i} className="w-3 h-3 bg-slate-800 rounded-full border border-slate-600 flex items-center justify-center text-[6px]" title={badge}>
                                                         🏅
                                                     </div>
                                                 ))}
@@ -132,9 +132,9 @@ export const LeaderboardWidget = () => {
 
                                         {/* Trend */}
                                         <div className="ml-auto">
-                                            {user.trend === 'up' && <TrendingUp size={14} className="text-emerald-400" />}
-                                            {user.trend === 'down' && <TrendingDown size={14} className="text-rose-400" />}
-                                            {user.trend === 'stable' && <Minus size={14} className="text-slate-500" />}
+                                            {user.trend === 'up' && <TrendingUp size={12} className="text-emerald-400" />}
+                                            {user.trend === 'down' && <TrendingDown size={12} className="text-rose-400" />}
+                                            {user.trend === 'stable' && <Minus size={12} className="text-slate-500" />}
                                         </div>
                                     </div>
                                 </div>
@@ -143,9 +143,9 @@ export const LeaderboardWidget = () => {
                     })}
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-white/10 text-center">
-                    <button className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-wider">
-                        Ver Clasificación Completa
+                <div className="mt-2 pt-2 border-t border-white/10 text-center">
+                    <button className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-wider">
+                        Ver Todo
                     </button>
                 </div>
             </div>

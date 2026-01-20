@@ -25,7 +25,7 @@ export const SavingsTrendChart = () => {
     ];
 
     return (
-        <div className="h-[250px] w-full">
+        <div className="h-full w-full">
             <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                     <defs>
@@ -80,15 +80,15 @@ export const PipelinePieChart = ({
     ];
 
     return (
-        <div className="h-[200px] w-full relative">
+        <div className="h-full w-full relative">
             <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                     <Pie
                         data={data}
                         cx="50%"
                         cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
+                        innerRadius={40}
+                        outerRadius={55}
                         paddingAngle={5}
                         dataKey="value"
                         stroke="none"
@@ -112,7 +112,7 @@ export const PipelinePieChart = ({
             </ResponsiveContainer>
             {/* Center Text */}
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                <span className="block text-3xl font-light text-slate-700 tracking-tight">{active + won}</span>
+                <span className="block text-xl md:text-2xl font-light text-slate-700 tracking-tight">{active + won}</span>
                 <span className="text-[10px] uppercase font-medium text-slate-400 tracking-wider">Total</span>
             </div>
         </div>

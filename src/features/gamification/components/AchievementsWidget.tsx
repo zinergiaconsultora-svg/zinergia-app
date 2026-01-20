@@ -46,27 +46,27 @@ export const AchievementsWidget = () => {
     if (!stats) return null;
 
     return (
-        <div className="bg-white/40 backdrop-blur-md rounded-[2.5rem] p-6 border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.02)] relative overflow-hidden group hover:bg-white/50 transition-all h-full flex flex-col">
+        <div className="bg-white/40 backdrop-blur-md rounded-[2rem] p-4 border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.02)] relative overflow-hidden group hover:bg-white/50 transition-all h-full flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                    <div className="bg-gradient-to-br from-indigo-500 to-violet-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/20">
-                        <Medal size={20} className="text-white" />
+            <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                    <div className="bg-gradient-to-br from-indigo-500 to-violet-600 p-1.5 rounded-lg shadow-lg shadow-indigo-500/20">
+                        <Medal size={16} className="text-white" />
                     </div>
                     <div>
-                        <h3 className="font-bold text-lg leading-tight text-slate-800">Logros</h3>
-                        <p className="text-xs text-slate-400 font-medium">Nivel {stats.level} • {stats.xp} XP</p>
+                        <h3 className="font-bold text-sm leading-tight text-slate-800">Logros</h3>
+                        <p className="text-[10px] text-slate-400 font-medium">Nivel {stats.level} • {stats.xp} XP</p>
                     </div>
                 </div>
             </div>
 
             {/* XP Progress */}
-            <div className="mb-6">
-                <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+            <div className="mb-3">
+                <div className="flex justify-between text-[8px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
                     <span>Nivel {stats.level}</span>
                     <span>{stats.progress}%</span>
                 </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${stats.progress}%` }}
