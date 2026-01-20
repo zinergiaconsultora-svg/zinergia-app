@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Medal, Lock, Trophy } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { crmService } from '@/services/crmService';
 
 interface Achievement {
@@ -39,77 +39,58 @@ export const AchievementsWidget = () => {
         loadStats();
     }, []);
 
-    if (loading) {
-        return <div className="h-full w-full bg-white/20 animate-pulse rounded-[2.5rem]"></div>;
-    }
-
+    if (loading) return null;
     if (!stats) return null;
 
     return (
-        <div className="bg-white/40 backdrop-blur-md rounded-[2rem] p-4 border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.02)] relative overflow-hidden group hover:bg-white/50 transition-all h-full flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                    <div className="bg-gradient-to-br from-indigo-500 to-violet-600 p-1.5 rounded-lg shadow-lg shadow-indigo-500/20">
-                        <Medal size={16} className="text-white" />
+        <div className="flex flex-col gap-3 h-full px-1">
+            {/* XP Progress - Ultra Minimal */}
+            <div className="flex items-center gap-3">
+                <div className="flex-1 space-y-1.5">
+                    <div className="flex justify-between items-end">
+                        <span className="text-[9px] font-medium uppercase tracking-widest text-slate-400">Nivel {stats.level}</span>
+                        <span className="text-[9px] font-medium text-slate-600">{stats.progress}%</span>
                     </div>
-                    <div>
-                        <h3 className="font-bold text-sm leading-tight text-slate-800">Logros</h3>
-                        <p className="text-[10px] text-slate-400 font-medium">Nivel {stats.level} • {stats.xp} XP</p>
+                    <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${stats.progress}%` }}
+                            transition={{ duration: 1.5, ease: "circOut" }}
+                            className="h-full bg-indigo-500/80"
+                        />
                     </div>
+                </div>
+                <div className="text-[9px] font-medium text-indigo-500 bg-indigo-50/50 px-2 py-0.5 rounded-full border border-indigo-100/50">
+                    {stats.xp} XP
                 </div>
             </div>
 
-            {/* XP Progress */}
-            <div className="mb-3">
-                <div className="flex justify-between text-[8px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
-                    <span>Nivel {stats.level}</span>
-                    <span>{stats.progress}%</span>
-                </div>
-                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${stats.progress}%` }}
-                        transition={{ duration: 1.5, ease: "easeOut" }}
-                        className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 shadow-[0_0_10px_rgba(99,102,241,0.4)]"
-                    />
-                </div>
-            </div>
-
-            {/* Badges Grid */}
+            {/* Badges - Floating Jewels */}
             <div className="grid grid-cols-4 gap-2">
                 {stats.badges.map((badge, idx) => (
                     <motion.div
                         key={badge.id}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.1 }}
                         className={`
-                            aspect-square rounded-2xl flex flex-col items-center justify-center gap-1 border cursor-pointer relative group/badge
-                            ${badge.unlocked ? badge.color : 'bg-slate-50 border-slate-100 text-slate-300'}
+                            aspect-square rounded-full flex items-center justify-center relative group cursor-pointer transition-all duration-300
+                            ${badge.unlocked
+                                ? 'bg-gradient-to-br from-white to-slate-50 border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5'
+                                : 'bg-slate-50/50 border border-slate-100/50 opacity-60 grayscale'}
                         `}
                     >
-                        {badge.unlocked ? (
-                            <>
-                                <span className="text-xl filter drop-shadow-sm transform group-hover/badge:scale-110 transition-transform">{badge.icon}</span>
-                            </>
-                        ) : (
-                            <Lock size={16} />
-                        )}
+                        <span className="text-base filter drop-shadow-sm transform group-hover:scale-110 transition-transform">
+                            {badge.unlocked ? badge.icon : <Lock size={10} className="text-slate-300" />}
+                        </span>
 
-                        {/* Tooltip */}
-                        <div className="absolute opacity-0 group-hover/badge:opacity-100 bottom-full mb-2 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded-lg whitespace-nowrap pointer-events-none transition-opacity z-20">
+                        {/* Elegant Tooltip */}
+                        <div className="absolute opacity-0 group-hover:opacity-100 bottom-full mb-2 bg-slate-800/90 backdrop-blur-sm text-white text-[9px] font-medium px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none transition-all z-20">
                             {badge.title}
-                            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
+                            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800/90"></div>
                         </div>
                     </motion.div>
                 ))}
-            </div>
-
-            <div className="mt-auto pt-6 text-center">
-                <button className="text-xs font-bold text-indigo-500 hover:text-indigo-600 transition-colors uppercase tracking-wider flex items-center justify-center gap-1">
-                    Ver todos <Trophy size={12} />
-                </button>
             </div>
         </div>
     );

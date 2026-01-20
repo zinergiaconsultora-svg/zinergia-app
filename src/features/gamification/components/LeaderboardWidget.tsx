@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Crown, Trophy, TrendingUp, TrendingDown, Minus, Star } from 'lucide-react';
+import { Crown, TrendingUp, TrendingDown } from 'lucide-react';
 import { crmService } from '@/services/crmService';
 
 interface LeaderboardEntry {
@@ -22,7 +22,6 @@ export const LeaderboardWidget = () => {
     useEffect(() => {
         const fetchLeaders = async () => {
             try {
-                // Ensure data is robust
                 const data = await crmService.getLeaderboard();
                 setLeaders(data as LeaderboardEntry[]);
             } catch (error) {
@@ -34,121 +33,78 @@ export const LeaderboardWidget = () => {
         fetchLeaders();
     }, []);
 
-    if (loading) {
-        return <div className="animate-pulse h-80 bg-slate-100 rounded-[2rem]"></div>;
-    }
-
+    if (loading) return null; // Skeleton handled by parent or empty state
     if (leaders.length === 0) return null;
 
     const getRankStyles = (index: number) => {
         switch (index) {
-            case 0: return 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white shadow-lg shadow-yellow-500/30 border-yellow-300';
-            case 1: return 'bg-gradient-to-r from-slate-300 to-slate-400 text-slate-800 shadow-lg border-slate-200';
-            case 2: return 'bg-gradient-to-r from-amber-700 to-amber-800 text-amber-100 shadow-lg border-amber-600';
-            default: return 'bg-slate-800 text-slate-400 border-slate-700';
+            case 0: return 'bg-yellow-50 text-yellow-600 border-yellow-200';
+            case 1: return 'bg-slate-50 text-slate-600 border-slate-200';
+            case 2: return 'bg-amber-50 text-amber-700 border-amber-200';
+            default: return 'bg-white text-slate-400 border-slate-100';
         }
     };
 
     return (
-        <div className="bg-slate-900 rounded-[2rem] p-4 text-white shadow-xl relative overflow-hidden h-full border border-slate-800">
-            {/* Background Decorations */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/20 rounded-full blur-[80px] pointer-events-none -mr-16 -mt-16"></div>
-            <div className="absolute bottom-0 left-0 w-40 h-40 bg-purple-600/10 rounded-full blur-[60px] pointer-events-none -ml-10 -mb-10"></div>
+        <div className="flex flex-col gap-1.5 h-full">
+            {leaders.slice(0, 5).map((user, index) => {
+                const rankStyle = getRankStyles(index);
+                const initials = user.name
+                    ? user.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
+                    : 'U';
 
-            <div className="relative z-10 flex flex-col h-full">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                        <div className="bg-gradient-to-br from-yellow-400 to-amber-600 p-1.5 rounded-lg shadow-lg shadow-yellow-500/20">
-                            <Trophy size={16} className="text-white" />
+                return (
+                    <motion.div
+                        key={user.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className={`flex items-center gap-2 p-1.5 rounded-lg border transition-all cursor-pointer group
+                            ${index === 0 ? 'bg-yellow-50/50 border-yellow-100' : 'bg-white/40 border-slate-100 hover:border-indigo-100 hover:bg-white/60'}
+                        `}
+                    >
+                        {/* Compact Rank */}
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center font-medium text-[9px] shrink-0 border ${rankStyle}`}>
+                            {index + 1}
                         </div>
-                        <div>
-                            <h3 className="font-bold text-sm leading-tight text-white">Ranking</h3>
-                            <p className="text-[10px] text-slate-400 font-medium">Top Agentes</p>
+
+                        {/* Compact Avatar */}
+                        <div className="relative">
+                            <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-200 ring-1 ring-white">
+                                {user.avatar_url ? (
+                                    <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-[8px] font-normal text-slate-400">
+                                        {initials}
+                                    </div>
+                                )}
+                            </div>
+                            {index === 0 && (
+                                <div className="absolute -top-1.5 -right-1 text-yellow-500 drop-shadow-sm">
+                                    <Crown size={8} fill="currentColor" />
+                                </div>
+                            )}
                         </div>
-                    </div>
-                </div>
 
-                <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                    {leaders.slice(0, 5).map((user, index) => {
-                        const rankStyle = getRankStyles(index);
-                        const initials = user.name
-                            ? user.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
-                            : 'U';
+                        {/* Info */}
+                        <div className="flex-1 min-w-0 flex items-center justify-between">
+                            <div className="min-w-0">
+                                <p className="text-[10px] font-medium text-slate-600 truncate group-hover:text-indigo-600 transition-colors">
+                                    {user.name}
+                                </p>
+                            </div>
 
-                        return (
-                            <motion.div
-                                key={user.id}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                                className={`flex items-center gap-2 p-1.5 rounded-xl border transition-all hover:bg-white/5 group ${index === 0 ? 'bg-gradient-to-r from-yellow-500/10 to-transparent border-yellow-500/30' : 'bg-white/5 border-white/5'
-                                    }`}
-                            >
-                                {/* Rank Badge */}
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-[10px] shrink-0 border-2 ${rankStyle}`}>
-                                    {index + 1}
-                                </div>
-
-                                {/* Avatar */}
-                                <div className="relative">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] ring-2 ring-offset-1 ring-offset-slate-900 ${index === 0 ? 'bg-yellow-100 text-yellow-700 ring-yellow-500' :
-                                        index === 1 ? 'bg-slate-100 text-slate-700 ring-slate-400' :
-                                            index === 2 ? 'bg-amber-100 text-amber-800 ring-amber-700' :
-                                                'bg-slate-700 text-slate-300 ring-slate-700'
-                                        }`}>
-                                        {user.avatar_url ? (
-                                            <img src={user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
-                                        ) : (
-                                            initials
-                                        )}
-                                    </div>
-                                    {index === 0 && (
-                                        <div className="absolute -top-2 -right-1 text-yellow-400 drop-shadow-lg animate-bounce-slow">
-                                            <Crown size={10} fill="currentColor" />
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                    <p className={`text-xs font-bold truncate ${index === 0 ? 'text-yellow-100' : 'text-slate-100'}`}>
-                                        {user.name || 'Agente'}
-                                    </p>
-                                    <div className="flex items-center gap-1.5 mt-0.5">
-                                        <div className="flex items-center gap-0.5 bg-indigo-500/20 px-1.5 py-0.5 rounded-full border border-indigo-500/30">
-                                            <Star size={8} className="text-indigo-400 fill-indigo-400" />
-                                            <span className="text-[9px] font-bold text-indigo-200">{user.points} XP</span>
-                                        </div>
-                                        {/* Badge Icons */}
-                                        {user.badges && user.badges.length > 0 && (
-                                            <div className="flex -space-x-1">
-                                                {user.badges.slice(0, 3).map((badge, i) => (
-                                                    <div key={i} className="w-3 h-3 bg-slate-800 rounded-full border border-slate-600 flex items-center justify-center text-[6px]" title={badge}>
-                                                        🏅
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Trend */}
-                                        <div className="ml-auto">
-                                            {user.trend === 'up' && <TrendingUp size={12} className="text-emerald-400" />}
-                                            {user.trend === 'down' && <TrendingDown size={12} className="text-rose-400" />}
-                                            {user.trend === 'stable' && <Minus size={12} className="text-slate-500" />}
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        );
-                    })}
-                </div>
-
-                <div className="mt-2 pt-2 border-t border-white/10 text-center">
-                    <button className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-wider">
-                        Ver Todo
-                    </button>
-                </div>
-            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] font-medium text-indigo-500 bg-indigo-50 px-1 rounded-sm">
+                                    {user.points} XP
+                                </span>
+                                {user.trend === 'up' && <TrendingUp size={10} className="text-emerald-500" />}
+                                {user.trend === 'down' && <TrendingDown size={10} className="text-rose-500" />}
+                            </div>
+                        </div>
+                    </motion.div>
+                );
+            })}
         </div>
     );
 };
