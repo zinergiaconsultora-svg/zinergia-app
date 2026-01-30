@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/client';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Client, InvoiceData, Offer, SavingsResult, Proposal, TariffPrice, NetworkUser, UserRole } from '@/types/crm';
+import { analyzeDocumentAction } from '@/app/actions/ocr';
+import { calculateSavingsAction } from '@/app/actions/compare';
 
 export const crmService = {
     /**
@@ -414,7 +416,7 @@ export const crmService = {
 
             if (error) {
                 console.warn('Could not fetch tariffs from lv_zinergia_tarifas. Falling back to offers table.', error);
-                
+
                 const { data: offersData, error: offersError } = await supabase
                     .from('offers')
                     .select('*')
@@ -525,30 +527,12 @@ export const crmService = {
 
     async calculateSavings(invoice: InvoiceData): Promise<SavingsResult[]> {
         try {
-            console.log('📤 Sending invoice data to comparison webhook:', JSON.stringify(invoice, null, 2));
-            
-            const response = await fetch('https://sswebhook.iawarrior.com/webhook/effcc85b-5122-4896-9f0c-810e724e12c3', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(invoice),
-            });
-
-            if (!response.ok) {
-                console.error(`❌ Webhook returned error: ${response.status} ${response.statusText}`);
-                throw new Error(`Tariff comparison webhook failed: ${response.statusText}`);
-            }
-
-            const responseData = await response.json();
-            console.log('📥 Received response from webhook:', JSON.stringify(responseData, null, 2));
-            
-            const data = Array.isArray(responseData) ? (responseData[0]?.output || responseData[0]) : (responseData?.output || responseData);
+            const data = await calculateSavingsAction(invoice);
 
             if (data && data.offers && Array.isArray(data.offers)) {
                 const currentCost = data.current_annual_cost || data.current_annual_cost_calculated || 0;
 
-                const results = data.offers.map((offer: any) => ({
+                return data.offers.map((offer: any) => ({
                     offer: {
                         id: offer.id || offer.offer_id || Math.random().toString(36).substr(2, 9),
                         marketer_name: offer.marketer_name || offer.comercializadora || offer.company_name || 'Comercializadora',
@@ -566,18 +550,13 @@ export const crmService = {
                     savings_percent: currentCost > 0 ? ((currentCost - (offer.annual_cost || offer.costo_anual || 0)) / currentCost) * 100 : 0,
                     optimization_result: offer.optimization_result || offer.resultado_optimizacion,
                 }));
-                
-                console.log(`✅ Parsed ${results.length} offers from webhook response`);
-                return results;
             }
-
-            console.warn('⚠️ Webhook response missing offers array, returning empty');
             return [];
         } catch (error) {
-            console.error('❌ Webhook unavailable, using mock data:', error);
-            
+            console.error('❌ Server Action comparison failed, using mock data:', error);
+
             const currentCost = invoice.total_amount || 1200;
-            
+
             return [
                 {
                     offer: {
@@ -629,76 +608,9 @@ export const crmService = {
         formData.append('file', file);
 
         try {
-            const response = await fetch('https://sswebhook.iawarrior.com/webhook/cee8e0d1-b537-4939-b54e-6255fa9776cc', {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (!response.ok) {
-                throw new Error(`Webhook upload failed: ${response.statusText}`);
-            }
-
-            const responseData = await response.json();
-            const data = Array.isArray(responseData) ? responseData[0]?.output || responseData[0] : responseData?.output || responseData;
-
-            if (data) {
-                const parseNumber = (value: any) => {
-                    if (!value) return 0;
-                    const strValue = String(value).replace(/\./g, '').replace(',', '.');
-                    const parsed = parseFloat(strValue);
-                    return isNaN(parsed) ? 0 : parsed;
-                };
-
-                return {
-                    client_name: data.client_name || data.CLIENTE_NOMBRE || data.cliente_nombre || 'Cliente Desconocido',
-                    dni_cif: data.dni_cif || data.nif_cif || '',
-                    company_name: data.company_name || data.COMERCIALIZADORA || data.compania || '',
-                    cups: data.cups || data.CUPS || '',
-                    tariff_name: data.tariff_name || data.TARIFA || data.tarifa || '',
-                    invoice_number: data.invoice_number || data.NUMERO_FACTURA || data.numero_factura || '',
-                    invoice_date: data.invoice_date || data.FECHA_FACTURA || data.fecha_factura || '',
-                    period_days: parseNumber(data.period_days || data.periodo_facturacion),
-                    supply_address: data.supply_address || data.direccion_suministro || '',
-                    subtotal: parseNumber(data.subtotal),
-                    vat: parseNumber(data.iva),
-                    total_amount: parseNumber(data.importe_total || data.total),
-                    rights_cost: parseNumber(data.derechos_enganche),
-                    
-                    power_p1: parseNumber(data.power_p1 || data.POTENCIA_P1 || data.potencia_p1),
-                    power_p2: parseNumber(data.power_p2 || data.POTENCIA_P2 || data.potencia_p2),
-                    power_p3: parseNumber(data.power_p3 || data.POTENCIA_P3 || data.potencia_p3),
-                    power_p4: parseNumber(data.power_p4 || data.POTENCIA_P4 || data.potencia_p4),
-                    power_p5: parseNumber(data.power_p5 || data.POTENCIA_P5 || data.potencia_p5),
-                    power_p6: parseNumber(data.power_p6 || data.POTENCIA_P6 || data.potencia_p6),
-                    
-                    energy_p1: parseNumber(data.energy_p1 || data.ENERGIA_P1 || data.energia_p1),
-                    energy_p2: parseNumber(data.energy_p2 || data.ENERGIA_P2 || data.energia_p2),
-                    energy_p3: parseNumber(data.energy_p3 || data.ENERGIA_P3 || data.energia_p3),
-                    energy_p4: parseNumber(data.energy_p4 || data.ENERGIA_P4 || data.energia_p4),
-                    energy_p5: parseNumber(data.energy_p5 || data.ENERGIA_P5 || data.energia_p5),
-                    energy_p6: parseNumber(data.energy_p6 || data.ENERGIA_P6 || data.energia_p6),
-                    
-                    current_power_price_p1: parseNumber(data.current_power_price_p1 || data.precio_potencia_p1),
-                    current_power_price_p2: parseNumber(data.current_power_price_p2 || data.precio_potencia_p2),
-                    current_power_price_p3: parseNumber(data.current_power_price_p3 || data.precio_potencia_p3),
-                    current_power_price_p4: parseNumber(data.current_power_price_p4 || data.precio_potencia_p4),
-                    current_power_price_p5: parseNumber(data.current_power_price_p5 || data.precio_potencia_p5),
-                    current_power_price_p6: parseNumber(data.current_power_price_p6 || data.precio_potencia_p6),
-                    
-                    current_energy_price_p1: parseNumber(data.current_energy_price_p1 || data.precio_energia_p1),
-                    current_energy_price_p2: parseNumber(data.current_energy_price_p2 || data.precio_energia_p2),
-                    current_energy_price_p3: parseNumber(data.current_energy_price_p3 || data.precio_energia_p3),
-                    current_energy_price_p4: parseNumber(data.current_energy_price_p4 || data.precio_energia_p4),
-                    current_energy_price_p5: parseNumber(data.current_energy_price_p5 || data.precio_energia_p5),
-                    current_energy_price_p6: parseNumber(data.current_energy_price_p6 || data.precio_energia_p6),
-                    
-                    detected_power_type: data.detected_power_type || data.TIPO_POTENCIA || '',
-                };
-            }
-
-            return null;
+            return await analyzeDocumentAction(formData);
         } catch (error) {
-            console.error('Error uploading document:', error);
+            console.error('Error uploading document via server action:', error);
             throw error;
         }
     },
