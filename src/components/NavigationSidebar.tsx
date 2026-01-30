@@ -59,14 +59,14 @@ interface NavItemProps {
 
 const NavItem = React.memo(({ item, isActive, onClick }: NavItemProps) => {
     const Icon = item.icon;
-    
+
     return (
         <Link
             href={item.href}
             onClick={onClick}
             className={`flex items-center justify-between px-4 py-3.5 md:py-3 rounded-xl transition-all group ${isActive
-                ? 'bg-indigo-50 text-indigo-700 shadow-sm shadow-indigo-100/50'
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                ? 'bg-white/40 dark:bg-slate-800/40 text-indigo-600 font-bold shadow-lg shadow-indigo-500/5 backdrop-blur-sm border border-white/50 dark:border-white/10'
+                : 'text-slate-500 hover:bg-white/20 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
             aria-current={isActive ? 'page' : undefined}
         >
@@ -77,7 +77,10 @@ const NavItem = React.memo(({ item, isActive, onClick }: NavItemProps) => {
                 </span>
             </div>
             {isActive && (
-                <motion.div layoutId="activeNav" className="text-energy-400" aria-hidden="true">
+                <motion.div layoutId="activeNav" className="absolute left-0 w-1 h-8 bg-indigo-500 rounded-r-full" aria-hidden="true" />
+            )}
+            {isActive && (
+                <motion.div className="text-energy-400" aria-hidden="true">
                     <ChevronRight size={16} />
                 </motion.div>
             )}
@@ -115,7 +118,7 @@ const GamificationWidget = React.memo(({ level, xp, nextLevelXp }: GamificationW
                     <span>{xp} XP</span>
                     <span>{nextLevelXp} XP</span>
                 </div>
-                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden" role="progressbar" aria-valuenow={progressPercent} aria-valuemin={0} aria-valuemax={100}>
+                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden" role="progressbar" aria-label="Progreso al siguiente nivel" aria-valuenow={progressPercent || 0} aria-valuemin={0} aria-valuemax={100}>
                     <motion.div
                         className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"
                         initial={{ width: 0 }}
@@ -149,7 +152,7 @@ export const NavigationSidebar = React.memo(({ isMobile = false, onItemClick }: 
                 });
             }
         }, 2000);
-        
+
         return () => {
             mounted = false;
             clearTimeout(timer);
@@ -161,8 +164,10 @@ export const NavigationSidebar = React.memo(({ isMobile = false, onItemClick }: 
     }, []);
 
     const sidebarClass = useMemo(() => `
-        ${isMobile ? 'flex w-full h-full bg-transparent border-none' : 'fixed left-0 top-0 h-screen w-64 bg-white border-r border-slate-100 hidden lg:flex'}
-        flex-col z-40
+        ${isMobile
+            ? 'flex w-full h-full bg-transparent border-none'
+            : 'fixed left-4 top-4 h-[calc(100vh-2rem)] w-[250px] glass-premium rounded-[2.5rem] hidden lg:flex border border-white/40 shadow-floating'}
+        flex-col z-40 transition-all duration-300
     `, [isMobile]);
 
     return (

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, User, Target, ChevronDown, Users, TrendingUp, BadgeEuro, Mail, Eye } from 'lucide-react';
 import { NetworkUser } from '@/types/crm';
@@ -22,7 +23,8 @@ const TreeNode: React.FC<{ node: NetworkUser, depth: number, isLast?: boolean, s
             if (forceExpand && !isExpanded) {
                 setIsExpanded(true);
             }
-        }, [forceExpand, isExpanded]);
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [forceExpand]);
 
         return (
             <div className="relative">
@@ -54,15 +56,14 @@ const TreeNode: React.FC<{ node: NetworkUser, depth: number, isLast?: boolean, s
                         <div className="flex items-center gap-4 relative z-10">
                             {/* Avatar / Icon */}
                             <div className={`
-                            w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border ring-1 ring-inset ring-black/5
+                            w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border ring-1 ring-inset ring-black/5 relative overflow-hidden
                             ${node.role === 'franchise'
                                     ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 border-indigo-500/50 text-white'
                                     : 'bg-white border-white text-slate-500 group-hover:text-indigo-600 transition-colors'
                                 }
                         `}>
                                 {node.avatar_url ? (
-                                    /* eslint-disable-next-line @next/next/no-img-element */
-                                    <img src={node.avatar_url} alt={node.full_name} className="w-full h-full rounded-2xl object-cover" />
+                                    <Image src={node.avatar_url} alt={node.full_name} fill className="object-cover" sizes="48px" />
                                 ) : (
                                     node.role === 'franchise' ? <Building2 size={20} strokeWidth={1.5} /> : <User size={20} strokeWidth={1.5} />
                                 )}

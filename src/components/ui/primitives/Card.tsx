@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '@/lib/utils';
 
 interface CardProps {
     children: React.ReactNode;
@@ -16,15 +17,12 @@ export const Card: React.FC<CardProps> = ({
     return (
         <div
             onClick={onClick}
-            className={`
-                bg-white dark:bg-slate-900 
-                border border-slate-200 dark:border-slate-800 
-                rounded-[2rem] shadow-sm 
-                transition-all duration-300
-                ${onClick ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]' : ''}
-                ${noPadding ? '' : 'p-6'}
-                ${className}
-            `}
+            className={cn(
+                "glass-premium rounded-3xl transition-all duration-300",
+                onClick && "cursor-pointer hover:shadow-floating hover:-translate-y-1 active:scale-[0.99]",
+                !noPadding && "p-6 md:p-8",
+                className
+            )}
         >
             {children}
         </div>

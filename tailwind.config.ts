@@ -72,7 +72,11 @@ export default {
                 },
                 brand: {
                     blue: 'var(--color-brand-blue)',
-                }
+                },
+                primary: {
+                    DEFAULT: '#1e293b',
+                    foreground: '#f8fafc',
+                },
             },
             animation: {
                 blob: "blob 7s infinite",
@@ -161,6 +165,10 @@ export default {
                         'stroke-opacity': 1,
                     },
                 },
+            },
+            boxShadow: {
+                'floating': '0 12px 48px rgba(30, 41, 59, 0.12)',
+                'interaction': '0 8px 32px rgba(30, 41, 59, 0.08)',
             },
         },
     },

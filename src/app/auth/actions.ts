@@ -25,9 +25,9 @@ export async function login(formData: FormData) {
         if (error) {
             return { error: 'Credenciales incorrectas o usuario no encontrado' }
         }
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Login error:', error)
-        if (error?.message?.includes('Missing Supabase environment variables')) {
+        if (error instanceof Error && error.message.includes('Missing Supabase environment variables')) {
             return { error: 'Error de configuración del servidor: Faltan variables de entorno.' }
         }
         return { error: 'Error inesperado al iniciar sesión. Inténtelo de nuevo más tarde.' }
@@ -38,6 +38,8 @@ export async function login(formData: FormData) {
 }
 
 export async function signup(formData: FormData) {
+    let errorRedirect = null;
+
     try {
         const supabase = await createClient()
 
@@ -49,15 +51,16 @@ export async function signup(formData: FormData) {
         const { error } = await supabase.auth.signUp(data)
 
         if (error) {
-            // Instead of redirecting to a generic error page, we could return the error 
-            // but the current implementation redirects. We'll keep the redirect pattern for now 
-            // but wrap the createClient call.
             console.error('Signup error:', error)
-            redirect('/error?message=Error al registrarse')
+            errorRedirect = '/error?message=Error al registrarse';
         }
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Signup exception:', error)
-        redirect('/error?message=Error inesperado del servidor')
+        errorRedirect = '/error?message=Error inesperado del servidor';
+    }
+
+    if (errorRedirect) {
+        redirect(errorRedirect);
     }
 
     revalidatePath('/', 'layout')

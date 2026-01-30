@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { ZinergiaLogo } from '@/components/ui/ZinergiaLogo';
 import { login } from '@/app/auth/actions';
+import { Button } from '@/components/ui/primitives/Button';
+import { Input } from '@/components/ui/primitives/Input';
+import { Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 
 export default function LandingPage() {
   const [loading, setLoading] = useState(false);
@@ -29,10 +33,12 @@ export default function LandingPage() {
 
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
-          <img
+          <Image
             src="/images/login-bg-bulb.png"
             alt="Realistic Lightbulb Background"
-            className="w-full h-full object-cover opacity-90"
+            fill
+            className="object-cover opacity-90"
+            priority
           />
           {/* Subtle gradient to ensure text legibility without hiding the bulb's detail */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] via-[#0F172A]/40 to-transparent mix-blend-multiply"></div>
@@ -78,30 +84,25 @@ export default function LandingPage() {
           </div>
 
           <form action={handleSubmit} className="space-y-6" aria-labelledby="login-heading" noValidate>
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="email" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 ml-1">
-                  Email Corporativo
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="usuario@zinergia.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all text-slate-900 placeholder:text-slate-300 shadow-sm"
-                  aria-invalid={error ? 'true' : 'false'}
-                  aria-describedby={error ? 'login-error' : undefined}
-                />
-              </div>
-              <div>
-                <label htmlFor="password" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 ml-1">
-                  Contraseña
-                </label>
-                <input
+            <div className="space-y-5">
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                placeholder="usuario@zinergia.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                label="Email Corporativo"
+                icon={<Mail size={18} />}
+                className="py-6"
+                aria-invalid={error ? 'true' : 'false'}
+                aria-describedby={error ? 'login-error' : undefined}
+              />
+
+              <div className="space-y-1">
+                <Input
                   id="password"
                   name="password"
                   type="password"
@@ -110,33 +111,35 @@ export default function LandingPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all text-slate-900 placeholder:text-slate-300 shadow-sm"
+                  label="Contraseña"
+                  icon={<Lock size={18} />}
+                  className="py-6"
                   aria-invalid={error ? 'true' : 'false'}
                 />
+                <div className="flex justify-end">
+                  <a href="#" className="text-[11px] font-bold uppercase tracking-widest text-indigo-500 hover:text-indigo-600 transition-colors">
+                    ¿Olvidaste tu contraseña?
+                  </a>
+                </div>
               </div>
             </div>
 
             {error && (
-              <div id="login-error" className="p-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 text-[11px] font-medium text-center" role="alert">
+              <div id="login-error" className="p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 text-sm font-medium flex items-center gap-3 animate-in slide-in-from-top-2" role="alert">
+                <AlertCircle size={20} />
                 {error}
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
-              disabled={loading}
-              className="w-full py-4 bg-[#0F172A] hover:bg-slate-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-              aria-busy={loading}
+              isLoading={loading}
+              className="w-full py-6 text-base rounded-2xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30"
+              rightIcon={<ArrowRight size={18} />}
+              size="lg"
             >
-              {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />
-                  <span className="sr-only">Iniciando sesión...</span>
-                </>
-              ) : (
-                'Iniciar Sesión'
-              )}
-            </button>
+              Iniciar Sesión
+            </Button>
           </form>
 
           <div className="pt-6 text-center">

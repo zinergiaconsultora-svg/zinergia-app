@@ -72,6 +72,10 @@
   --color-amber-800: #92400e;
   --color-amber-900: #78350f;
   --color-amber-950: #451a03;
+  /* Antigravity Design Tokens */
+  --color-primary: #1e293b;
+  --color-accent-start: #3b82f6;
+  --color-accent-end: #8b5cf6;
 }
 
 :root {
@@ -104,7 +108,7 @@ body {
 .dark {
   --background: #020617;
   --foreground: #f8fafc;
-  
+
   color-scheme: dark;
 }
 
@@ -307,6 +311,7 @@ h3 {
    PREFERS-REDUCED-MOTION (Accesibilidad)
    ======================================== */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -324,6 +329,7 @@ h3 {
     opacity: 0;
     transform: translateY(30px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -335,11 +341,25 @@ h3 {
 }
 
 /* Stagger delays */
-.stagger-1 { animation-delay: 0.1s; }
-.stagger-2 { animation-delay: 0.2s; }
-.stagger-3 { animation-delay: 0.3s; }
-.stagger-4 { animation-delay: 0.4s; }
-.stagger-5 { animation-delay: 0.5s; }
+.stagger-1 {
+  animation-delay: 0.1s;
+}
+
+.stagger-2 {
+  animation-delay: 0.2s;
+}
+
+.stagger-3 {
+  animation-delay: 0.3s;
+}
+
+.stagger-4 {
+  animation-delay: 0.4s;
+}
+
+.stagger-5 {
+  animation-delay: 0.5s;
+}
 
 /* ========================================
    GRADIENTES ORGÁNICOS (Non-linear)
@@ -383,6 +403,7 @@ h3 {
    ======================================== */
 .glass-premium {
   background: rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow:
@@ -393,6 +414,7 @@ h3 {
 
 .glass-dark {
   background: rgba(15, 23, 42, 0.6);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow:

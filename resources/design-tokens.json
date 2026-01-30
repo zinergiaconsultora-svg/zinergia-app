@@ -1,0 +1,44 @@
+{
+    "colors": {
+        "primary": {
+            "DEFAULT": "#1e293b",
+            "description": "Deep Slate Blue for headings and primary text"
+        },
+        "accent": {
+            "start": "#3b82f6",
+            "end": "#8b5cf6",
+            "description": "Electric Blue to Purple gradient for interactions"
+        },
+        "background": {
+            "DEFAULT": "#f8fafc",
+            "description": "Very pale gray, almost white"
+        },
+        "glass": {
+            "background": "rgba(255, 255, 255, 0.7)",
+            "border": "rgba(255, 255, 255, 0.3)",
+            "blur": "backdrop-blur-xl",
+            "description": "Standard glassmorphism token"
+        }
+    },
+    "typography": {
+        "fontFamily": {
+            "sans": "Inter, SF Pro, Satoshi, sans-serif"
+        },
+        "weights": {
+            "highlight": "600-700",
+            "body": "300-400"
+        }
+    },
+    "shapes": {
+        "borderRadius": {
+            "lg": "1rem",
+            "xl": "1.5rem",
+            "2xl": "2rem",
+            "full": "9999px"
+        }
+    },
+    "shadows": {
+        "floating": "0 12px 48px rgba(30, 41, 59, 0.12)",
+        "interaction": "0 8px 32px rgba(30, 41, 59, 0.08)"
+    }
+}

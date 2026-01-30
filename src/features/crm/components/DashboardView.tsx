@@ -19,12 +19,15 @@ import {
     PieChart
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import dynamic from 'next/dynamic';
 import { formatCurrency } from '@/lib/utils/format';
-import { LeaderboardWidget } from '@/features/gamification/components/LeaderboardWidget';
-import { AchievementsWidget } from '@/features/gamification/components/AchievementsWidget';
-import { NotificationsPopover } from '@/features/crm/components/NotificationsPopover';
-import { SavingsTrendChart, PipelinePieChart } from './DashboardCharts';
 import { DashboardSkeleton } from '@/components/ui/DashboardSkeleton';
+
+const LeaderboardWidget = dynamic(() => import('@/features/gamification/components/LeaderboardWidget').then(mod => mod.LeaderboardWidget), { loading: () => <div className="h-64 bg-slate-100/50 animate-pulse rounded-2xl" /> });
+const AchievementsWidget = dynamic(() => import('@/features/gamification/components/AchievementsWidget').then(mod => mod.AchievementsWidget));
+const NotificationsPopover = dynamic(() => import('@/features/crm/components/NotificationsPopover').then(mod => mod.NotificationsPopover), { ssr: false });
+const SavingsTrendChart = dynamic(() => import('./DashboardCharts').then(mod => mod.SavingsTrendChart), { loading: () => <div className="h-full w-full bg-slate-100/20 animate-pulse rounded-lg" /> });
+const PipelinePieChart = dynamic(() => import('./DashboardCharts').then(mod => mod.PipelinePieChart), { loading: () => <div className="h-full w-full bg-slate-100/20 animate-pulse rounded-full" /> });
 
 interface DashboardStats {
     user?: {
@@ -88,6 +91,22 @@ export default function DashboardView() {
         { id: '2', type: 'info' as const, title: 'Nuevo Recurso', message: 'Se ha añadido "Tarifas 2026 Q1" a la Academy.', created_at: new Date(Date.now() - 3600000).toISOString(), read: false },
     ]);
 
+    const container = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.2
+            }
+        }
+    };
+
+    const item = {
+        hidden: { opacity: 0, y: 20 },
+        show: { opacity: 1, y: 0 }
+    };
+
     const MONTHLY_GOAL = 10000;
 
     useEffect(() => {
@@ -116,22 +135,27 @@ export default function DashboardView() {
     if (loading) return <DashboardSkeleton />;
 
     return (
-        <div className="h-screen w-full bg-[#F8FAFC] text-slate-600 font-sans overflow-hidden flex flex-col relative selection:bg-indigo-100">
+        <div className="h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-300 font-sans overflow-hidden flex flex-col relative selection:bg-indigo-100">
             {/* Background Effects */}
             <div className="fixed inset-0 pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-indigo-200/30 rounded-full blur-[80px] mix-blend-multiply opacity-50"></div>
-                <div className="absolute bottom-[-10%] right-[-10%] w-[30vw] h-[30vw] bg-emerald-100/50 rounded-full blur-[80px] mix-blend-multiply opacity-50"></div>
+                <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-indigo-200/30 dark:bg-indigo-900/20 rounded-full blur-[80px] mix-blend-multiply dark:mix-blend-screen opacity-50"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[30vw] h-[30vw] bg-emerald-100/50 dark:bg-emerald-900/20 rounded-full blur-[80px] mix-blend-multiply dark:mix-blend-screen opacity-50"></div>
             </div>
 
-            <div className="flex-1 flex flex-col p-4 md:p-5 gap-4 md:gap-5 max-w-[1800px] mx-auto w-full z-10">
+            <motion.div
+                variants={container}
+                initial="hidden"
+                animate="show"
+                className="flex-1 flex flex-col p-4 md:p-5 gap-4 md:gap-5 max-w-[1800px] mx-auto w-full z-10"
+            >
 
                 {/* 1. HEADER ROW (Highly Compact) */}
-                <div className="flex items-center justify-between shrink-0 h-10">
+                <motion.div variants={item} className="flex items-center justify-between shrink-0 h-10">
                     <div className="flex items-baseline gap-2">
-                        <h1 className="text-xl font-semibold text-slate-800 tracking-tight">
-                            Hola, <span className="text-indigo-600">{firstName}.</span>
+                        <h1 className="text-xl font-semibold text-slate-800 dark:text-white tracking-tight">
+                            Hola, <span className="text-indigo-600 dark:text-indigo-400">{firstName}.</span>
                         </h1>
-                        <span className="text-xs text-slate-400 font-medium hidden md:inline-block">
+                        <span className="text-xs text-slate-400 dark:text-slate-500 font-medium hidden md:inline-block">
                             Tu rendimiento hoy está al 100%.
                         </span>
                     </div>
@@ -143,24 +167,26 @@ export default function DashboardView() {
                                 <Bell size={18} />
                                 {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-rose-500 rounded-full ring-1 ring-white"></span>}
                             </button>
-                            <NotificationsPopover
-                                isOpen={isNotifOpen}
-                                onClose={() => setIsNotifOpen(false)}
-                                notifications={notifications}
-                                onMarkAsRead={(id) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))}
-                                onMarkAllAsRead={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
-                                onDismiss={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
-                            />
+                            {isNotifOpen && (
+                                <NotificationsPopover
+                                    isOpen={isNotifOpen}
+                                    onClose={() => setIsNotifOpen(false)}
+                                    notifications={notifications}
+                                    onMarkAsRead={(id) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))}
+                                    onMarkAllAsRead={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
+                                    onDismiss={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
+                                />
+                            )}
                         </div>
                         {/* User Avatar */}
                         <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs ring-2 ring-indigo-100">
                             {firstName[0]}
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* 2. KPIs ROW (Fixed Height ~80px) */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 shrink-0 h-[80px]">
+                <motion.div variants={item} className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 shrink-0 h-[80px]">
                     <GlassKpiCard label="Ahorro Detectado" value={formatCurrency(stats.financials.total_detected)} icon={TrendingUp} delay={0.1} />
                     <GlassKpiCard label="Objetivo Mensual" value={`${goalProgress}%`} subValue={formatCurrency(MONTHLY_GOAL)} icon={Target} progress={goalProgress} delay={0.2} />
                     <GlassKpiCard label="Pipeline Activo" value={formatCurrency(stats.financials.pipeline)} icon={Layers} delay={0.3} />
@@ -174,10 +200,10 @@ export default function DashboardView() {
                         </div>
                         <GraduationCap size={24} className="text-indigo-200/50 group-hover:text-indigo-100 transition-colors" />
                     </div>
-                </div>
+                </motion.div>
 
                 {/* 3. MAIN BENTO GRID (Fills remaining height) */}
-                <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4 pb-16 lg:pb-0">
+                <motion.div variants={item} className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4 pb-16 lg:pb-0">
 
                     {/* LEFT COLUMN (Charts) - 6 Cols */}
                     <div className="lg:col-span-8 flex flex-col gap-4 min-h-0 h-full">
@@ -212,19 +238,19 @@ export default function DashboardView() {
                             </div>
 
                             {/* Recent Activity (Compact List) */}
-                            <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-3 flex flex-col hover:bg-white/80 transition-colors overflow-hidden">
+                            <div className="bg-white/60 dark:bg-slate-800/40 backdrop-blur-md rounded-2xl border border-white/60 dark:border-white/5 shadow-sm p-3 flex flex-col hover:bg-white/80 dark:hover:bg-slate-800/60 transition-colors overflow-hidden">
                                 <SectionHeader title="Actividad Reciente" />
                                 <div className="flex-1 overflow-y-auto mt-2 space-y-2 pr-1 custom-scrollbar">
                                     {stats.recentProposals.slice(0, 5).map((proposal) => (
-                                        <div key={proposal.id} onClick={() => router.push(`/dashboard/proposals/${proposal.id}`)} className="flex items-center justify-between p-2 rounded-lg bg-white/50 border border-slate-100 hover:border-indigo-200 cursor-pointer group transition-all">
+                                        <div key={proposal.id} onClick={() => router.push(`/dashboard/proposals/${proposal.id}`)} className="flex items-center justify-between p-2 rounded-lg bg-white/50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-500/30 cursor-pointer group transition-all">
                                             <div className="flex items-center gap-2 min-w-0">
-                                                <div className={`w-1.5 h-1.5 rounded-full ${proposal.status === 'accepted' ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
+                                                <div className={`w-1.5 h-1.5 rounded-full ${proposal.status === 'accepted' ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}></div>
                                                 <div className="min-w-0">
-                                                    <div className="text-xs font-medium text-slate-700 truncate group-hover:text-indigo-600">{proposal.client_name}</div>
+                                                    <div className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400">{proposal.client_name}</div>
                                                     <div className="text-[9px] text-slate-400">{formatCurrency(proposal.annual_savings)}</div>
                                                 </div>
                                             </div>
-                                            <ArrowUpRight size={12} className="text-slate-300 group-hover:text-indigo-500" />
+                                            <ArrowUpRight size={12} className="text-slate-300 dark:text-slate-600 group-hover:text-indigo-500" />
                                         </div>
                                     ))}
                                 </div>
@@ -254,9 +280,9 @@ export default function DashboardView() {
                             </div>
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
-            </div>
+            </motion.div>
 
             {/* FLOATING DOCK */}
             <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 w-auto">

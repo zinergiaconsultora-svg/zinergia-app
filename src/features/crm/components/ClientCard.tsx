@@ -6,6 +6,8 @@ import { Client } from '@/types/crm';
 import { MapPin, Phone, ChevronRight, User, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+import { Card } from '@/components/ui/primitives/Card';
+
 interface ClientCardProps {
     client: Client;
 }
@@ -14,9 +16,9 @@ export default function ClientCard({ client }: ClientCardProps) {
     const router = useRouter();
 
     return (
-        <div
+        <Card
             onClick={() => router.push(`/dashboard/clients/${client.id}`)}
-            className="group bg-white/70 backdrop-blur-xl border border-white/60 rounded-[2.5rem] p-8 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] hover:-translate-y-1 transition-all duration-500 cursor-pointer relative overflow-hidden"
+            className="group hover:shadow-floating hover:-translate-y-1 relative overflow-hidden p-8"
         >
             <div className="absolute top-0 right-0 p-16 bg-gradient-to-bl from-white/80 to-transparent rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
@@ -95,6 +97,6 @@ export default function ClientCard({ client }: ClientCardProps) {
                     </div>
                 </div>
             </div>
-        </div>
+        </Card>
     );
 }

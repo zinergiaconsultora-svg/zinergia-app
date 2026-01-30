@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Crown, TrendingUp, TrendingDown } from 'lucide-react';
 import { crmService } from '@/services/crmService';
@@ -70,9 +71,9 @@ export const LeaderboardWidget = () => {
 
                         {/* Compact Avatar */}
                         <div className="relative">
-                            <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-200 ring-1 ring-white">
+                            <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-200 ring-1 ring-white relative">
                                 {user.avatar_url ? (
-                                    <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                                    <Image src={user.avatar_url} alt={user.name} fill className="object-cover" sizes="24px" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-[8px] font-normal text-slate-400">
                                         {initials}

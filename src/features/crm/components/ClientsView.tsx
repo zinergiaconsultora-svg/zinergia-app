@@ -3,10 +3,18 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Search, ChevronRight, User } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useClients } from '../hooks/useClients';
 import ClientCard from './ClientCard';
-import CreateClientModal from './CreateClientModal';
+import dynamic from 'next/dynamic';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
+import { Button } from '@/components/ui/primitives/Button';
+import { Input } from '@/components/ui/primitives/Input';
+
+const CreateClientModal = dynamic(() => import('./CreateClientModal'), {
+    ssr: false,
+    loading: () => null
+});
 
 export default function ClientsView() {
     const { clients, loading, refresh } = useClients();
@@ -19,8 +27,23 @@ export default function ClientsView() {
         c.cups?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const container = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1
+            }
+        }
+    };
+
+    const item = {
+        hidden: { opacity: 0, y: 20 },
+        show: { opacity: 1, y: 0 }
+    };
+
     return (
-        <div className="min-h-screen bg-[#F8F9FC] pb-20 relative overflow-hidden font-sans selection:bg-energy-500/30 selection:text-energy-900">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 relative overflow-hidden font-sans selection:bg-energy-500/30 selection:text-energy-900">
             <AmbientBackground />
 
             <div className="max-w-[1400px] mx-auto px-6 sm:px-8 lg:px-12 py-12 relative z-10">
@@ -29,12 +52,14 @@ export default function ClientsView() {
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
-                            <button
+                            <Button
                                 onClick={() => router.back()}
-                                className="w-10 h-10 rounded-2xl bg-white/60 backdrop-blur-xl border border-white/60 flex items-center justify-center text-slate-500 hover:text-energy-600 hover:bg-white/80 transition-all hover:-translate-x-1 active:scale-95"
+                                variant="secondary"
+                                size="icon"
+                                className="rounded-2xl"
                             >
                                 <ChevronRight size={20} className="rotate-180" />
-                            </button>
+                            </Button>
                             <span className="text-[11px] font-medium text-energy-600 bg-energy-50 px-3 py-1 rounded-full border border-energy-100 uppercase tracking-widest">
                                 Cartera
                             </span>
@@ -46,29 +71,33 @@ export default function ClientsView() {
 
                     <div className="flex-1 max-w-md flex gap-4">
                         <div className="relative group flex-1">
-                            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                                <Search className="text-slate-400 group-focus-within:text-energy-500 transition-colors" size={18} />
-                            </div>
-                            <input
-                                type="text"
+                            <Input
                                 placeholder="Buscar por nombre o CUPS..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-white/60 backdrop-blur-xl border border-white/60 rounded-2xl py-4 pl-12 pr-4 text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:bg-white/80 focus:ring-2 focus:ring-energy-500/20 focus:scale-[1.02] transition-all outline-none shadow-sm"
+                                icon={<Search size={18} />}
+                                className="rounded-2xl py-6"
                             />
                         </div>
-                        <button
+                        <Button
                             onClick={() => setIsModalOpen(true)}
-                            className="h-[52px] px-6 bg-slate-900 text-white rounded-2xl font-medium transition-all shadow-lg shadow-slate-900/20 hover:shadow-xl hover:shadow-slate-900/30 hover:-translate-y-1 active:scale-95 flex items-center gap-2 flex-shrink-0"
+                            variant="primary"
+                            size="lg"
+                            className="h-[52px] rounded-2xl px-6 shadow-floating"
+                            leftIcon={<Plus size={20} />}
                         >
-                            <Plus size={20} />
                             <span className="hidden sm:inline">Nuevo</span>
-                        </button>
+                        </Button>
                     </div>
                 </div>
 
                 {/* CONTENT GRID */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <motion.div
+                    variants={container}
+                    initial="hidden"
+                    animate="show"
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                >
                     {loading ? (
                         // Skeleton
                         [1, 2, 3, 4, 5, 6].map(i => (
@@ -76,22 +105,24 @@ export default function ClientsView() {
                         ))
                     ) : filteredClients.length === 0 ? (
                         // Empty State
-                        <div className="col-span-full py-32 flex flex-col items-center justify-center text-center">
-                            <div className="w-24 h-24 bg-gradient-to-tr from-white to-slate-50 rounded-[2rem] shadow-xl shadow-energy-500/5 flex items-center justify-center mb-6 border border-white/60">
-                                <User size={40} className="text-slate-300" strokeWidth={1} />
+                        <motion.div variants={item} className="col-span-full py-32 flex flex-col items-center justify-center text-center">
+                            <div className="w-24 h-24 bg-gradient-to-tr from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 rounded-[2rem] shadow-xl shadow-energy-500/5 flex items-center justify-center mb-6 border border-white/60 dark:border-white/10">
+                                <User size={40} className="text-slate-300 dark:text-slate-600" strokeWidth={1} />
                             </div>
-                            <h3 className="text-2xl font-medium text-slate-900 mb-2">No se encontraron clientes</h3>
-                            <p className="text-slate-500 font-light max-w-md">
+                            <h3 className="text-2xl font-medium text-slate-900 dark:text-white mb-2">No se encontraron clientes</h3>
+                            <p className="text-slate-500 dark:text-slate-400 font-light max-w-md">
                                 Prueba con otra búsqueda o añade un nuevo cliente a tu cartera.
                             </p>
-                        </div>
+                        </motion.div>
                     ) : (
                         // Client Cards - Antigravity Style
                         filteredClients.map(client => (
-                            <ClientCard key={client.id} client={client} />
+                            <motion.div key={client.id} variants={item}>
+                                <ClientCard client={client} />
+                            </motion.div>
                         ))
                     )}
-                </div>
+                </motion.div>
             </div>
 
             <CreateClientModal

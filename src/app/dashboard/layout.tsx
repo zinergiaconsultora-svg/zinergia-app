@@ -14,7 +14,7 @@ export default function DashboardLayout({
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     return (
-        <div className="min-h-screen bg-slate-50 relative selection:bg-indigo-100">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 gradient-organic relative selection:bg-indigo-100 dark:selection:bg-indigo-900 text-slate-900 dark:text-slate-100 font-sans">
             {/* Desktop Sidebar */}
             <NavigationSidebar />
 
@@ -53,7 +53,11 @@ export default function DashboardLayout({
                         >
                             <div className="p-6 flex justify-between items-center border-b border-slate-50 bg-slate-50/50">
                                 <span className="font-black text-slate-900 tracking-tighter text-xl">Menú</span>
-                                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 -mr-2 text-slate-400 hover:text-slate-900 transition-colors">
+                                <button
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="p-2 -mr-2 text-slate-400 hover:text-slate-900 transition-colors"
+                                    aria-label="Cerrar menú"
+                                >
                                     <X size={24} />
                                 </button>
                             </div>
@@ -68,7 +72,7 @@ export default function DashboardLayout({
             </AnimatePresence>
 
             {/* Main Content Area */}
-            <main className="lg:pl-64 min-h-screen pb-24 lg:pb-12">
+            <main className="lg:pl-[280px] min-h-screen pb-24 lg:pb-12 transition-all duration-300">
                 <div className="max-w-[1600px] mx-auto p-4 md:p-8 lg:p-12 animate-in fade-in duration-500">
                     {children}
                 </div>
