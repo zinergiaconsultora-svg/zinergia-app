@@ -6,8 +6,15 @@ const OCR_WEBHOOK_URL = process.env.OCR_WEBHOOK_URL;
 const WEBHOOK_API_KEY = process.env.WEBHOOK_API_KEY;
 
 export async function analyzeDocumentAction(formData: FormData): Promise<InvoiceData> {
+    console.log('[OCR Action] Starting document analysis');
+
     if (!OCR_WEBHOOK_URL) {
+        console.error('[OCR Action] OCR_WEBHOOK_URL not configured');
         throw new Error('SERVER ERROR: OCR_WEBHOOK_URL is not configured');
+    }
+
+    if (!WEBHOOK_API_KEY) {
+        console.error('[OCR Action] WEBHOOK_API_KEY not configured');
     }
 
     try {
@@ -16,7 +23,7 @@ export async function analyzeDocumentAction(formData: FormData): Promise<Invoice
             throw new Error('No file provided');
         }
 
-        // Add validation here if needed (size, type)
+        console.log('[OCR Action] File received:', { name: file.name, size: file.size, type: file.type });
 
         const response = await fetch(OCR_WEBHOOK_URL, {
             method: 'POST',
@@ -26,8 +33,12 @@ export async function analyzeDocumentAction(formData: FormData): Promise<Invoice
             body: formData,
         });
 
+        console.log('[OCR Action] Webhook response status:', response.status);
+
         if (!response.ok) {
-            throw new Error(`OCR Processing failed: ${response.statusText}`);
+            const errorText = await response.text();
+            console.error('[OCR Action] Webhook error:', errorText);
+            throw new Error(`OCR Processing failed: ${response.statusText} - ${errorText}`);
         }
 
         const responseData = await response.json();
