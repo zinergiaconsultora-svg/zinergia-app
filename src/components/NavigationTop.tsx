@@ -5,14 +5,15 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useScroll, useTransform } from 'framer-motion';
 import {
-    Home,
-    Users,
-    BookOpen,
+    LayoutDashboard,
+    Contact,
+    Network,
     Briefcase,
+    GraduationCap,
+    FileSignature,
+    Sparkles,
+    Receipt,
     Settings,
-    Zap,
-    PieChart,
-    Wallet,
     LogOut,
     Trophy,
     Menu,
@@ -24,14 +25,14 @@ import { crmService } from '@/services/crmService';
 import { logout } from '@/app/auth/actions';
 
 const navItems = [
-    { name: 'Inicio', href: '/dashboard', icon: Home },
-    { name: 'Red', href: '/dashboard/network', icon: Users },
-    { name: 'Cartera', href: '/dashboard/wallet', icon: Wallet },
-    { name: 'Academy', href: '/dashboard/academy', icon: BookOpen },
-    { name: 'Clientes', href: '/dashboard/clients', icon: Briefcase },
-    { name: 'Simulador', href: '/dashboard/simulator', icon: Zap },
-    { name: 'Propuestas', href: '/dashboard/proposals', icon: PieChart },
-    { name: 'Tarifas', href: '/dashboard/tariffs', icon: Zap },
+    { name: 'Inicio', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Red', href: '/dashboard/network', icon: Network },
+    { name: 'Cartera', href: '/dashboard/wallet', icon: Briefcase },
+    { name: 'Academy', href: '/dashboard/academy', icon: GraduationCap },
+    { name: 'Clientes', href: '/dashboard/clients', icon: Contact },
+    { name: 'Simulador', href: '/dashboard/simulator', icon: Sparkles },
+    { name: 'Propuestas', href: '/dashboard/proposals', icon: FileSignature },
+    { name: 'Tarifas', href: '/dashboard/tariffs', icon: Receipt },
     { name: 'Ajustes', href: '/dashboard/settings', icon: Settings },
 ] as const;
 
@@ -108,16 +109,16 @@ export const NavigationTop = () => {
                                         >
                                             <Link
                                                 href={item.href}
-                                                className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-300 ${isActive
-                                                    ? 'bg-slate-900 text-white shadow-md'
+                                                className={`relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300 ${isActive
+                                                    ? 'bg-energy-500 text-white shadow-lg shadow-energy-500/20'
                                                     : 'text-slate-500 hover:bg-slate-100/50 hover:text-slate-900'
                                                     }`}
                                             >
-                                                <Icon size={18} />
+                                                <Icon size={22} strokeWidth={1.5} />
                                                 {isActive && (
                                                     <motion.div
                                                         layoutId="navGlow"
-                                                        className="absolute inset-0 bg-indigo-500/10 blur-xl rounded-full"
+                                                        className="absolute inset-0 bg-energy-500/20 blur-2xl rounded-full"
                                                     />
                                                 )}
                                             </Link>
@@ -212,13 +213,13 @@ export const NavigationTop = () => {
                                         key={item.name}
                                         href={item.href}
                                         onClick={() => setIsMobileMenuOpen(false)}
-                                        className={`flex flex-col items-center justify-center gap-2 p-4 rounded-3xl transition-all ${isActive
-                                            ? 'bg-slate-900 text-white shadow-lg'
+                                        className={`flex flex-col items-center justify-center gap-3 p-5 rounded-[2rem] transition-all ${isActive
+                                            ? 'bg-energy-500 text-white shadow-xl shadow-energy-500/20 scale-[1.02]'
                                             : 'bg-slate-50 text-slate-500 active:bg-slate-100'
                                             }`}
                                     >
-                                        <Icon size={24} />
-                                        <span className="text-[10px] font-black uppercase tracking-widest">{item.name}</span>
+                                        <Icon size={28} strokeWidth={1.5} />
+                                        <span className="text-[10px] font-bold uppercase tracking-[0.2em]">{item.name}</span>
                                     </Link>
                                 );
                             })}
