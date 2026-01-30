@@ -9,19 +9,16 @@ import {
     Target,
     Layers,
     ArrowRight,
-    Home,
-    Users,
-    Plus,
-    Wallet,
     Bell,
     GraduationCap,
-    ArrowUpRight,
-    PieChart
+    ArrowUpRight
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { formatCurrency } from '@/lib/utils/format';
 import { DashboardSkeleton } from '@/components/ui/DashboardSkeleton';
+import { useSimulator } from '@/features/simulator/hooks/useSimulator';
+import { Upload, Sparkles } from 'lucide-react';
 
 const LeaderboardWidget = dynamic(() => import('@/features/gamification/components/LeaderboardWidget').then(mod => mod.LeaderboardWidget), { loading: () => <div className="h-64 bg-slate-100/50 animate-pulse rounded-2xl" /> });
 const AchievementsWidget = dynamic(() => import('@/features/gamification/components/AchievementsWidget').then(mod => mod.AchievementsWidget));
@@ -86,6 +83,13 @@ export default function DashboardView() {
     const [stats, setStats] = useState<DashboardStats>(DEFAULT_STATS);
     const [loading, setLoading] = useState(true);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
+
+    const {
+        handleFileUpload,
+        handleDrop,
+        handleDragOver,
+        isAnalyzing
+    } = useSimulator();
     const [notifications, setNotifications] = useState([
         { id: '1', type: 'success' as const, title: 'Comisión Aprobada', message: 'La venta de "Restaurante El Molino" ha sido validada.', created_at: new Date().toISOString(), read: false },
         { id: '2', type: 'info' as const, title: 'Nuevo Recurso', message: 'Se ha añadido "Tarifas 2026 Q1" a la Academy.', created_at: new Date(Date.now() - 3600000).toISOString(), read: false },
@@ -146,8 +150,62 @@ export default function DashboardView() {
                 variants={container}
                 initial="hidden"
                 animate="show"
-                className="flex-1 flex flex-col p-4 md:p-5 gap-4 md:gap-5 max-w-[1800px] mx-auto w-full z-10"
+                className="flex-1 flex flex-col p-4 md:p-6 gap-6 md:gap-8 max-w-[1700px] mx-auto w-full z-10 pb-20"
             >
+                {/* 0. HERO UPLOAD SECTION (Imposing & Professional) */}
+                <motion.div
+                    variants={item}
+                    className="relative w-full group"
+                >
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-emerald-500/10 to-teal-500/10 blur-3xl opacity-50 rounded-[3rem]" />
+
+                    <div className="relative glass-premium rounded-[2.5rem] border border-white/40 shadow-2xl overflow-hidden p-8 md:p-12 flex flex-col lg:flex-row items-center gap-10">
+                        {/* Shimmer Effect */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+
+                        <div className="flex-1 text-center lg:text-left">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase tracking-widest mb-4 border border-indigo-100 italic">
+                                <Sparkles size={12} /> IA Power Detection
+                            </div>
+                            <h2 className="text-3xl md:text-5xl font-display font-bold text-slate-800 dark:text-white leading-tight mb-4">
+                                Optimiza tu <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-emerald-600">Energía</span> en segundos
+                            </h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-lg max-w-xl mx-auto lg:mx-0 font-body">
+                                Sube tu factura PDF y deja que nuestra ingeniería detecte el mayor ahorro posible para tus clientes.
+                            </p>
+                        </div>
+
+                        <div className="w-full lg:w-[450px] shrink-0">
+                            <label className="block w-full h-full cursor-pointer group/upload">
+                                <input
+                                    type="file"
+                                    accept=".pdf"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        handleFileUpload(e);
+                                        router.push('/dashboard/simulator');
+                                    }}
+                                    disabled={isAnalyzing}
+                                />
+                                <div
+                                    onDrop={(e) => {
+                                        handleDrop(e);
+                                        router.push('/dashboard/simulator');
+                                    }}
+                                    onDragOver={handleDragOver}
+                                    className="relative glass-premium border-2 border-dashed border-indigo-200/50 hover:border-indigo-400/50 transition-all rounded-3xl p-8 flex flex-col items-center justify-center bg-white/40 hover:bg-white/60 shadow-lg"
+                                >
+                                    <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm mb-4 group-hover/upload:scale-110 transition-transform">
+                                        <Upload size={28} />
+                                    </div>
+                                    <div className="text-lg font-bold text-slate-800 dark:text-white mb-1">Cargar Nueva Factura</div>
+                                    <div className="text-xs text-slate-400 font-medium text-center">Arrastra aquí o haz clic para subir tu PDF</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </motion.div>
+
 
                 {/* 1. HEADER ROW (Highly Compact) */}
                 <motion.div variants={item} className="flex items-center justify-between shrink-0 h-10">
@@ -283,18 +341,6 @@ export default function DashboardView() {
                 </motion.div>
 
             </motion.div>
-
-            {/* FLOATING DOCK */}
-            <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 w-auto">
-                <div className="flex items-center justify-center gap-1.5 p-1.5 bg-white/80 backdrop-blur-xl border border-slate-200/50 rounded-2xl shadow-xl ring-1 ring-slate-200/50">
-                    <DockItem icon={<Home size={18} />} label="Inicio" active />
-                    <DockItem icon={<Users size={18} />} label="Clientes" onClick={() => router.push('/dashboard/clients')} />
-                    <DockItem icon={<Plus size={20} />} label="Crear" highlight onClick={() => router.push('/dashboard/comparator')} />
-                    <DockItem icon={<PieChart size={18} />} label="Propuestas" onClick={() => router.push('/dashboard/proposals')} />
-                    <DockItem icon={<Wallet size={18} />} label="Cartera" onClick={() => router.push('/dashboard/wallet')} />
-                    <DockItem icon={<Layers size={18} />} label="Red" onClick={() => router.push('/dashboard/network')} />
-                </div>
-            </div>
         </div>
     );
 }
@@ -347,22 +393,4 @@ function GlassKpiCard({ label, value, icon: Icon, subValue, progress, delay = 0 
             </div>
         </motion.div>
     );
-}
-
-interface DockItemProps {
-    icon: React.ReactNode;
-    label: string;
-    active?: boolean;
-    highlight?: boolean;
-    onClick?: () => void;
-}
-
-function DockItem({ icon, active, highlight, onClick }: DockItemProps) {
-    return (
-        <button onClick={onClick} className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${highlight ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:scale-105' :
-            active ? 'bg-slate-100 text-slate-900 shadow-inner' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'
-            }`}>
-            {icon}
-        </button>
-    )
 }
