@@ -52,15 +52,15 @@ export default function SettingsView() {
 
         setLoading(true);
         try {
-            const extractedData = await crmService.analyzeDocument(file);
+            const extractedData = await crmService.analyzeDocument(file) as Record<string, unknown>;
             console.log('Extracted Data:', extractedData);
 
             if (extractedData) {
                 setSettings(prev => ({
                     ...prev,
-                    companyName: extractedData.razon_social || prev.companyName,
-                    nif: extractedData.cif || prev.nif,
-                    address: extractedData.direccion || prev.address
+                    companyName: (extractedData.razon_social as string) || (extractedData.company_name as string) || prev.companyName,
+                    nif: (extractedData.nif as string) || (extractedData.cif as string) || prev.nif,
+                    address: (extractedData.supply_address as string) || (extractedData.direccion as string) || prev.address
                 }));
                 // TODO: Show success toast
             }

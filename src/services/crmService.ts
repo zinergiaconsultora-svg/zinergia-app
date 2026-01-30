@@ -407,64 +407,59 @@ export const crmService = {
 
         try {
             const { data, error } = await supabase
-                .from('offers')
+                .from('lv_zinergia_tarifas')
                 .select('*')
-                .or(`franchise_id.eq.${franchiseId},franchise_id.is.null`) // Fetch own + system offers
                 .eq('is_active', true)
-                .order('created_at', { ascending: false });
+                .order('company', { ascending: true });
 
             if (error) {
-                console.warn('Could not fetch offers from DB, checks if table exists. Falling back to mock.', error);
-                throw error;
+                console.warn('Could not fetch tariffs from lv_zinergia_tarifas. Falling back to offers table.', error);
+                
+                const { data: offersData, error: offersError } = await supabase
+                    .from('offers')
+                    .select('*')
+                    .or(`franchise_id.eq.${franchiseId},franchise_id.is.null`)
+                    .eq('is_active', true)
+                    .order('created_at', { ascending: false });
+
+                if (offersError) throw offersError;
+                return offersData as Offer[];
             }
 
-            return data as Offer[];
+            if (!data || data.length === 0) {
+                console.warn('No tariffs found in lv_zinergia_tarifas. Returning empty array.');
+                return [];
+            }
 
-        } catch {
-            // FALLBACK FOR DEV: If table missing or error, return mocks
-            console.log('Serving Mock Offers due to DB error or missing table.');
-            return [
-                {
-                    id: '1',
-                    marketer_name: 'Naturgy',
-                    tariff_name: 'Tarifa Compromiso',
-                    logo_color: 'bg-blue-600',
-                    contract_duration: '12 meses',
-                    type: 'fixed',
-                    power_price: { p1: 0.08, p2: 0.04, p3: 0.02, p4: 0.02, p5: 0.02, p6: 0.02 },
-                    energy_price: { p1: 0.14, p2: 0.12, p3: 0.09, p4: 0.08, p5: 0.08, p6: 0.08 }
+            return data.map(tariff => ({
+                id: tariff.id,
+                marketer_name: tariff.company,
+                tariff_name: tariff.tariff_name,
+                logo_color: tariff.logo_color || 'bg-slate-600',
+                contract_duration: tariff.contract_duration || '12 meses',
+                type: tariff.offer_type as 'fixed' | 'indexed' || 'fixed',
+                power_price: {
+                    p1: tariff.power_price_p1 || 0,
+                    p2: tariff.power_price_p2 || 0,
+                    p3: tariff.power_price_p3 || 0,
+                    p4: tariff.power_price_p4 || 0,
+                    p5: tariff.power_price_p5 || 0,
+                    p6: tariff.power_price_p6 || 0,
                 },
-                {
-                    id: '2',
-                    marketer_name: 'Endesa',
-                    tariff_name: 'Conecta Empresas',
-                    logo_color: 'bg-blue-500',
-                    contract_duration: '12 meses',
-                    type: 'fixed',
-                    power_price: { p1: 0.09, p2: 0.05, p3: 0.03, p4: 0.03, p5: 0.03, p6: 0.03 },
-                    energy_price: { p1: 0.13, p2: 0.11, p3: 0.10, p4: 0.09, p5: 0.09, p6: 0.09 }
+                energy_price: {
+                    p1: tariff.energy_price_p1 || 0,
+                    p2: tariff.energy_price_p2 || 0,
+                    p3: tariff.energy_price_p3 || 0,
+                    p4: tariff.energy_price_p4 || 0,
+                    p5: tariff.energy_price_p5 || 0,
+                    p6: tariff.energy_price_p6 || 0,
                 },
-                {
-                    id: '3',
-                    marketer_name: 'Iberdrola',
-                    tariff_name: 'Plan Estable',
-                    logo_color: 'bg-green-600',
-                    contract_duration: '24 meses',
-                    type: 'fixed',
-                    power_price: { p1: 0.075, p2: 0.045, p3: 0.025, p4: 0.025, p5: 0.025, p6: 0.025 },
-                    energy_price: { p1: 0.15, p2: 0.13, p3: 0.11, p4: 0.10, p5: 0.10, p6: 0.10 }
-                },
-                {
-                    id: '4',
-                    marketer_name: 'TotalEnergies',
-                    tariff_name: 'A Tu Aire Gas + Luz',
-                    logo_color: 'bg-red-500',
-                    contract_duration: '12 meses',
-                    type: 'indexed',
-                    power_price: { p1: 0.06, p2: 0.03, p3: 0.015, p4: 0.015, p5: 0.015, p6: 0.015 },
-                    energy_price: { p1: 0.12, p2: 0.10, p3: 0.08, p4: 0.07, p5: 0.07, p6: 0.07 }
-                }
-            ];
+                fixed_fee: tariff.fixed_fee || 0,
+            })) as Offer[];
+
+        } catch (error) {
+            console.error('Error fetching offers from both tables:', error);
+            return [];
         }
     },
 
@@ -529,120 +524,112 @@ export const crmService = {
     },
 
     async calculateSavings(invoice: InvoiceData): Promise<SavingsResult[]> {
-        const offers = await this.getOffers();
-
-        // Refactored cost calculation helper
-        const getCost = (inv: InvoiceData, off: Offer) => {
-            const annualPower = [1, 2, 3, 4, 5, 6].reduce((sum, i) =>
-                sum + ((inv[`power_p${i}` as keyof InvoiceData] as number || 0) * off.power_price[`p${i}` as keyof TariffPrice]), 0
-            ) * 365;
-
-            const annualEnergy = [1, 2, 3, 4, 5, 6].reduce((sum, i) =>
-                sum + ((inv[`energy_p${i}` as keyof InvoiceData] as number || 0) * off.energy_price[`p${i}` as keyof TariffPrice]), 0
-            );
-
-            return annualPower + annualEnergy + ((off.fixed_fee || 0) * 12);
-        };
-
-        // Estimate current cost: Worst existing offer + 15% markup
-        const currentSimulatedCost = Math.max(...offers.map(o => getCost(invoice, o))) * 1.15;
-
-        // Power Optimization Logic
-        // Check if any max_demand data is present to trigger optimization
-        const hasMaxDemand = [1, 2, 3, 4, 5, 6].some(p => (invoice[`max_demand_p${p}` as keyof InvoiceData] as number) > 0);
-
-        return offers.map(offer => {
-            let offer_annual_cost = 0;
-            let optimized_annual_fixed_cost_for_this_offer = 0;
-            const optimized_powers_map: Record<string, number> = {};
-
-            // 1. Initial Optimal Powers based on Max Demand + Safety Margin
-            const rawOptimalPowers: number[] = [1, 2, 3, 4, 5, 6].map(i => {
-                const power = (invoice[`power_p${i}` as keyof InvoiceData] as number) || 0;
-                const maxDemand = (invoice[`max_demand_p${i}` as keyof InvoiceData] as number) || 0;
-
-                // If no max demand data, we can't safely optimize, so we keep current power
-                if (maxDemand === 0) return power;
-
-                // Safety margin: 5% above max demand, but not exceeding current power if it's already tight
-                return Math.ceil((maxDemand * 1.05) * 10) / 10;
+        try {
+            console.log('📤 Sending invoice data to comparison webhook:', JSON.stringify(invoice, null, 2));
+            
+            const response = await fetch('https://sswebhook.iawarrior.com/webhook/effcc85b-5122-4896-9f0c-810e724e12c3', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(invoice),
             });
 
-            // 2. Enforce Rule: P(n+1) >= P(n)
-            // This is mandatory for tariffs like 3.0TD in Spain.
-            const adjustedPowers: number[] = [...rawOptimalPowers];
-            for (let i = 1; i < 6; i++) {
-                if (adjustedPowers[i] < adjustedPowers[i - 1]) {
-                    adjustedPowers[i] = adjustedPowers[i - 1];
-                }
+            if (!response.ok) {
+                console.error(`❌ Webhook returned error: ${response.status} ${response.statusText}`);
+                throw new Error(`Tariff comparison webhook failed: ${response.statusText}`);
             }
 
-            // 3. Map back to result structure
-            adjustedPowers.forEach((p, idx) => {
-                optimized_powers_map[`p${idx + 1}`] = p;
-            });
+            const responseData = await response.json();
+            console.log('📥 Received response from webhook:', JSON.stringify(responseData, null, 2));
+            
+            const data = Array.isArray(responseData) ? (responseData[0]?.output || responseData[0]) : (responseData?.output || responseData);
 
-            // Calculate costs for P1-P6 using Adjusted Powers
-            for (let i = 1; i <= 6; i++) {
-                const pKey = `p${i}` as keyof TariffPrice;
-                const power = invoice[`power_p${i}` as keyof InvoiceData] as number || 0;
-                const energy = invoice[`energy_p${i}` as keyof InvoiceData] as number || 0;
-                const optimalPower = optimized_powers_map[`p${i}`];
+            if (data && data.offers && Array.isArray(data.offers)) {
+                const currentCost = data.current_annual_cost || data.current_annual_cost_calculated || 0;
 
-                // Offer Cost with ORIGINAL powers
-                // POWER is daily price -> * 365
-                offer_annual_cost += (power * offer.power_price[pKey] * 365) + (energy * offer.energy_price[pKey]);
-
-                // Fixed Cost with OPTIMIZED powers
-                optimized_annual_fixed_cost_for_this_offer += (optimalPower * offer.power_price[pKey] * 365);
+                const results = data.offers.map((offer: any) => ({
+                    offer: {
+                        id: offer.id || offer.offer_id || Math.random().toString(36).substr(2, 9),
+                        marketer_name: offer.marketer_name || offer.comercializadora || offer.company_name || 'Comercializadora',
+                        tariff_name: offer.tariff_name || offer.nombre_tarifa || offer.tarifa || 'Tarifa',
+                        logo_color: offer.logo_color || offer.color_logo || 'bg-blue-600',
+                        type: offer.type || offer.tipo || 'fixed',
+                        power_price: offer.power_price || offer.precio_potencia || { p1: 0, p2: 0, p3: 0, p4: 0, p5: 0, p6: 0 },
+                        energy_price: offer.energy_price || offer.precio_energia || { p1: 0, p2: 0, p3: 0, p4: 0, p5: 0, p6: 0 },
+                        fixed_fee: offer.fixed_fee || offer.cuota_fija || 0,
+                        contract_duration: offer.contract_duration || offer.duracion_contrato || '12 meses',
+                    },
+                    current_annual_cost: currentCost,
+                    offer_annual_cost: offer.annual_cost || offer.costo_anual || 0,
+                    annual_savings: Math.max(0, currentCost - (offer.annual_cost || offer.costo_anual || 0)),
+                    savings_percent: currentCost > 0 ? ((currentCost - (offer.annual_cost || offer.costo_anual || 0)) / currentCost) * 100 : 0,
+                    optimization_result: offer.optimization_result || offer.resultado_optimizacion,
+                }));
+                
+                console.log(`✅ Parsed ${results.length} offers from webhook response`);
+                return results;
             }
 
-            // Fixed Fee
-            if (offer.fixed_fee) {
-                offer_annual_cost += offer.fixed_fee * 12;
-                optimized_annual_fixed_cost_for_this_offer += offer.fixed_fee * 12; // Fixed fee remains
-            }
-
-            // Calculate the "Technical Saving" (Difference between Offer@CurrentPower and Offer@OptimizedPower)
-            // Original Fixed Cost with Offer Prices
-            let original_fixed_cost_with_offer = 0;
-            for (let i = 1; i <= 6; i++) {
-                const pKey = `p${i}` as keyof TariffPrice;
-                const power = invoice[`power_p${i}` as keyof InvoiceData] as number || 0;
-                original_fixed_cost_with_offer += (power * offer.power_price[pKey] * 365);
-            }
-
-            const annual_optimization_savings = hasMaxDemand
-                ? Math.max(0, original_fixed_cost_with_offer - optimized_annual_fixed_cost_for_this_offer)
-                : 0;
-
-            return {
-                offer,
-                current_annual_cost: currentSimulatedCost, // Use the smart simulated cost instead of hardcoded raw cost
-                offer_annual_cost,
-                annual_savings: currentSimulatedCost - offer_annual_cost,
-                savings_percent: ((currentSimulatedCost - offer_annual_cost) / currentSimulatedCost) * 100,
-                optimization_result: hasMaxDemand ? {
-                    optimized_powers: optimized_powers_map,
-                    original_annual_fixed_cost: original_fixed_cost_with_offer,
-                    optimized_annual_fixed_cost: optimized_annual_fixed_cost_for_this_offer,
-                    annual_optimization_savings: annual_optimization_savings
-                } : undefined
-            };
-        }).sort((a, b) => b.annual_savings - a.annual_savings);
+            console.warn('⚠️ Webhook response missing offers array, returning empty');
+            return [];
+        } catch (error) {
+            console.error('❌ Webhook unavailable, using mock data:', error);
+            
+            const currentCost = invoice.total_amount || 1200;
+            
+            return [
+                {
+                    offer: {
+                        id: 'mock-offer-1',
+                        marketer_name: 'Energía Plus',
+                        tariff_name: 'Tarifa Optimizada 2.0TD',
+                        logo_color: 'bg-emerald-600',
+                        type: 'fixed',
+                        power_price: { p1: 0.045, p2: 0.045, p3: 0, p4: 0, p5: 0, p6: 0 },
+                        energy_price: { p1: 0.22, p2: 0.18, p3: 0, p4: 0, p5: 0, p6: 0 },
+                        fixed_fee: 35,
+                        contract_duration: '12 meses',
+                    },
+                    current_annual_cost: currentCost,
+                    offer_annual_cost: currentCost * 0.85,
+                    annual_savings: currentCost * 0.15,
+                    savings_percent: 15,
+                    optimization_result: undefined,
+                },
+                {
+                    offer: {
+                        id: 'mock-offer-2',
+                        marketer_name: 'Luz Directa',
+                        tariff_name: 'Tarifa Verde 24h',
+                        logo_color: 'bg-blue-600',
+                        type: 'fixed',
+                        power_price: { p1: 0.04, p2: 0.04, p3: 0, p4: 0, p5: 0, p6: 0 },
+                        energy_price: { p1: 0.20, p2: 0.20, p3: 0, p4: 0, p5: 0, p6: 0 },
+                        fixed_fee: 28,
+                        contract_duration: '12 meses',
+                    },
+                    current_annual_cost: currentCost,
+                    offer_annual_cost: currentCost * 0.92,
+                    annual_savings: currentCost * 0.08,
+                    savings_percent: 8,
+                    optimization_result: undefined,
+                },
+            ];
+        }
     },
 
     /**
-     * Uploads a document (Invoice/Fiscal) to the webhook for OCR processing.
-     * @param file File object to upload
-     * @returns Parsed data from the webhook
-     */
+      * Uploads a document (Invoice/Fiscal) to the webhook for OCR processing.
+      * @param file File object to upload
+      * @returns Parsed data from the webhook
+      */
     async analyzeDocument(file: File) {
         const formData = new FormData();
         formData.append('file', file);
 
         try {
-            const response = await fetch('https://sswebhook.iawarrior.com/webhook/fd77781d-8afc-4177-b793-accf923ad106', {
+            const response = await fetch('https://sswebhook.iawarrior.com/webhook/cee8e0d1-b537-4939-b54e-6255fa9776cc', {
                 method: 'POST',
                 body: formData,
             });
@@ -652,54 +639,64 @@ export const crmService = {
             }
 
             const responseData = await response.json();
+            const data = Array.isArray(responseData) ? responseData[0]?.output || responseData[0] : responseData?.output || responseData;
 
-            // The platform receives an array. We take the first element.
-            // Structure: data[0] -> { bestOfferDetails, FacturaOriginal, ... }
-            const data = Array.isArray(responseData) ? responseData[0] : responseData;
-
-            if (data && data.FacturaOriginal) {
-                const original = data.FacturaOriginal;
-                const best = data.bestOfferDetails || {};
+            if (data) {
+                const parseNumber = (value: any) => {
+                    if (!value) return 0;
+                    const strValue = String(value).replace(/\./g, '').replace(',', '.');
+                    const parsed = parseFloat(strValue);
+                    return isNaN(parsed) ? 0 : parsed;
+                };
 
                 return {
-                    // Mapping Power from FacturaOriginal
-                    power_p1: original.POTENCIA_P1 ? parseFloat(original.POTENCIA_P1.replace(',', '.')) : 0,
-                    power_p2: original.POTENCIA_P2 ? parseFloat(original.POTENCIA_P2.replace(',', '.')) : 0,
-                    power_p3: original.POTENCIA_P3 ? parseFloat(original.POTENCIA_P3.replace(',', '.')) : 0,
-                    // Tariffs like 3.0TD may have P4-P6, defaulting to 0 if not present
-                    power_p4: original.POTENCIA_P4 ? parseFloat(original.POTENCIA_P4.replace(',', '.')) : 0,
-                    power_p5: original.POTENCIA_P5 ? parseFloat(original.POTENCIA_P5.replace(',', '.')) : 0,
-                    power_p6: original.POTENCIA_P6 ? parseFloat(original.POTENCIA_P6.replace(',', '.')) : 0,
-
-                    // Mapping Consumption from FacturaOriginal (Received as ENERGIA_PX)
-                    energy_p1: original.ENERGIA_P1 ? parseFloat(original.ENERGIA_P1.replace(',', '.')) : 0,
-                    energy_p2: original.ENERGIA_P2 ? parseFloat(original.ENERGIA_P2.replace(',', '.')) : 0,
-                    energy_p3: original.ENERGIA_P3 ? parseFloat(original.ENERGIA_P3.replace(',', '.')) : 0,
-                    energy_p4: original.ENERGIA_P4 ? parseFloat(original.ENERGIA_P4.replace(',', '.')) : 0,
-                    energy_p5: original.ENERGIA_P5 ? parseFloat(original.ENERGIA_P5.replace(',', '.')) : 0,
-                    energy_p6: original.ENERGIA_P6 ? parseFloat(original.ENERGIA_P6.replace(',', '.')) : 0,
-
-                    razon_social: original.CLIENTE_NOMBRE || 'Cliente Desconocido',
-                    cups: original.CUPS || '',
-                    direccion: original.DIRECCION_SUMINISTRO || '',
-                    // Metadata from the best offer if found
-                    best_offer: best
+                    client_name: data.client_name || data.CLIENTE_NOMBRE || data.cliente_nombre || 'Cliente Desconocido',
+                    dni_cif: data.dni_cif || data.nif_cif || '',
+                    company_name: data.company_name || data.COMERCIALIZADORA || data.compania || '',
+                    cups: data.cups || data.CUPS || '',
+                    tariff_name: data.tariff_name || data.TARIFA || data.tarifa || '',
+                    invoice_number: data.invoice_number || data.NUMERO_FACTURA || data.numero_factura || '',
+                    invoice_date: data.invoice_date || data.FECHA_FACTURA || data.fecha_factura || '',
+                    period_days: parseNumber(data.period_days || data.periodo_facturacion),
+                    supply_address: data.supply_address || data.direccion_suministro || '',
+                    subtotal: parseNumber(data.subtotal),
+                    vat: parseNumber(data.iva),
+                    total_amount: parseNumber(data.importe_total || data.total),
+                    rights_cost: parseNumber(data.derechos_enganche),
+                    
+                    power_p1: parseNumber(data.power_p1 || data.POTENCIA_P1 || data.potencia_p1),
+                    power_p2: parseNumber(data.power_p2 || data.POTENCIA_P2 || data.potencia_p2),
+                    power_p3: parseNumber(data.power_p3 || data.POTENCIA_P3 || data.potencia_p3),
+                    power_p4: parseNumber(data.power_p4 || data.POTENCIA_P4 || data.potencia_p4),
+                    power_p5: parseNumber(data.power_p5 || data.POTENCIA_P5 || data.potencia_p5),
+                    power_p6: parseNumber(data.power_p6 || data.POTENCIA_P6 || data.potencia_p6),
+                    
+                    energy_p1: parseNumber(data.energy_p1 || data.ENERGIA_P1 || data.energia_p1),
+                    energy_p2: parseNumber(data.energy_p2 || data.ENERGIA_P2 || data.energia_p2),
+                    energy_p3: parseNumber(data.energy_p3 || data.ENERGIA_P3 || data.energia_p3),
+                    energy_p4: parseNumber(data.energy_p4 || data.ENERGIA_P4 || data.energia_p4),
+                    energy_p5: parseNumber(data.energy_p5 || data.ENERGIA_P5 || data.energia_p5),
+                    energy_p6: parseNumber(data.energy_p6 || data.ENERGIA_P6 || data.energia_p6),
+                    
+                    current_power_price_p1: parseNumber(data.current_power_price_p1 || data.precio_potencia_p1),
+                    current_power_price_p2: parseNumber(data.current_power_price_p2 || data.precio_potencia_p2),
+                    current_power_price_p3: parseNumber(data.current_power_price_p3 || data.precio_potencia_p3),
+                    current_power_price_p4: parseNumber(data.current_power_price_p4 || data.precio_potencia_p4),
+                    current_power_price_p5: parseNumber(data.current_power_price_p5 || data.precio_potencia_p5),
+                    current_power_price_p6: parseNumber(data.current_power_price_p6 || data.precio_potencia_p6),
+                    
+                    current_energy_price_p1: parseNumber(data.current_energy_price_p1 || data.precio_energia_p1),
+                    current_energy_price_p2: parseNumber(data.current_energy_price_p2 || data.precio_energia_p2),
+                    current_energy_price_p3: parseNumber(data.current_energy_price_p3 || data.precio_energia_p3),
+                    current_energy_price_p4: parseNumber(data.current_energy_price_p4 || data.precio_energia_p4),
+                    current_energy_price_p5: parseNumber(data.current_energy_price_p5 || data.precio_energia_p5),
+                    current_energy_price_p6: parseNumber(data.current_energy_price_p6 || data.precio_energia_p6),
+                    
+                    detected_power_type: data.detected_power_type || data.TIPO_POTENCIA || '',
                 };
             }
 
-            // FALLBACK: If webhook returns "Workflow was started" (Async n8n default)
-            if (data && (data.message === 'Workflow was started' || !data.FacturaOriginal)) {
-                console.warn('Webhook data incomplete or async. Returning MOCK data for UI verification.');
-                return {
-                    power_p1: 5.5, power_p2: 5.5, power_p3: 5.5, power_p4: 5.5, power_p5: 5.5, power_p6: 5.5,
-                    energy_p1: 1200, energy_p2: 1100, energy_p3: 900, energy_p4: 800, energy_p5: 700, energy_p6: 600,
-                    razon_social: 'Empresa de Prueba S.L.',
-                    cif: 'B12345678',
-                    direccion: 'Calle Industria 45, Madrid'
-                };
-            }
-
-            return data;
+            return null;
         } catch (error) {
             console.error('Error uploading document:', error);
             throw error;

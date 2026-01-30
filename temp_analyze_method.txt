@@ -1,0 +1,148 @@
+    async analyzeDocument(file: File, invoiceType?: 'particular' | 'empresa') {
+        const timestamp = () => new Date().toISOString();
+
+        console.log(`\n${timestamp()} 🚀 Starting invoice analysis ${invoiceType ? `(user selected: ${invoiceType})` : ''}`);
+
+        const WEBHOOKS = {
+            particular: 'https://sswebhook.iawarrior.com/webhook/cee8e0d1-b537-4939-b54e-6255fa9776cc',
+            empresa: 'https://sswebhook.iawarrior.com/webhook/73352e3c-b68d-4a8f-86a9-d24394988467'
+        };
+
+        try {
+            let webhookUrl: string;
+            let webhookName: string;
+
+            if (invoiceType === 'particular') {
+                webhookUrl = WEBHOOKS.particular;
+                webhookName = 'particular';
+                console.log(`${timestamp()} 📌 Using PARTICULAR webhook (P1-P3) - user selected`);
+            } else {
+                webhookUrl = WEBHOOKS.empresa;
+                webhookName = 'empresa';
+                console.log(`${timestamp()} 📌 Using EMPRESA webhook (P1-P6) - user selected`);
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch(webhookUrl, {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error(`Webhook upload failed: ${response.statusText}`);
+            }
+
+            const responseData = await response.json();
+            console.log(`${timestamp()} ✅ ${webhookName} webhook responded`);
+
+            const unwrapData = (data: any): any => {
+                if (Array.isArray(data)) {
+                    if (data.length === 0) return null;
+                    const first = data[0];
+                    if (first.output) return first.output;
+                    return first;
+                }
+
+                if (data && data.output) return data.output;
+                if (data && data.data) return Array.isArray(data.data) ? data.data[0] : data.data;
+                if (data && data.result) return Array.isArray(data.result) ? data.result[0] : data.result;
+
+                return data;
+            };
+
+            const rawData = unwrapData(responseData);
+
+            if (!rawData) {
+                throw new Error('No data received from webhook');
+            }
+
+            const normalizeKeys = (obj: any): any => {
+                if (!obj || typeof obj !== 'object') return obj;
+                const newObj: any = {};
+                Object.keys(obj).forEach(key => {
+                    newObj[key.toLowerCase()] = obj[key];
+                });
+                return newObj;
+            };
+
+            const normalizedData = normalizeKeys(rawData);
+            console.log(`${timestamp()} 📄 Normalized data:`, normalizedData);
+
+            const parseNum = (val: any): number => {
+                if (val === undefined || val === null || val === '') return 0;
+                return parseFloat(val.toString().replace(/,/g, ''));
+            };
+
+            const invoiceObject = {
+                client_name: normalizedData.cliente_nombre || normalizedData.nombre || normalizedData.titular || '',
+                cups: normalizedData.cups || '',
+                supply_address: normalizedData.direccion_suministro || normalizedData.direccion || '',
+                company_name: normalizedData.compania || normalizedData.comercializadora || normalizedData.empresa || '',
+                tariff_name: normalizedData.tarifa || normalizedData.peaje || '',
+                invoice_number: normalizedData.numero_factura || normalizedData.num_factura || '',
+                invoice_date: normalizedData.fecha_factura || normalizedData.fecha || '',
+                period_days: parseNum(normalizedData.dias_facturacion) || 30,
+
+                power_p1: parseNum(normalizedData.potencia_p1),
+                power_p2: parseNum(normalizedData.potencia_p2),
+                power_p3: parseNum(normalizedData.potencia_p3),
+                power_p4: parseNum(normalizedData.potencia_p4 || 0),
+                power_p5: parseNum(normalizedData.potencia_p5 || 0),
+                power_p6: parseNum(normalizedData.potencia_p6 || 0),
+
+                energy_p1: parseNum(normalizedData.energia_p1),
+                energy_p2: parseNum(normalizedData.energia_p2),
+                energy_p3: parseNum(normalizedData.energia_p3),
+                energy_p4: parseNum(normalizedData.energia_p4 || 0),
+                energy_p5: parseNum(normalizedData.energia_p5 || 0),
+                energy_p6: parseNum(normalizedData.energia_p6 || 0),
+
+                current_power_price_p1: parseNum(normalizedData.precio_potencia_p1),
+                current_power_price_p2: parseNum(normalizedData.precio_potencia_p2),
+                current_power_price_p3: parseNum(normalizedData.precio_potencia_p3),
+                current_power_price_p4: parseNum(normalizedData.precio_potencia_p4 || 0),
+                current_power_price_p5: parseNum(normalizedData.precio_potencia_p5 || 0),
+                current_power_price_p6: parseNum(normalizedData.precio_potencia_p6 || 0),
+
+                current_energy_price_p1: parseNum(normalizedData.precio_energia_p1),
+                current_energy_price_p2: parseNum(normalizedData.precio_energia_p2),
+                current_energy_price_p3: parseNum(normalizedData.precio_energia_p3),
+                current_energy_price_p4: parseNum(normalizedData.precio_energia_p4 || 0),
+                current_energy_price_p5: parseNum(normalizedData.precio_energia_p5 || 0),
+                current_energy_price_p6: parseNum(normalizedData.precio_energia_p6 || 0),
+
+                subtotal: parseNum(normalizedData.subtotal),
+                vat: parseNum(normalizedData.iva),
+                total_amount: parseNum(normalizedData.importe_total || normalizedData.total),
+                rights_cost: parseNum(normalizedData.derechos_enganche || normalizedData.alquiler_equipos),
+            };
+
+            const baseInvoiceData: InvoiceData = invoiceObject;
+            const classification = forensicClassification(baseInvoiceData);
+
+            const detectedType = classification.client_type;
+            const detectedTariffType = classification.tariff_type;
+
+            console.log(`${timestamp()} 🔍 Forensic analysis:`, {
+                detectedType,
+                detectedTariffType,
+                userSelected: invoiceType
+            });
+
+            console.log(`${timestamp()} ✅ Invoice data extracted and classified`);
+
+            return {
+                ...invoiceObject,
+                detected_client_type: detectedType,
+                detected_tariff_type: detectedTariffType,
+                forensic_details: classification.details
+            };
+
+        } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+            console.error(`${timestamp()} ❌ Invoice analysis failed:`, errorMsg);
+            throw new Error(`Invoice analysis failed: ${errorMsg}`);
+        }
+    },

@@ -1,0 +1,115 @@
+{
+    "meta": {
+        "brand_name": "Repaart",
+        "style": "Antigravity",
+        "description": "Premium futuristic design tokens for a weightless, sophisticated UI with glassmorphism and floating aesthetics."
+    },
+    "colors": {
+        "primary": {
+            "DEFAULT": "#1e293b",
+            "light": "#334155",
+            "foreground": "#FFFFFF",
+            "description": "Deep Slate Blue for titles and primary text"
+        },
+        "accent": {
+            "gradient_start": "#3b82f6",
+            "gradient_end": "#8b5cf6",
+            "DEFAULT": "#6366f1",
+            "hover": "#7c3aed",
+            "foreground": "#FFFFFF",
+            "description": "Electric Blue to Purple/Violet gradient for interactions and active states"
+        },
+        "background": {
+            "DEFAULT": "#f8fafc",
+            "secondary": "#ffffff",
+            "description": "Very pale gray, almost white, neutral and clean"
+        },
+        "foreground": {
+            "DEFAULT": "#1e293b",
+            "muted": "#64748b",
+            "light": "#94a3b8",
+            "description": "Text hierarchy: bold titles in deep slate, light body text in medium gray"
+        },
+        "glass": {
+            "background": "rgba(255, 255, 255, 0.7)",
+            "border": "rgba(255, 255, 255, 0.3)",
+            "description": "Glassmorphism: translucent frosted glass effect"
+        },
+        "shadow": {
+            "soft": "rgba(30, 41, 59, 0.08)",
+            "medium": "rgba(30, 41, 59, 0.12)",
+            "deep": "rgba(30, 41, 59, 0.15)",
+            "description": "Soft, diffuse, extensive shadows for floating effect"
+        },
+        "destructive": "#ef4444",
+        "success": "#22c55e",
+        "warning": "#f59e0b"
+    },
+    "typography": {
+        "font_family": {
+            "primary": [
+                "Inter",
+                "SF Pro",
+                "Satoshi",
+                "system-ui",
+                "sans-serif"
+            ],
+            "description": "Geometric Modern Humanist Sans Serif"
+        },
+        "font_weight": {
+            "light": "300",
+            "regular": "400",
+            "medium": "500",
+            "semibold": "600",
+            "bold": "700",
+            "description": "Dramatic weight contrast: bold/semibold for titles, light/regular for body"
+        },
+        "hierarchy": {
+            "titles": {
+                "weight": "bold or semibold (600-700)",
+                "color": "primary.DEFAULT (Deep Slate Blue)"
+            },
+            "body": {
+                "weight": "light or regular (300-400)",
+                "color": "foreground.muted (Medium Gray)"
+            },
+            "labels": {
+                "weight": "light or regular (300-400)",
+                "color": "foreground.light (Light Gray)"
+            }
+        }
+    },
+    "ui": {
+        "border_radius": {
+            "pill": "9999px",
+            "large": "1.5rem",
+            "default": "1rem",
+            "small": "0.75rem",
+            "description": "Extremely rounded and soft corners on all elements"
+        },
+        "spacing_base_unit": "4px",
+        "glassmorphism": {
+            "backdrop_blur": "12px",
+            "background": "glass.background",
+            "border": "1px solid glass.border",
+            "description": "All containers are translucent frosted glass panels"
+        },
+        "shadows": {
+            "floating_light": "0 8px 32px shadow.soft",
+            "floating_medium": "0 12px 48px shadow.medium",
+            "floating_deep": "0 16px 64px shadow.deep",
+            "description": "Deep soft shadows create optical illusion of physical floating"
+        },
+        "icons": {
+            "style": "thin rounded lines (Phosphor/Heroicons style)",
+            "weight": "matches body text weight"
+        }
+    },
+    "effects": {
+        "antigravity": {
+            "principle": "Weightlessness - no element appears attached to background",
+            "depth": "Multi-layer floating glass construction",
+            "lighting": "Soft overhead diffuse light accentuating glass edges"
+        }
+    }
+}

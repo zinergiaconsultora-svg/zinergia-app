@@ -29,7 +29,7 @@ export const ComparatorView = () => {
         setInvoiceData,
         handleFileUpload,
         runAnalysis,
-        handleReset
+        reset
     } = useComparator();
 
     return (
@@ -68,39 +68,79 @@ export const ComparatorView = () => {
                         exit={{ opacity: 0, y: -20 }}
                         className="flex flex-col items-center justify-center pt-4 relative z-10 px-4"
                     >
-                        <h1 className="text-3xl md:text-5xl font-light text-slate-900 mb-6 text-center tracking-tight leading-tight">
-                            Comencemos con la <span className="font-bold text-energy-600">Factura.</span>
-                        </h1>
-                        <p className="text-base md:text-lg text-slate-500 mb-12 text-center max-w-xl font-light leading-relaxed">
+                        <motion.h1 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1, duration: 0.6 }}
+                            className="font-display text-3xl md:text-5xl lg:text-6xl font-bold text-slate-900 mb-6 text-center tracking-tight leading-tight"
+                        >
+                            Comencemos con la{' '}
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-energy-600 to-amber-500">
+                                Factura.
+                            </span>
+                        </motion.h1>
+                        <motion.p 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.2, duration: 0.6 }}
+                            className="text-base md:text-lg text-slate-600 mb-12 text-center max-w-2xl font-body leading-relaxed"
+                        >
                             Sube el PDF de la última factura eléctrica. Nuestra IA extraerá los datos y detectará oportunidades de ahorro al instante.
-                        </p>
+                        </motion.p>
 
-                        <div className="w-full max-w-2xl relative group">
-                            <div className="absolute inset-0 bg-gradient-to-r from-energy-100 to-orange-100 rounded-[3rem] blur-xl opacity-50 group-hover:opacity-100 transition duration-700"></div>
-
-                            <label className="relative block min-h-[350px] bg-white/80 backdrop-blur-xl rounded-[2.5rem] border-2 border-dashed border-energy-200 hover:border-energy-400 cursor-pointer transition-all flex flex-col items-center justify-center p-8 md:p-12 overflow-hidden shadow-sm hover:shadow-xl">
-                                <input type="file" accept=".pdf" className="hidden" onChange={handleFileUpload} disabled={isAnalyzing} />
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.3, duration: 0.5 }}
+                            className="w-full max-w-2xl relative group"
+                        >
+                            {/* Glow effect mejorado */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-energy-200/60 to-amber-200/60 rounded-[3rem] blur-3xl opacity-60 group-hover:opacity-100 transition duration-700"></div>
+                            
+                            <motion.label 
+                                whileHover={{ scale: 1.01 }}
+                                className="relative block min-h-[350px] glass-premium rounded-[2.5rem] border-2 border-dashed border-energy-300 hover:border-energy-500 cursor-pointer transition-all flex flex-col items-center justify-center p-8 md:p-12 overflow-hidden shadow-lg hover:shadow-2xl"
+                            >
+                                <input 
+                                    id="invoice-upload-comparator"
+                                    type="file" 
+                                    accept=".pdf" 
+                                    className="hidden" 
+                                    onChange={handleFileUpload} 
+                                    disabled={isAnalyzing}
+                                    aria-label="Subir factura en formato PDF"
+                                />
 
                                 {isAnalyzing ? (
                                     <div className="flex flex-col items-center text-center">
-                                        <div className="w-16 h-16 border-4 border-energy-100 border-t-energy-500 rounded-full animate-spin mb-6"></div>
-                                        <p className="text-lg font-medium text-slate-700">Analizando documento...</p>
-                                        <p className="text-sm text-slate-400 mt-2">Extrayendo potencias y consumos</p>
+                                        <motion.div 
+                                            animate={{ rotate: 360 }}
+                                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                            className="w-16 h-16 border-4 border-energy-200 border-t-energy-600 rounded-full mb-6"
+                                            aria-hidden="true"
+                                        ></motion.div>
+                                        <p className="text-lg font-semibold text-slate-700 font-display">Analizando documento...</p>
+                                        <p className="text-sm text-slate-500 mt-2 font-body">Extrayendo potencias y consumos</p>
                                     </div>
                                 ) : (
                                     <>
-                                        <div className="w-20 h-20 bg-energy-50 rounded-3xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-300 shadow-inner">
-                                            <Upload className="w-8 h-8 text-energy-600" />
-                                        </div>
-                                        <h3 className="text-xl font-medium text-slate-800 mb-2">Arrastra tu PDF aquí</h3>
-                                        <p className="text-slate-400 mb-8 text-center">o haz clic para explorar archivos</p>
-                                        <div className="px-6 py-2 bg-slate-50 rounded-full text-xs font-bold text-slate-400 uppercase tracking-widest border border-slate-100/50">
+                                        <motion.div 
+                                            initial={{ scale: 0.8 }}
+                                            animate={{ scale: 1 }}
+                                            transition={{ delay: 0.4 }}
+                                            className="w-20 h-20 bg-gradient-to-br from-energy-100 to-amber-100 rounded-3xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-300 shadow-lg"
+                                        >
+                                            <Upload className="w-8 h-8 text-energy-600" aria-hidden="true" />
+                                        </motion.div>
+                                        <h3 className="font-display text-xl font-semibold text-slate-800 mb-2">Arrastra tu PDF aquí</h3>
+                                        <p className="text-slate-500 mb-8 text-center font-body">o haz clic para explorar archivos</p>
+                                        <div className="px-6 py-2 bg-gradient-to-r from-energy-50 to-amber-50 rounded-full text-xs font-bold text-energy-700 uppercase tracking-widest border border-energy-200 shadow-sm">
                                             Soporta Endesa, Iberdrola, Naturgy +12
                                         </div>
                                     </>
                                 )}
-                            </label>
-                        </div>
+                            </motion.label>
+                        </motion.div>
 
                         <button onClick={() => setStep(2)} className="mt-8 text-sm text-slate-400 hover:text-energy-600 underline font-medium transition-colors">
                             No tengo factura, introducir datos manualmente
@@ -117,13 +157,24 @@ export const ComparatorView = () => {
                         exit={{ opacity: 0, x: -20 }}
                         className="max-w-4xl mx-auto px-4 relative z-10"
                     >
-                        <div className="text-center mb-12">
-                            <h2 className="text-3xl font-light text-slate-900 mb-3">Verifica los Datos</h2>
-                            <p className="text-slate-500 mb-6">Confirma que la extracción ha sido correcta antes de calcular.</p>
-                            <CompanyScanner />
-                        </div>
+                        <motion.div 
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1, duration: 0.6 }}
+                            className="text-center mb-12"
+                        >
+                            <h2 className="font-display text-3xl md:text-4xl font-bold text-slate-900 mb-3">
+                                Verifica los <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500">Datos</span>
+                            </h2>
+                            <p className="text-slate-500 mb-6 font-body">Confirma que la extracción ha sido correcta antes de calcular.</p>
+                        </motion.div>
 
-                        <div className="bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-sm border border-white/60 overflow-hidden">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.98 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.2, duration: 0.5 }}
+                            className="glass-premium rounded-[2rem] shadow-lg hover:shadow-xl transition-shadow duration-300 border border-white/60 overflow-hidden"
+                        >
                             {/* Client Info */}
                             <div className="p-6 md:p-8 border-b border-slate-100 flex flex-col md:flex-row gap-6 items-center">
                                 <div className="flex-1 w-full">
@@ -178,26 +229,44 @@ export const ComparatorView = () => {
                                         ))}
                                     </div>
                                 </div>
-                            </div>
+                             </div>
 
-                            <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex justify-end">
-                                <button
-                                    onClick={runAnalysis}
-                                    disabled={isAnalyzing}
-                                    className="w-full md:w-auto bg-slate-900 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10 flex items-center justify-center gap-3 active:scale-95"
-                                >
-                                    {isAnalyzing ? (
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                            <span className="animate-pulse">{loadingMessage}</span>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            Calcular Ahorro <ArrowRight size={20} />
-                                        </>
-                                    )}
-                                </button>
-                            </div>
+                             <motion.div 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.8 }}
+                                className="p-6 bg-slate-50/50 border-t border-slate-100 flex justify-end"
+                             >
+                                 <motion.button
+                                     whileHover={{ scale: 1.02, translateY: -2 }}
+                                     whileTap={{ scale: 0.98 }}
+                                     onClick={runAnalysis}
+                                     disabled={isAnalyzing}
+                                     aria-busy={isAnalyzing}
+                                     className="group relative w-full md:w-auto bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-8 py-4 rounded-xl font-display font-bold text-lg shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed disabled:shadow-none transition-all overflow-hidden"
+                                 >
+                                     {/* Shine effect */}
+                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
+                                     
+                                     {isAnalyzing ? (
+                                         <div className="flex items-center gap-3 relative z-10">
+                                             <motion.div 
+                                                 animate={{ rotate: 360 }}
+                                                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                 className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                                                 aria-hidden="true"
+                                             ></motion.div>
+                                             <span className="sr-only">Calculando ahorro</span>
+                                             <span className="font-body">{loadingMessage}</span>
+                                         </div>
+                                     ) : (
+                                         <div className="flex items-center gap-3 relative z-10">
+                                             <span>Calcular Ahorro</span>
+                                             <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+                                         </div>
+                                     )}
+                                 </motion.button>
+                             </motion.div>
                         </div>
                     </motion.div>
                 )}
@@ -208,22 +277,41 @@ export const ComparatorView = () => {
                         key="s4"
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
                         className="pb-20 relative z-10 px-4"
                     >
-                        <h2 className="text-center text-3xl font-light text-slate-900 mb-2">Propuesta Generada</h2>
-                        <p className="text-center text-slate-500 mb-10">Hemos encontrado una oportunidad de ahorro significativa.</p>
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="text-center mb-12"
+                        >
+                            <h2 className="font-display text-3xl md:text-4xl font-bold text-slate-900 mb-2">
+                                Propuesta <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500">Generada</span>
+                            </h2>
+                            <p className="text-slate-500 mb-10 font-body">
+                                Hemos encontrado una oportunidad de ahorro significativa para ti.
+                            </p>
+                        </motion.div>
 
-                        <DigitalProposalCard
-                            result={results[0]}
-                            onReset={handleReset}
-                            onEmail={() => setIsEmailModalOpen(true)}
-                        />
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.4 }}
+                            className="max-w-4xl mx-auto"
+                        >
+                            <DigitalProposalCard
+                                result={results[0]}
+                                onReset={reset}
+                                onEmail={() => setIsEmailModalOpen(true)}
+                            />
 
-                        <EmailModal
-                            isOpen={isEmailModalOpen}
-                            onClose={() => setIsEmailModalOpen(false)}
-                            result={results[0]}
-                        />
+                            <EmailModal
+                                isOpen={isEmailModalOpen}
+                                onClose={() => setIsEmailModalOpen(false)}
+                                result={results[0]}
+                            />
+                        </motion.div>
                     </motion.div>
                 )}
 

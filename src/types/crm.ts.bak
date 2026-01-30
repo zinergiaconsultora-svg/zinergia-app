@@ -1,0 +1,228 @@
+export type ClientType = 'residential' | 'company' | 'public_admin' | 'particular';
+export type ClientStatus = 'new' | 'contacted' | 'in_process' | 'won' | 'lost';
+export type DetectedClientType = 'particular' | 'empresa';
+export type DetectedTariffType = 'fija' | 'indexada';
+
+export interface Client {
+    id: string;
+    created_at: string;
+    updated_at?: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    cups?: string;
+    average_monthly_bill?: number;
+    contracted_power?: Record<string, number>; // { p1: 3.4, ... }
+    current_supplier?: string;
+    tariff_type?: string;
+
+    // Metadata
+    type: ClientType;
+    status: ClientStatus;
+    dni_cif?: string;
+
+    // Geolocation for Geo-Intelligence
+    zip_code?: string;
+    city?: string;
+    latitude?: number;
+    longitude?: number;
+}
+
+// Comparator Types
+export interface InvoiceData {
+    period_days: number;
+
+    // Core Power
+    power_p1: number;
+    power_p2: number;
+    power_p3: number;
+    power_p4: number;
+    power_p5: number;
+    power_p6: number;
+
+    // Core Energy
+    energy_p1: number;
+    energy_p2: number;
+    energy_p3: number;
+    energy_p4: number;
+    energy_p5: number;
+    energy_p6: number;
+
+    // --- Extended Webhook Data ---
+    client_name?: string;
+    cups?: string;
+    supply_address?: string;
+    company_name?: string;
+    tariff_name?: string;
+    invoice_number?: string;
+    invoice_date?: string;
+
+    // --- Detected Classification Fields (Forensic Analysis) ---
+    detected_client_type?: DetectedClientType;
+    detected_tariff_type?: DetectedTariffType;
+    forensic_details?: {
+        energy_reactive?: number;
+        reactive_penalty?: boolean;
+        tariff_access?: string;
+        power_rental_cost?: number;
+        price_match_boe?: boolean;
+        pass_through_components?: string[];
+        has_financial_adjustments?: boolean;
+        has_losses_coefficient?: boolean;
+        contract_end_date?: string;
+        has_clausule_exit_penalty?: boolean;
+    };
+
+    // Financials
+    subtotal?: number;
+    vat?: number;
+    total_amount?: number;
+    rights_cost?: number; // Derechos de enganche
+
+    // Optional Max Demand (Maxímetro) for Optimization
+    max_demand_p1?: number;
+    max_demand_p2?: number;
+    max_demand_p3?: number;
+    max_demand_p4?: number;
+    max_demand_p5?: number;
+    max_demand_p6?: number;
+
+    // Optional Current Prices (if user wants to override default estimation)
+    current_power_price_p1?: number;
+    current_power_price_p2?: number;
+    current_power_price_p3?: number;
+    current_power_price_p4?: number;
+    current_power_price_p5?: number;
+    current_power_price_p6?: number;
+
+    current_energy_price_p1?: number;
+    current_energy_price_p2?: number;
+    current_energy_price_p3?: number;
+    current_energy_price_p4?: number;
+    current_energy_price_p5?: number;
+    current_energy_price_p6?: number;
+}
+
+export interface TariffPrice {
+    p1: number;
+    p2: number;
+    p3: number;
+    p4: number;
+    p5: number;
+    p6: number;
+}
+
+export interface Offer {
+    id: string;
+    marketer_name: string;
+    tariff_name: string;
+    logo_color: string; // Hex code or Tailwind class precursor
+    type?: 'fixed' | 'indexed';
+    power_price: TariffPrice;
+    energy_price: TariffPrice;
+    fixed_fee?: number; // Monthly fixed fee if any
+    contract_duration: string;
+}
+
+export interface SavingsResult {
+    offer: Offer;
+    current_annual_cost: number;
+    offer_annual_cost: number;
+    annual_savings: number;
+    savings_percent: number;
+    optimization_result?: {
+        optimized_powers: Record<string, number>;
+        original_annual_fixed_cost: number;
+        optimized_annual_fixed_cost: number;
+        annual_optimization_savings: number;
+    };
+}
+
+export type ProposalStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
+
+export interface Proposal {
+    id: string;
+    client_id: string;
+    franchise_id?: string;
+    created_at: string;
+    status: ProposalStatus;
+    offer_snapshot: Offer; // Full copy of offer at time of generation
+    calculation_data: InvoiceData;
+    current_annual_cost: number;
+    offer_annual_cost: number;
+    annual_savings: number;
+    savings_percent: number;
+    notes?: string;
+    optimization_result?: {
+        optimized_powers: Record<string, number>;
+        original_annual_fixed_cost: number;
+        optimized_annual_fixed_cost: number;
+        annual_optimization_savings: number;
+    };
+    clients?: {
+        name: string;
+    };
+}
+
+
+// Network & Franchise Types
+
+export type UserRole = 'admin' | 'franchise' | 'agent';
+
+export interface NetworkUser {
+    id: string;
+    email: string;
+    full_name: string;
+    role: UserRole;
+    parent_id?: string | null;
+    avatar_url?: string;
+    // Computed/Joined fields
+    children?: NetworkUser[];
+    stats?: {
+        active_clients: number;
+        total_sales: number;
+        commission_earned: number;
+    };
+    franchise_config?: {
+        company_name?: string;
+        royalty_percent?: number;
+    } | null;
+}
+
+// Sprint 3: Commissions & Gamification
+export interface Commission {
+    id: string;
+    proposal_id: string;
+    agent_id: string;
+    franchise_id: string;
+    total_revenue: number;
+    agent_commission: number;
+    franchise_profit: number;
+    hq_royalty: number;
+    status: 'pending' | 'cleared' | 'paid';
+    created_at: string;
+
+    // Joined fields from crmService
+    proposals?: {
+        client_id: string;
+        clients?: {
+            name: string;
+        };
+    };
+}
+
+export interface UserPoints {
+    id: string;
+    user_id: string;
+    points: number;
+    badges: string[]; // JSONB stored as array of strings
+    last_updated: string;
+
+    // Joined fields
+    profiles?: {
+        full_name: string;
+        role: UserRole;
+        avatar_url?: string;
+    };
+}

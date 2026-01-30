@@ -1,0 +1,23 @@
+
+    // --- Detected Classification Fields (Forensic Analysis) ---
+    detected_client_type?: DetectedClientType;
+    detected_tariff_type?: DetectedTariffType;
+    forensic_details?: {
+        energy_reactive?: number;
+        reactive_penalty?: boolean;
+        tariff_access?: string;
+        power_rental_cost?: number;
+        price_match_boe?: boolean;
+        pass_through_components?: string[];
+        has_financial_adjustments?: boolean;
+        has_losses_coefficient?: boolean;
+        contract_end_date?: string;
+        has_clausula_exit_penalty?: boolean;
+    };
+    forensic_mismatch?: string; // For forensic validation errors
+
+    // Financials
+    subtotal?: number;
+    vat?: number;
+    total_amount?: number;
+    rights_cost?: number; // Derechos de enganche

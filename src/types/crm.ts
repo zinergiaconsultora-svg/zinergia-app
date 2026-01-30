@@ -1,5 +1,7 @@
 export type ClientType = 'residential' | 'company' | 'public_admin' | 'particular';
 export type ClientStatus = 'new' | 'contacted' | 'in_process' | 'won' | 'lost';
+export type DetectedClientType = 'particular' | 'empresa';
+export type DetectedTariffType = 'fija' | 'indexada';
 
 export interface Client {
     id: string;
@@ -30,19 +32,56 @@ export interface Client {
 // Comparator Types
 export interface InvoiceData {
     period_days: number;
+
+    // Core Power
     power_p1: number;
     power_p2: number;
     power_p3: number;
     power_p4: number;
     power_p5: number;
     power_p6: number;
+
+    // Core Energy
     energy_p1: number;
     energy_p2: number;
     energy_p3: number;
     energy_p4: number;
     energy_p5: number;
-
     energy_p6: number;
+
+    // --- Extended Webhook Data ---
+    client_name?: string;
+    dni_cif?: string;
+    cups?: string;
+    supply_address?: string;
+    company_name?: string;
+    tariff_name?: string;
+    invoice_number?: string;
+    invoice_date?: string;
+
+    // --- Detected Classification Fields (Forensic Analysis) ---
+    detected_client_type?: DetectedClientType;
+    detected_tariff_type?: DetectedTariffType;
+    forensic_details?: {
+        energy_reactive?: number;
+        reactive_penalty?: boolean;
+        tariff_access?: string;
+        power_rental_cost?: number;
+        price_match_boe?: boolean;
+        pass_through_components?: string[];
+        has_financial_adjustments?: boolean;
+        has_losses_coefficient?: boolean;
+        contract_end_date?: string;
+        has_clausule_exit_penalty?: boolean;
+    };
+    forensic_mismatch?: string; // For forensic validation errors
+
+    // Financials
+    subtotal?: number;
+    vat?: number;
+    total_amount?: number;
+    rights_cost?: number; // Derechos de enganche
+
     // Optional Max Demand (Maxímetro) for Optimization
     max_demand_p1?: number;
     max_demand_p2?: number;
@@ -65,6 +104,8 @@ export interface InvoiceData {
     current_energy_price_p4?: number;
     current_energy_price_p5?: number;
     current_energy_price_p6?: number;
+
+    detected_power_type?: string;
 }
 
 export interface TariffPrice {
@@ -107,20 +148,24 @@ export type ProposalStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expir
 export interface Proposal {
     id: string;
     client_id: string;
-    franchise_id: string;
+    franchise_id?: string;
     created_at: string;
     status: ProposalStatus;
-    offer_snapshot: Offer; // Full copy of the offer at the time of generation
+    offer_snapshot: Offer; // Full copy of offer at time of generation
     calculation_data: InvoiceData;
     current_annual_cost: number;
     offer_annual_cost: number;
     annual_savings: number;
     savings_percent: number;
+    notes?: string;
     optimization_result?: {
         optimized_powers: Record<string, number>;
         original_annual_fixed_cost: number;
         optimized_annual_fixed_cost: number;
         annual_optimization_savings: number;
+    };
+    clients?: {
+        name: string;
     };
 }
 

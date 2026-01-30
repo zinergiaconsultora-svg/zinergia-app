@@ -15,7 +15,8 @@ import {
     Wallet,
     Bell,
     GraduationCap,
-    ArrowUpRight
+    ArrowUpRight,
+    PieChart
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatCurrency } from '@/lib/utils/format';
@@ -263,6 +264,7 @@ export default function DashboardView() {
                     <DockItem icon={<Home size={18} />} label="Inicio" active />
                     <DockItem icon={<Users size={18} />} label="Clientes" onClick={() => router.push('/dashboard/clients')} />
                     <DockItem icon={<Plus size={20} />} label="Crear" highlight onClick={() => router.push('/dashboard/comparator')} />
+                    <DockItem icon={<PieChart size={18} />} label="Propuestas" onClick={() => router.push('/dashboard/proposals')} />
                     <DockItem icon={<Wallet size={18} />} label="Cartera" onClick={() => router.push('/dashboard/wallet')} />
                     <DockItem icon={<Layers size={18} />} label="Red" onClick={() => router.push('/dashboard/network')} />
                 </div>
@@ -308,7 +310,12 @@ function GlassKpiCard({ label, value, icon: Icon, subValue, progress, delay = 0 
                 </div>
                 {progress !== undefined && (
                     <div className="w-full h-1 bg-slate-100 rounded-full mt-1.5 overflow-hidden">
-                        <div className="h-full bg-indigo-500/80 rounded-full" style={{ width: `${progress}%` }}></div>
+                        <div
+                            className="h-full bg-indigo-500/80 rounded-full transition-all duration-500"
+                            style={{
+                                width: `${progress}%`
+                            } as React.CSSProperties}
+                        ></div>
                     </div>
                 )}
             </div>
