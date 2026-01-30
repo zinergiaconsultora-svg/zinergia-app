@@ -192,7 +192,7 @@ export const ComparatorView = () => {
                                         <Check size={16} /> Datos Validados
                                     </div>
                                 </div>
-                            </div>
+                             </div>
 
                             {/* Data Grid */}
                             <div className="p-6 md:p-8 grid md:grid-cols-2 gap-12">
@@ -215,18 +215,22 @@ export const ComparatorView = () => {
                                         <ConsumptionChart data={invoiceData} />
                                     </div>
                                     <div className="grid grid-cols-3 gap-3">
-                                        {[1, 2, 3, 4, 5, 6].map(p => (
-                                            <div key={`e${p}`} className="bg-slate-50/50 rounded-xl p-3 border border-slate-100/50 focus-within:bg-white focus-within:border-energy-200 transition-colors">
-                                                <label className="block text-[10px] font-bold text-slate-400 mb-1">P{p}</label>
-                                                <input
-                                                    type="number"
-                                                    value={invoiceData[`energy_p${p}` as keyof InvoiceData]}
-                                                    onChange={(e) => setInvoiceData({ ...invoiceData, [`energy_p${p}`]: parseFloat(e.target.value) || 0 })}
-                                                    className="w-full bg-transparent font-bold text-slate-700 border-none p-0 text-sm focus:ring-0"
-                                                    aria-label={`Consumo P${p}`}
-                                                />
-                                            </div>
-                                        ))}
+                                        {[1, 2, 3, 4, 5, 6].map(p => {
+                                            const fieldName = `energy_p${p}` as keyof InvoiceData;
+                                            const value = typeof invoiceData[fieldName] === 'number' ? invoiceData[fieldName] : 0;
+                                            return (
+                                                <div key={`e${p}`} className="bg-slate-50/50 rounded-xl p-3 border border-slate-100/50 focus-within:bg-white focus-within:border-energy-200 transition-colors">
+                                                    <label className="block text-[10px] font-bold text-slate-400 mb-1">P{p}</label>
+                                                    <input
+                                                        type="number"
+                                                        value={value}
+                                                        onChange={(e) => setInvoiceData({ ...invoiceData, [fieldName]: parseFloat(e.target.value) || 0 })}
+                                                        className="w-full bg-transparent font-bold text-slate-700 border-none p-0 text-sm focus:ring-0"
+                                                        aria-label={`Consumo P${p}`}
+                                                    />
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                              </div>
@@ -265,11 +269,11 @@ export const ComparatorView = () => {
                                              <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" aria-hidden="true" />
                                          </div>
                                      )}
-                                 </motion.button>
-                             </motion.div>
-                        </div>
-                    </motion.div>
-                )}
+                                  </motion.button>
+                              </motion.div>
+                         </motion.div>
+                     </motion.div>
+                 )}
 
                 {/* STEP 4: PROPOSAL (The "Wow" Result) */}
                 {step === 4 && results.length > 0 && (
