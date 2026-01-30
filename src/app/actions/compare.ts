@@ -1,28 +1,25 @@
 'use server';
 
 import { InvoiceData } from '@/types/crm';
-
-const COMPARE_WEBHOOK_URL = process.env.COMPARISON_WEBHOOK_URL || process.env.COMPARE_WEBHOOK_URL;
-const WEBHOOK_API_KEY = process.env.WEBHOOK_API_KEY;
+import { env } from '@/lib/env';
 
 export async function calculateSavingsAction(invoice: InvoiceData) {
+    const COMPARISON_WEBHOOK_URL = env.COMPARISON_WEBHOOK_URL;
+    const WEBHOOK_API_KEY = env.WEBHOOK_API_KEY;
+
     // Diagnostic Logging for Vercel
     console.log('[Compare Action] Starting savings calculation');
     console.log('[Compare Action] Environment Configuration:', {
-        COMPARE_WEBHOOK_URL: COMPARE_WEBHOOK_URL ? 'Defined' : 'MISSING',
-        WEBHOOK_API_KEY: WEBHOOK_API_KEY ? 'Defined' : 'MISSING',
+        COMPARISON_WEBHOOK_URL: 'Defined',
+        WEBHOOK_API_KEY: 'Defined',
     });
 
-    if (!COMPARE_WEBHOOK_URL) {
-        throw new Error('SERVER ERROR: COMPARE_WEBHOOK_URL is not configured');
-    }
-
     try {
-        const response = await fetch(COMPARE_WEBHOOK_URL, {
+        const response = await fetch(COMPARISON_WEBHOOK_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                ...(WEBHOOK_API_KEY ? { 'x-api-key': WEBHOOK_API_KEY } : {}),
+                'x-api-key': WEBHOOK_API_KEY,
             },
             body: JSON.stringify(invoice),
         });

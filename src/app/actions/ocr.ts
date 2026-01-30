@@ -1,26 +1,21 @@
 'use server';
 
 import { InvoiceData } from '@/types/crm';
+import { env } from '@/lib/env';
 
 export async function analyzeDocumentAction(formData: FormData): Promise<InvoiceData> {
-    // Read environment variables INSIDE the function (not at module level)
-    const OCR_WEBHOOK_URL = process.env.OCR_WEBHOOK_URL;
-    const WEBHOOK_API_KEY = process.env.WEBHOOK_API_KEY;
+    const OCR_WEBHOOK_URL = env.OCR_WEBHOOK_URL;
+    const WEBHOOK_API_KEY = env.WEBHOOK_API_KEY;
 
     console.log('[OCR Action] Starting document analysis');
 
     // Diagnostic Logging for Vercel
     const envCheck = {
-        OCR_WEBHOOK_URL: process.env.OCR_WEBHOOK_URL ? 'Defined (Length: ' + process.env.OCR_WEBHOOK_URL.length + ')' : 'MISSING',
-        WEBHOOK_API_KEY: process.env.WEBHOOK_API_KEY ? 'Defined' : 'MISSING',
-        NODE_ENV: process.env.NODE_ENV,
+        OCR_WEBHOOK_URL: 'Defined (Length: ' + OCR_WEBHOOK_URL.length + ')',
+        WEBHOOK_API_KEY: 'Defined',
+        NODE_ENV: env.NODE_ENV,
     };
     console.log('[OCR Action] Environment Configuration:', JSON.stringify(envCheck, null, 2));
-
-    if (!OCR_WEBHOOK_URL) {
-        console.error('[OCR Action] OCR_WEBHOOK_URL not configured');
-        throw new Error('SERVER ERROR: OCR_WEBHOOK_URL is not configured');
-    }
 
     try {
         const file = formData.get('file') as File;
@@ -33,7 +28,7 @@ export async function analyzeDocumentAction(formData: FormData): Promise<Invoice
         const response = await fetch(OCR_WEBHOOK_URL, {
             method: 'POST',
             headers: {
-                ...(WEBHOOK_API_KEY ? { 'x-api-key': WEBHOOK_API_KEY } : {}),
+                'x-api-key': WEBHOOK_API_KEY,
             },
             body: formData,
         });
@@ -97,7 +92,7 @@ export async function analyzeDocumentAction(formData: FormData): Promise<Invoice
         console.error('Server Action OCR Error:', error);
 
         // Mock data fallback for development
-        if (process.env.NODE_ENV === 'development') {
+        if (env.NODE_ENV === 'development') {
             console.warn('⚠️ OCR Webhook failed. Using MOCK data for development.');
             return {
                 client_name: 'Empresa Mock S.L.',
