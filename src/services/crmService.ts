@@ -532,15 +532,51 @@ export const crmService = {
             if (data && data.offers && Array.isArray(data.offers)) {
                 const currentCost = data.current_annual_cost || data.current_annual_cost_calculated || 0;
 
-                return data.offers.map((offer: any) => ({
+                interface PricePoint {
+                    p1?: number;
+                    p2?: number;
+                    p3?: number;
+                    p4?: number;
+                    p5?: number;
+                    p6?: number;
+                }
+
+                interface WebhookOffer {
+                    id?: string;
+                    offer_id?: string;
+                    marketer_name?: string;
+                    comercializadora?: string;
+                    company_name?: string;
+                    tariff_name?: string;
+                    nombre_tarifa?: string;
+                    tarifa?: string;
+                    logo_color?: string;
+                    color_logo?: string;
+                    type?: 'fixed' | 'indexed';
+                    tipo?: 'fixed' | 'indexed';
+                    power_price?: PricePoint;
+                    precio_potencia?: PricePoint;
+                    energy_price?: PricePoint;
+                    precio_energia?: PricePoint;
+                    fixed_fee?: number;
+                    cuota_fija?: number;
+                    contract_duration?: string;
+                    duracion_contrato?: string;
+                    annual_cost?: number;
+                    costo_anual?: number;
+                    optimization_result?: unknown;
+                    resultado_optimizacion?: unknown;
+                }
+
+                return data.offers.map((offer: WebhookOffer) => ({
                     offer: {
                         id: offer.id || offer.offer_id || Math.random().toString(36).substr(2, 9),
                         marketer_name: offer.marketer_name || offer.comercializadora || offer.company_name || 'Comercializadora',
                         tariff_name: offer.tariff_name || offer.nombre_tarifa || offer.tarifa || 'Tarifa',
                         logo_color: offer.logo_color || offer.color_logo || 'bg-blue-600',
                         type: offer.type || offer.tipo || 'fixed',
-                        power_price: offer.power_price || offer.precio_potencia || { p1: 0, p2: 0, p3: 0, p4: 0, p5: 0, p6: 0 },
-                        energy_price: offer.energy_price || offer.precio_energia || { p1: 0, p2: 0, p3: 0, p4: 0, p5: 0, p6: 0 },
+                        power_price: (offer.power_price || offer.precio_potencia || { p1: 0, p2: 0, p3: 0, p4: 0, p5: 0, p6: 0 }) as TariffPrice,
+                        energy_price: (offer.energy_price || offer.precio_energia || { p1: 0, p2: 0, p3: 0, p4: 0, p5: 0, p6: 0 }) as TariffPrice,
                         fixed_fee: offer.fixed_fee || offer.cuota_fija || 0,
                         contract_duration: offer.contract_duration || offer.duracion_contrato || '12 meses',
                     },
@@ -548,7 +584,7 @@ export const crmService = {
                     offer_annual_cost: offer.annual_cost || offer.costo_anual || 0,
                     annual_savings: Math.max(0, currentCost - (offer.annual_cost || offer.costo_anual || 0)),
                     savings_percent: currentCost > 0 ? ((currentCost - (offer.annual_cost || offer.costo_anual || 0)) / currentCost) * 100 : 0,
-                    optimization_result: offer.optimization_result || offer.resultado_optimizacion,
+                    optimization_result: (offer.optimization_result || offer.resultado_optimizacion) as SavingsResult['optimization_result'],
                 }));
             }
             return [];

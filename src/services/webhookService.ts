@@ -1,4 +1,4 @@
-import { InvoiceData, SavingsResult } from '@/types/crm';
+import { InvoiceData, SavingsResult, TariffPrice } from '@/types/crm';
 
 // Note: Webhook operations are now handled via secure Server Actions
 // to protect API keys from exposure in the browser.
@@ -30,7 +30,21 @@ export async function calculateSavings(invoice: InvoiceData): Promise<SavingsRes
         const data = await calculateSavingsAction(invoice);
         const currentCost = data.current_annual_cost || 0;
 
-        return data.offers.map((offer: any) => ({
+        interface WebhookOffer {
+            id: string;
+            marketer_name: string;
+            tariff_name: string;
+            logo_color?: string;
+            type?: 'fixed' | 'indexed';
+            power_price: TariffPrice;
+            energy_price: TariffPrice;
+            fixed_fee?: number;
+            contract_duration: string;
+            annual_cost?: number;
+            optimization_result?: unknown;
+        }
+
+        return (data.offers as WebhookOffer[]).map((offer) => ({
             offer: {
                 id: offer.id,
                 marketer_name: offer.marketer_name,
@@ -46,7 +60,7 @@ export async function calculateSavings(invoice: InvoiceData): Promise<SavingsRes
             offer_annual_cost: offer.annual_cost || 0,
             annual_savings: Math.max(0, currentCost - (offer.annual_cost || 0)),
             savings_percent: currentCost > 0 ? ((currentCost - (offer.annual_cost || 0)) / currentCost) * 100 : 0,
-            optimization_result: offer.optimization_result,
+            optimization_result: offer.optimization_result as SavingsResult['optimization_result'],
         }));
     } catch (error) {
         console.error('Tariff comparison error:', error);
