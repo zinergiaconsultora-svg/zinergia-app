@@ -217,8 +217,8 @@ export async function exportResultsToPDF(
     const doc = new jsPDF();
 
     // Colors
-    const primaryColor = [37, 99, 235]; // Blue
-    const successColor = [16, 163, 127]; // Green
+    const primaryColor = [37, 99, 235] as const; // Blue
+    const successColor = [16, 163, 127] as const; // Green
 
     // Header
     doc.setFillColor(...primaryColor);
@@ -355,7 +355,7 @@ export async function exportResultsToExcel(
         ['P5', results[0]?.offer.power_price.p5 || 0, results[0]?.offer.energy_price.p5 || 0],
         ['P6', results[0]?.offer.power_price.p6 || 0, results[0]?.offer.energy_price.p6 || 0],
         ['',
-        'Cuota Fija', `€${results[0]?.offer.fixed_fee.toFixed(2) || 0}/mes`,
+        'Cuota Fija', `€${(results[0]?.offer.fixed_fee || 0).toFixed(2)}/mes`,
         'Duración', results[0]?.offer.contract_duration || 'N/A'],
     ];
 
