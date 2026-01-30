@@ -201,6 +201,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                             <span className="text-xs font-black text-emerald-600 bg-emerald-100 px-2 py-1 rounded w-8 text-center">P{p}</span>
                                             <input
                                                 type="number"
+                                                aria-label={`Energía P${p}`}
                                                 value={data[field] as number}
                                                 onChange={(e) => onUpdate(field, parseFloat(e.target.value) || 0)}
                                                 className="flex-1 bg-transparent border-b border-emerald-200 focus:border-emerald-500 focus:outline-none text-right font-bold text-slate-800 text-sm py-1"
@@ -232,6 +233,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                             <span className="text-xs font-black text-amber-600 bg-amber-100 px-2 py-1 rounded w-8 text-center">P{p}</span>
                                             <input
                                                 type="number"
+                                                aria-label={`Potencia P${p}`}
                                                 value={data[field] as number}
                                                 onChange={(e) => onUpdate(field, parseFloat(e.target.value) || 0)}
                                                 className="flex-1 bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none text-right font-bold text-slate-800 text-sm py-1"
