@@ -5,6 +5,7 @@ import { Upload, CheckCircle2, XCircle, RefreshCw, ArrowRight, ChevronLeft, Zap 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSimulator } from '../hooks/useSimulator';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
+import { DemoModeAlert } from '@/components/ui/DemoModeAlert';
 import { InvoiceData } from '@/types/crm';
 import { DigitalProposalCard } from '@/features/comparator/components/DigitalProposalCard';
 
@@ -13,6 +14,7 @@ export const SimulatorView = () => {
         step,
         setStep,
         isAnalyzing,
+        isMockMode,
         invoiceData,
         setInvoiceData,
         uploadError,
@@ -432,6 +434,9 @@ export const SimulatorView = () => {
                             exit={{ opacity: 0, y: -20 }}
                             transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
                         >
+                            {/* Demo Mode Alert */}
+                            <DemoModeAlert show={isMockMode} />
+
                             {/* Header mejorado */}
                             <motion.div 
                                 initial={{ opacity: 0, y: 20 }}

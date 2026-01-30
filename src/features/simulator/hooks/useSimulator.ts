@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { InvoiceData, SavingsResult } from '@/types/crm';
-import { crmService } from '@/services/crmService';
+import { analyzeDocument, calculateSavings, validateFile } from '@/services/webhookService';
 
 type Step = 1 | 2 | 3;
 
 export function useSimulator() {
     const [step, setStep] = useState<Step>(1);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [isMockMode, setIsMockMode] = useState(false);
     const [invoiceData, setInvoiceData] = useState<InvoiceData>({
         period_days: 30,
         power_p1: 0, power_p2: 0, power_p3: 0, power_p4: 0, power_p5: 0, power_p6: 0,
@@ -19,9 +20,16 @@ export function useSimulator() {
     const processInvoice = async (file: File) => {
         setIsAnalyzing(true);
         setUploadError(null);
+        setIsMockMode(false);
 
         try {
-            const data = await crmService.analyzeDocument(file);
+            // Validate file first
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                throw new Error(validation.error);
+            }
+
+            const data = await analyzeDocument(file);
 
             if (!data) {
                 throw new Error('No se pudieron extraer datos de la factura');
@@ -67,10 +75,12 @@ export function useSimulator() {
         });
         setUploadError(null);
         setResults([]);
+        setIsMockMode(false);
     };
 
     const runComparison = async () => {
         setIsAnalyzing(true);
+        setIsMockMode(false);
         const messages = [
             'Analizando patrones de consumo...',
             'Consultando las 3 mejores tarifas disponibles...',
@@ -89,8 +99,16 @@ export function useSimulator() {
         }, 800);
 
         try {
-            const calculatedSavings = await crmService.calculateSavings(invoiceData);
+            const calculatedSavings = await calculateSavings(invoiceData);
             clearInterval(interval);
+
+            // Check if we're in mock mode
+            if (process.env.NODE_ENV === 'development' && calculatedSavings.length > 0) {
+                const firstOffer = calculatedSavings[0];
+                if (firstOffer.offer.id.startsWith('mock-')) {
+                    setIsMockMode(true);
+                }
+            }
 
             const topResults = calculatedSavings.slice(0, 3);
             setResults(topResults);
@@ -115,12 +133,14 @@ export function useSimulator() {
     const goBackToStep1 = () => {
         setStep(1);
         setUploadError(null);
+        setIsMockMode(false);
     };
 
     return {
         step,
         setStep,
         isAnalyzing,
+        isMockMode,
         invoiceData,
         setInvoiceData,
         uploadError,
