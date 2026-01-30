@@ -8,11 +8,14 @@ export async function analyzeDocumentAction(formData: FormData): Promise<Invoice
     const WEBHOOK_API_KEY = process.env.WEBHOOK_API_KEY;
 
     console.log('[OCR Action] Starting document analysis');
-    console.log('[OCR Action] Environment check:', {
-        hasOCR_URL: !!process.env.OCR_WEBHOOK_URL,
-        hasAPIKey: !!process.env.WEBHOOK_API_KEY,
-        nodeEnv: process.env.NODE_ENV
-    });
+
+    // Diagnostic Logging for Vercel
+    const envCheck = {
+        OCR_WEBHOOK_URL: process.env.OCR_WEBHOOK_URL ? 'Defined (Length: ' + process.env.OCR_WEBHOOK_URL.length + ')' : 'MISSING',
+        WEBHOOK_API_KEY: process.env.WEBHOOK_API_KEY ? 'Defined' : 'MISSING',
+        NODE_ENV: process.env.NODE_ENV,
+    };
+    console.log('[OCR Action] Environment Configuration:', JSON.stringify(envCheck, null, 2));
 
     if (!OCR_WEBHOOK_URL) {
         console.error('[OCR Action] OCR_WEBHOOK_URL not configured');
@@ -92,6 +95,29 @@ export async function analyzeDocumentAction(formData: FormData): Promise<Invoice
 
     } catch (error) {
         console.error('Server Action OCR Error:', error);
+
+        // Mock data fallback for development
+        if (process.env.NODE_ENV === 'development') {
+            console.warn('⚠️ OCR Webhook failed. Using MOCK data for development.');
+            return {
+                client_name: 'Empresa Mock S.L.',
+                dni_cif: 'B12345678',
+                company_name: 'Comercializadora Mock',
+                cups: 'ES0021000000000000XX',
+                tariff_name: '2.0TD',
+                invoice_number: 'FACT-2024-001',
+                invoice_date: new Date().toISOString().split('T')[0],
+                period_days: 30,
+                supply_address: 'Calle Falsa 123, Madrid',
+                subtotal: 100.00,
+                vat: 21.00,
+                total_amount: 121.00,
+                rights_cost: 0,
+                power_p1: 4.6, power_p2: 4.6, power_p3: 0, power_p4: 0, power_p5: 0, power_p6: 0,
+                energy_p1: 150, energy_p2: 100, energy_p3: 0, energy_p4: 0, energy_p5: 0, energy_p6: 0,
+            } as InvoiceData;
+        }
+
         throw error;
     }
 }
