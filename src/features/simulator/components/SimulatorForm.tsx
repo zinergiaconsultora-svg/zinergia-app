@@ -1,9 +1,24 @@
 'use client';
 
 import React from 'react';
-import { Zap, ChevronLeft, ArrowRight } from 'lucide-react';
+import {
+    Zap,
+    ChevronLeft,
+    ArrowRight,
+    User,
+    Building2,
+    Hash,
+    Calendar,
+    MapPin,
+    Activity,
+    Info,
+    AlertCircle,
+    CheckCircle2
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import { InvoiceData } from '@/types/crm';
+import { Card } from '@/components/ui/primitives/Card';
+import { Input } from '@/components/ui/primitives/Input';
 
 interface SimulatorFormProps {
     data: InvoiceData;
@@ -24,264 +39,245 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     loadingMessage,
     powerType
 }) => {
+    // Basic validation for visual feedback
+    const isCupsValid = data.cups?.length === 20 || data.cups?.length === 22;
+    const hasEnergyValues = [1, 2, 3, 4, 5, 6].some(p => (data[`energy_p${p}` as keyof InvoiceData] as number) > 0);
+    const hasPowerValues = [1, 2, 3, 4, 5, 6].some(p => (data[`power_p${p}` as keyof InvoiceData] as number) > 0);
+
     return (
         <motion.div
-            key="s2"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="max-w-4xl mx-auto"
+            key="simulator-form"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -30 }}
+            className="max-w-5xl mx-auto pb-12"
         >
-            {/* Header con botón volver */}
-            <div className="flex items-center justify-between mb-6">
-                <button
+            {/* Header & Navigation */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                <motion.button
+                    whileHover={{ x: -4 }}
                     onClick={onBack}
-                    className="flex items-center gap-2 text-slate-500 hover:text-slate-700 font-medium text-sm transition-colors"
+                    className="flex items-center gap-2 text-slate-500 hover:text-emerald-600 font-bold text-sm transition-all group"
                 >
-                    <ChevronLeft size={16} />
-                    Subir otra factura
-                </button>
-                <div className="text-right">
-                    <h2 className="text-xl font-bold text-slate-900">Datos de la Factura</h2>
-                    <p className="text-xs text-slate-500">
-                        Tipo de Potencia: <span className="font-semibold text-indigo-600">{powerType}</span>
-                    </p>
-                </div>
-            </div>
+                    <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                    SUBIR OTRA FACTURA
+                </motion.button>
 
-            {/* Resumen de detección */}
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-6 border border-indigo-100 mb-6">
-                <div className="flex items-center justify-center gap-4">
-                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
-                        <Zap className="w-6 h-6 text-indigo-600" />
-                    </div>
-                    <div className="text-center">
-                        <p className="text-sm font-bold text-indigo-900 mb-1">TIPO DE POTENCIA DETECTADA</p>
-                        <p className="text-3xl font-bold text-slate-900">
-                            {powerType === '2.0' && '⚡ 2.0TD'}
-                            {powerType === '3.0' && '⚡⚡ 3.0TD'}
-                            {powerType === '3.1' && '⚡⚡⚡ 3.1TD'}
+                <div className="flex items-center gap-4 bg-white/40 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/60 shadow-sm">
+                    <div className="text-right">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estado Auditoría</p>
+                        <p className="text-sm font-bold text-slate-900 flex items-center gap-2 justify-end">
+                            {data.detected_power_type ? 'Validado por IA' : 'Revisión Manual'}
+                            <CheckCircle2 size={14} className="text-emerald-500" />
                         </p>
                     </div>
                 </div>
             </div>
 
-            {/* Datos administrativos - Glass Premium */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1, duration: 0.5 }}
-                className="glass-premium rounded-2xl border border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 p-6 mb-4"
-            >
-                <h3 className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-4 flex items-center gap-2 font-display">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> Datos Administrativos
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label htmlFor="client-name" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Titular</label>
-                        <input
-                            id="client-name"
-                            name="client-name"
-                            type="text"
-                            value={data.client_name || ''}
-                            onChange={(e) => onUpdate('client_name', e.target.value)}
-                            className="w-full bg-slate-50/50 border border-slate-100/50 rounded-lg text-xs font-semibold text-slate-700 px-3 py-2 focus:ring-2 focus:ring-indigo-400 focus-visible:ring-2 focus-visible:ring-indigo-400 transition-all"
-                            autoComplete="name"
-                            spellCheck={false}
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="company-name" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Comercializadora</label>
-                        <input
-                            id="company-name"
-                            name="company-name"
-                            type="text"
-                            value={data.company_name || ''}
-                            onChange={(e) => onUpdate('company_name', e.target.value)}
-                            className="w-full bg-slate-50/50 border border-slate-100/50 rounded-lg text-xs font-semibold text-slate-700 px-3 py-2 focus:ring-2 focus:ring-indigo-400 focus-visible:ring-2 focus-visible:ring-indigo-400 transition-all"
-                            autoComplete="organization"
-                            spellCheck={false}
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="tariff-name" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Tarifa</label>
-                        <input
-                            id="tariff-name"
-                            name="tariff-name"
-                            type="text"
-                            value={data.tariff_name || ''}
-                            onChange={(e) => onUpdate('tariff_name', e.target.value)}
-                            className="w-full bg-slate-50/50 border border-slate-100/50 rounded-lg text-xs font-semibold text-slate-700 px-3 py-2 focus:ring-2 focus:ring-indigo-400 focus-visible:ring-2 focus-visible:ring-indigo-400 transition-all"
-                            autoComplete="off"
-                            spellCheck={false}
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="cups" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">CUPS</label>
-                        <input
-                            id="cups"
-                            name="cups"
-                            type="text"
-                            value={data.cups || ''}
-                            onChange={(e) => onUpdate('cups', e.target.value)}
-                            className="w-full bg-slate-50/50 border border-slate-100/50 rounded-lg text-xs font-semibold text-slate-700 px-3 py-2 font-mono focus:ring-2 focus:ring-indigo-400 focus-visible:ring-2 focus-visible:ring-indigo-400 transition-all"
-                            autoComplete="off"
-                            spellCheck={false}
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="invoice-number" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nº Factura</label>
-                        <input
-                            id="invoice-number"
-                            name="invoice-number"
-                            type="text"
-                            value={data.invoice_number || ''}
-                            onChange={(e) => onUpdate('invoice_number', e.target.value)}
-                            className="w-full bg-slate-50/50 border border-slate-100/50 rounded-lg text-xs font-semibold text-slate-700 px-3 py-2 focus:ring-2 focus:ring-indigo-400 focus-visible:ring-2 focus-visible:ring-indigo-400 transition-all"
-                            autoComplete="off"
-                            spellCheck={false}
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="invoice-date" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Fecha</label>
-                        <input
-                            id="invoice-date"
-                            name="invoice-date"
-                            type="text"
-                            value={data.invoice_date || ''}
-                            onChange={(e) => onUpdate('invoice_date', e.target.value)}
-                            className="w-full bg-slate-50/50 border border-slate-100/50 rounded-lg text-xs font-semibold text-slate-700 px-3 py-2 focus:ring-2 focus:ring-indigo-400 focus-visible:ring-2 focus-visible:ring-indigo-400 transition-all"
-                            autoComplete="off"
-                            spellCheck={false}
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="period-days" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Días</label>
-                        <input
-                            id="period-days"
-                            name="period-days"
-                            type="number"
-                            inputMode="decimal"
-                            min="1"
-                            max="365"
-                            value={data.period_days || 30}
-                            onChange={(e) => onUpdate('period_days', parseInt(e.target.value) || 30)}
-                            className="w-full bg-slate-50/50 border border-slate-100/50 rounded-lg text-xs font-semibold text-slate-700 px-3 py-2 text-center focus:ring-2 focus:ring-indigo-400 focus-visible:ring-2 focus-visible:ring-indigo-400 transition-all"
-                        />
-                    </div>
-                </div>
-            </motion.div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Left Column: Analysis & Groups */}
+                <div className="lg:col-span-8 space-y-8">
 
-            {/* Datos técnicos - Grid mejorado */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2, duration: 0.5 }}
-                    className="glass-premium rounded-2xl border border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 p-6"
-                >
-                    <h3 className="text-xs font-bold text-amber-600 uppercase tracking-widest mb-4 flex items-center gap-2 font-display">
-                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div> Potencias (kW)
-                    </h3>
-                    <div className="grid grid-cols-3 gap-2">
-                        {[1, 2, 3, 4, 5, 6].filter(p => {
-                            if (powerType === '2.0') return p <= 2;
-                            if (powerType === '3.0') return p <= 3;
-                            return true;
-                        }).map(p => {
-                            const field = `power_p${p}` as keyof InvoiceData;
-                            const value = data[field];
-                            return (
-                                <div key={`pow${p}`} className="text-center">
-                                    <label htmlFor={`power-p${p}`} className="block text-[8px] font-bold text-slate-400">P{p}</label>
-                                    <input
-                                        id={`power-p${p}`}
-                                        name={`power-p${p}`}
-                                        type="number"
-                                        inputMode="decimal"
-                                        step="0.01"
-                                        min="0"
-                                        value={typeof value === 'number' ? value : 0}
-                                        onChange={(e) => onUpdate(field, parseFloat(e.target.value) || 0)}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-700 py-1 text-center focus:ring-2 focus:ring-orange-400 focus-visible:ring-2 focus-visible:ring-orange-400 transition-all"
-                                        aria-label={`Potencia período P${p} en kW`}
-                                    />
+                    {/* Detection Summary Card */}
+                    <Card className="relative overflow-hidden border-2 border-emerald-100 bg-white/80">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -translate-y-1/2 translate-x-1/2 rounded-full" />
+
+                        <div className="flex flex-col md:flex-row md:items-center gap-6 relative z-10">
+                            <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                                <Zap className="w-8 h-8 text-white animate-pulse" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">Diagnóstico Inicial</h3>
+                                <div className="flex items-end gap-3">
+                                    <p className="text-4xl font-extrabold text-slate-900 tracking-tight">
+                                        {powerType === '2.0' && 'Tensión Baja 2.0TD'}
+                                        {powerType === '3.0' && 'Empresa 3.0TD'}
+                                        {powerType === '3.1' && 'Alta Tensión 3.1TD'}
+                                    </p>
+                                    <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded uppercase mb-2">Detectado</span>
                                 </div>
-                            );
-                        })}
-                    </div>
-                </motion.div>
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3, duration: 0.5 }}
-                    className="glass-premium rounded-2xl border border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 p-6"
-                >
-                    <h3 className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-4 flex items-center gap-2 font-display">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> Consumo Energía (kWh)
-                    </h3>
-                    <div className="grid grid-cols-3 gap-2">
-                        {[1, 2, 3, 4, 5, 6].filter(p => {
-                            if (powerType === '2.0') return p <= 2;
-                            if (powerType === '3.0') return p <= 3;
-                            return true;
-                        }).map(p => {
-                            const field = `energy_p${p}` as keyof InvoiceData;
-                            const value = data[field];
-                            return (
-                                <div key={`ene${p}`} className="text-center">
-                                    <label htmlFor={`energy-p${p}`} className="block text-[8px] font-bold text-slate-400">P{p}</label>
-                                    <input
-                                        id={`energy-p${p}`}
-                                        name={`energy-p${p}`}
-                                        type="number"
-                                        inputMode="decimal"
-                                        step="0.01"
-                                        min="0"
-                                        value={typeof value === 'number' ? value : 0}
-                                        onChange={(e) => onUpdate(field, parseFloat(e.target.value) || 0)}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-700 py-1 text-center focus:ring-2 focus:ring-indigo-400 focus-visible:ring-2 focus-visible:ring-indigo-400 transition-all"
-                                        aria-label={`Consumo energía período P${p} en kWh`}
-                                    />
-                                </div>
-                            );
-                        })}
-                    </div>
-                </motion.div>
-            </div>
+                                <p className="text-sm text-slate-500 mt-2 flex items-center gap-1.5 font-medium">
+                                    <Info size={14} className="text-emerald-500" />
+                                    Tarifa detectada: <span className="text-slate-900 font-bold">{data.tariff_name}</span>
+                                </p>
+                            </div>
+                        </div>
+                    </Card>
 
-            {/* Botón de acción - Diseño Premium */}
-            <div className="flex justify-end">
-                <motion.button
-                    whileHover={{ scale: 1.02, translateY: -2 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={onCompare}
-                    disabled={isAnalyzing}
-                    aria-busy={isAnalyzing}
-                    className="group relative bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-8 py-4 rounded-2xl font-display font-bold text-lg shadow-lg shadow-emerald-600/30 flex items-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed disabled:shadow-none transition-all overflow-hidden"
-                >
-                    {/* Shine effect */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
-
-                    {isAnalyzing ? (
-                        <div className="flex items-center gap-3 relative z-10">
-                            <motion.div
-                                animate={{ rotate: 360 }}
-                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
-                                aria-hidden="true"
+                    {/* Group 1: Identity & Contract */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3 px-2">
+                            <div className="w-1.5 h-6 bg-emerald-500 rounded-full" />
+                            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Datos del Contrato</h2>
+                        </div>
+                        <Card className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white/60">
+                            <Input
+                                label="Titular / Cliente"
+                                icon={<User size={16} />}
+                                value={data.client_name}
+                                onChange={(e) => onUpdate('client_name', e.target.value)}
+                                placeholder="Nombre completo"
                             />
-                            <span className="sr-only">Procesando comparación</span>
-                            <span className="font-body">{loadingMessage}</span>
+                            <Input
+                                label="CIF / DNI"
+                                icon={<Hash size={16} />}
+                                value={data.dni_cif}
+                                onChange={(e) => onUpdate('dni_cif', e.target.value)}
+                                placeholder="Identificación"
+                            />
+                            <Input
+                                label="Comercializadora Actual"
+                                icon={<Building2 size={16} />}
+                                value={data.company_name}
+                                onChange={(e) => onUpdate('company_name', e.target.value)}
+                                placeholder="Ej: Endesa, Iberdrola..."
+                            />
+                            <Input
+                                label="Nº de Factura"
+                                icon={<Hash size={16} />}
+                                value={data.invoice_number}
+                                onChange={(e) => onUpdate('invoice_number', e.target.value)}
+                            />
+                        </Card>
+                    </div>
+
+                    {/* Group 2: Supply Info */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3 px-2">
+                            <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
+                            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Punto de Suministro</h2>
                         </div>
-                    ) : (
-                        <div className="flex items-center gap-3 relative z-10">
-                            <span>Comparativa de Tarifas</span>
-                            <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+                        <Card className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white/60">
+                            <div className="md:col-span-2">
+                                <Input
+                                    label="CUPS"
+                                    icon={<Activity size={16} />}
+                                    value={data.cups}
+                                    error={!isCupsValid && data.cups ? 'Longitud de CUPS sospechosa' : undefined}
+                                    onChange={(e) => onUpdate('cups', e.target.value.toUpperCase())}
+                                    className="font-mono"
+                                />
+                            </div>
+                            <Input
+                                label="Dirección de Suministro"
+                                icon={<MapPin size={16} />}
+                                value={data.supply_address}
+                                onChange={(e) => onUpdate('supply_address', e.target.value)}
+                            />
+                            <div className="grid grid-cols-2 gap-4">
+                                <Input
+                                    label="Días Factura"
+                                    type="number"
+                                    icon={<Calendar size={16} />}
+                                    value={data.period_days}
+                                    onChange={(e) => onUpdate('period_days', parseInt(e.target.value) || 30)}
+                                />
+                                <Input
+                                    label="Fecha"
+                                    icon={<Calendar size={16} />}
+                                    value={data.invoice_date}
+                                    onChange={(e) => onUpdate('invoice_date', e.target.value)}
+                                />
+                            </div>
+                        </Card>
+                    </div>
+
+                </div>
+
+                {/* Right Column: Values & Metrics */}
+                <div className="lg:col-span-4 space-y-8">
+
+                    {/* Energy Sectors */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3 px-2">
+                            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Consumo (kWh)</h2>
                         </div>
-                    )}
-                </motion.button>
+                        <Card className="bg-emerald-50/30 border border-emerald-100 shadow-sm">
+                            <div className="space-y-3">
+                                {[1, 2, 3, 4, 5, 6].filter(p => (powerType === '2.0' ? p <= 3 : powerType === '3.0' ? p <= 6 : true)).map(p => {
+                                    const field = `energy_p${p}` as keyof InvoiceData;
+                                    return (
+                                        <div key={`energy-${p}`} className="flex items-center justify-between gap-4">
+                                            <span className="text-xs font-black text-emerald-600 bg-emerald-100 px-2 py-1 rounded w-8 text-center">P{p}</span>
+                                            <input
+                                                type="number"
+                                                value={data[field] as number}
+                                                onChange={(e) => onUpdate(field, parseFloat(e.target.value) || 0)}
+                                                className="flex-1 bg-transparent border-b border-emerald-200 focus:border-emerald-500 focus:outline-none text-right font-bold text-slate-800 text-sm py-1"
+                                            />
+                                        </div>
+                                    );
+                                })}
+                                {!hasEnergyValues && (
+                                    <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-orange-600 bg-orange-50 p-2 rounded-lg">
+                                        <AlertCircle size={14} />
+                                        SIN CONSUMO DETECTADO
+                                    </div>
+                                )}
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* Power Sectors */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3 px-2">
+                            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Potencias (kW)</h2>
+                        </div>
+                        <Card className="bg-amber-50/30 border border-amber-100 shadow-sm">
+                            <div className="space-y-3">
+                                {[1, 2, 3, 4, 5, 6].filter(p => (powerType === '2.0' ? p <= 2 : powerType === '3.0' ? p <= 6 : true)).map(p => {
+                                    const field = `power_p${p}` as keyof InvoiceData;
+                                    return (
+                                        <div key={`power-${p}`} className="flex items-center justify-between gap-4">
+                                            <span className="text-xs font-black text-amber-600 bg-amber-100 px-2 py-1 rounded w-8 text-center">P{p}</span>
+                                            <input
+                                                type="number"
+                                                value={data[field] as number}
+                                                onChange={(e) => onUpdate(field, parseFloat(e.target.value) || 0)}
+                                                className="flex-1 bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none text-right font-bold text-slate-800 text-sm py-1"
+                                            />
+                                        </div>
+                                    );
+                                })}
+                                {!hasPowerValues && (
+                                    <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-red-600 bg-red-50 p-2 rounded-lg">
+                                        <AlertCircle size={14} />
+                                        FALTA POTENCIA CONTRATADA
+                                    </div>
+                                )}
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* Final Action */}
+                    <motion.button
+                        whileHover={{ scale: 1.02, translateY: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={onCompare}
+                        disabled={isAnalyzing || !hasEnergyValues || !hasPowerValues}
+                        className="w-full relative bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-6 rounded-[2rem] font-display font-bold text-xl shadow-xl shadow-emerald-500/30 flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale transition-all overflow-hidden group mt-6"
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
+
+                        {isAnalyzing ? (
+                            <div className="flex items-center gap-3">
+                                <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                    className="w-6 h-6 border-3 border-white/20 border-t-white rounded-full"
+                                />
+                                <span>{loadingMessage}</span>
+                            </div>
+                        ) : (
+                            <>
+                                <span>Ejecutar Comparativa</span>
+                                <ArrowRight size={22} className="group-hover:translate-x-1.5 transition-transform" />
+                            </>
+                        )}
+                    </motion.button>
+                </div>
             </div>
         </motion.div>
     );
 };
+

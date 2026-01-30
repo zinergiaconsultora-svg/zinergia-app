@@ -16,8 +16,14 @@ const CreateClientModal = dynamic(() => import('./CreateClientModal'), {
     loading: () => null
 });
 
-export default function ClientsView() {
-    const { clients, loading, refresh } = useClients();
+import { Client } from '@/types/crm';
+
+interface ClientsViewProps {
+    initialData?: Client[];
+}
+
+export default function ClientsView({ initialData }: ClientsViewProps) {
+    const { clients, loading, refresh } = useClients(initialData);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const router = useRouter();

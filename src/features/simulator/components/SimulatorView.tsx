@@ -34,11 +34,21 @@ export const SimulatorView = () => {
     };
 
     const getPowerType = (data: InvoiceData): string => {
+        // 1. Prioritize explicit detection from OCR
+        if (data.detected_power_type) return data.detected_power_type;
+
+        // 2. Intelligent fallback based on Tariff Name (Common in Spain)
+        const tariff = (data.tariff_name || '').toUpperCase();
+        if (tariff.includes('3.1') || tariff.includes('6.1') || tariff.includes('6.2')) return '3.1';
+        if (tariff.includes('3.0')) return '3.0';
+        if (tariff.includes('2.0') || tariff.includes('2.1')) return '2.0';
+
+        // 3. Last resort: Infer from presence of values
         const hasP4P5P6 = data.power_p4 > 0 || data.power_p5 > 0 || data.power_p6 > 0;
-        const hasP1P2P3 = data.power_p1 > 0 || data.power_p2 > 0 || data.power_p3 > 0;
+        const hasP3 = data.power_p3 > 0;
 
         if (hasP4P5P6) return '3.1';
-        if (hasP1P2P3) return '3.0';
+        if (hasP3) return '3.0'; // 3.0TD has 6 periods but 3 are most common in low tension
         return '2.0';
     };
 

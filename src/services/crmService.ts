@@ -28,8 +28,8 @@ export const crmService = {
         return profile.franchise_id;
     },
 
-    async getClients() {
-        const supabase = createClient();
+    async getClients(serverClient?: SupabaseClient) {
+        const supabase = serverClient || createClient();
         const franchiseId = await this._getFranchiseId(supabase);
 
         const { data, error } = await supabase

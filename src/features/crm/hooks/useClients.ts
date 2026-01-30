@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { crmService } from '@/services/crmService';
 import { Client } from '@/types/crm';
 
-export function useClients() {
-    const [clients, setClients] = useState<Client[]>([]);
-    const [loading, setLoading] = useState(true);
+export function useClients(initialData?: Client[]) {
+    const [clients, setClients] = useState<Client[]>(initialData || []);
+    const [loading, setLoading] = useState(!initialData);
     const [error, setError] = useState<Error | null>(null);
 
     const loadClients = async () => {
@@ -21,8 +21,10 @@ export function useClients() {
     };
 
     useEffect(() => {
-        loadClients();
-    }, []);
+        if (!initialData) {
+            loadClients();
+        }
+    }, [initialData]);
 
     return { clients, loading, error, refresh: loadClients };
 }
