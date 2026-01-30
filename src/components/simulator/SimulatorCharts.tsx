@@ -123,7 +123,7 @@ export const SimulatorCharts: React.FC<SimulatorChartsProps> = ({ results, invoi
                 className="bg-white rounded-xl p-6 shadow-sm"
             >
                 <h3 className="text-lg font-bold text-slate-900 mb-4">Comparación de Costos</h3>
-                <ResponsiveContainer width="100%" height={300} minWidth={0}>
+                <ResponsiveContainer width="100%" height={300} minWidth={0} minHeight={0}>
                     <BarChart data={barData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis
@@ -161,7 +161,7 @@ export const SimulatorCharts: React.FC<SimulatorChartsProps> = ({ results, invoi
                     className="bg-white rounded-xl p-6 shadow-sm"
                 >
                     <h3 className="text-lg font-bold text-slate-900 mb-4">Desglose de Costos</h3>
-                    <ResponsiveContainer width="100%" height={300} minWidth={0}>
+                    <ResponsiveContainer width="100%" height={300} minWidth={0} minHeight={0}>
                         <PieChart>
                             <Pie
                                 data={pieData}
@@ -198,7 +198,7 @@ export const SimulatorCharts: React.FC<SimulatorChartsProps> = ({ results, invoi
                         className="bg-white rounded-xl p-6 shadow-sm"
                     >
                         <h3 className="text-lg font-bold text-slate-900 mb-4">Tendencia de Ahorros</h3>
-                        <ResponsiveContainer width="100%" height={300} minWidth={0}>
+                        <ResponsiveContainer width="100%" height={300} minWidth={0} minHeight={0}>
                             <LineChart data={trendData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                 <XAxis dataKey="month" fontSize={12} />

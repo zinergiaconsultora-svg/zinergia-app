@@ -1,6 +1,3 @@
-'use client';
-
-import { useState } from 'react';
 import { InvoiceData, SavingsResult } from '@/types/crm';
 
 // API key for webhook authentication (should come from environment in production)
@@ -17,47 +14,17 @@ if (typeof window !== 'undefined') {
     }
 }
 
-// Helper function to call secure API routes
-async function callWebhookAPI(endpoint: string, data?: any): Promise<any> {
-    const response = await fetch(`/api/webhooks/${endpoint}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': API_KEY,
-        },
-        body: data ? JSON.stringify(data) : undefined,
-    });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'API request failed');
-    }
-
-    return response.json();
-}
+import { analyzeDocumentAction } from '@/app/actions/ocr';
 
 /**
- * Secure document analysis with validation and retry logic
+ * Secure document analysis using Server Action (Hidden API Key)
  */
 export async function analyzeDocument(file: File): Promise<InvoiceData> {
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-        const response = await fetch('/api/webhooks/ocr', {
-            method: 'POST',
-            headers: {
-                'x-api-key': API_KEY,
-            },
-            body: formData,
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to analyze document');
-        }
-
-        return await response.json();
+        return await analyzeDocumentAction(formData);
     } catch (error) {
         console.error('Document analysis error:', error);
         throw error;
