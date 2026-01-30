@@ -5,6 +5,9 @@ import { InvoiceData, SavingsResult } from '@/types/crm';
 
 // API key for webhook authentication (should come from environment in production)
 const API_KEY = process.env.NEXT_PUBLIC_WEBHOOK_API_KEY || 'dev-key';
+if (typeof window !== 'undefined') {
+    console.log(`[OCR Debug] Browser API Key loaded. Length: ${API_KEY.length}. (Should be 64)`);
+}
 
 // Helper function to call secure API routes
 async function callWebhookAPI(endpoint: string, data?: any): Promise<any> {
@@ -95,12 +98,12 @@ export async function calculateSavings(invoice: InvoiceData): Promise<SavingsRes
         }));
     } catch (error) {
         console.error('Tariff comparison error:', error);
-        
+
         // Return mock data ONLY in development mode
         if (process.env.NODE_ENV === 'development') {
             console.warn('Using mock data in development mode');
             const currentCost = invoice.total_amount || 1200;
-            
+
             return [
                 {
                     offer: {
@@ -140,7 +143,7 @@ export async function calculateSavings(invoice: InvoiceData): Promise<SavingsRes
                 },
             ];
         }
-        
+
         throw error;
     }
 }
