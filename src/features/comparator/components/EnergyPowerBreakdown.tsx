@@ -23,7 +23,7 @@ export const EnergyPowerBreakdown: React.FC<BreakdownProps> = ({ powerCost, ener
             <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full -mr-16 -mt-16 z-0" />
 
             <div className="relative z-10 h-full">
-                <ResponsiveContainer width="100%" height="90%">
+                <ResponsiveContainer width="100%" height="90%" minWidth={0}>
                     <PieChart>
                         <Pie
                             data={data}

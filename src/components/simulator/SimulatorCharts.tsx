@@ -123,28 +123,28 @@ export const SimulatorCharts: React.FC<SimulatorChartsProps> = ({ results, invoi
                 className="bg-white rounded-xl p-6 shadow-sm"
             >
                 <h3 className="text-lg font-bold text-slate-900 mb-4">Comparación de Costos</h3>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={300} minWidth={0}>
                     <BarChart data={barData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis 
-                            dataKey="offer" 
+                        <XAxis
+                            dataKey="offer"
                             angle={-45}
                             textAnchor="end"
                             height={100}
                             fontSize={12}
                         />
-                        <YAxis 
+                        <YAxis
                             label="€"
                             fontSize={12}
                         />
-                                <Tooltip 
-                                    formatter={(value: number | undefined) => `€${(value || 0).toFixed(2)}`}
-                                    contentStyle={{ 
-                                        backgroundColor: '#1f2937',
-                                        borderRadius: '8px',
-                                        border: 'none'
-                                    }}
-                                />
+                        <Tooltip
+                            formatter={(value: number | undefined) => `€${(value || 0).toFixed(2)}`}
+                            contentStyle={{
+                                backgroundColor: '#1f2937',
+                                borderRadius: '8px',
+                                border: 'none'
+                            }}
+                        />
                         <Legend />
                         <Bar dataKey="annualCost" fill="#ef4444" name="Costo Anual" radius={[8, 8, 0, 0]} />
                         <Bar dataKey="savings" fill="#10b981" name="Ahorro" radius={[8, 8, 0, 0]} />
@@ -161,7 +161,7 @@ export const SimulatorCharts: React.FC<SimulatorChartsProps> = ({ results, invoi
                     className="bg-white rounded-xl p-6 shadow-sm"
                 >
                     <h3 className="text-lg font-bold text-slate-900 mb-4">Desglose de Costos</h3>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={300} minWidth={0}>
                         <PieChart>
                             <Pie
                                 data={pieData}
@@ -177,9 +177,9 @@ export const SimulatorCharts: React.FC<SimulatorChartsProps> = ({ results, invoi
                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                 ))}
                             </Pie>
-                            <Tooltip 
+                            <Tooltip
                                 formatter={(value: number | undefined) => `€${(value || 0).toFixed(2)}`}
-                                contentStyle={{ 
+                                contentStyle={{
                                     backgroundColor: '#1f2937',
                                     borderRadius: '8px',
                                     border: 'none'
@@ -198,26 +198,26 @@ export const SimulatorCharts: React.FC<SimulatorChartsProps> = ({ results, invoi
                         className="bg-white rounded-xl p-6 shadow-sm"
                     >
                         <h3 className="text-lg font-bold text-slate-900 mb-4">Tendencia de Ahorros</h3>
-                        <ResponsiveContainer width="100%" height={300}>
+                        <ResponsiveContainer width="100%" height={300} minWidth={0}>
                             <LineChart data={trendData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                 <XAxis dataKey="month" fontSize={12} />
-                                <YAxis 
+                                <YAxis
                                     label="€"
                                     fontSize={12}
                                 />
-                                <Tooltip 
+                                <Tooltip
                                     formatter={(value: number | undefined) => `€${(value || 0).toFixed(2)}`}
-                                    contentStyle={{ 
+                                    contentStyle={{
                                         backgroundColor: '#1f2937',
                                         borderRadius: '8px',
                                         border: 'none'
                                     }}
                                 />
-                                <Line 
-                                    type="monotone" 
-                                    dataKey="savings" 
-                                    stroke="#10b981" 
+                                <Line
+                                    type="monotone"
+                                    dataKey="savings"
+                                    stroke="#10b981"
                                     strokeWidth={2}
                                     dot={{ fill: '#10b981', r: 4 }}
                                 />
@@ -234,7 +234,7 @@ export const SimulatorCharts: React.FC<SimulatorChartsProps> = ({ results, invoi
 function calculateAnnualPowerCost(offer: any): number {
     const daysPerYear = 365;
     const days = 30; // Default billing period
-    
+
     const powerCost = Object.values(offer.offer.power_price).reduce((sum: number, val: any) => sum + (val || 0), 0);
     return powerCost * (daysPerYear / days);
 }

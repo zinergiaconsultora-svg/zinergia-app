@@ -32,7 +32,7 @@ export const CostComparisonChart: React.FC<CostComparisonProps> = ({ currentCost
     return (
         <div className="h-[300px] w-full bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
             <h4 className="text-sm font-bold text-slate-700 mb-4 text-center">Comparativa Anual Estimada</h4>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <BarChart
                     data={data}
                     margin={{

@@ -76,7 +76,7 @@ export const NetworkIntelligence: React.FC = () => {
                     </div>
 
                     <div className="h-[300px] w-full mt-4">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <BarChart data={commissionData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                                 <Tooltip
                                     cursor={{ fill: 'transparent' }}
