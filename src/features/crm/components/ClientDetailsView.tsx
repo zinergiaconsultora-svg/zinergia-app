@@ -170,7 +170,7 @@ export default function ClientDetailsView({ clientId }: ClientDetailsViewProps) 
                             <div className="flex-1 space-y-4 w-full">
                                 <div>
                                     <div className="flex flex-wrap items-center gap-3 mb-2">
-                                        <h1 className="text-2xl md:text-3xl font-medium text-slate-900 tracking-tight break-all md:break-normal">{client.name}</h1>
+                                        <h1 className="text-xl md:text-2xl font-medium text-slate-900 tracking-tight break-all md:break-normal">{client.name}</h1>
                                         <StatusBadge status={client.status} />
                                     </div>
                                     <p className="text-slate-500 font-light flex items-center gap-2 text-sm md:text-base">
@@ -203,9 +203,9 @@ export default function ClientDetailsView({ clientId }: ClientDetailsViewProps) 
                             <div key={idx} className="bg-white/60 backdrop-blur-xl border border-white/60 rounded-[2.5rem] p-8 hover:bg-white/70 transition-colors">
                                 <div className="flex items-center gap-4 mb-6">
                                     <div className="w-10 h-10 rounded-2xl bg-white/80 shadow-sm flex items-center justify-center text-slate-600">
-                                        {React.cloneElement(section.icon as React.ReactElement, { size: 20, strokeWidth: 1.5 } as React.SVGAttributes<SVGElement>)}
+                                        {React.cloneElement(section.icon as React.ReactElement, { size: 18, strokeWidth: 1.5 } as React.SVGAttributes<SVGElement>)}
                                     </div>
-                                    <h3 className="font-medium text-lg text-slate-900">{section.title}</h3>
+                                    <h3 className="font-medium text-base text-slate-900">{section.title}</h3>
                                 </div>
 
                                 <div className="space-y-5">
@@ -227,7 +227,7 @@ export default function ClientDetailsView({ clientId }: ClientDetailsViewProps) 
                     {/* Proposals History Section */}
                     <div className="space-y-4">
                         <div className="flex items-center justify-between px-2">
-                            <h3 className="text-xl font-medium text-slate-900">Historial de Propuestas</h3>
+                            <h3 className="text-lg font-medium text-slate-900">Historial de Propuestas</h3>
                         </div>
 
                         {proposals.length === 0 ? (

@@ -171,21 +171,21 @@ body {
 
 /* Base Typography Overrides with Fluid Scales */
 h1 {
-  font-size: var(--font-size-4xl);
+  font-size: var(--font-size-3xl);
   font-weight: 800;
   letter-spacing: -0.025em;
   line-height: 1.1;
 }
 
 h2 {
-  font-size: var(--font-size-3xl);
+  font-size: var(--font-size-2xl);
   font-weight: 700;
   letter-spacing: -0.015em;
   line-height: 1.2;
 }
 
 h3 {
-  font-size: var(--font-size-2xl);
+  font-size: var(--font-size-xl);
   font-weight: 600;
   line-height: 1.3;
 }

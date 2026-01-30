@@ -70,7 +70,7 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                                 Cartera
                             </span>
                         </div>
-                        <h1 className="text-4xl font-medium text-slate-900 tracking-tight leading-none">
+                        <h1 className="text-2xl md:text-3xl font-medium text-slate-900 tracking-tight leading-none">
                             Mis Clientes<span className="text-transparent bg-clip-text bg-gradient-to-r from-energy-600 to-energy-400">.</span>
                         </h1>
                     </div>

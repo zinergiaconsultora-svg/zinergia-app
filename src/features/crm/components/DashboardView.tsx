@@ -164,11 +164,11 @@ export default function DashboardView() {
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
 
                         <div className="flex-1 text-center lg:text-left">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase tracking-widest mb-4 border border-indigo-100 italic">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-energy-50 text-energy-600 text-[10px] font-bold uppercase tracking-widest mb-4 border border-energy-100 italic">
                                 <Sparkles size={12} /> IA Power Detection
                             </div>
-                            <h2 className="text-3xl md:text-5xl font-display font-bold text-slate-800 dark:text-white leading-tight mb-4">
-                                Optimiza tu <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-emerald-600">Energía</span> en segundos
+                            <h2 className="text-2xl md:text-3xl lg:text-4xl font-display font-bold text-slate-800 dark:text-white leading-tight mb-4 tracking-tight">
+                                Optimiza tu <span className="text-transparent bg-clip-text bg-gradient-to-r from-energy-600 to-energy-400">Energía</span> en segundos
                             </h2>
                             <p className="text-slate-500 dark:text-slate-400 text-lg max-w-xl mx-auto lg:mx-0 font-body">
                                 Sube tu factura PDF y deja que nuestra ingeniería detecte el mayor ahorro posible para tus clientes.

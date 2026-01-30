@@ -109,10 +109,10 @@ export default function SettingsView() {
                             <ChevronLeft size={20} />
                         </button>
                         <div>
-                            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+                            <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
                                 Configuración
                             </h1>
-                            <p className="text-sm text-slate-500 font-medium">Gestión de perfil y red comercial</p>
+                            <p className="text-xs text-slate-500 font-medium tracking-wide">Gestión de perfil y red comercial</p>
                         </div>
                     </div>
 
