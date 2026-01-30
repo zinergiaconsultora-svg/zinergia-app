@@ -45,9 +45,20 @@ export async function POST(request: NextRequest) {
     try {
         // 1. Check API Key
         const apiKey = request.headers.get('x-api-key');
+
+        // Diagnostic logs (visible in Vercel Logs)
+        if (!WEBHOOK_API_KEY) {
+            console.error('SERVER ERROR: Missing WEBHOOK_API_KEY in environment!');
+        }
+
         if (apiKey !== WEBHOOK_API_KEY) {
+            console.warn(`AUTH FAILURE: Received key length ${apiKey?.length || 0}, expected ${WEBHOOK_API_KEY?.length || 0}`);
             return NextResponse.json(
-                { error: 'Unauthorized', message: 'Invalid API key' },
+                {
+                    error: 'Unauthorized',
+                    message: 'La clave de API no coincide o no está configurada en el servidor. Revisa las variables de entorno en Vercel.',
+                    debug: process.env.NODE_ENV === 'development' ? { received: apiKey, expected: WEBHOOK_API_KEY } : undefined
+                },
                 { status: 401 }
             );
         }
@@ -158,20 +169,20 @@ export async function POST(request: NextRequest) {
             invoice_number: sanitizeString(data.invoice_number || data.NUMERO_FACTURA || data.numero_factura, 50),
             invoice_date: sanitizeString(data.invoice_date || data.FECHA_FACTURA || data.fecha_factura, 20),
             supply_address: sanitizeString(data.supply_address || data.direccion_suministro, 500),
-            
+
             period_days: sanitizeNumber(data.period_days || data.periodo_facturacion, 1, 365),
             subtotal: sanitizeNumber(data.subtotal, 0, 1000000),
             vat: sanitizeNumber(data.iva, 0, 1000000),
             total_amount: sanitizeNumber(data.importe_total || data.total, 0, 10000000),
             rights_cost: sanitizeNumber(data.derechos_enganche, 0, 100000),
-            
+
             power_p1: sanitizeNumber(data.power_p1 || data.POTENCIA_P1 || data.potencia_p1, 0, 100),
             power_p2: sanitizeNumber(data.power_p2 || data.POTENCIA_P2 || data.potencia_p2, 0, 100),
             power_p3: sanitizeNumber(data.power_p3 || data.POTENCIA_P3 || data.potencia_p3, 0, 100),
             power_p4: sanitizeNumber(data.power_p4 || data.POTENCIA_P4 || data.potencia_p4, 0, 100),
             power_p5: sanitizeNumber(data.power_p5 || data.POTENCIA_P5 || data.potencia_p5, 0, 100),
             power_p6: sanitizeNumber(data.power_p6 || data.POTENCIA_P6 || data.potencia_p6, 0, 100),
-            
+
             energy_p1: sanitizeNumber(data.energy_p1 || data.ENERGIA_P1 || data.energia_p1, 0, 100000),
             energy_p2: sanitizeNumber(data.energy_p2 || data.ENERGIA_P2 || data.energia_p2, 0, 100000),
             energy_p3: sanitizeNumber(data.energy_p3 || data.ENERGIA_P3 || data.energia_p3, 0, 100000),
