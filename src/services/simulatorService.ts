@@ -1,115 +1,45 @@
 /**
- * Service layer for simulator with retry logic, caching, and history
+ * Service layer for simulator using secure Server Actions
  */
 
 import { InvoiceData, SavingsResult } from '@/types/crm';
 import { createClient } from '@/lib/supabase/client';
 
-// API key for webhook authentication
-const API_KEY = process.env.NEXT_PUBLIC_WEBHOOK_API_KEY || 'dev-key';
+import { analyzeDocumentAction } from '@/app/actions/ocr';
+import { calculateSavingsAction } from '@/app/actions/compare';
 
 // ============================================================================
-// RETRY LOGIC WITH EXPONENTIAL BACKOFF
-// ============================================================================
-
-interface RetryOptions {
-    maxRetries?: number;
-    baseDelay?: number;
-    maxDelay?: number;
-}
-
-async function fetchWithRetry<T>(
-    fn: () => Promise<T>,
-    options: RetryOptions = {}
-): Promise<T> {
-    const { maxRetries = 3, baseDelay = 1000, maxDelay = 10000 } = options;
-
-    let lastError: Error = new Error('Max retries exceeded');
-
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-        try {
-            return await fn();
-        } catch (error) {
-            lastError = error as Error;
-            
-            if (attempt < maxRetries - 1) {
-                // Exponential backoff with jitter
-                const delay = Math.min(
-                    baseDelay * Math.pow(2, attempt) + Math.random() * 1000,
-                    maxDelay
-                );
-                
-                console.log(`Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-            }
-        }
-    }
-
-    throw lastError;
-}
-
-// ============================================================================
-// WEBHOOK CALLS WITH RETRY
+// WEBHOOK CALLS VIA SERVER ACTIONS
 // ============================================================================
 
 export async function analyzeDocumentWithRetry(file: File): Promise<InvoiceData> {
-    return fetchWithRetry(async () => {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch('/api/webhooks/ocr', {
-            method: 'POST',
-            headers: { 'x-api-key': API_KEY },
-            body: formData,
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to analyze document');
-        }
-
-        return await response.json();
-    }, { maxRetries: 2, baseDelay: 2000 });
+    const formData = new FormData();
+    formData.append('file', file);
+    return await analyzeDocumentAction(formData);
 }
 
 export async function calculateSavingsWithRetry(invoice: InvoiceData): Promise<SavingsResult[]> {
-    return fetchWithRetry(async () => {
-        const response = await fetch('/api/webhooks/compare', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': API_KEY,
-            },
-            body: JSON.stringify(invoice),
-        });
+    const data = await calculateSavingsAction(invoice);
+    const currentCost = data.current_annual_cost || 0;
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to calculate savings');
-        }
-
-        const data = await response.json();
-        const currentCost = data.current_annual_cost || 0;
-
-        return data.offers.map((offer: any) => ({
-            offer: {
-                id: offer.id,
-                marketer_name: offer.marketer_name,
-                tariff_name: offer.tariff_name,
-                logo_color: offer.logo_color || 'bg-blue-600',
-                type: offer.type,
-                power_price: offer.power_price,
-                energy_price: offer.energy_price,
-                fixed_fee: offer.fixed_fee,
-                contract_duration: offer.contract_duration,
-            },
-            current_annual_cost: currentCost,
-            offer_annual_cost: offer.annual_cost || 0,
-            annual_savings: Math.max(0, currentCost - (offer.annual_cost || 0)),
-            savings_percent: currentCost > 0 ? ((currentCost - (offer.annual_cost || 0)) / currentCost) * 100 : 0,
-            optimization_result: offer.optimization_result,
-        }));
-    }, { maxRetries: 3, baseDelay: 1500 });
+    return data.offers.map((offer: any) => ({
+        offer: {
+            id: offer.id,
+            marketer_name: offer.marketer_name,
+            tariff_name: offer.tariff_name,
+            logo_color: offer.logo_color || 'bg-blue-600',
+            type: offer.type,
+            power_price: offer.power_price,
+            energy_price: offer.energy_price,
+            fixed_fee: offer.fixed_fee,
+            contract_duration: offer.contract_duration,
+        },
+        current_annual_cost: currentCost,
+        offer_annual_cost: offer.annual_cost || 0,
+        annual_savings: Math.max(0, currentCost - (offer.annual_cost || 0)),
+        savings_percent: currentCost > 0 ? ((currentCost - (offer.annual_cost || 0)) / currentCost) * 100 : 0,
+        optimization_result: offer.optimization_result,
+    }));
 }
 
 // ============================================================================
@@ -223,11 +153,11 @@ export async function exportResultsToPDF(
     // Header
     doc.setFillColor(...primaryColor);
     doc.rect(0, 0, 210, 40, 'F');
-    
+
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
     doc.text('Comparación de Tarifas', 105, 20, { align: 'center' });
-    
+
     doc.setFontSize(12);
     doc.text('Informe de Ahorro Energético', 105, 30, { align: 'center' });
 
@@ -274,7 +204,7 @@ export async function exportResultsToPDF(
 
         doc.setFontSize(14);
         doc.text(`${index + 1}. ${result.offer.marketer_name}`, 20, yPosition + 5);
-        
+
         doc.setFontSize(11);
         doc.text(`Tarifa: ${result.offer.tariff_name}`, 20, yPosition + 12);
         doc.text(`Costo Anual: €${result.offer_annual_cost.toFixed(2)}`, 20, yPosition + 19);
@@ -355,8 +285,8 @@ export async function exportResultsToExcel(
         ['P5', results[0]?.offer.power_price.p5 || 0, results[0]?.offer.energy_price.p5 || 0],
         ['P6', results[0]?.offer.power_price.p6 || 0, results[0]?.offer.energy_price.p6 || 0],
         ['',
-        'Cuota Fija', `€${(results[0]?.offer.fixed_fee || 0).toFixed(2)}/mes`,
-        'Duración', results[0]?.offer.contract_duration || 'N/A'],
+            'Cuota Fija', `€${(results[0]?.offer.fixed_fee || 0).toFixed(2)}/mes`,
+            'Duración', results[0]?.offer.contract_duration || 'N/A'],
     ];
 
     const pricingWs = XLSX.utils.aoa_to_sheet(pricingData);

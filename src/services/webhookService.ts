@@ -31,26 +31,14 @@ export async function analyzeDocument(file: File): Promise<InvoiceData> {
     }
 }
 
+import { calculateSavingsAction } from '@/app/actions/compare';
+
 /**
  * Secure tariff comparison with validation
  */
 export async function calculateSavings(invoice: InvoiceData): Promise<SavingsResult[]> {
     try {
-        const response = await fetch('/api/webhooks/compare', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': API_KEY,
-            },
-            body: JSON.stringify(invoice),
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to calculate savings');
-        }
-
-        const data = await response.json();
+        const data = await calculateSavingsAction(invoice);
         const currentCost = data.current_annual_cost || 0;
 
         return data.offers.map((offer: any) => ({
