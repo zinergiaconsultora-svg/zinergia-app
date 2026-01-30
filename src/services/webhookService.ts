@@ -5,8 +5,16 @@ import { InvoiceData, SavingsResult } from '@/types/crm';
 
 // API key for webhook authentication (should come from environment in production)
 const API_KEY = process.env.NEXT_PUBLIC_WEBHOOK_API_KEY || 'dev-key';
+
 if (typeof window !== 'undefined') {
-    console.log(`[OCR Debug] Browser API Key loaded. Length: ${API_KEY.length}. (Should be 64)`);
+    const isDevKey = API_KEY === 'dev-key';
+    const isProduction = window.location.hostname !== 'localhost';
+
+    if (isDevKey && isProduction) {
+        console.error('❌ [OCR Critical] La clave de API no se ha cargado en el navegador. Las variables NEXT_PUBLIC_ no están configuradas en Vercel.');
+    } else {
+        console.log(`[OCR Debug] Browser API Key loaded. Length: ${API_KEY.length}. ${isDevKey ? '(DEV MODE)' : '(SECURE MODE)'}`);
+    }
 }
 
 // Helper function to call secure API routes
