@@ -7,9 +7,15 @@ const WEBHOOK_API_KEY = process.env.WEBHOOK_API_KEY;
 
 export async function analyzeDocumentAction(formData: FormData): Promise<InvoiceData> {
     console.log('[OCR Action] Starting document analysis');
+    console.log('[OCR Action] Environment check:', {
+        hasOCR_URL: !!process.env.OCR_WEBHOOK_URL,
+        hasAPIKey: !!process.env.WEBHOOK_API_KEY,
+        allEnvKeys: Object.keys(process.env).filter(k => k.includes('WEBHOOK') || k.includes('OCR'))
+    });
 
     if (!OCR_WEBHOOK_URL) {
         console.error('[OCR Action] OCR_WEBHOOK_URL not configured');
+        console.error('[OCR Action] Available env vars:', Object.keys(process.env).filter(k => k.includes('WEBHOOK') || k.includes('OCR')));
         throw new Error('SERVER ERROR: OCR_WEBHOOK_URL is not configured');
     }
 
