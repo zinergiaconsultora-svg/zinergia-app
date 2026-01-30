@@ -85,7 +85,7 @@ export const NavigationTop = () => {
                     {/* Logo Section */}
                     <div className="flex items-center gap-8">
                         <Link href="/dashboard" className="transition-transform active:scale-95">
-                            <ZinergiaLogo className="w-20 md:w-24" />
+                            <ZinergiaLogo className="w-16 md:w-20" />
                         </Link>
 
                         {/* Desktop Navigation Items */}
@@ -147,7 +147,7 @@ export const NavigationTop = () => {
                     {/* Right Section: Stats & Profile */}
                     <div className="flex items-center gap-3">
                         {/* Gamification Mini-Widget */}
-                        <div className="hidden md:flex items-center gap-3 bg-slate-50/50 border border-slate-100/50 px-3 py-1.5 rounded-2xl relative overflow-hidden group/shimmer">
+                        <div className="hidden md:flex items-center gap-2 bg-slate-50/50 border border-slate-100/50 px-2 py-1.5 rounded-2xl relative overflow-hidden group/shimmer">
                             <motion.div
                                 className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full"
                                 animate={{ x: ["-100%", "100%"] }}

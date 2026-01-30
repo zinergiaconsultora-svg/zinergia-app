@@ -150,7 +150,7 @@ export default function DashboardView() {
                 variants={container}
                 initial="hidden"
                 animate="show"
-                className="flex-1 flex flex-col p-4 md:p-6 gap-6 md:gap-8 max-w-[1700px] mx-auto w-full z-10 pb-20"
+                className="flex-1 flex flex-col p-4 md:p-6 gap-6 md:gap-8 max-w-[1700px] mx-auto w-full z-10"
             >
                 {/* 0. HERO UPLOAD SECTION (Imposing & Professional) */}
                 <motion.div
@@ -159,7 +159,7 @@ export default function DashboardView() {
                 >
                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-emerald-500/10 to-teal-500/10 blur-3xl opacity-50 rounded-[3rem]" />
 
-                    <div className="relative glass-premium rounded-[2.5rem] border border-white/40 shadow-2xl overflow-hidden p-8 md:p-12 flex flex-col lg:flex-row items-center gap-10">
+                    <div className="relative glass-premium rounded-[2.5rem] border border-white/20 shadow-2xl overflow-hidden p-8 md:p-12 flex flex-col lg:flex-row items-center gap-10">
                         {/* Shimmer Effect */}
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
 
@@ -261,7 +261,7 @@ export default function DashboardView() {
                 </motion.div>
 
                 {/* 3. MAIN BENTO GRID (Fills remaining height) */}
-                <motion.div variants={item} className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4 pb-16 lg:pb-0">
+                <motion.div variants={item} className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4">
 
                     {/* LEFT COLUMN (Charts) - 6 Cols */}
                     <div className="lg:col-span-8 flex flex-col gap-4 min-h-0 h-full">
