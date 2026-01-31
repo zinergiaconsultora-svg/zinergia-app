@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { DigitalProposalCard } from './DigitalProposalCard';
 import { EmailModal } from './EmailModal';
 import { ConsumptionChart } from './ConsumptionChart';
-import { CompanyScanner } from './CompanyScanner';
+
 import { PowerOptimizer } from './PowerOptimizer';
 import { useComparator } from '../hooks/useComparator';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
