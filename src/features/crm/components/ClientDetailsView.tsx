@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useClientDetails } from '../hooks/useClientDetails';
 import {
@@ -20,6 +20,74 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CreateClientModal from './CreateClientModal';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { Proposal } from '@/types/crm';
+
+// Memoized Proposal Card Component
+interface ProposalCardProps {
+    proposal: Proposal;
+    onClick: () => void;
+    onDelete: (e: React.MouseEvent) => void;
+}
+
+const ProposalCard = React.memo(function ProposalCard({ proposal, onClick, onDelete }: ProposalCardProps) {
+    // Memoize formatted values to prevent recalculation on every render
+    const formattedDate = useMemo(() =>
+        new Date(proposal.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
+        [proposal.created_at]
+    );
+
+    const formattedSavings = useMemo(() =>
+        proposal.annual_savings.toLocaleString('es-ES', { maximumFractionDigits: 0 }),
+        [proposal.annual_savings]
+    );
+
+    return (
+        <div
+            onClick={onClick}
+            className="group bg-white/60 backdrop-blur-xl border border-white/60 rounded-[2rem] p-6 hover:bg-white/90 hover:border-energy-100 hover:shadow-lg hover:shadow-energy-500/5 transition-all cursor-pointer relative overflow-hidden"
+        >
+            <div className="absolute top-0 right-0 p-16 bg-gradient-to-bl from-energy-50/50 to-transparent rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-energy-50 to-blue-50 border border-energy-100/50 flex items-center justify-center text-energy-600 shadow-sm group-hover:scale-105 transition-transform">
+                        <FileText size={20} strokeWidth={1.5} />
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-slate-900 text-lg">
+                            {proposal.offer_snapshot.marketer_name}
+                        </h4>
+                        <p className="text-slate-500 text-sm">
+                            {proposal.offer_snapshot.tariff_name} • {formattedDate}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-4 pl-16 sm:pl-0">
+                    <div className="text-right mr-2">
+                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Ahorro Est.</p>
+                        <p className="text-emerald-600 font-bold text-xl">
+                            {formattedSavings}€<span className="text-sm font-medium text-emerald-600/70">/año</span>
+                        </p>
+                    </div>
+
+                    <StatusBadge status={proposal.status} />
+
+                    <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden sm:block"></div>
+
+                    <button
+                        onClick={onDelete}
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                        title="Eliminar propuesta"
+                        aria-label="Eliminar propuesta"
+                    >
+                        <Trash2 size={18} />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+});
 
 interface ClientDetailsViewProps {
     clientId: string;
@@ -237,50 +305,12 @@ export default function ClientDetailsView({ clientId }: ClientDetailsViewProps) 
                         ) : (
                             <div className="grid grid-cols-1 gap-4">
                                 {proposals.map(proposal => (
-                                    <div
+                                    <ProposalCard
                                         key={proposal.id}
+                                        proposal={proposal}
                                         onClick={() => router.push(`/dashboard/proposals/${proposal.id}`)}
-                                        className="group bg-white/60 backdrop-blur-xl border border-white/60 rounded-[2rem] p-6 hover:bg-white/90 hover:border-energy-100 hover:shadow-lg hover:shadow-energy-500/5 transition-all cursor-pointer relative overflow-hidden"
-                                    >
-                                        <div className="absolute top-0 right-0 p-16 bg-gradient-to-bl from-energy-50/50 to-transparent rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
-
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-energy-50 to-blue-50 border border-energy-100/50 flex items-center justify-center text-energy-600 shadow-sm group-hover:scale-105 transition-transform">
-                                                    <FileText size={20} strokeWidth={1.5} />
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-bold text-slate-900 text-lg">
-                                                        {proposal.offer_snapshot.marketer_name}
-                                                    </h4>
-                                                    <p className="text-slate-500 text-sm">
-                                                        {proposal.offer_snapshot.tariff_name} • {new Date(proposal.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-4 pl-16 sm:pl-0">
-                                                <div className="text-right mr-2">
-                                                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Ahorro Est.</p>
-                                                    <p className="text-emerald-600 font-bold text-xl">
-                                                        {proposal.annual_savings.toLocaleString('es-ES', { maximumFractionDigits: 0 })}€<span className="text-sm font-medium text-emerald-600/70">/año</span>
-                                                    </p>
-                                                </div>
-
-                                                <StatusBadge status={proposal.status} />
-
-                                                <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden sm:block"></div>
-
-                                                <button
-                                                    onClick={(e) => onConfirmDeleteProposal(proposal.id, e)}
-                                                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                                                    title="Eliminar propuesta"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
+                                        onDelete={(e) => onConfirmDeleteProposal(proposal.id, e)}
+                                    />
                                 ))}
                             </div>
                         )}
