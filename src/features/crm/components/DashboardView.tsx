@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { crmService } from '@/services/crmService';
 import { Client } from '@/types/crm';
@@ -11,14 +11,14 @@ import {
     ArrowRight,
     Bell,
     GraduationCap,
-    ArrowUpRight
+    ArrowUpRight,
+    Sparkles
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { formatCurrency } from '@/lib/utils/format';
 import { DashboardSkeleton } from '@/components/ui/DashboardSkeleton';
-import { useSimulatorContext } from '@/features/simulator/contexts/SimulatorContext';
-import { Upload, Sparkles } from 'lucide-react';
+import { QuickUploadZone } from './QuickUploadZone';
 
 const LeaderboardWidget = dynamic(() => import('@/features/gamification/components/LeaderboardWidget').then(mod => mod.LeaderboardWidget), { loading: () => <div className="h-64 bg-slate-100/50 animate-pulse rounded-2xl" /> });
 const AchievementsWidget = dynamic(() => import('@/features/gamification/components/AchievementsWidget').then(mod => mod.AchievementsWidget));
@@ -78,40 +78,35 @@ const DEFAULT_STATS: DashboardStats = {
     }
 };
 
+// Animation variants - defined outside component to prevent recreation
+const container = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1,
+            delayChildren: 0.2
+        }
+    }
+};
+
+const item = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+};
+
+const MONTHLY_GOAL = 10000;
+
 export default function DashboardView() {
     const router = useRouter();
     const [stats, setStats] = useState<DashboardStats>(DEFAULT_STATS);
     const [loading, setLoading] = useState(true);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
 
-    const {
-        handleFileUpload,
-        handleDrop,
-        handleDragOver,
-        isAnalyzing
-    } = useSimulatorContext();
     const [notifications, setNotifications] = useState([
         { id: '1', type: 'success' as const, title: 'Comisión Aprobada', message: 'La venta de "Restaurante El Molino" ha sido validada.', created_at: new Date().toISOString(), read: false },
         { id: '2', type: 'info' as const, title: 'Nuevo Recurso', message: 'Se ha añadido "Tarifas 2026 Q1" a la Academy.', created_at: new Date(Date.now() - 3600000).toISOString(), read: false },
     ]);
-
-    const container = {
-        hidden: { opacity: 0 },
-        show: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.1,
-                delayChildren: 0.2
-            }
-        }
-    };
-
-    const item = {
-        hidden: { opacity: 0, y: 20 },
-        show: { opacity: 1, y: 0 }
-    };
-
-    const MONTHLY_GOAL = 10000;
 
     useEffect(() => {
         async function loadStats() {
@@ -127,14 +122,41 @@ export default function DashboardView() {
         loadStats();
     }, []);
 
-    const goalProgress = Math.min(Math.round((stats.financials.month_savings / MONTHLY_GOAL) * 100), 100);
-    const firstName = stats.user?.full_name?.split(' ')[0] || 'Consultor';
-    const unreadCount = notifications.filter(n => !n.read).length;
+    // Memoized calculations
+    const goalProgress = useMemo(() => 
+        Math.min(Math.round((stats.financials.month_savings / MONTHLY_GOAL) * 100), 100),
+        [stats.financials.month_savings]
+    );
 
-    // Chart Calculations
-    const wonDeals = stats.recentProposals.filter(p => p.status === 'accepted').length;
-    const activeDeals = stats.recentProposals.filter(p => p.status === 'sent' || p.status === 'draft').length;
-    const lostDeals = stats.recentProposals.filter(p => p.status === 'rejected').length;
+    const firstName = useMemo(() => 
+        stats.user?.full_name?.split(' ')[0] || 'Consultor',
+        [stats.user?.full_name]
+    );
+
+    const unreadCount = useMemo(() => 
+        notifications.filter(n => !n.read).length,
+        [notifications]
+    );
+
+    // Chart Calculations - memoized
+    const { wonDeals, activeDeals, lostDeals } = useMemo(() => ({
+        wonDeals: stats.recentProposals.filter(p => p.status === 'accepted').length,
+        activeDeals: stats.recentProposals.filter(p => p.status === 'sent' || p.status === 'draft').length,
+        lostDeals: stats.recentProposals.filter(p => p.status === 'rejected').length
+    }), [stats.recentProposals]);
+
+    // Callbacks for notification handlers
+    const handleMarkAsRead = useCallback((id: string) => {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    }, []);
+
+    const handleMarkAllAsRead = useCallback(() => {
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    }, []);
+
+    const handleDismiss = useCallback((id: string) => {
+        setNotifications(prev => prev.filter(n => n.id !== id));
+    }, []);
 
     if (loading) return <DashboardSkeleton />;
 
@@ -175,34 +197,7 @@ export default function DashboardView() {
                             </p>
                         </div>
 
-                        <div className="w-full lg:w-[450px] shrink-0">
-                            <label className="block w-full h-full cursor-pointer group/upload">
-                                <input
-                                    type="file"
-                                    accept=".pdf"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                        handleFileUpload(e);
-                                        router.push('/dashboard/simulator');
-                                    }}
-                                    disabled={isAnalyzing}
-                                />
-                                <div
-                                    onDrop={(e) => {
-                                        handleDrop(e);
-                                        router.push('/dashboard/simulator');
-                                    }}
-                                    onDragOver={handleDragOver}
-                                    className="relative glass-premium border-2 border-dashed border-indigo-200/50 hover:border-indigo-400/50 transition-all rounded-3xl p-8 flex flex-col items-center justify-center bg-white/40 hover:bg-white/60 shadow-lg"
-                                >
-                                    <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm mb-4 group-hover/upload:scale-110 transition-transform">
-                                        <Upload size={28} />
-                                    </div>
-                                    <div className="text-lg font-bold text-slate-800 dark:text-white mb-1">Cargar Nueva Factura</div>
-                                    <div className="text-xs text-slate-400 font-medium text-center">Arrastra aquí o haz clic para subir tu PDF</div>
-                                </div>
-                            </label>
-                        </div>
+                        <QuickUploadZone />
                     </div>
                 </motion.div>
 
@@ -230,9 +225,9 @@ export default function DashboardView() {
                                     isOpen={isNotifOpen}
                                     onClose={() => setIsNotifOpen(false)}
                                     notifications={notifications}
-                                    onMarkAsRead={(id) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))}
-                                    onMarkAllAsRead={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
-                                    onDismiss={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
+                                    onMarkAsRead={handleMarkAsRead}
+                                    onMarkAllAsRead={handleMarkAllAsRead}
+                                    onDismiss={handleDismiss}
                                 />
                             )}
                         </div>
