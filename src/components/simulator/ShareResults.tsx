@@ -15,7 +15,7 @@ interface ShareResultsProps {
     results: unknown[];
 }
 
-export const ShareResults: React.FC<ShareResultsProps> = ({ simulationId, invoiceData, results }) => {
+export const ShareResults: React.FC<ShareResultsProps> = ({ simulationId }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [shareLink, setShareLink] = useState('');
     const [copied, setCopied] = useState(false);
