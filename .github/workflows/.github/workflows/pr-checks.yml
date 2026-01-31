@@ -1,0 +1,81 @@
+name: Pull Request Checks
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+env:
+  NODE_VERSION: '20.x'
+jobs:
+  validate-pr:
+    runs-on: ubuntu-latest
+    name: Validate PR
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Check for lockfile changes
+        run: |
+          if git diff --name-only origin/main | grep -q "package-lock.json"; then
+            echo "⚠️  Warning: package-lock.json has changed"
+          fi
+      - name: Run lint
+        run: npm run lint
+      - name: Type check
+        run: npx tsc --noEmit
+      - name: Build check
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+  bundle-size:
+    runs-on: ubuntu-latest
+    name: Bundle Size Check
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build and analyze
+        run: |
+          npm run build
+          echo "📦 Bundle size analysis:"
+          du -sh .next/static/
+          echo ""
+          echo "📁 Largest chunks:"
+          ls -lhS .next/static/chunks/ | head -10
+  dependency-check:
+    runs-on: ubuntu-latest
+    name: Dependency Audit
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Check for vulnerabilities
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+      - name: Check for outdated dependencies
+        run: |
+          echo "📋 Checking for outdated dependencies..."
+          npm outdated || true
