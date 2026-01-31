@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
+import useSWR from 'swr';
 import { crmService } from '@/services/crmService';
 import { Proposal } from '@/types/crm';
 import { PieChart, Plus, Clock, Users, TrendingUp } from 'lucide-react';
@@ -13,48 +14,49 @@ interface AuditGroup {
     items: Proposal[];
 }
 
+// SWR fetcher function
+const fetchProposals = async () => {
+    return crmService.getRecentProposals();
+};
+
 export default function ProposalsPage() {
-    const [proposals, setProposals] = useState<Proposal[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    // Use SWR for data fetching with caching
+    const { data: proposals = [], isLoading } = useSWR(
+        'recent-proposals',
+        fetchProposals,
+        {
+            revalidateOnFocus: false,
+            dedupingInterval: 5000,
+            refreshInterval: 30000, // Refresh every 30 seconds
+        }
+    );
 
-    useEffect(() => {
-        async function loadProposals() {
-            try {
-                const data = await crmService.getRecentProposals();
-                setProposals(data);
-            } catch (err: unknown) {
-                console.error('Error loading proposals:', err);
-            } finally {
-                setIsLoading(false);
+    // Memoize grouped proposals calculation
+    const groupedProposals = useMemo(() => {
+        return proposals.reduce((acc: AuditGroup[], current: Proposal) => {
+            const timeThreshold = 5 * 60 * 1000; // 5 minutes
+            const currentDate = new Date(current.created_at).getTime();
+
+            const existingGroup = acc.find(g =>
+                g.client_id === current.client_id &&
+                Math.abs(new Date(g.date).getTime() - currentDate) < timeThreshold
+            );
+
+            if (existingGroup) {
+                existingGroup.items.push(current);
+                // Sort by savings to keep the best one first
+                existingGroup.items.sort((a, b) => b.annual_savings - a.annual_savings);
+            } else {
+                acc.push({
+                    client_id: current.client_id,
+                    clientName: current.clients?.name || 'Cliente Desconocido',
+                    date: current.created_at,
+                    items: [current]
+                });
             }
-        }
-        loadProposals();
-    }, []);
-
-    // Grouping Logic: Group proposals by client and timestamp proximity (5 mins)
-    const groupedProposals = proposals.reduce((acc: AuditGroup[], current: Proposal) => {
-        const timeThreshold = 5 * 60 * 1000; // 5 minutes
-        const currentDate = new Date(current.created_at).getTime();
-
-        const existingGroup = acc.find(g =>
-            g.client_id === current.client_id &&
-            Math.abs(new Date(g.date).getTime() - currentDate) < timeThreshold
-        );
-
-        if (existingGroup) {
-            existingGroup.items.push(current);
-            // Sort by savings to keep the best one first
-            existingGroup.items.sort((a, b) => b.annual_savings - a.annual_savings);
-        } else {
-            acc.push({
-                client_id: current.client_id,
-                clientName: current.clients?.name || 'Cliente Desconocido',
-                date: current.created_at,
-                items: [current]
-            });
-        }
-        return acc;
-    }, []);
+            return acc;
+        }, []);
+    }, [proposals]);
 
     return (
         <div className="space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

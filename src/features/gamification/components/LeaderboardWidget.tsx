@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Crown, TrendingUp, TrendingDown } from 'lucide-react';
+import useSWR from 'swr';
 import { crmService } from '@/services/crmService';
 
-interface LeaderboardEntry {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type LeaderboardEntry = {
     id: string;
     name: string;
     role: string;
@@ -14,27 +16,25 @@ interface LeaderboardEntry {
     trend: 'up' | 'down' | 'stable';
     avatar_url: string;
     badges?: string[];
-}
+};
+
+// SWR fetcher
+const fetchLeaderboard = async () => {
+    return crmService.getLeaderboard();
+};
 
 export const LeaderboardWidget = () => {
-    const [leaders, setLeaders] = useState<LeaderboardEntry[]>([]);
-    const [loading, setLoading] = useState(true);
+    // Use SWR for data fetching with caching
+    const { data: leaders = [], isLoading } = useSWR(
+        'leaderboard',
+        fetchLeaderboard,
+        {
+            revalidateOnFocus: false,
+            refreshInterval: 60000, // Refresh every minute
+        }
+    );
 
-    useEffect(() => {
-        const fetchLeaders = async () => {
-            try {
-                const data = await crmService.getLeaderboard();
-                setLeaders(data as LeaderboardEntry[]);
-            } catch (error) {
-                console.error('Error fetching leaderboard:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchLeaders();
-    }, []);
-
-    if (loading) return null; // Skeleton handled by parent or empty state
+    if (isLoading) return null; // Skeleton handled by parent or empty state
     if (leaders.length === 0) return null;
 
     const getRankStyles = (index: number) => {
@@ -73,7 +73,14 @@ export const LeaderboardWidget = () => {
                         <div className="relative">
                             <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-200 ring-1 ring-white relative">
                                 {user.avatar_url ? (
-                                    <Image src={user.avatar_url} alt={user.name} fill className="object-cover" sizes="24px" />
+                                    <Image 
+                                        src={user.avatar_url} 
+                                        alt={user.name} 
+                                        fill 
+                                        className="object-cover" 
+                                        sizes="24px"
+                                        loading="lazy"
+                                    />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-[8px] font-normal text-slate-400">
                                         {initials}
