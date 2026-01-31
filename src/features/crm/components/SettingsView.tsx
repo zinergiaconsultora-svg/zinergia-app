@@ -53,7 +53,7 @@ export default function SettingsView() {
         setLoading(true);
         try {
             const extractedData = await crmService.analyzeDocument(file);
-            console.log('Extracted Data:', extractedData);
+
 
             if (extractedData) {
                 setSettings(prev => ({
