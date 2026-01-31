@@ -2,6 +2,7 @@
 
 import React, { useCallback, useRef, useEffect } from 'react';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 type AsyncFunction<T> = (...args: any[]) => Promise<T>;
 
 interface CacheEntry<T> {
