@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     Zap,
     ChevronLeft,
@@ -39,6 +39,15 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     loadingMessage,
     powerType
 }) => {
+    // Memoize visible periods to prevent recalculation on every render
+    const visibleEnergyPeriods = useMemo(() => {
+        return [1, 2, 3, 4, 5, 6].filter(p => (powerType === '2.0' ? p <= 3 : powerType === '3.0' ? p <= 6 : true));
+    }, [powerType]);
+
+    const visiblePowerPeriods = useMemo(() => {
+        return [1, 2, 3, 4, 5, 6].filter(p => (powerType === '2.0' ? p <= 2 : powerType === '3.0' ? p <= 6 : true));
+    }, [powerType]);
+
     // Basic validation for visual feedback
     const isCupsValid = data.cups?.length === 20 || data.cups?.length === 22;
     const hasEnergyValues = [1, 2, 3, 4, 5, 6].some(p => (data[`energy_p${p}` as keyof InvoiceData] as number) > 0);
@@ -194,7 +203,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                         </div>
                         <Card className="bg-emerald-50/30 border border-emerald-100 shadow-sm">
                             <div className="space-y-3">
-                                {[1, 2, 3, 4, 5, 6].filter(p => (powerType === '2.0' ? p <= 3 : powerType === '3.0' ? p <= 6 : true)).map(p => {
+                                {visibleEnergyPeriods.map(p => {
                                     const field = `energy_p${p}` as keyof InvoiceData;
                                     return (
                                         <div key={`energy-${p}`} className="flex items-center justify-between gap-4">
@@ -226,7 +235,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                         </div>
                         <Card className="bg-amber-50/30 border border-amber-100 shadow-sm">
                             <div className="space-y-3">
-                                {[1, 2, 3, 4, 5, 6].filter(p => (powerType === '2.0' ? p <= 2 : powerType === '3.0' ? p <= 6 : true)).map(p => {
+                                {visiblePowerPeriods.map(p => {
                                     const field = `power_p${p}` as keyof InvoiceData;
                                     return (
                                         <div key={`power-${p}`} className="flex items-center justify-between gap-4">
