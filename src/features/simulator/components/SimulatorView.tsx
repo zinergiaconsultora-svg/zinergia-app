@@ -30,7 +30,7 @@ export const SimulatorView = () => {
     } = useSimulatorContext();
 
     const updateInvoiceField = <K extends keyof InvoiceData>(key: K, value: InvoiceData[K]) => {
-        setInvoiceData(prev => ({ ...prev, [key]: value }));
+        setInvoiceData({ ...invoiceData, [key]: value });
     };
 
     const getPowerType = (data: InvoiceData): string => {
