@@ -5,8 +5,9 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { InvoiceData, SavingsResult } from '@/types/crm';import { SimulationRecord } from '@/services/simulatorService';
-import
+import { InvoiceData, SavingsResult } from '@/types/crm';
+import { SimulationRecord } from '@/services/simulatorService';
+import { 
     analyzeDocumentWithRetry, 
     calculateSavingsWithRetry, 
     saveSimulation,
