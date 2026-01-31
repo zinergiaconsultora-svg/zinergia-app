@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { InvoiceData, SavingsResult } from '@/types/crm';
 import { analyzeDocumentWithRetry, calculateSavingsWithRetry } from '@/services/simulatorService';
 
@@ -21,10 +21,48 @@ export interface ComparisonInvoice {
 export function useMultipleComparison() {
     const [invoices, setInvoices] = useState<ComparisonInvoice[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
+    const invoicesRef = useRef(invoices);
+    
+    // Keep ref in sync
+    invoicesRef.current = invoices;
 
-    /* eslint-disable react-hooks/exhaustive-deps */
+    const processInvoice = useRef(async (id: string, file: File) => {
+        try {
+            setInvoices((prev: ComparisonInvoice[]) => 
+                prev.map(inv => 
+                    inv.id === id ? { ...inv, status: 'analyzing' as const } : inv
+                )
+            );
+
+            const data = await analyzeDocumentWithRetry(file);
+
+            setInvoices((prev: ComparisonInvoice[]) => {
+                const updated = prev.map(inv => 
+                    inv.id === id ? { ...inv, data, status: 'analyzed' as const } : inv
+                );
+                
+                // Check if all analyzed, then compare all
+                const allAnalyzed = updated.every(inv => inv.status === 'analyzed');
+                if (allAnalyzed && updated.length > 1) {
+                    compareAllInvoices(updated);
+                }
+                
+                return updated;
+            });
+
+        } catch (error) {
+            setInvoices((prev: ComparisonInvoice[]) => 
+                prev.map(inv => 
+                    inv.id === id 
+                        ? { ...inv, status: 'error' as const, error: error instanceof Error ? error.message : 'Error al analizar' }
+                        : inv
+                )
+            );
+        }
+    }).current;
+
     const addInvoice = useCallback((file: File): boolean => {
-        if (invoices.length >= 3) {
+        if (invoicesRef.current.length >= 3) {
             return false; // Max 3 invoices
         }
 
@@ -36,50 +74,11 @@ export function useMultipleComparison() {
 
         setInvoices(prev => [...prev, newInvoice]);
         
-        // Process asynchronously - processInvoice is defined below but called via setTimeout
-        setTimeout(() => {
-            processInvoice(newInvoice.id, file);
-        }, 0);
+        // Process asynchronously
+        setTimeout(() => processInvoice(newInvoice.id, file), 0);
         
         return true;
-    }, [invoices.length]);
-    /* eslint-enable react-hooks/exhaustive-deps */
-
-    const processInvoice = async (id: string, file: File) => {
-        try {
-            setInvoices(prev => 
-                prev.map(inv => 
-                    inv.id === id ? { ...inv, status: 'analyzing' } : inv
-                )
-            );
-
-            const data = await analyzeDocumentWithRetry(file);
-
-            setInvoices(prev => 
-                prev.map(inv => 
-                    inv.id === id ? { ...inv, data, status: 'analyzed' } : inv
-                )
-            );
-
-            // Check if all analyzed, then compare all
-            setInvoices(prev => {
-                const allAnalyzed = prev.every(inv => inv.status === 'analyzed');
-                if (allAnalyzed && prev.length > 1) {
-                    compareAllInvoices(prev);
-                }
-                return prev;
-            });
-
-        } catch (error) {
-            setInvoices(prev => 
-                prev.map(inv => 
-                    inv.id === id 
-                        ? { ...inv, status: 'error', error: error instanceof Error ? error.message : 'Error al analizar' }
-                        : inv
-                )
-            );
-        }
-    };
+    }, []);
 
     const compareAllInvoices = async (currentInvoices: ComparisonInvoice[]) => {
         setIsProcessing(true);
