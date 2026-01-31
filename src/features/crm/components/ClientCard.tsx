@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Client } from '@/types/crm';
 import { MapPin, Phone, ChevronRight, User, Building2 } from 'lucide-react';
@@ -15,9 +15,13 @@ interface ClientCardProps {
 export default function ClientCard({ client }: ClientCardProps) {
     const router = useRouter();
 
+    const handleClick = useCallback(() => {
+        router.push(`/dashboard/clients/${client.id}`);
+    }, [router, client.id]);
+
     return (
         <Card
-            onClick={() => router.push(`/dashboard/clients/${client.id}`)}
+            onClick={handleClick}
             className="group hover:shadow-floating hover:-translate-y-1 relative overflow-hidden p-8"
         >
             <div className="absolute top-0 right-0 p-16 bg-gradient-to-bl from-white/80 to-transparent rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>

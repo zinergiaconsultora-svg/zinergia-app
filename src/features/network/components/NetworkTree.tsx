@@ -63,7 +63,7 @@ const TreeNode: React.FC<{ node: NetworkUser, depth: number, isLast?: boolean, s
                                 }
                         `}>
                                 {node.avatar_url ? (
-                                    <Image src={node.avatar_url} alt={node.full_name} fill className="object-cover" sizes="48px" />
+                                    <Image src={node.avatar_url} alt={node.full_name} fill className="object-cover" sizes="48px" loading="lazy" />
                                 ) : (
                                     node.role === 'franchise' ? <Building2 size={20} strokeWidth={1.5} /> : <User size={20} strokeWidth={1.5} />
                                 )}
