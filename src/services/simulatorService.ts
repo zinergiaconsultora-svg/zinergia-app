@@ -232,8 +232,10 @@ export async function exportResultsToPDF(
 // ============================================================================
 
 export async function exportResultsToExcel(
-    invoiceData: InvoiceData,
-    results: SavingsResult[]
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _invoiceData: InvoiceData,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _results: SavingsResult[]
 ): Promise<void> {
     // TODO: Re-implementar con librería segura
     console.warn('Export to Excel temporarily disabled');
