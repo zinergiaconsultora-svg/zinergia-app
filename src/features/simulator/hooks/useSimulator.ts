@@ -1,9 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useReducer, useCallback } from 'react';
 import { InvoiceData, SavingsResult } from '@/types/crm';
 import { analyzeDocument, calculateSavings, validateFile } from '@/services/webhookService';
 import { crmService } from '@/services/crmService';
 
 type Step = 1 | 2 | 3;
+
+interface SimulatorState {
+    step: Step;
+    isAnalyzing: boolean;
+    isMockMode: boolean;
+    invoiceData: InvoiceData;
+    uploadError: string | null;
+    results: SavingsResult[];
+    loadingMessage: string;
+}
+
+type SimulatorAction =
+    | { type: 'START_ANALYSIS' }
+    | { type: 'SET_INVOICE_DATA'; payload: InvoiceData }
+    | { type: 'SET_ERROR'; payload: string | null }
+    | { type: 'SET_RESULTS'; payload: SavingsResult[] }
+    | { type: 'SET_LOADING_MESSAGE'; payload: string }
+    | { type: 'SET_MOCK_MODE'; payload: boolean }
+    | { type: 'SET_STEP'; payload: Step }
+    | { type: 'RESET' }
+    | { type: 'GO_BACK_TO_STEP1' };
 
 const defaultInvoiceData: InvoiceData = {
     period_days: 30,
@@ -11,14 +32,43 @@ const defaultInvoiceData: InvoiceData = {
     energy_p1: 0, energy_p2: 0, energy_p3: 0, energy_p4: 0, energy_p5: 0, energy_p6: 0,
 };
 
+const initialState: SimulatorState = {
+    step: 1,
+    isAnalyzing: false,
+    isMockMode: false,
+    invoiceData: defaultInvoiceData,
+    uploadError: null,
+    results: [],
+    loadingMessage: '',
+};
+
+function simulatorReducer(state: SimulatorState, action: SimulatorAction): SimulatorState {
+    switch (action.type) {
+        case 'START_ANALYSIS':
+            return { ...state, isAnalyzing: true, uploadError: null, isMockMode: false };
+        case 'SET_INVOICE_DATA':
+            return { ...state, invoiceData: action.payload, step: 2, isAnalyzing: false };
+        case 'SET_ERROR':
+            return { ...state, uploadError: action.payload, isAnalyzing: false };
+        case 'SET_RESULTS':
+            return { ...state, results: action.payload, step: 3, isAnalyzing: false };
+        case 'SET_LOADING_MESSAGE':
+            return { ...state, loadingMessage: action.payload };
+        case 'SET_MOCK_MODE':
+            return { ...state, isMockMode: action.payload };
+        case 'SET_STEP':
+            return { ...state, step: action.payload };
+        case 'RESET':
+            return initialState;
+        case 'GO_BACK_TO_STEP1':
+            return { ...state, step: 1, uploadError: null, isMockMode: false };
+        default:
+            return state;
+    }
+}
+
 export function useSimulator() {
-    const [step, setStep] = useState<Step>(1);
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [isMockMode, setIsMockMode] = useState(false);
-    const [invoiceData, setInvoiceData] = useState<InvoiceData>(defaultInvoiceData);
-    const [uploadError, setUploadError] = useState<string | null>(null);
-    const [results, setResults] = useState<SavingsResult[]>([]);
-    const [loadingMessage, setLoadingMessage] = useState('');
+    const [state, dispatch] = useReducer(simulatorReducer, initialState);
 
     // Check for pending invoice data from QuickUploadZone
     useEffect(() => {
@@ -27,8 +77,7 @@ export function useSimulator() {
             if (pendingData) {
                 try {
                     const parsedData = JSON.parse(pendingData);
-                    setInvoiceData(parsedData);
-                    setStep(2);
+                    dispatch({ type: 'SET_INVOICE_DATA', payload: parsedData });
                     localStorage.removeItem('pendingInvoiceData');
                 } catch (e) {
                     console.error('Error parsing pending invoice data:', e);
@@ -37,10 +86,8 @@ export function useSimulator() {
         }
     }, []);
 
-    const processInvoice = async (file: File) => {
-        setIsAnalyzing(true);
-        setUploadError(null);
-        setIsMockMode(false);
+    const processInvoice = useCallback(async (file: File) => {
+        dispatch({ type: 'START_ANALYSIS' });
 
         try {
             // Validate file first
@@ -55,48 +102,39 @@ export function useSimulator() {
                 throw new Error('No se pudieron extraer datos de la factura');
             }
 
-            setInvoiceData(data);
-            setStep(2);
-
+            dispatch({ type: 'SET_INVOICE_DATA', payload: data });
         } catch (error) {
             console.error('Error processing invoice:', error);
-            setUploadError(error instanceof Error ? error.message : 'Error al procesar la factura');
-        } finally {
-            setIsAnalyzing(false);
+            dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Error al procesar la factura' });
         }
-    };
+    }, []);
 
-    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
         await processInvoice(file);
-    };
+    }, [processInvoice]);
 
-    const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         const file = e.dataTransfer.files[0];
         if (file && file.type === 'application/pdf') {
             await processInvoice(file);
         } else {
-            setUploadError('Por favor, sube solo archivos PDF');
+            dispatch({ type: 'SET_ERROR', payload: 'Por favor, sube solo archivos PDF' });
         }
-    };
+    }, [processInvoice]);
 
-    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
-    };
+    }, []);
 
-    const handleReset = () => {
-        setStep(1);
-        setInvoiceData(defaultInvoiceData);
-        setUploadError(null);
-        setResults([]);
-        setIsMockMode(false);
-    };
+    const handleReset = useCallback(() => {
+        dispatch({ type: 'RESET' });
+    }, []);
 
-    const runComparison = async () => {
-        setIsAnalyzing(true);
-        setIsMockMode(false);
+    const runComparison = useCallback(async () => {
+        dispatch({ type: 'START_ANALYSIS' });
         const messages = [
             'Analizando patrones de consumo...',
             'Consultando las 3 mejores tarifas disponibles...',
@@ -105,39 +143,38 @@ export function useSimulator() {
         ];
 
         let msgIndex = 0;
-        setLoadingMessage(messages[0]);
+        dispatch({ type: 'SET_LOADING_MESSAGE', payload: messages[0] });
 
         const interval = setInterval(() => {
             msgIndex++;
             if (msgIndex < messages.length) {
-                setLoadingMessage(messages[msgIndex]);
+                dispatch({ type: 'SET_LOADING_MESSAGE', payload: messages[msgIndex] });
             }
         }, 800);
 
         try {
-            const calculatedSavings = await calculateSavings(invoiceData);
+            const calculatedSavings = await calculateSavings(state.invoiceData);
             clearInterval(interval);
 
             // Check if we're in mock mode
             if (process.env.NODE_ENV === 'development' && calculatedSavings.length > 0) {
                 const firstOffer = calculatedSavings[0];
                 if (firstOffer.offer.id.startsWith('mock-')) {
-                    setIsMockMode(true);
+                    dispatch({ type: 'SET_MOCK_MODE', payload: true });
                 }
             }
 
             const topResults = calculatedSavings.slice(0, 3);
-            setResults(topResults);
+            dispatch({ type: 'SET_RESULTS', payload: topResults });
 
             if (topResults.length > 0) {
                 // Persistent: Save the top 3 results as draft proposals
-                // The user explicitly requested to create 3 top proposals
                 try {
                     console.log('[Simulator] Persisting 3 top proposals...');
 
                     // 1. Log the best result (creates client + 1st proposal)
                     const bestResult = topResults[0];
-                    const savedProposal = await crmService.logSimulation(invoiceData, bestResult, invoiceData.client_name);
+                    const savedProposal = await crmService.logSimulation(state.invoiceData, bestResult, state.invoiceData.client_name);
 
                     // 2. Log the next two if they exist, linked to the SAME client
                     if (topResults.length > 1) {
@@ -147,7 +184,7 @@ export function useSimulator() {
                                 client_id: savedProposal.client_id,
                                 status: 'draft',
                                 offer_snapshot: result.offer,
-                                calculation_data: invoiceData,
+                                calculation_data: state.invoiceData,
                                 annual_savings: result.annual_savings,
                                 current_annual_cost: result.current_annual_cost,
                                 offer_annual_cost: result.offer_annual_cost,
@@ -159,41 +196,36 @@ export function useSimulator() {
                     console.log('[Simulator] 3 Proposals persisted successfully');
                 } catch (persistError) {
                     console.error('[Simulator] Failed to persist proposals:', persistError);
-                    // We don't block the UI if persistence fails, but we should at least log it
                 }
 
                 localStorage.setItem('antigravity_simulator_result', JSON.stringify(topResults[0]));
-                localStorage.setItem('antigravity_simulator_invoice', JSON.stringify(invoiceData));
+                localStorage.setItem('antigravity_simulator_invoice', JSON.stringify(state.invoiceData));
                 sessionStorage.setItem('simulator_result', JSON.stringify(topResults[0]));
-                sessionStorage.setItem('simulator_invoice', JSON.stringify(invoiceData));
-
-                setStep(3);
+                sessionStorage.setItem('simulator_invoice', JSON.stringify(state.invoiceData));
             }
         } catch (error) {
             console.error('Comparison failed', error);
             clearInterval(interval);
-            setUploadError(error instanceof Error ? error.message : 'Error al realizar la comparación');
-        } finally {
-            setIsAnalyzing(false);
+            dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Error al realizar la comparación' });
         }
-    };
+    }, [state.invoiceData]);
 
-    const goBackToStep1 = () => {
-        setStep(1);
-        setUploadError(null);
-        setIsMockMode(false);
-    };
+    const goBackToStep1 = useCallback(() => {
+        dispatch({ type: 'GO_BACK_TO_STEP1' });
+    }, []);
+
+    const setInvoiceData = useCallback((data: InvoiceData) => {
+        dispatch({ type: 'SET_INVOICE_DATA', payload: data });
+    }, []);
+
+    const setStep = useCallback((step: Step) => {
+        dispatch({ type: 'SET_STEP', payload: step });
+    }, []);
 
     return {
-        step,
+        ...state,
         setStep,
-        isAnalyzing,
-        isMockMode,
-        invoiceData,
         setInvoiceData,
-        uploadError,
-        results,
-        loadingMessage,
         handleFileUpload,
         handleDrop,
         handleDragOver,
