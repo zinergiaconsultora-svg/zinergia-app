@@ -13,23 +13,25 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('system');
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window !== 'undefined') {
+      const storedTheme = localStorage.getItem('theme') as Theme | null;
+      return storedTheme || 'system';
+    }
+    return 'system';
+  });
   const [actualTheme, setActualTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
     const root = window.document.documentElement;
-    const storedTheme = localStorage.getItem('theme') as Theme | null;
-    
-    const initialTheme = storedTheme || 'system';
-    setTheme(initialTheme);
     
     const updateTheme = () => {
       let resolved: 'light' | 'dark';
       
-      if (initialTheme === 'system') {
+      if (theme === 'system') {
         resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       } else {
-        resolved = initialTheme;
+        resolved = theme;
       }
       
       setActualTheme(resolved);
