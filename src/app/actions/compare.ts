@@ -14,6 +14,14 @@ export async function calculateSavingsAction(invoice: InvoiceData) {
         WEBHOOK_API_KEY: 'Defined',
     });
 
+    if (!COMPARISON_WEBHOOK_URL) {
+        throw new Error('COMPARISON_WEBHOOK_URL is not defined');
+    }
+
+    if (!WEBHOOK_API_KEY) {
+        throw new Error('WEBHOOK_API_KEY is not defined');
+    }
+
     try {
         const response = await fetch(COMPARISON_WEBHOOK_URL, {
             method: 'POST',
