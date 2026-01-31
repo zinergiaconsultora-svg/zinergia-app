@@ -18,12 +18,16 @@ const TreeNode: React.FC<{ node: NetworkUser, depth: number, isLast?: boolean, s
         const [isExpanded, setIsExpanded] = useState(depth < 2 || !!forceExpand);
         const hasChildren = node.children && node.children.length > 0;
 
-        // Sync forceExpand prop to state
+        // Sync forceExpand prop to state using ref to avoid setState in effect
+        const hasExpandedRef = React.useRef(false);
         useEffect(() => {
-            if (forceExpand && !isExpanded) {
-                setIsExpanded(true);
+            if (forceExpand && !hasExpandedRef.current) {
+                hasExpandedRef.current = true;
+                // Use requestAnimationFrame to avoid synchronous setState
+                requestAnimationFrame(() => {
+                    setIsExpanded(true);
+                });
             }
-            // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [forceExpand]);
 
         return (

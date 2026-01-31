@@ -34,6 +34,30 @@ const Cell = dynamic(
     { ssr: false }
 );
 
+// Static style objects defined outside components to prevent recreation on every render
+const TOOLTIP_CONTENT_STYLE = {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backdropFilter: 'blur(8px)',
+    border: '1px solid rgba(0,0,0,0.05)',
+    borderRadius: '12px',
+    color: '#1e293b',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
+} as const;
+
+const TOOLTIP_ITEM_STYLE = { color: '#059669', fontWeight: 500 } as const;
+const TOOLTIP_CURSOR_STYLE = { stroke: '#e2e8f0', strokeWidth: 1 } as const;
+
+const PIE_TOOLTIP_CONTENT_STYLE = {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    border: '1px solid rgba(0,0,0,0.05)',
+    borderRadius: '12px',
+    color: '#1e293b',
+    fontSize: '12px',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+} as const;
+
+const PIE_TOOLTIP_ITEM_STYLE = { color: '#1e293b' } as const;
+
 export const SavingsTrendChart = () => {
     // MOCK DATA for Visual Demonstration
     const data = [
@@ -57,16 +81,9 @@ export const SavingsTrendChart = () => {
                         </linearGradient>
                     </defs>
                     <Tooltip
-                        contentStyle={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                            backdropFilter: 'blur(8px)',
-                            border: '1px solid rgba(0,0,0,0.05)',
-                            borderRadius: '12px',
-                            color: '#1e293b',
-                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
-                        }}
-                        itemStyle={{ color: '#059669', fontWeight: 500 }}
-                        cursor={{ stroke: '#e2e8f0', strokeWidth: 1 }}
+                        contentStyle={TOOLTIP_CONTENT_STYLE}
+                        itemStyle={TOOLTIP_ITEM_STYLE}
+                        cursor={TOOLTIP_CURSOR_STYLE}
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         formatter={(value: any) => [formatCurrency(value), 'Ahorro']}
                     />
@@ -120,15 +137,8 @@ export const PipelinePieChart = ({
                         ))}
                     </Pie>
                     <Tooltip
-                        contentStyle={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                            border: '1px solid rgba(0,0,0,0.05)',
-                            borderRadius: '12px',
-                            color: '#1e293b',
-                            fontSize: '12px',
-                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
-                        }}
-                        itemStyle={{ color: '#1e293b' }}
+                        contentStyle={PIE_TOOLTIP_CONTENT_STYLE}
+                        itemStyle={PIE_TOOLTIP_ITEM_STYLE}
                     />
                 </PieChart>
             </ResponsiveContainer>
