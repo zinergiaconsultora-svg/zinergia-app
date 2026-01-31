@@ -72,9 +72,9 @@ export function useClientForm({ clientToEdit, onSuccess, onClose }: UseClientFor
             }
             onSuccess();
             onClose();
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            setError(err.message || 'Error al guardar cliente');
+            setError(err instanceof Error ? err.message : 'Error al guardar cliente');
         } finally {
             setLoading(false);
         }
