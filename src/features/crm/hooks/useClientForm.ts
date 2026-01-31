@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useReducer, useEffect, useCallback } from 'react';
 import { crmService } from '@/services/crmService';
 import { Client, ClientType } from '@/types/crm';
 
@@ -8,84 +8,132 @@ interface UseClientFormProps {
     onClose: () => void;
 }
 
-export function useClientForm({ clientToEdit, onSuccess, onClose }: UseClientFormProps) {
-    const [loading, setLoading] = useState(false);
-    const [step, setStep] = useState(1);
-    const [error, setError] = useState<string | null>(null);
+interface FormState {
+    loading: boolean;
+    step: number;
+    error: string | null;
+    formData: {
+        name: string;
+        email: string;
+        phone: string;
+        address: string;
+        type: ClientType;
+        cups: string;
+        current_supplier: string;
+        tariff_type: string;
+    };
+}
 
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        phone: '',
-        address: '',
-        type: 'particular' as ClientType,
-        cups: '',
-        current_supplier: '',
-        tariff_type: '2.0TD'
-    });
+type FormAction =
+    | { type: 'SET_FIELD'; field: keyof FormState['formData']; value: string }
+    | { type: 'SET_STEP'; step: number }
+    | { type: 'SET_ERROR'; error: string | null }
+    | { type: 'START_SUBMIT' }
+    | { type: 'SUBMIT_SUCCESS' }
+    | { type: 'SUBMIT_ERROR'; error: string }
+    | { type: 'RESET_FORM'; clientToEdit?: Client | null };
+
+const defaultFormData = {
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    type: 'particular' as ClientType,
+    cups: '',
+    current_supplier: '',
+    tariff_type: '2.0TD'
+};
+
+const initialState: FormState = {
+    loading: false,
+    step: 1,
+    error: null,
+    formData: defaultFormData
+};
+
+function formReducer(state: FormState, action: FormAction): FormState {
+    switch (action.type) {
+        case 'SET_FIELD':
+            return {
+                ...state,
+                formData: { ...state.formData, [action.field]: action.value }
+            };
+        case 'SET_STEP':
+            return { ...state, step: action.step };
+        case 'SET_ERROR':
+            return { ...state, error: action.error };
+        case 'START_SUBMIT':
+            return { ...state, loading: true, error: null };
+        case 'SUBMIT_SUCCESS':
+            return { ...state, loading: false };
+        case 'SUBMIT_ERROR':
+            return { ...state, loading: false, error: action.error };
+        case 'RESET_FORM':
+            if (action.clientToEdit) {
+                return {
+                    ...initialState,
+                    formData: {
+                        name: action.clientToEdit.name || '',
+                        email: action.clientToEdit.email || '',
+                        phone: action.clientToEdit.phone || '',
+                        address: action.clientToEdit.address || '',
+                        type: action.clientToEdit.type || 'particular',
+                        cups: action.clientToEdit.cups || '',
+                        current_supplier: action.clientToEdit.current_supplier || '',
+                        tariff_type: action.clientToEdit.tariff_type || '2.0TD'
+                    }
+                };
+            }
+            return initialState;
+        default:
+            return state;
+    }
+}
+
+export function useClientForm({ clientToEdit, onSuccess, onClose }: UseClientFormProps) {
+    const [state, dispatch] = useReducer(formReducer, initialState);
 
     useEffect(() => {
-        if (clientToEdit) {
-            setFormData({
-                name: clientToEdit.name || '',
-                email: clientToEdit.email || '',
-                phone: clientToEdit.phone || '',
-                address: clientToEdit.address || '',
-                type: clientToEdit.type || 'particular',
-                cups: clientToEdit.cups || '',
-                current_supplier: clientToEdit.current_supplier || '',
-                tariff_type: clientToEdit.tariff_type || '2.0TD'
-            });
-        } else {
-            setFormData({
-                name: '',
-                email: '',
-                phone: '',
-                address: '',
-                type: 'particular' as ClientType,
-                cups: '',
-                current_supplier: '',
-                tariff_type: '2.0TD'
-            });
-        }
-        setStep(1);
-        setError(null);
+        dispatch({ type: 'RESET_FORM', clientToEdit });
     }, [clientToEdit]);
 
-    const handleChange = (field: keyof typeof formData, value: string) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
-    };
+    const handleChange = useCallback((field: keyof FormState['formData'], value: string) => {
+        dispatch({ type: 'SET_FIELD', field, value });
+    }, []);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const setStep = useCallback((step: number) => {
+        dispatch({ type: 'SET_STEP', step });
+    }, []);
+
+    const handleSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
-        setError(null);
+        dispatch({ type: 'START_SUBMIT' });
 
         try {
             if (clientToEdit) {
-                await crmService.updateClient(clientToEdit.id, formData);
+                await crmService.updateClient(clientToEdit.id, state.formData);
             } else {
                 await crmService.createClient({
-                    ...formData,
+                    ...state.formData,
                     status: 'new'
                 });
             }
+            dispatch({ type: 'SUBMIT_SUCCESS' });
             onSuccess();
             onClose();
         } catch (err: unknown) {
             console.error(err);
-            setError(err instanceof Error ? err.message : 'Error al guardar cliente');
-        } finally {
-            setLoading(false);
+            const errorMessage = err instanceof Error ? err.message : 'Error al guardar cliente';
+            dispatch({ type: 'SUBMIT_ERROR', error: errorMessage });
         }
-    };
+    }, [clientToEdit, state.formData, onSuccess, onClose]);
 
     return {
-        formData,
-        step,
+        formData: state.formData,
+        step: state.step,
         setStep,
-        loading,
-        error,
+        loading: state.loading,
+        error: state.error,
         handleChange,
         handleSubmit
     };

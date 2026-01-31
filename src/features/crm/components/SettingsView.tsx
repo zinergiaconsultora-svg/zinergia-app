@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
@@ -46,7 +46,7 @@ export default function SettingsView() {
         { id: 3, name: 'Pedro Colaborador', type: 'collaborator', owner: 'Pedro Lopez', commission: 50, sales: 12, status: 'active' }, // Direct collaborator of Admin
     ]);
 
-    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
@@ -70,15 +70,15 @@ export default function SettingsView() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const handleSave = async () => {
+    const handleSave = useCallback(async () => {
         setLoading(true);
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1000));
         setLoading(false);
         // TODO: Show toast success
-    };
+    }, []);
 
     const containerVariants = {
         hidden: { opacity: 0 },
