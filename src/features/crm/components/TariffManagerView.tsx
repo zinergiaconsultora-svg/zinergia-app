@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import { crmService } from '@/services/crmService';
 import { Offer } from '@/types/crm';
@@ -22,6 +22,92 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TariffForm from './TariffForm';
+
+// Memoized Offer Card Component to prevent unnecessary re-renders
+interface OfferCardProps {
+    offer: Offer;
+    isSelected: boolean;
+    isDeleteConfirm: boolean;
+    onSelect: (id: string) => void;
+    onDelete: (id: string, e?: React.MouseEvent) => void;
+}
+
+const OfferCard = memo(function OfferCard({ 
+    offer, 
+    isSelected, 
+    isDeleteConfirm, 
+    onSelect, 
+    onDelete 
+}: OfferCardProps) {
+    const handleClick = useCallback(() => {
+        onSelect(offer.id);
+    }, [onSelect, offer.id]);
+
+    const handleDeleteClick = useCallback((e: React.MouseEvent) => {
+        onDelete(offer.id, e);
+    }, [onDelete, offer.id]);
+
+    return (
+        <motion.div
+            layout
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            onClick={handleClick}
+            className={`
+                group relative rounded-xl border p-4 cursor-pointer transition-all hover:shadow-md
+                ${isSelected
+                    ? 'bg-white border-indigo-500 ring-1 ring-indigo-500 shadow-md z-10'
+                    : 'bg-white border-slate-200 hover:border-indigo-300'
+                }
+            `}
+        >
+            <div className="flex justify-between items-start mb-3">
+                <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-white text-[10px] font-bold shadow-sm ${offer.logo_color || 'bg-slate-800'}`}>
+                        {offer.marketer_name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                        <h3 className={`text-[11px] font-bold leading-tight ${isSelected ? 'text-indigo-900' : 'text-slate-900'}`}>{offer.tariff_name}</h3>
+                        <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-slate-500">{offer.marketer_name}</span>
+                            {offer.type === 'indexed'
+                                ? <span className="w-1.5 h-1.5 rounded-full bg-purple-500 ring-2 ring-purple-100" />
+                                : <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ring-2 ring-emerald-100" />
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Mini Specs */}
+            <div className="grid grid-cols-3 gap-px bg-slate-100 rounded-lg border border-slate-100 overflow-hidden">
+                <div className="bg-slate-50 p-2 text-center group-hover:bg-white transition-colors">
+                    <div className="text-[9px] text-slate-400 font-bold uppercase">P1</div>
+                    <div className="text-[10px] font-mono font-medium text-slate-700">{Number(offer.energy_price?.p1).toFixed(4)}</div>
+                </div>
+                <div className="bg-slate-50 p-2 text-center group-hover:bg-white transition-colors">
+                    <div className="text-[9px] text-slate-400 font-bold uppercase">P2</div>
+                    <div className="text-[10px] font-mono font-medium text-slate-700">{Number(offer.energy_price?.p2).toFixed(4)}</div>
+                </div>
+                <div className="bg-slate-50 p-2 text-center group-hover:bg-white transition-colors">
+                    <div className="text-[9px] text-slate-400 font-bold uppercase">P3</div>
+                    <div className="text-[10px] font-mono font-medium text-slate-700">{Number(offer.energy_price?.p3).toFixed(4)}</div>
+                </div>
+            </div>
+            {/* Action Footer for Card */}
+            <div className="mt-3 flex justify-end">
+                <button
+                    onClick={handleDeleteClick}
+                    className={`p-1.5 rounded transition-colors ${isDeleteConfirm ? 'bg-rose-600 text-white' : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'}`}
+                    title="Eliminar"
+                    aria-label={isDeleteConfirm ? "Confirmar borrado" : "Eliminar tarifa"}
+                >
+                    {isDeleteConfirm ? <span className="text-[9px] font-bold px-1">¿Borrar?</span> : <Trash2 size={14} />}
+                </button>
+            </div>
+        </motion.div>
+    );
+});
 
 /**
  * Enhanced Tariff Manager View 2.0
@@ -47,12 +133,7 @@ export default function TariffManagerView() {
     const [isImporting, setIsImporting] = useState(false);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-    // Initial Load
-    useEffect(() => {
-        loadOffers();
-    }, []);
-
-    async function loadOffers() {
+    const loadOffers = useCallback(async () => {
         try {
             setLoading(true);
             const data = await crmService.getOffers();
@@ -62,7 +143,12 @@ export default function TariffManagerView() {
         } finally {
             setLoading(false);
         }
-    }
+    }, []);
+
+    // Initial Load
+    useEffect(() => {
+        loadOffers();
+    }, [loadOffers]);
 
     // --- Derived State ---
     const marketers = useMemo(() => {
@@ -101,7 +187,7 @@ export default function TariffManagerView() {
         setIsFormOpen(true);
     };
 
-    const handleDelete = async (id: string, e?: React.MouseEvent) => {
+    const handleDelete = useCallback(async (id: string, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
 
         console.log('Intentando borrar tarifa:', id);
@@ -127,7 +213,11 @@ export default function TariffManagerView() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [deleteConfirmId, loadOffers]);
+
+    const handleSelectOffer = useCallback((id: string) => {
+        setSelectedOfferId(prev => prev === id ? null : id);
+    }, []);
 
     const handleSave = async (offer: Partial<Offer>) => {
         try {
@@ -329,65 +419,14 @@ export default function TariffManagerView() {
                     ) : (
                         <div className={viewMode === 'grid' ? "grid grid-cols-1 xl:grid-cols-2 gap-4" : "space-y-2"}>
                             {filteredOffers.map(offer => (
-                                <motion.div
+                                <OfferCard
                                     key={offer.id}
-                                    layout
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    onClick={() => setSelectedOfferId(offer.id === selectedOfferId ? null : offer.id)}
-                                    className={`
-                                        group relative rounded-xl border p-4 cursor-pointer transition-all hover:shadow-md
-                                        ${selectedOfferId === offer.id
-                                            ? 'bg-white border-indigo-500 ring-1 ring-indigo-500 shadow-md z-10'
-                                            : 'bg-white border-slate-200 hover:border-indigo-300'
-                                        }
-                                    `}
-                                >
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-white text-[10px] font-bold shadow-sm ${offer.logo_color || 'bg-slate-800'}`}>
-                                                {offer.marketer_name.substring(0, 2).toUpperCase()}
-                                            </div>
-                                            <div>
-                                                <h3 className={`text-[11px] font-bold leading-tight ${selectedOfferId === offer.id ? 'text-indigo-900' : 'text-slate-900'}`}>{offer.tariff_name}</h3>
-                                                <div className="flex items-center gap-2 mt-0.5">
-                                                    <span className="text-[10px] text-slate-500">{offer.marketer_name}</span>
-                                                    {offer.type === 'indexed'
-                                                        ? <span className="w-1.5 h-1.5 rounded-full bg-purple-500 ring-2 ring-purple-100" />
-                                                        : <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ring-2 ring-emerald-100" />
-                                                    }
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Mini Specs */}
-                                    <div className="grid grid-cols-3 gap-px bg-slate-100 rounded-lg border border-slate-100 overflow-hidden">
-                                        <div className="bg-slate-50 p-2 text-center group-hover:bg-white transition-colors">
-                                            <div className="text-[9px] text-slate-400 font-bold uppercase">P1</div>
-                                            <div className="text-[10px] font-mono font-medium text-slate-700">{Number(offer.energy_price?.p1).toFixed(4)}</div>
-                                        </div>
-                                        <div className="bg-slate-50 p-2 text-center group-hover:bg-white transition-colors">
-                                            <div className="text-[9px] text-slate-400 font-bold uppercase">P2</div>
-                                            <div className="text-[10px] font-mono font-medium text-slate-700">{Number(offer.energy_price?.p2).toFixed(4)}</div>
-                                        </div>
-                                        <div className="bg-slate-50 p-2 text-center group-hover:bg-white transition-colors">
-                                            <div className="text-[9px] text-slate-400 font-bold uppercase">P3</div>
-                                            <div className="text-[10px] font-mono font-medium text-slate-700">{Number(offer.energy_price?.p3).toFixed(4)}</div>
-                                        </div>
-                                    </div>
-                                    {/* Action Footer for Card */}
-                                    <div className="mt-3 flex justify-end">
-                                        <button
-                                            onClick={(e) => handleDelete(offer.id, e)}
-                                            className={`p-1.5 rounded transition-colors ${deleteConfirmId === offer.id ? 'bg-rose-600 text-white' : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'}`}
-                                            title="Eliminar"
-                                            aria-label={deleteConfirmId === offer.id ? "Confirmar borrado" : "Eliminar tarifa"}
-                                        >
-                                            {deleteConfirmId === offer.id ? <span className="text-[9px] font-bold px-1">¿Borrar?</span> : <Trash2 size={14} />}
-                                        </button>
-                                    </div>
-                                </motion.div>
+                                    offer={offer}
+                                    isSelected={selectedOfferId === offer.id}
+                                    isDeleteConfirm={deleteConfirmId === offer.id}
+                                    onSelect={handleSelectOffer}
+                                    onDelete={handleDelete}
+                                />
                             ))}
                         </div>
                     )}
