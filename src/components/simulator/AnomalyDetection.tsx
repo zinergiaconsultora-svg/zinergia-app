@@ -35,7 +35,6 @@ export const AnomalyDetection: React.FC<AnomalyAlertProps> = ({ invoiceData, onD
             (invoiceData.energy_p5 || 0) +
             (invoiceData.energy_p6 || 0);
 
-        const avgMonthlyEnergy = totalEnergy * 12; // Rough annual
         const avgDailyEnergy = totalEnergy / (invoiceData.period_days || 30);
 
         // Very high consumption alert
