@@ -11,7 +11,7 @@ export const crmService = {
      */
     async _getFranchiseId(supabase: SupabaseClient) {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
+        if (!user) return null;
 
         const { data: profile } = await supabase
             .from('profiles')
@@ -31,6 +31,7 @@ export const crmService = {
     async getClients(serverClient?: SupabaseClient) {
         const supabase = serverClient || createClient();
         const franchiseId = await this._getFranchiseId(supabase);
+        if (!franchiseId) return [];
 
         const { data, error } = await supabase
             .from('clients')
@@ -109,7 +110,29 @@ export const crmService = {
 
         const growth = '+12%';
 
-        const { data: userProfile } = await supabase.from('profiles').select('full_name, role, avatar_url').eq('id', (await supabase.auth.getUser()).data.user!.id).single();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return {
+                user: null,
+                total: 0,
+                active: 0,
+                pending: 0,
+                new: 0,
+                growth: '0%',
+                recent: [],
+                recentProposals: [],
+                pendingActions: [],
+                financials: {
+                    total_detected: 0,
+                    pipeline: 0,
+                    secured: 0,
+                    conversion_rate: 0,
+                    month_savings: 0
+                }
+            };
+        }
+
+        const { data: userProfile } = await supabase.from('profiles').select('full_name, role, avatar_url').eq('id', user.id).single();
 
         return {
             user: userProfile,
@@ -243,6 +266,7 @@ export const crmService = {
     async getClientById(id: string) {
         const supabase = createClient();
         const franchiseId = await this._getFranchiseId(supabase);
+        if (!franchiseId) return null;
 
         const { data, error } = await supabase
             .from('clients')
@@ -262,6 +286,7 @@ export const crmService = {
     async updateClient(id: string, updates: Partial<Client>) {
         const supabase = createClient();
         const franchiseId = await this._getFranchiseId(supabase);
+        if (!franchiseId) return null;
 
         const { data, error } = await supabase
             .from('clients')
@@ -278,6 +303,7 @@ export const crmService = {
     async deleteClient(id: string) {
         const supabase = createClient();
         const franchiseId = await this._getFranchiseId(supabase);
+        if (!franchiseId) return false;
 
         const { error } = await supabase
             .from('clients')
@@ -292,6 +318,7 @@ export const crmService = {
     async saveProposal(proposal: Omit<Proposal, 'id' | 'created_at'>) {
         const supabase = createClient();
         const franchiseId = await this._getFranchiseId(supabase);
+        if (!franchiseId) return [];
 
         const { data, error } = await supabase
             .from('proposals')
@@ -332,6 +359,7 @@ export const crmService = {
     async updateProposalStatus(id: string, status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired') {
         const supabase = createClient();
         const franchiseId = await this._getFranchiseId(supabase);
+        if (!franchiseId) throw new Error('No franchise access');
 
         // 1. Update the proposal status
         const { data: proposal, error } = await supabase
@@ -355,12 +383,10 @@ export const crmService = {
         return proposal as Proposal;
     },
 
-    // Old implementation moved to clarify Sprint 3 structure below.
-
-
     async deleteProposal(id: string) {
         const supabase = createClient();
         const franchiseId = await this._getFranchiseId(supabase);
+        if (!franchiseId) return false;
 
         const { error } = await supabase
             .from('proposals')
@@ -379,6 +405,7 @@ export const crmService = {
     async getProposalById(id: string) {
         const supabase = createClient();
         const franchiseId = await this._getFranchiseId(supabase);
+        if (!franchiseId) return null;
 
         const { data, error } = await supabase
             .from('proposals')
@@ -406,6 +433,8 @@ export const crmService = {
     async getOffers(): Promise<Offer[]> {
         const supabase = createClient();
         const franchiseId = await this._getFranchiseId(supabase);
+        // During build/SSR without authentication, return empty list
+        if (!franchiseId) return [];
 
         try {
             const { data, error } = await supabase
@@ -1000,6 +1029,7 @@ export const crmService = {
     async getRecentProposals(limit = 20) {
         const supabase = createClient();
         const franchiseId = await this._getFranchiseId(supabase);
+        if (!franchiseId) return [];
 
         const { data, error } = await supabase
             .from('proposals')

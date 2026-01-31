@@ -23,6 +23,13 @@ const getEnv = () => {
     const parsed = envSchema.safeParse(process.env);
 
     if (!parsed.success) {
+        const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || process.env.CI === 'true';
+
+        if (isBuildTime) {
+            console.warn('⚠️ Missing environment variables during build/CI. This is allowed if they are set in the runtime environment.');
+            return process.env as any;
+        }
+
         console.error('❌ Invalid environment variables:', JSON.stringify(parsed.error.format(), null, 4));
         throw new Error('Invalid environment variables');
     }

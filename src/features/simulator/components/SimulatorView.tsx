@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSimulator } from '../hooks/useSimulator';
+import { useSimulatorContext } from '../contexts/SimulatorContext';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { InvoiceData } from '@/types/crm';
 import { SimulatorUpload } from './SimulatorUpload';
@@ -27,7 +27,7 @@ export const SimulatorView = () => {
         runComparison,
         reset: handleReset,
         goBackToStep1
-    } = useSimulator();
+    } = useSimulatorContext();
 
     const updateInvoiceField = <K extends keyof InvoiceData>(key: K, value: InvoiceData[K]) => {
         setInvoiceData(prev => ({ ...prev, [key]: value }));

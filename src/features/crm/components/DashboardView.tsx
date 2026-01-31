@@ -17,7 +17,7 @@ import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { formatCurrency } from '@/lib/utils/format';
 import { DashboardSkeleton } from '@/components/ui/DashboardSkeleton';
-import { useSimulator } from '@/features/simulator/hooks/useSimulator';
+import { useSimulatorContext } from '@/features/simulator/contexts/SimulatorContext';
 import { Upload, Sparkles } from 'lucide-react';
 
 const LeaderboardWidget = dynamic(() => import('@/features/gamification/components/LeaderboardWidget').then(mod => mod.LeaderboardWidget), { loading: () => <div className="h-64 bg-slate-100/50 animate-pulse rounded-2xl" /> });
@@ -89,7 +89,7 @@ export default function DashboardView() {
         handleDrop,
         handleDragOver,
         isAnalyzing
-    } = useSimulator();
+    } = useSimulatorContext();
     const [notifications, setNotifications] = useState([
         { id: '1', type: 'success' as const, title: 'Comisión Aprobada', message: 'La venta de "Restaurante El Molino" ha sido validada.', created_at: new Date().toISOString(), read: false },
         { id: '2', type: 'info' as const, title: 'Nuevo Recurso', message: 'Se ha añadido "Tarifas 2026 Q1" a la Academy.', created_at: new Date(Date.now() - 3600000).toISOString(), read: false },

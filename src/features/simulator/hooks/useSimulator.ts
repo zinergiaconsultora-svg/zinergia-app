@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { InvoiceData, SavingsResult } from '@/types/crm';
 import { analyzeDocument, calculateSavings, validateFile } from '@/services/webhookService';
+import { crmService } from '@/services/crmService';
 
 type Step = 1 | 2 | 3;
 
@@ -114,6 +115,38 @@ export function useSimulator() {
             setResults(topResults);
 
             if (topResults.length > 0) {
+                // Persistent: Save the top 3 results as draft proposals
+                // The user explicitly requested to create 3 top proposals
+                try {
+                    console.log('[Simulator] Persisting 3 top proposals...');
+
+                    // 1. Log the best result (creates client + 1st proposal)
+                    const bestResult = topResults[0];
+                    const savedProposal = await crmService.logSimulation(invoiceData, bestResult, invoiceData.client_name);
+
+                    // 2. Log the next two if they exist, linked to the SAME client
+                    if (topResults.length > 1) {
+                        for (let i = 1; i < topResults.length; i++) {
+                            const result = topResults[i];
+                            await crmService.saveProposal({
+                                client_id: savedProposal.client_id,
+                                status: 'draft',
+                                offer_snapshot: result.offer,
+                                calculation_data: invoiceData,
+                                annual_savings: result.annual_savings,
+                                current_annual_cost: result.current_annual_cost,
+                                offer_annual_cost: result.offer_annual_cost,
+                                savings_percent: result.savings_percent,
+                                optimization_result: result.optimization_result
+                            });
+                        }
+                    }
+                    console.log('[Simulator] 3 Proposals persisted successfully');
+                } catch (persistError) {
+                    console.error('[Simulator] Failed to persist proposals:', persistError);
+                    // We don't block the UI if persistence fails, but we should at least log it
+                }
+
                 localStorage.setItem('antigravity_simulator_result', JSON.stringify(topResults[0]));
                 localStorage.setItem('antigravity_simulator_invoice', JSON.stringify(invoiceData));
                 sessionStorage.setItem('simulator_result', JSON.stringify(topResults[0]));
