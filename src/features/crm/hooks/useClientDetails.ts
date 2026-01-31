@@ -19,9 +19,9 @@ export function useClientDetails(clientId: string) {
 
             const fetchedProposals = await crmService.getProposalsByClient(clientId);
             setProposals(fetchedProposals);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            setError(err.message || 'Error al cargar datos del cliente');
+            setError(err instanceof Error ? err.message : 'Error al cargar datos del cliente');
         } finally {
             setLoading(false);
         }
@@ -36,7 +36,7 @@ export function useClientDetails(clientId: string) {
         try {
             await crmService.deleteClient(clientId);
             router.push('/dashboard/clients');
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error deleting client:', err);
             setError('Error al eliminar cliente');
             setDeleting(false);
