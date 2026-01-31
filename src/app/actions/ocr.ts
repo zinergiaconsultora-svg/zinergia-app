@@ -9,6 +9,14 @@ export async function analyzeDocumentAction(formData: FormData): Promise<Invoice
 
     console.log('[OCR Action] Starting document analysis');
 
+    if (!OCR_WEBHOOK_URL) {
+        throw new Error('OCR_WEBHOOK_URL is not defined');
+    }
+
+    if (!WEBHOOK_API_KEY) {
+        throw new Error('WEBHOOK_API_KEY is not defined');
+    }
+
     // Diagnostic Logging for Vercel
     const envCheck = {
         OCR_WEBHOOK_URL: 'Defined (Length: ' + OCR_WEBHOOK_URL.length + ')',
