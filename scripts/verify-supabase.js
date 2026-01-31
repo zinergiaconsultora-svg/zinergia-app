@@ -26,7 +26,7 @@ async function verifySetup() {
     // 1. Verificar tabla lv_zinergia_tarifas
     console.log('📋 Verificando tabla lv_zinergia_tarifas...');
     try {
-        const { data, error, count } = await supabase
+        const { error, count } = await supabase
             .from('lv_zinergia_tarifas')
             .select('*', { count: 'exact', head: true });
         
@@ -37,15 +37,15 @@ async function verifySetup() {
             console.log(`   ✅ PASS - ${count} tarifas encontradas\n`);
             results.push({ check: 'lv_zinergia_tarifas', status: 'PASS', count });
         }
-    } catch (_err) {
-        console.log(`   ❌ Error: ${_err.message}\n`);
-        results.push({ check: 'lv_zinergia_tarifas', status: 'FAIL', error: _err.message });
+    } catch (err) {
+        console.log(`   ❌ Error: ${err.message}\n`);
+        results.push({ check: 'lv_zinergia_tarifas', status: 'FAIL', error: err.message });
     }
 
     // 2. Verificar vista v_active_tariffs
     console.log('📋 Verificando vista v_active_tariffs...');
     try {
-        const { data, error, count } = await supabase
+        const { error, count } = await supabase
             .from('v_active_tariffs')
             .select('*', { count: 'exact', head: true });
         
@@ -56,9 +56,9 @@ async function verifySetup() {
             console.log(`   ✅ PASS - ${count} tarifas activas\n`);
             results.push({ check: 'v_active_tariffs', status: 'PASS', count });
         }
-    } catch (_err) {
-        console.log(`   ❌ Error: ${_err.message}\n`);
-        results.push({ check: 'v_active_tariffs', status: 'FAIL', error: _err.message });
+    } catch (err) {
+        console.log(`   ❌ Error: ${err.message}\n`);
+        results.push({ check: 'v_active_tariffs', status: 'FAIL', error: err.message });
     }
 
     // 3. Verificar tipos de tarifas
@@ -73,7 +73,7 @@ async function verifySetup() {
             console.log(`   ❌ Error: ${error.message}\n`);
             results.push({ check: 'tariff_types', status: 'FAIL', error: error.message });
         } else {
-            const types: Record<string, number> = {};
+            const types = {};
             data.forEach(t => {
                 const key = `${t.tariff_type} - ${t.offer_type}`;
                 types[key] = (types[key] || 0) + 1;
