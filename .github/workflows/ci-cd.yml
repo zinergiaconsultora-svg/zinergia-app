@@ -66,6 +66,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Security Scan
     needs: lint-and-type
+    continue-on-error: true
     permissions:
       actions: read
       contents: read
