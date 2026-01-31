@@ -61,7 +61,6 @@ export function useMultipleComparison() {
         }
     }).current;
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     const addInvoice = (file: File): boolean => {
         if (invoicesRef.current.length >= 3) {
             return false; // Max 3 invoices
