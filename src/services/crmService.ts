@@ -24,16 +24,18 @@ export const crmService = {
     /**
      * PRIVATE HELPER: strictly gets the current user's franchise ID.
      * This acts as a second layer of security (Defense in Depth) on top of RLS.
+     * OPTIMIZED: Parallel auth and profile fetch to eliminate waterfall
      */
     async _getFranchiseId(supabase: SupabaseClient) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return null;
+        const [{ data: { user } }, { data: profile }] = await Promise.all([
+            supabase.auth.getUser(),
+            supabase
+                .from('profiles')
+                .select('franchise_id')
+                .single()
+        ]);
 
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('franchise_id')
-            .eq('id', user.id)
-            .single();
+        if (!user) return null;
 
         if (!profile) {
             // Retrieve via ensureProfile if missing (self-healing for brand new users)
@@ -136,7 +138,12 @@ export const crmService = {
 
         const growth = '+12%';
 
-        const { data: { user } } = await supabase.auth.getUser();
+        // Parallel: Fetch user and profile simultaneously
+        const [{ data: { user } }, { data: userProfile }] = await Promise.all([
+            supabase.auth.getUser(),
+            supabase.from('profiles').select('full_name, role, avatar_url').single()
+        ]);
+
         if (!user) {
             return {
                 user: null,
@@ -157,8 +164,6 @@ export const crmService = {
                 }
             };
         }
-
-        const { data: userProfile } = await supabase.from('profiles').select('full_name, role, avatar_url').eq('id', user.id).single();
 
         const result = {
             user: userProfile,
