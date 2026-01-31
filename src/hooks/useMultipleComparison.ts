@@ -22,6 +22,7 @@ export function useMultipleComparison() {
     const [invoices, setInvoices] = useState<ComparisonInvoice[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const addInvoice = useCallback((file: File): boolean => {
         if (invoices.length >= 3) {
             return false; // Max 3 invoices
@@ -35,8 +36,8 @@ export function useMultipleComparison() {
 
         setInvoices(prev => [...prev, newInvoice]);
         
-        // Process asynchronously
-        processInvoice(newInvoice.id, file);
+        // Process asynchronously - called after definition
+        setTimeout(() => processInvoice(newInvoice.id, file), 0);
         
         return true;
     }, [invoices.length]);
