@@ -39,7 +39,7 @@ async function quickCheck() {
         } else {
             console.log('❌ Supabase: No hay tarifas cargadas');
         }
-    } catch (_err) {
+    } catch {
         console.log('❌ Supabase: Error de conexión');
         console.log('   Verifica tus credenciales en .env.local');
     }
