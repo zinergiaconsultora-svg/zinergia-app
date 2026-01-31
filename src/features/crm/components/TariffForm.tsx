@@ -27,7 +27,7 @@ export default function TariffForm({ isOpen, initialData, onClose, onSave }: Tar
     const [formData, setFormData] = useState<Partial<Offer> & { type?: 'fixed' | 'indexed' }>(
         initialData ? {
             ...initialData,
-            type: (initialData as any).type || 'fixed' // Safe fallback
+            type: initialData.type || 'fixed' // Safe fallback
         } : {
             marketer_name: '',
             tariff_name: '',
