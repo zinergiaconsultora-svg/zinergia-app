@@ -46,7 +46,7 @@ export const CostComparisonChart: React.FC<CostComparisonProps> = ({ currentCost
                     <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
                     <YAxis tickFormatter={(val) => `€${val}`} tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <Tooltip
-                        formatter={(value: any) => [formatEuro(Number(value) || 0), '']}
+                        formatter={(value: number | undefined) => [formatEuro(Number(value) || 0), '']}
                         contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                         cursor={{ fill: 'transparent' }}
                     />
