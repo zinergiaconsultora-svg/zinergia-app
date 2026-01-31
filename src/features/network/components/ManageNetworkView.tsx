@@ -26,9 +26,9 @@ export const ManageNetworkView: React.FC = () => {
             ]);
             setHierarchy(hData);
             setNetStats(sData);
-        } catch (err: any) {
-            console.error('Network View Error Details:', err);
-            setError(err.message || 'Error al cargar la red jerárquica');
+       } catch (err: unknown) {
+    console.error('Network View Error Details:', err);
+    setError(err instanceof Error ? err.message : 'Error al cargar la red jerárquica');
         } finally {
             setIsLoading(false);
         }
