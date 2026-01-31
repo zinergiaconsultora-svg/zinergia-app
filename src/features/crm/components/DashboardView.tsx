@@ -138,12 +138,15 @@ export default function DashboardView() {
         [notifications]
     );
 
-    // Chart Calculations - memoized
-    const { wonDeals, activeDeals, lostDeals } = useMemo(() => ({
-        wonDeals: stats.recentProposals.filter(p => p.status === 'accepted').length,
-        activeDeals: stats.recentProposals.filter(p => p.status === 'sent' || p.status === 'draft').length,
-        lostDeals: stats.recentProposals.filter(p => p.status === 'rejected').length
-    }), [stats.recentProposals]);
+    // Chart Calculations - optimized to single pass O(n) instead of O(3n)
+    const { wonDeals, activeDeals, lostDeals } = useMemo(() => {
+        return stats.recentProposals.reduce((acc, p) => {
+            if (p.status === 'accepted') acc.wonDeals++;
+            else if (p.status === 'sent' || p.status === 'draft') acc.activeDeals++;
+            else if (p.status === 'rejected') acc.lostDeals++;
+            return acc;
+        }, { wonDeals: 0, activeDeals: 0, lostDeals: 0 });
+    }, [stats.recentProposals]);
 
     // Callbacks for notification handlers
     const handleMarkAsRead = useCallback((id: string) => {
