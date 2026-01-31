@@ -38,7 +38,7 @@ interface SimulatorChartsProps {
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
-export const SimulatorCharts: React.FC<SimulatorChartsProps> = ({ results, invoiceData, history }) => {
+export const SimulatorCharts: React.FC<SimulatorChartsProps> = ({ results, history }) => {
     // Prepare bar chart data
     const barData: ChartData[] = results.map((r) => ({
         offer: r.offer.marketer_name,
@@ -56,7 +56,7 @@ export const SimulatorCharts: React.FC<SimulatorChartsProps> = ({ results, invoi
     ];
 
     // Prepare trend data from history
-    const trendData = history?.slice(0, 6).map((h, i) => ({
+    const trendData = history?.slice(0, 6).map((h) => ({
         month: new Date(h.created_at).toLocaleDateString('es-ES', { month: 'short' }),
         savings: h.total_savings || 0,
     })) || [];
