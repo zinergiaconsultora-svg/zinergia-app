@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { SavingsResult } from '../../../types/crm';
-import { Download, Mail, ShieldCheck, Zap, Loader2, FileText, Phone, MapPin, Globe } from 'lucide-react';
+import { Download, Mail, ShieldCheck, Zap, Loader2, FileText } from 'lucide-react';
+// Lint fix: removed unused imports (Phone, MapPin, Globe)
 import { QRCodeSVG } from 'qrcode.react';
 import { formatCurrency } from '@/lib/utils/format';
 
@@ -52,8 +53,6 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
         setIsGeneratingPdf(true);
 
         try {
-            const printContent = cardRef.current.outerHTML;
-
             const printWindow = window.open('', '_blank', 'width=900,height=700');
             if (!printWindow) {
                 alert('Permite las ventanas emergentes para descargar el PDF');
