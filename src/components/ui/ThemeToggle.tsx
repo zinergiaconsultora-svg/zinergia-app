@@ -6,7 +6,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function ThemeToggle() {
-  const { theme, setTheme, actualTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [isOpen, setIsOpen] = React.useState(false);
 
   const themes: { value: 'light' | 'dark' | 'system'; icon: React.ReactNode; label: string }[] = [
