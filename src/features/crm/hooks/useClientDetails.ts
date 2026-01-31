@@ -47,7 +47,7 @@ export function useClientDetails(clientId: string) {
         try {
             await crmService.deleteProposal(id);
             setProposals(prev => prev.filter(p => p.id !== id));
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error deleting proposal:', err);
             // Optionally set error or handle it via a toast in the UI
             setError('Error al eliminar la propuesta');
