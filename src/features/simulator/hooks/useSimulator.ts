@@ -1,22 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { InvoiceData, SavingsResult } from '@/types/crm';
 import { analyzeDocument, calculateSavings, validateFile } from '@/services/webhookService';
 import { crmService } from '@/services/crmService';
 
 type Step = 1 | 2 | 3;
 
+const defaultInvoiceData: InvoiceData = {
+    period_days: 30,
+    power_p1: 0, power_p2: 0, power_p3: 0, power_p4: 0, power_p5: 0, power_p6: 0,
+    energy_p1: 0, energy_p2: 0, energy_p3: 0, energy_p4: 0, energy_p5: 0, energy_p6: 0,
+};
+
 export function useSimulator() {
     const [step, setStep] = useState<Step>(1);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isMockMode, setIsMockMode] = useState(false);
-    const [invoiceData, setInvoiceData] = useState<InvoiceData>({
-        period_days: 30,
-        power_p1: 0, power_p2: 0, power_p3: 0, power_p4: 0, power_p5: 0, power_p6: 0,
-        energy_p1: 0, energy_p2: 0, energy_p3: 0, energy_p4: 0, energy_p5: 0, energy_p6: 0,
-    });
+    const [invoiceData, setInvoiceData] = useState<InvoiceData>(defaultInvoiceData);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [results, setResults] = useState<SavingsResult[]>([]);
     const [loadingMessage, setLoadingMessage] = useState('');
+
+    // Check for pending invoice data from QuickUploadZone
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const pendingData = localStorage.getItem('pendingInvoiceData');
+            if (pendingData) {
+                try {
+                    const parsedData = JSON.parse(pendingData);
+                    setInvoiceData(parsedData);
+                    setStep(2);
+                    localStorage.removeItem('pendingInvoiceData');
+                } catch (e) {
+                    console.error('Error parsing pending invoice data:', e);
+                }
+            }
+        }
+    }, []);
 
     const processInvoice = async (file: File) => {
         setIsAnalyzing(true);
@@ -69,11 +88,7 @@ export function useSimulator() {
 
     const handleReset = () => {
         setStep(1);
-        setInvoiceData({
-            period_days: 30,
-            power_p1: 0, power_p2: 0, power_p3: 0, power_p4: 0, power_p5: 0, power_p6: 0,
-            energy_p1: 0, energy_p2: 0, energy_p3: 0, energy_p4: 0, energy_p5: 0, energy_p6: 0,
-        });
+        setInvoiceData(defaultInvoiceData);
         setUploadError(null);
         setResults([]);
         setIsMockMode(false);
