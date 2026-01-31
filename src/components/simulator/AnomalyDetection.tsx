@@ -89,7 +89,7 @@ export const AnomalyDetection: React.FC<AnomalyAlertProps> = ({ invoiceData, onD
         }
 
         // Check for reactive energy if data available
-        if ((invoiceData as any).energy_reactive > 0) {
+        if (invoiceData.forensic_details?.energy_reactive && invoiceData.forensic_details.energy_reactive > 0) {
             alerts.push({
                 id: 'reactive-energy',
                 type: 'warning',

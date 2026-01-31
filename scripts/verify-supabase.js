@@ -3,8 +3,10 @@
  * Ejecutar: node scripts/verify-supabase.js
  */
 
-require('dotenv').config({ path: '.env.local' });
-const { createClient } = require('@supabase/supabase-js');
+import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
+
+dotenv.config({ path: '.env.local' });
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -35,9 +37,9 @@ async function verifySetup() {
             console.log(`   ✅ PASS - ${count} tarifas encontradas\n`);
             results.push({ check: 'lv_zinergia_tarifas', status: 'PASS', count });
         }
-    } catch (err) {
-        console.log(`   ❌ Error: ${err.message}\n`);
-        results.push({ check: 'lv_zinergia_tarifas', status: 'FAIL', error: err.message });
+    } catch (_err) {
+        console.log(`   ❌ Error: ${_err.message}\n`);
+        results.push({ check: 'lv_zinergia_tarifas', status: 'FAIL', error: _err.message });
     }
 
     // 2. Verificar vista v_active_tariffs
@@ -54,9 +56,9 @@ async function verifySetup() {
             console.log(`   ✅ PASS - ${count} tarifas activas\n`);
             results.push({ check: 'v_active_tariffs', status: 'PASS', count });
         }
-    } catch (err) {
-        console.log(`   ❌ Error: ${err.message}\n`);
-        results.push({ check: 'v_active_tariffs', status: 'FAIL', error: err.message });
+    } catch (_err) {
+        console.log(`   ❌ Error: ${_err.message}\n`);
+        results.push({ check: 'v_active_tariffs', status: 'FAIL', error: _err.message });
     }
 
     // 3. Verificar tipos de tarifas
@@ -71,7 +73,7 @@ async function verifySetup() {
             console.log(`   ❌ Error: ${error.message}\n`);
             results.push({ check: 'tariff_types', status: 'FAIL', error: error.message });
         } else {
-            const types = {};
+            const types: Record<string, number> = {};
             data.forEach(t => {
                 const key = `${t.tariff_type} - ${t.offer_type}`;
                 types[key] = (types[key] || 0) + 1;
@@ -84,9 +86,9 @@ async function verifySetup() {
             console.log('');
             results.push({ check: 'tariff_types', status: 'PASS', types });
         }
-    } catch (err) {
-        console.log(`   ❌ Error: ${err.message}\n`);
-        results.push({ check: 'tariff_types', status: 'FAIL', error: err.message });
+    } catch (_err) {
+        console.log(`   ❌ Error: ${_err.message}\n`);
+        results.push({ check: 'tariff_types', status: 'FAIL', error: _err.message });
     }
 
     // 4. Verificar empresas de tarifas
@@ -110,9 +112,9 @@ async function verifySetup() {
             console.log('');
             results.push({ check: 'tariff_companies', status: 'PASS', count: companies.length });
         }
-    } catch (err) {
-        console.log(`   ❌ Error: ${err.message}\n`);
-        results.push({ check: 'tariff_companies', status: 'FAIL', error: err.message });
+    } catch (_err) {
+        console.log(`   ❌ Error: ${_err.message}\n`);
+        results.push({ check: 'tariff_companies', status: 'FAIL', error: _err.message });
     }
 
     // 5. Verificar muestra de tarifas
@@ -134,8 +136,8 @@ async function verifySetup() {
             });
             console.log('');
         }
-    } catch (err) {
-        console.log(`   ❌ Error: ${err.message}\n`);
+    } catch (_err) {
+        console.log(`   ❌ Error: ${_err.message}\n`);
     }
 
     // Resumen

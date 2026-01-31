@@ -3,8 +3,10 @@
  * Ejecutar: npm run supabase:setup:check
  */
 
-require('dotenv').config({ path: '.env.local' });
-const { createClient } = require('@supabase/supabase-js');
+import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
+
+dotenv.config({ path: '.env.local' });
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -37,7 +39,7 @@ async function quickCheck() {
         } else {
             console.log('❌ Supabase: No hay tarifas cargadas');
         }
-    } catch (err) {
+    } catch (_err) {
         console.log('❌ Supabase: Error de conexión');
         console.log('   Verifica tus credenciales en .env.local');
     }

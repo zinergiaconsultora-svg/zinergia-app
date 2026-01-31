@@ -9,9 +9,10 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Trash2, RotateCcw, Calendar, DollarSign } from 'lucide-react';
 import { getSimulationHistory, deleteSimulation } from '@/services/simulatorService';
+import { InvoiceData, SavingsResult } from '@/types/crm';
 
-export function SimulationHistoryView({ onLoadSimulation }: { onLoadSimulation: (invoiceData: any, results: any[]) => void }) {
-    const [history, setHistory] = React.useState<any[]>([]);
+export function SimulationHistoryView({ onLoadSimulation }: { onLoadSimulation: (invoiceData: InvoiceData, results: SavingsResult[]) => void }) {
+    const [history, setHistory] = React.useState<Array<{ id: string; invoice_data: InvoiceData; results: SavingsResult[]; total_savings: number; created_at: string }>>([]);
     const [loading, setLoading] = React.useState(false);
 
     const loadHistory = async () => {
@@ -39,7 +40,7 @@ export function SimulationHistoryView({ onLoadSimulation }: { onLoadSimulation: 
         }
     };
 
-    const handleLoad = (simulation: any) => {
+    const handleLoad = (simulation: { id: string; invoice_data: InvoiceData; results: SavingsResult[]; total_savings: number; created_at: string }) => {
         onLoadSimulation(simulation.invoice_data, simulation.results);
     };
 

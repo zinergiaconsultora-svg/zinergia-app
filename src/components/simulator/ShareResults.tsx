@@ -11,8 +11,8 @@ import { createClient } from '@/lib/supabase/client';
 
 interface ShareResultsProps {
     simulationId: string;
-    invoiceData: any;
-    results: any[];
+    invoiceData: unknown;
+    results: unknown[];
 }
 
 export const ShareResults: React.FC<ShareResultsProps> = ({ simulationId, invoiceData, results }) => {

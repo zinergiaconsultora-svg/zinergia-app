@@ -12,17 +12,35 @@ interface ChartData {
     savingsPercent: number;
 }
 
+interface SimulatorResult {
+    offer: {
+        marketer_name: string;
+        power_price: Record<string, number>;
+        energy_price: Record<string, number>;
+        fixed_fee: number;
+    };
+    offer_annual_cost: number;
+    annual_savings: number;
+    savings_percent: number;
+    invoiceData?: Record<string, number>;
+}
+
+interface HistoryItem {
+    created_at: string;
+    total_savings: number;
+}
+
 interface SimulatorChartsProps {
-    results: any[];
-    invoiceData: any;
-    history?: any[];
+    results: SimulatorResult[];
+    invoiceData: Record<string, unknown>;
+    history?: HistoryItem[];
 }
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 export const SimulatorCharts: React.FC<SimulatorChartsProps> = ({ results, invoiceData, history }) => {
     // Prepare bar chart data
-    const barData: ChartData[] = results.map((r, i) => ({
+    const barData: ChartData[] = results.map((r) => ({
         offer: r.offer.marketer_name,
         annualCost: r.offer_annual_cost,
         savings: r.annual_savings,
@@ -168,7 +186,7 @@ export const SimulatorCharts: React.FC<SimulatorChartsProps> = ({ results, invoi
                                 cx="50%"
                                 cy="50%"
                                 labelLine={false}
-                                label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                label={({ name, percent }: { name?: string; percent?: number }) => `${name || ''} ${((percent || 0) * 100).toFixed(0)}%`}
                                 outerRadius={80}
                                 fill="#8884d8"
                                 dataKey="value"
@@ -231,15 +249,15 @@ export const SimulatorCharts: React.FC<SimulatorChartsProps> = ({ results, invoi
 };
 
 // Helper functions
-function calculateAnnualPowerCost(offer: any): number {
+function calculateAnnualPowerCost(offer: SimulatorResult): number {
     const daysPerYear = 365;
     const days = 30; // Default billing period
 
-    const powerCost = Object.values(offer.offer.power_price).reduce((sum: number, val: any) => sum + (val || 0), 0);
+    const powerCost = Object.values(offer.offer.power_price).reduce((sum: number, val: number) => sum + (val || 0), 0);
     return powerCost * (daysPerYear / days);
 }
 
-function calculateAnnualEnergyCost(offer: any): number {
+function calculateAnnualEnergyCost(offer: SimulatorResult): number {
     if (!offer || !offer.offer || !offer.offer.energy_price) {
         return 0;
     }
@@ -248,15 +266,15 @@ function calculateAnnualEnergyCost(offer: any): number {
     const energyPrices = offer.offer.energy_price;
     const energyCost = Object.entries(energyPrices).reduce((sum: number, [period, price]) => {
         const periodNum = period.replace('p', '');
-        const energyKey = `energy_p${periodNum}` as keyof any;
+        const energyKey = `energy_p${periodNum}`;
         const consumption = offer.invoiceData?.[energyKey] || 0;
-        return sum + (consumption * (price as number));
+        return sum + (consumption * price);
     }, 0);
 
     // Annualize (assuming 30-day billing period)
     return energyCost * (365 / 30);
 }
 
-function calculateAnnualFixedFee(offer: any): number {
+function calculateAnnualFixedFee(offer: SimulatorResult): number {
     return offer.offer.fixed_fee * 12;
 }
