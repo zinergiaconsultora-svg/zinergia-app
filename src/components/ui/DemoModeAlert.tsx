@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface DemoModeAlertProps {
     show: boolean;
