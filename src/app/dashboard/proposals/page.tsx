@@ -31,23 +31,21 @@ export default function ProposalsPage() {
         }
     );
 
-    // Memoize grouped proposals calculation
+    // Memoize grouped proposals calculation - Optimized to O(n log n)
     const groupedProposals = useMemo(() => {
-        return proposals.reduce((acc: AuditGroup[], current: Proposal) => {
-            const timeThreshold = 5 * 60 * 1000; // 5 minutes
+        const timeThreshold = 5 * 60 * 1000; // 5 minutes
+        
+        // First pass: group proposals
+        const groups = proposals.reduce((acc: Map<string, AuditGroup>, current: Proposal) => {
             const currentDate = new Date(current.created_at).getTime();
-
-            const existingGroup = acc.find(g =>
-                g.client_id === current.client_id &&
-                Math.abs(new Date(g.date).getTime() - currentDate) < timeThreshold
-            );
-
+            const groupKey = `${current.client_id}-${Math.floor(currentDate / timeThreshold)}`;
+            
+            const existingGroup = acc.get(groupKey);
+            
             if (existingGroup) {
                 existingGroup.items.push(current);
-                // Sort by savings to keep the best one first
-                existingGroup.items.sort((a, b) => b.annual_savings - a.annual_savings);
             } else {
-                acc.push({
+                acc.set(groupKey, {
                     client_id: current.client_id,
                     clientName: current.clients?.name || 'Cliente Desconocido',
                     date: current.created_at,
@@ -55,7 +53,14 @@ export default function ProposalsPage() {
                 });
             }
             return acc;
-        }, []);
+        }, new Map());
+        
+        // Second pass: sort each group once (O(n log n) total instead of O(n² log n))
+        groups.forEach(group => {
+            group.items.sort((a: Proposal, b: Proposal) => b.annual_savings - a.annual_savings);
+        });
+        
+        return Array.from(groups.values());
     }, [proposals]);
 
     return (
@@ -107,7 +112,7 @@ export default function ProposalsPage() {
                             <div className="flex-1 p-6 pt-2 space-y-4">
                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] px-1 opacity-70">Opciones Generadas</p>
                                 <div className="space-y-3">
-                                    {group.items.map((p, idx) => (
+                                    {group.items.map((p: Proposal, idx: number) => (
                                         <Link
                                             href={`/dashboard/proposals/${p.id}`}
                                             key={p.id}

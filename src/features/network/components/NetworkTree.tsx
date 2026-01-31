@@ -40,6 +40,7 @@ const TreeNode: React.FC<{ node: NetworkUser, depth: number, isLast?: boolean, s
                 <motion.div
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
+                    style={{ willChange: 'transform, opacity' }}
                     className="relative z-10 mb-4"
                 >
                     <div
