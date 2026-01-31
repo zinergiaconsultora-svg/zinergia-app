@@ -27,7 +27,7 @@ const getEnv = () => {
 
         if (isBuildTime) {
             console.warn('⚠️ Missing environment variables during build/CI. This is allowed if they are set in the runtime environment.');
-            return process.env as any;
+            return process.env as Record<string, string | undefined>;
         }
 
         console.error('❌ Invalid environment variables:', JSON.stringify(parsed.error.format(), null, 4));
