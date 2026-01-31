@@ -23,7 +23,7 @@ interface GeoClient {
 export const MapView: React.FC = () => {
     const [clients, setClients] = useState<GeoClient[]>([]);
     const [loading, setLoading] = useState(true);
-    const [L, setL] = useState<any>(null);
+    const [L, setL] = useState<typeof import('leaflet') | null>(null);
 
     useEffect(() => {
         // Load Leaflet object for specific icons
