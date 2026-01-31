@@ -5,8 +5,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { InvoiceData, SavingsResult } from '@/types/crm';
-import { 
+import { InvoiceData, SavingsResult } from '@/types/crm';import { SimulationRecord } from '@/services/simulatorService';
+import
     analyzeDocumentWithRetry, 
     calculateSavingsWithRetry, 
     saveSimulation,
@@ -29,7 +29,7 @@ export function useEnhancedSimulator() {
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [results, setResults] = useState<SavingsResult[]>([]);
     const [loadingMessage, setLoadingMessage] = useState('');
-    const [history, setHistory] = useState<any[]>([]);
+    const [history, setHistory] = useState<SimulationRecord[]>([]);
     const [showHistory, setShowHistory] = useState(false);
 
     const processInvoice = async (file: File) => {
