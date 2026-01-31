@@ -22,7 +22,7 @@ export async function calculateSavingsWithRetry(invoice: InvoiceData): Promise<S
     const data = await calculateSavingsAction(invoice);
     const currentCost = data.current_annual_cost || 0;
 
-    return data.offers.map((offer: any) => ({
+    return data.offers.map((offer: SavingsResult['offer'] & { annual_cost?: number; optimization_result?: unknown }) => ({
         offer: {
             id: offer.id,
             marketer_name: offer.marketer_name,
