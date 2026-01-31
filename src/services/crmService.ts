@@ -4,6 +4,22 @@ import { Client, InvoiceData, Offer, SavingsResult, Proposal, TariffPrice, Netwo
 import { analyzeDocumentAction } from '@/app/actions/ocr';
 import { calculateSavingsAction } from '@/app/actions/compare';
 
+// Simple in-memory cache for client-side
+const cache = new Map<string, { data: unknown; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+function getCached<T>(key: string): T | null {
+    const cached = cache.get(key);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return cached.data as T;
+    }
+    return null;
+}
+
+function setCache<T>(key: string, data: T): void {
+    cache.set(key, { data, timestamp: Date.now() });
+}
+
 export const crmService = {
     /**
      * PRIVATE HELPER: strictly gets the current user's franchise ID.
@@ -33,10 +49,14 @@ export const crmService = {
         const franchiseId = await this._getFranchiseId(supabase);
         if (!franchiseId) return [];
 
+        const cacheKey = `clients_${franchiseId}`;
+        const cached = getCached<Client[]>(cacheKey);
+        if (cached) return cached;
+
         const { data, error } = await supabase
             .from('clients')
             .select('*')
-            .eq('franchise_id', franchiseId) // SECURITY: Application-side filtering
+            .eq('franchise_id', franchiseId)
             .order('created_at', { ascending: false });
 
         if (error) {
@@ -44,12 +64,18 @@ export const crmService = {
             throw error;
         }
 
+        setCache(cacheKey, data);
         return data as Client[];
     },
 
     async getDashboardStats() {
         const supabase = createClient();
         const franchiseId = await this._getFranchiseId(supabase);
+        if (!franchiseId) return null;
+
+        const cacheKey = `dashboard_stats_${franchiseId}`;
+        const cached = getCached(cacheKey);
+        if (cached) return cached;
 
         // Date calc for "Monthly Goal"
         const now = new Date();
@@ -134,7 +160,7 @@ export const crmService = {
 
         const { data: userProfile } = await supabase.from('profiles').select('full_name, role, avatar_url').eq('id', user.id).single();
 
-        return {
+        const result = {
             user: userProfile,
             total: totalClients,
             active: activeClients,
@@ -162,6 +188,9 @@ export const crmService = {
                 month_savings: monthSavings
             }
         };
+
+        setCache(cacheKey, result);
+        return result;
     },
 
     /**
