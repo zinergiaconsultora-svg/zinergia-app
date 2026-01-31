@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useCallback, memo } from 'react';
 import { useRouter } from 'next/navigation';
+
 import { crmService } from '@/services/crmService';
 import { Offer } from '@/types/crm';
 import {
@@ -53,6 +54,7 @@ const OfferCard = memo(function OfferCard({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             onClick={handleClick}
+            style={{ contentVisibility: 'auto' as const }}
             className={`
                 group relative rounded-xl border p-4 cursor-pointer transition-all hover:shadow-md
                 ${isSelected
