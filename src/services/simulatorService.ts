@@ -235,63 +235,7 @@ export async function exportResultsToExcel(
     invoiceData: InvoiceData,
     results: SavingsResult[]
 ): Promise<void> {
-    const XLSX = await import('xlsx');
-
-    // Create workbook
-    const wb = XLSX.utils.book_new();
-
-    // Summary sheet
-    const summaryData = [
-        ['Comparación de Tarifas - Zinergia'],
-        ['Fecha', new Date().toLocaleDateString('es-ES')],
-        [''],
-        ['Datos de Factura'],
-        ['Cliente', invoiceData.client_name || 'N/A'],
-        ['Comercializadora', invoiceData.company_name || 'N/A'],
-        ['Tarifa Actual', invoiceData.tariff_name || 'N/A'],
-        ['Importe Anual', `€${(invoiceData.total_amount || 0).toFixed(2)}`],
-        [''],
-        ['Resumen de Ahorro'],
-        ['Mejor Oferta', results[0]?.offer.marketer_name || 'N/A'],
-        ['Ahorro Anual', `€${results.reduce((sum, r) => sum + r.annual_savings, 0).toFixed(2)}`],
-    ];
-
-    const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(wb, summaryWs, 'Resumen');
-
-    // Offers sheet
-    const offersData = [
-        ['Oferta', 'Comercializadora', 'Tarifa', 'Costo Anual', 'Ahorro', '% Ahorro'],
-        ...results.map((r, i) => [
-            `Oferta ${i + 1}`,
-            r.offer.marketer_name,
-            r.offer.tariff_name,
-            r.offer_annual_cost.toFixed(2),
-            r.annual_savings.toFixed(2),
-            r.savings_percent.toFixed(1) + '%',
-        ]),
-    ];
-
-    const offersWs = XLSX.utils.aoa_to_sheet(offersData);
-    XLSX.utils.book_append_sheet(wb, offersWs, 'Ofertas');
-
-    // Detailed pricing sheet
-    const pricingData = [
-        ['Periodo', 'Precio Potencia (€/kW)', 'Precio Energía (€/kWh)'],
-        ['P1', results[0]?.offer.power_price.p1 || 0, results[0]?.offer.energy_price.p1 || 0],
-        ['P2', results[0]?.offer.power_price.p2 || 0, results[0]?.offer.energy_price.p2 || 0],
-        ['P3', results[0]?.offer.power_price.p3 || 0, results[0]?.offer.energy_price.p3 || 0],
-        ['P4', results[0]?.offer.power_price.p4 || 0, results[0]?.offer.energy_price.p4 || 0],
-        ['P5', results[0]?.offer.power_price.p5 || 0, results[0]?.offer.energy_price.p5 || 0],
-        ['P6', results[0]?.offer.power_price.p6 || 0, results[0]?.offer.energy_price.p6 || 0],
-        ['',
-            'Cuota Fija', `€${(results[0]?.offer.fixed_fee || 0).toFixed(2)}/mes`,
-            'Duración', results[0]?.offer.contract_duration || 'N/A'],
-    ];
-
-    const pricingWs = XLSX.utils.aoa_to_sheet(pricingData);
-    XLSX.utils.book_append_sheet(wb, pricingWs, 'Precios Detallados');
-
-    // Save
-    XLSX.writeFile(wb, `comparacion-tarifas-${Date.now()}.xlsx`);
+    // TODO: Re-implementar con librería segura
+    console.warn('Export to Excel temporarily disabled');
+    throw new Error('Excel export temporarily disabled');
 }
