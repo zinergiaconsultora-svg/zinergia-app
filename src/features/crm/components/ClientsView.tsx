@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Search, ChevronRight, User } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -22,31 +22,36 @@ interface ClientsViewProps {
     initialData?: Client[];
 }
 
+// Animation variants defined outside component to prevent recreation
+const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+};
+
 export default function ClientsView({ initialData }: ClientsViewProps) {
     const { clients, loading, refresh } = useClients(initialData);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const router = useRouter();
 
-    const filteredClients = clients.filter(c =>
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.cups?.toLowerCase().includes(searchTerm.toLowerCase())
+    // Memoize filtered clients to prevent recalculation on every render
+    const filteredClients = useMemo(() =>
+        clients.filter(c =>
+            c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.cups?.toLowerCase().includes(searchTerm.toLowerCase())
+        ),
+        [clients, searchTerm]
     );
-
-    const container = {
-        hidden: { opacity: 0 },
-        show: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.1
-            }
-        }
-    };
-
-    const item = {
-        hidden: { opacity: 0, y: 20 },
-        show: { opacity: 1, y: 0 }
-    };
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 relative overflow-hidden font-sans selection:bg-energy-500/30 selection:text-energy-900">
@@ -99,7 +104,7 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
 
                 {/* CONTENT GRID */}
                 <motion.div
-                    variants={container}
+                    variants={containerVariants}
                     initial="hidden"
                     animate="show"
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
@@ -111,7 +116,7 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                         ))
                     ) : filteredClients.length === 0 ? (
                         // Empty State
-                        <motion.div variants={item} className="col-span-full py-32 flex flex-col items-center justify-center text-center">
+                        <motion.div variants={itemVariants} className="col-span-full py-32 flex flex-col items-center justify-center text-center">
                             <div className="w-24 h-24 bg-gradient-to-tr from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 rounded-[2rem] shadow-xl shadow-energy-500/5 flex items-center justify-center mb-6 border border-white/60 dark:border-white/10">
                                 <User size={40} className="text-slate-300 dark:text-slate-600" strokeWidth={1} />
                             </div>
@@ -123,7 +128,7 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                     ) : (
                         // Client Cards - Antigravity Style
                         filteredClients.map(client => (
-                            <motion.div key={client.id} variants={item}>
+                            <motion.div key={client.id} variants={itemVariants}>
                                 <ClientCard client={client} />
                             </motion.div>
                         ))

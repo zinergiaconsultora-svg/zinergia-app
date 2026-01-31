@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { NetworkOverview } from './NetworkOverview';
 import { NetworkTree } from './NetworkTree';
 import { InviteModal } from './InviteModal';
@@ -38,12 +38,13 @@ export const ManageNetworkView: React.FC = () => {
         loadData();
     }, []);
 
-    const stats = {
+    // Memoize stats calculation to prevent recalculation on every render
+    const stats = useMemo(() => ({
         totalAgents: hierarchy.reduce((acc: number, curr: NetworkUser) => acc + (curr.children?.length || 0) + 1, 0),
         activeFranchises: hierarchy.filter((n: NetworkUser) => n.role === 'franchise').length,
         totalVolumen: netStats.totalVolumen,
         monthlyGrowth: netStats.monthlyGrowth
-    };
+    }), [hierarchy, netStats]);
 
     return (
         <div className="p-6 md:p-8 max-w-7xl mx-auto font-sans">
