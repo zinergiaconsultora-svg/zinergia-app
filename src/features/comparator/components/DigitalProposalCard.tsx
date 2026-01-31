@@ -2,8 +2,14 @@ import React, { useRef, useState, useEffect } from 'react';
 import { SavingsResult } from '../../../types/crm';
 import { Download, Mail, ShieldCheck, Zap, Loader2, FileText } from 'lucide-react';
 // Lint fix: removed unused imports (Phone, MapPin, Globe)
-import { QRCodeSVG } from 'qrcode.react';
+import dynamic from 'next/dynamic';
 import { formatCurrency } from '@/lib/utils/format';
+
+// Dynamic import for QR code to reduce bundle size
+const QRCodeSVG = dynamic(
+    () => import('qrcode.react').then((mod) => mod.QRCodeSVG),
+    { ssr: false, loading: () => <div className="w-20 h-20 bg-slate-100 rounded-2xl animate-pulse" /> }
+);
 
 interface DigitalProposalCardProps {
     result: SavingsResult;
