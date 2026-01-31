@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { SavingsResult } from '../../../types/crm';
 import { Download, Mail, ShieldCheck, Zap, Loader2, FileText } from 'lucide-react';
 // Lint fix: removed unused imports (Phone, MapPin, Globe)
@@ -35,9 +35,15 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
     const [advisorNotes, setAdvisorNotes] = useState(initialNotes || '');
     const [offerValidity] = useState('48 horas');
 
-    // Generate document ID and date
-    const documentId = `ZIN-${new Date().getFullYear()}-${result.offer.id.slice(0, 6).toUpperCase()}`;
-    const documentDate = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+    // Generate document ID and date - memoized to prevent recalculation on every render
+    const documentId = useMemo(() =>
+        `ZIN-${new Date().getFullYear()}-${result.offer.id.slice(0, 6).toUpperCase()}`,
+        [result.offer.id]
+    );
+    const documentDate = useMemo(() =>
+        new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }),
+        []
+    );
 
     // Sync notes with parent
     useEffect(() => {
