@@ -32,7 +32,7 @@ export const crmService = {
             supabase
                 .from('profiles')
                 .select('franchise_id')
-                .single()
+                .maybeSingle()
         ]);
 
         if (!user) return null;
@@ -139,12 +139,68 @@ export const crmService = {
         const growth = '+12%';
 
         // Parallel: Fetch user and profile simultaneously
-        const [{ data: { user } }, { data: userProfile }] = await Promise.all([
-            supabase.auth.getUser(),
-            supabase.from('profiles').select('full_name, role, avatar_url').single()
-        ]);
+        try {
+            const [{ data: { user } }, { data: userProfile }] = await Promise.all([
+                supabase.auth.getUser(),
+                supabase.from('profiles').select('full_name, role, avatar_url').maybeSingle()
+            ]);
 
-        if (!user) {
+            if (!user) {
+                console.warn('getDashboardStats: No authenticated user found.');
+                return {
+                    user: null,
+                    total: 0,
+                    active: 0,
+                    pending: 0,
+                    new: 0,
+                    growth: '0%',
+                    recent: [],
+                    recentProposals: [],
+                    pendingActions: [],
+                    financials: {
+                        total_detected: 0,
+                        pipeline: 0,
+                        secured: 0,
+                        conversion_rate: 0,
+                        month_savings: 0
+                    }
+                };
+            }
+
+            const result = {
+                user: userProfile,
+                total: totalClients,
+                active: activeClients,
+                pending: pendingClients,
+                new: newClientsCount,
+                growth,
+                recent: recentClients,
+                recentProposals: recentProposals.map(p => ({
+                    id: p.id,
+                    client_name: p.clients?.name || 'Cliente',
+                    annual_savings: p.annual_savings,
+                    status: p.status,
+                    created_at: p.created_at
+                })),
+                pendingActions: proposals.filter(p => p.status === 'accepted').map(p => ({
+                    id: p.id,
+                    client_name: p.clients?.name || 'Cliente',
+                    type: 'documentation_needed' as const
+                })),
+                financials: {
+                    total_detected: totalSavingsDetected,
+                    pipeline: pipelineSavings,
+                    secured: securedSavings,
+                    conversion_rate: conversionRate,
+                    month_savings: monthSavings
+                }
+            };
+
+            setCache(cacheKey, result);
+            return result;
+        } catch (error) {
+            console.error('getDashboardStats: Fatal error assembling stats:', error);
+            // Return a safe fallback structure
             return {
                 user: null,
                 total: 0,
@@ -164,38 +220,6 @@ export const crmService = {
                 }
             };
         }
-
-        const result = {
-            user: userProfile,
-            total: totalClients,
-            active: activeClients,
-            pending: pendingClients,
-            new: newClientsCount,
-            growth,
-            recent: recentClients,
-            recentProposals: recentProposals.map(p => ({
-                id: p.id,
-                client_name: p.clients?.name || 'Cliente',
-                annual_savings: p.annual_savings,
-                status: p.status,
-                created_at: p.created_at
-            })),
-            pendingActions: proposals.filter(p => p.status === 'accepted').map(p => ({
-                id: p.id,
-                client_name: p.clients?.name || 'Cliente',
-                type: 'documentation_needed' as const
-            })),
-            financials: {
-                total_detected: totalSavingsDetected,
-                pipeline: pipelineSavings,
-                secured: securedSavings,
-                conversion_rate: conversionRate,
-                month_savings: monthSavings
-            }
-        };
-
-        setCache(cacheKey, result);
-        return result;
     },
 
     /**
@@ -254,12 +278,12 @@ export const crmService = {
                 franchise_id: franchise!.id,
                 full_name: email.split('@')[0],
                 role: 'agent'
-            }, { onConflict: 'id' }) // Ensure we update if exists (though 'maybeSingle' check above should have caught it, replication lag is possible)
+            }, { onConflict: 'id' })
             .select('franchise_id, full_name, role')
             .single();
 
         if (profileError) {
-            console.error('Failed to create/upsert profile:', JSON.stringify(profileError));
+            console.error('ensureProfile: Failed to create/upsert profile:', JSON.stringify(profileError)); // Improved logging context
 
             // Critical Fallback:
             // If we can't create a profile, we return a volatile in-memory profile.

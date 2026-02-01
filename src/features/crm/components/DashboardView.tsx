@@ -123,17 +123,17 @@ export default function DashboardView() {
     }, []);
 
     // Memoized calculations
-    const goalProgress = useMemo(() => 
+    const goalProgress = useMemo(() =>
         Math.min(Math.round((stats.financials.month_savings / MONTHLY_GOAL) * 100), 100),
         [stats.financials.month_savings]
     );
 
-    const firstName = useMemo(() => 
+    const firstName = useMemo(() =>
         stats.user?.full_name?.split(' ')[0] || 'Consultor',
         [stats.user?.full_name]
     );
 
-    const unreadCount = useMemo(() => 
+    const unreadCount = useMemo(() =>
         notifications.filter(n => !n.read).length,
         [notifications]
     );
@@ -267,7 +267,9 @@ export default function DashboardView() {
                         <div className="flex-[3] min-h-0 bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-3 relative flex flex-col group hover:bg-white/80 transition-colors">
                             <SectionHeader title="Tendencia de Ahorro" link="Ver Reporte" />
                             <div className="flex-1 w-full min-h-0 mt-1 relative">
-                                <SavingsTrendChart />
+                                <div className="absolute inset-0">
+                                    <SavingsTrendChart />
+                                </div>
                             </div>
                         </div>
 
@@ -276,9 +278,11 @@ export default function DashboardView() {
                             {/* Pipeline */}
                             <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-3 flex flex-col hover:bg-white/80 transition-colors">
                                 <SectionHeader title="Distribución" />
-                                <div className="flex-1 flex items-center justify-center relative min-h-0">
-                                    <div className="h-full w-full max-h-[140px] flex items-center justify-center">
-                                        <PipelinePieChart active={activeDeals} won={wonDeals} lost={lostDeals} />
+                                <div className="flex-1 relative min-h-0">
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="h-full w-full max-h-[140px]">
+                                            <PipelinePieChart active={activeDeals} won={wonDeals} lost={lostDeals} />
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="flex justify-between border-t border-slate-100 pt-2 mt-1">

@@ -5,6 +5,7 @@ import { useClientForm } from '@/features/crm/hooks/useClientForm';
 import { Client } from '@/types/crm';
 import { X, ChevronRight, Check, User, Building2, Zap, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { Input } from '@/components/ui/primitives/Input';
 
 interface CreateClientModalProps {
     isOpen: boolean;
@@ -142,12 +143,11 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
 
                                         <div className="space-y-4">
                                             <div>
-                                                <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 block ml-1">Nombre Completo</label>
-                                                <input
+                                                <Input
+                                                    label="Nombre Completo"
                                                     required
                                                     value={formData.name}
                                                     onChange={(e) => handleChange('name', e.target.value)}
-                                                    className="w-full px-4 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-energy-500 focus:ring-4 focus:ring-energy-500/10 outline-none transition-all font-semibold text-slate-800"
                                                     placeholder="Ej: Juan Pérez"
                                                     autoFocus
                                                 />
@@ -155,147 +155,143 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
 
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 block ml-1">Email</label>
-                                                    <div className="relative">
-                                                        <input
-                                                            type="email"
-                                                            value={formData.email}
-                                                            onChange={(e) => handleChange('email', e.target.value)}
-                                                            className="w-full pl-10 pr-4 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-energy-500 focus:ring-4 focus:ring-energy-500/10 outline-none transition-all font-medium text-slate-800"
-                                                            placeholder="nombre@email.com"
-                                                        />
-                                                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">@</span>
-                                                    </div>
+                                                    <Input
+                                                        label="Email"
+                                                        type="email"
+                                                        value={formData.email}
+                                                        onChange={(e) => handleChange('email', e.target.value)}
+                                                        placeholder="nombre@email.com"
+                                                        icon={<span>@</span>}
+                                                    />
                                                 </div>
                                                 <div>
-                                                    <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 block ml-1">Teléfono</label>
-                                                    <input
+                                                    <Input
+                                                        label="Teléfono"
                                                         type="tel"
                                                         value={formData.phone}
                                                         onChange={(e) => handleChange('phone', e.target.value)}
-                                                        className="w-full px-4 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-energy-500 focus:ring-4 focus:ring-energy-500/10 outline-none transition-all font-medium text-slate-800"
                                                         placeholder="600 123 456"
                                                     />
                                                 </div>
                                             </div>
 
                                             <div>
-                                                <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 block ml-1">Dirección Completa</label>
-                                                <input
-                                                    value={formData.address}
-                                                    onChange={(e) => handleChange('address', e.target.value)}
-                                                    className="w-full px-4 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-energy-500 focus:ring-4 focus:ring-energy-500/10 outline-none transition-all font-medium text-slate-800"
-                                                    placeholder="Calle, Número, Ciudad..."
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-5 animate-in slide-in-from-right duration-300">
-                                        <div className="bg-energy-50/50 p-4 rounded-2xl border border-energy-100 flex items-start gap-3">
-                                            <div className="bg-energy-100 p-2 rounded-lg text-energy-600">
-                                                <Zap size={20} />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-bold text-energy-900 text-sm">Datos del Suministro</h4>
-                                                <p className="text-xs text-energy-700/80 mt-0.5">Introduce los datos técnicos para optimizar la oferta.</p>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 block ml-1">CUPS (20-22 caracteres)</label>
-                                            <input
-                                                value={formData.cups}
-                                                onChange={(e) => handleChange('cups', e.target.value.toUpperCase())}
-                                                className="w-full px-4 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-energy-500 focus:ring-4 focus:ring-energy-500/10 outline-none transition-all font-mono font-medium text-slate-800 uppercase tracking-wide"
-                                                placeholder="ES0021000000000000XX"
-                                                maxLength={22}
-                                            />
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 block ml-1">Comercializadora</label>
-                                                <input
-                                                    value={formData.current_supplier}
-                                                    onChange={(e) => handleChange('current_supplier', e.target.value)}
-                                                    className="w-full px-4 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-energy-500 focus:ring-4 focus:ring-energy-500/10 outline-none transition-all font-medium text-slate-800"
-                                                    placeholder="Ej: Endesa"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 block ml-1">Tarifa Acceso</label>
-                                                <div className="relative">
-                                                    <select
-                                                        value={formData.tariff_type}
-                                                        onChange={(e) => handleChange('tariff_type', e.target.value)}
-                                                        className="w-full px-4 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-energy-500 focus:ring-4 focus:ring-energy-500/10 outline-none transition-all font-medium text-slate-800 appearance-none"
-                                                        title="Seleccionar tarifa de acceso"
-                                                        aria-label="Seleccionar tarifa de acceso"
-                                                    >
-                                                        <option value="2.0TD">2.0TD</option>
-                                                        <option value="3.0TD">3.0TD</option>
-                                                        <option value="6.1TD">6.1TD</option>
-                                                    </select>
-                                                    <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none rotate-90" size={16} />
+                                                <div>
+                                                    <Input
+                                                        label="Dirección Completa"
+                                                        value={formData.address}
+                                                        onChange={(e) => handleChange('address', e.target.value)}
+                                                        placeholder="Calle, Número, Ciudad..."
+                                                    />
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
+                                        ) : (
+                                        <div className="space-y-5 animate-in slide-in-from-right duration-300">
+                                            <div className="bg-energy-50/50 p-4 rounded-2xl border border-energy-100 flex items-start gap-3">
+                                                <div className="bg-energy-100 p-2 rounded-lg text-energy-600">
+                                                    <Zap size={20} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-energy-900 text-sm">Datos del Suministro</h4>
+                                                    <p className="text-xs text-energy-700/80 mt-0.5">Introduce los datos técnicos para optimizar la oferta.</p>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <div>
+                                                    <Input
+                                                        label="CUPS (20-22 caracteres)"
+                                                        value={formData.cups}
+                                                        onChange={(e) => handleChange('cups', e.target.value.toUpperCase())}
+                                                        placeholder="ES0021000000000000XX"
+                                                        maxLength={22}
+                                                        className="font-mono uppercase tracking-wide"
+                                                    />
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <Input
+                                                            label="Comercializadora"
+                                                            value={formData.current_supplier}
+                                                            onChange={(e) => handleChange('current_supplier', e.target.value)}
+                                                            placeholder="Ej: Endesa"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 block ml-1">Tarifa Acceso</label>
+                                                        <div className="relative">
+                                                            <select
+                                                                value={formData.tariff_type}
+                                                                onChange={(e) => handleChange('tariff_type', e.target.value)}
+                                                                className="w-full px-4 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-energy-500 focus:ring-4 focus:ring-energy-500/10 outline-none transition-all font-medium text-slate-800 appearance-none"
+                                                                title="Seleccionar tarifa de acceso"
+                                                                aria-label="Seleccionar tarifa de acceso"
+                                                            >
+                                                                <option value="2.0TD">2.0TD</option>
+                                                                <option value="3.0TD">3.0TD</option>
+                                                                <option value="6.1TD">6.1TD</option>
+                                                            </select>
+                                                            <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none rotate-90" size={16} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                 )}
-                            </form>
-                        </div>
+                                        </form>
+                                    </div>
 
                         {/* Footer / Actions */}
-                        <div className="p-4 bg-white border-t border-slate-100 flex gap-3">
-                            {step === 2 ? (
-                                <>
-                                    <button
-                                        type="button"
-                                        onClick={() => setStep(1)}
-                                        className="flex-1 px-4 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-2xl transition-all"
-                                    >
-                                        Atrás
-                                    </button>
-                                    <button
-                                        form="create-client-form"
-                                        type="submit"
-                                        disabled={loading}
-                                        className="flex-[2] px-4 py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl shadow-lg shadow-slate-900/20 active:scale-95 transition-all text-base flex justify-center items-center gap-2"
-                                    >
-                                        {loading ? (
-                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                        ) : (
-                                            <>
-                                                <span>{clientToEdit ? 'Guardar Cambios' : 'Crear Cliente'}</span>
-                                                <Check size={18} strokeWidth={3} />
-                                            </>
-                                        )}
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    <button
-                                        type="button"
-                                        onClick={onClose}
-                                        className="flex-1 px-4 py-4 bg-white border border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 transition-all"
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setStep(2)}
-                                        className="flex-[2] px-4 py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl shadow-lg shadow-slate-900/20 active:scale-95 transition-all text-base flex justify-center items-center gap-2"
-                                    >
-                                        <span>Siguiente</span>
-                                        <ChevronRight size={18} strokeWidth={3} />
-                                    </button>
-                                </>
-                            )}
+                                <div className="p-4 bg-white border-t border-slate-100 flex gap-3">
+                                    {step === 2 ? (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={() => setStep(1)}
+                                                className="flex-1 px-4 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-2xl transition-all"
+                                            >
+                                                Atrás
+                                            </button>
+                                            <button
+                                                form="create-client-form"
+                                                type="submit"
+                                                disabled={loading}
+                                                className="flex-[2] px-4 py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl shadow-lg shadow-slate-900/20 active:scale-95 transition-all text-base flex justify-center items-center gap-2"
+                                            >
+                                                {loading ? (
+                                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                ) : (
+                                                    <>
+                                                        <span>{clientToEdit ? 'Guardar Cambios' : 'Crear Cliente'}</span>
+                                                        <Check size={18} strokeWidth={3} />
+                                                    </>
+                                                )}
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={onClose}
+                                                className="flex-1 px-4 py-4 bg-white border border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 transition-all"
+                                            >
+                                                Cancelar
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setStep(2)}
+                                                className="flex-[2] px-4 py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl shadow-lg shadow-slate-900/20 active:scale-95 transition-all text-base flex justify-center items-center gap-2"
+                                            >
+                                                <span>Siguiente</span>
+                                                <ChevronRight size={18} strokeWidth={3} />
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </motion.div>
                         </div>
-                    </motion.div>
-                </div>
             )}
-        </AnimatePresence>
-    );
+                    </AnimatePresence>
+                    );
 }
