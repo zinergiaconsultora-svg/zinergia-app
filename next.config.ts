@@ -7,9 +7,8 @@ const nextConfig: NextConfig = {
 
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
-    // @ts-expect-error - React Compiler is available in this version but types might accurately reflect it yet
-    reactCompiler: true,
   },
+  reactCompiler: true,
   turbopack: {},
 
   typescript: {
