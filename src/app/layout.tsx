@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit, Space_Grotesk, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 
 const outfit = Outfit({
     variable: "--font-sans",
@@ -38,7 +39,9 @@ export default function RootLayout({
                 className={`${outfit.variable} ${spaceGrotesk.variable} ${dmMono.variable} antialiased`}
             >
                 <ThemeProvider>
-                    {children}
+                    <GlobalErrorBoundary>
+                        {children}
+                    </GlobalErrorBoundary>
                 </ThemeProvider>
             </body>
         </html>

@@ -11,24 +11,28 @@ interface SkeletonProps {
   animation?: 'pulse' | 'wave' | 'none';
 }
 
-export const Skeleton = React.memo(({ 
-  className = '', 
+export const Skeleton = React.memo(({
+  className = '',
   variant = 'text',
   width,
   height,
   animation = 'pulse'
 }: SkeletonProps) => {
-  const baseClasses = 'bg-slate-200';
-  
+  // Antigravity: Premium glass/shimmer effect
+  // We use a base of slate-100/50 for a subtle glass feel, 
+  // and the standard pulse for now, but usually this would be a moving gradient.
+  // For 'premium', let's ensure it's slightly translucent.
+  const baseClasses = 'bg-slate-200/60 backdrop-blur-sm';
+
   const variantClasses = {
-    text: 'rounded',
+    text: 'rounded-lg', // Slightly softer corners
     circular: 'rounded-full',
-    rectangular: 'rounded-md',
+    rectangular: 'rounded-2xl', // Antigravity typically uses large radii
   };
 
   const animationClasses = {
     pulse: 'animate-pulse',
-    wave: 'animate-shimmer',
+    wave: 'animate-shimmer', // Assuming this custom animation exists or falls back
     none: '',
   };
 
@@ -142,14 +146,14 @@ export const LoadingOverlay = React.memo(({ visible, message }: LoadingOverlayPr
   if (!visible) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center"
       role="dialog"
       aria-modal="true"
       aria-busy="true"
       aria-label={message || 'Cargando contenido'}
     >
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         className="text-center"
