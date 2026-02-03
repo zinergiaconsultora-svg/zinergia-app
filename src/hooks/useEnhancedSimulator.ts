@@ -7,9 +7,10 @@
 import { useState, useCallback } from 'react';
 import { InvoiceData, SavingsResult } from '@/types/crm';
 import { SimulationRecord } from '@/services/simulatorService';
-import { 
-    analyzeDocumentWithRetry, 
-    calculateSavingsWithRetry, 
+import { OptimizationRecommendation } from '@/lib/aletheia/types';
+import {
+    analyzeDocumentWithRetry,
+    calculateSavingsWithRetry,
     saveSimulation,
     getSimulationHistory,
     exportResultsToPDF,
@@ -32,6 +33,7 @@ export function useEnhancedSimulator() {
     const [loadingMessage, setLoadingMessage] = useState('');
     const [history, setHistory] = useState<SimulationRecord[]>([]);
     const [showHistory, setShowHistory] = useState(false);
+    const [optimizationRecommendations, setOptimizationRecommendations] = useState<OptimizationRecommendation[]>([]);
 
     const processInvoice = async (file: File) => {
         setIsAnalyzing(true);
@@ -165,12 +167,12 @@ export function useEnhancedSimulator() {
         }
 
         try {
-            await exportResultsToPDF(invoiceData, results);
+            await exportResultsToPDF(invoiceData, results, optimizationRecommendations);
         } catch (error) {
             console.error('Error exporting to PDF:', error);
             setUploadError('Error al exportar a PDF');
         }
-    }, [invoiceData, results]);
+    }, [invoiceData, results, optimizationRecommendations]);
 
     const exportToExcel = useCallback(async () => {
         if (results.length === 0) {
@@ -211,6 +213,8 @@ export function useEnhancedSimulator() {
         loadingMessage,
         history,
         showHistory,
+        optimizationRecommendations,
+        setOptimizationRecommendations,
         handleFileUpload,
         handleDrop,
         handleDragOver,

@@ -34,10 +34,23 @@ yarn-error.log*
 .env*
 
 # vercel
-.vercel
+
+# irrelevant folders
+opencode
+scripts
+docs
+resources
+
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 
-.vercel
+
+# irrelevant folders
+opencode
+scripts
+docs
+resources
+
+nul

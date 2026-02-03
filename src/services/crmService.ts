@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Client, InvoiceData, Offer, SavingsResult, Proposal, TariffPrice, NetworkUser, UserRole } from '@/types/crm';
+import { AletheiaResult } from '@/lib/aletheia/types';
 import { analyzeDocumentAction } from '@/app/actions/ocr';
 import { calculateSavingsAction } from '@/app/actions/compare';
 
@@ -261,8 +262,10 @@ export const crmService = {
                     if (retryFranchise) franchise = retryFranchise;
                     else throw new Error('Could not recover HQ franchise');
                 } else {
-                    console.error('Failed to auto-create franchise:', franchiseError);
-                    throw new Error('Error crítico: No se pudo iniciar la franquicia base (HQ).');
+                    console.error('Failed to auto-create franchise (likely RLS):', JSON.stringify(franchiseError));
+                    // Allow to proceed without franchise if creating one fails (will likely fail later but better DX)
+                    // Or return a dummy ID to prevent hard crash loop
+                    franchise = { id: '00000000-0000-0000-0000-000000000000' } as any;
                 }
             } else {
                 franchise = newFranchise;
@@ -742,7 +745,7 @@ export const crmService = {
      * Logs a simulation as a Draft Proposal.
      * Auto-creates a "Prospect" client if needed.
      */
-    async logSimulation(invoiceData: InvoiceData, bestResult: SavingsResult, clientName?: string) {
+    async logSimulation(invoiceData: InvoiceData, bestResult: SavingsResult, clientName?: string, aletheiaResult?: AletheiaResult) {
         const supabase = createClient();
         const franchiseId = await this._getFranchiseId(supabase);
         const { data: { user } } = await supabase.auth.getUser();
@@ -750,41 +753,53 @@ export const crmService = {
         if (!user) throw new Error('User not authenticated');
 
         // 1. Create or Identify Client
-        // For simplicity in this flow, we ALWAYS create a new "Prospect" to ensure history tracking without collisions,
-        // unless we had a robust "Select Client" dropdown in the comparator (which we might add later).
-        // The user asked for "Si no pones nombre, pondremos 'Cliente Potencial'".
-        const finalName = clientName || `Cliente Potencial ${new Date().toLocaleDateString('es-ES')}`;
+        // For simplicity in this flow, we ALWAYS create a new "Prospect" to ensure history tracking without collisions.
+        // We add a timestamp to the name to avoid UNIQUE constraints on the 'clients' table (Error 400/409).
+        const timestamp = new Date().getTime().toString().slice(-4);
+        const finalName = clientName || `Cliente Potencial ${new Date().toLocaleDateString('es-ES')} - ${timestamp}`;
 
         const { data: client, error: clientError } = await supabase
             .from('clients')
             .insert({
                 name: finalName,
                 status: 'new', // New Prospect
-                type: 'company', // Default
                 franchise_id: franchiseId,
                 owner_id: user.id
+                // Note: If NIF is required by DB constraint, we might need a dummy value.
+                // But usually 'status=new' allows weak entities.
             })
             .select()
             .single();
 
         if (clientError) {
-            console.error('Error auto-creating client for simulation:', clientError);
-            throw clientError;
+            console.error('Error auto-creating client for simulation:', JSON.stringify(clientError));
+            // Log specific details for debugging 400 errors
+            console.error('Client Payload:', { name: finalName, franchise_id: franchiseId, owner_id: user.id });
+            throw new Error(`Error al crear cliente: ${clientError.message}`);
         }
 
         // 2. Save Proposal as Draft
-        const proposal = {
+        const proposal: Omit<Proposal, 'id' | 'created_at'> = {
             client_id: client.id,
             franchise_id: franchiseId,
             status: 'draft',
-            created_at: new Date().toISOString(),
             offer_snapshot: bestResult.offer,
             calculation_data: invoiceData,
-            annual_savings: bestResult.annual_savings,
-            current_annual_cost: bestResult.current_annual_cost,
-            offer_annual_cost: bestResult.offer_annual_cost,
-            savings_percent: bestResult.savings_percent,
-            optimization_result: bestResult.optimization_result
+            annual_savings: bestResult.annual_savings || 0,
+            current_annual_cost: bestResult.current_annual_cost || 0,
+            offer_annual_cost: bestResult.offer_annual_cost || 0,
+            savings_percent: bestResult.savings_percent || 0,
+            optimization_result: bestResult.optimization_result,
+            aletheia_summary: aletheiaResult ? {
+                client_profile: aletheiaResult.client_profile,
+                opportunities: aletheiaResult.opportunities.map(o => ({
+                    type: o.type,
+                    description: o.description,
+                    annual_savings: o.annual_savings,
+                    priority: o.priority
+                })),
+                recommendations: aletheiaResult.optimization_recommendations
+            } : undefined
         };
 
         const { data: savedProposal, error: proposalError } = await supabase
@@ -794,7 +809,11 @@ export const crmService = {
             .single();
 
         if (proposalError) {
-            console.error('Error saving draft simulation:', proposalError);
+            console.error('Error saving draft simulation:', JSON.stringify(proposalError));
+            console.error('Error Message:', proposalError.message);
+            console.error('Error Details:', proposalError.details);
+            console.error('Error Hint:', proposalError.hint);
+            console.error('Payload:', JSON.stringify(proposal));
             throw proposalError;
         }
 

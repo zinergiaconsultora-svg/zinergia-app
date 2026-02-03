@@ -34,14 +34,14 @@ export default function ProposalsPage() {
     // Memoize grouped proposals calculation - Optimized to O(n log n)
     const groupedProposals = useMemo(() => {
         const timeThreshold = 5 * 60 * 1000; // 5 minutes
-        
+
         // First pass: group proposals
         const groups = proposals.reduce((acc: Map<string, AuditGroup>, current: Proposal) => {
             const currentDate = new Date(current.created_at).getTime();
             const groupKey = `${current.client_id}-${Math.floor(currentDate / timeThreshold)}`;
-            
+
             const existingGroup = acc.get(groupKey);
-            
+
             if (existingGroup) {
                 existingGroup.items.push(current);
             } else {
@@ -54,12 +54,12 @@ export default function ProposalsPage() {
             }
             return acc;
         }, new Map());
-        
+
         // Second pass: sort each group once (O(n log n) total instead of O(n² log n))
         groups.forEach(group => {
             group.items.sort((a: Proposal, b: Proposal) => b.annual_savings - a.annual_savings);
         });
-        
+
         return Array.from(groups.values());
     }, [proposals]);
 
@@ -110,37 +110,74 @@ export default function ProposalsPage() {
 
                             {/* Options List */}
                             <div className="flex-1 p-6 pt-2 space-y-4">
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] px-1 opacity-70">Opciones Generadas</p>
+                                <div className="flex justify-between items-end px-1">
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] opacity-70">Opciones Generadas</p>
+
+                                    {/* Intelligence Badges (Summary for the group based on best proposal) */}
+                                    {group.items[0]?.aletheia_summary?.client_profile?.tags && (
+                                        <div className="flex gap-1">
+                                            {group.items[0].aletheia_summary.client_profile.tags.slice(0, 2).map((tag: string) => (
+                                                <span key={tag} className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100 uppercase tracking-tight">
+                                                    {tag.replace('_', ' ')}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="space-y-3">
-                                    {group.items.map((p: Proposal, idx: number) => (
-                                        <Link
-                                            href={`/dashboard/proposals/${p.id}`}
-                                            key={p.id}
-                                            className="block p-4 bg-slate-50/50 rounded-2xl border border-transparent hover:border-indigo-100 hover:bg-white hover:shadow-md transition-all relative overflow-hidden group/item"
-                                        >
-                                            <div className="relative z-10 flex items-center justify-between">
-                                                <div>
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className={`text-[8px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${idx === 0 ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                                                            {idx === 0 ? 'Opción A' : 'Opción B'}
-                                                        </span>
-                                                        <span className="text-xs font-semibold text-slate-800">{p.offer_snapshot.marketer_name}</span>
+                                    {group.items.map((p: Proposal, idx: number) => {
+                                        const roiHigh = p.savings_percent > 30;
+                                        const hasOpp = p.aletheia_summary?.opportunities && p.aletheia_summary.opportunities.length > 0;
+
+                                        return (
+                                            <Link
+                                                href={`/dashboard/proposals/${p.id}`}
+                                                key={p.id}
+                                                className="block p-4 bg-slate-50/50 rounded-2xl border border-transparent hover:border-indigo-100 hover:bg-white hover:shadow-md transition-all relative overflow-hidden group/item"
+                                            >
+                                                <div className="relative z-10 flex items-center justify-between">
+                                                    <div className="min-w-0 flex-1 pr-4">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className={`text-[8px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${idx === 0 ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                                                                {idx === 0 ? 'Opción A' : 'Opción B'}
+                                                            </span>
+                                                            <span className="text-xs font-semibold text-slate-800 truncate">{p.offer_snapshot.marketer_name}</span>
+                                                        </div>
+
+                                                        {/* Tariff & Tech Info */}
+                                                        <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium">
+                                                            <span className="truncate max-w-[120px]">{p.offer_snapshot.tariff_name}</span>
+
+                                                            {/* Opportunity Indicators */}
+                                                            {hasOpp && (
+                                                                <div className="flex items-center gap-1 ml-auto md:ml-2 pl-2 border-l border-slate-200">
+                                                                    {p.aletheia_summary!.opportunities.map((opp, i) => (
+                                                                        <span key={i} title={opp.description} className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                                                    ))}
+                                                                    <span className="text-[9px] text-amber-600 font-bold">{p.aletheia_summary!.opportunities.length} Upsells</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                    <p className="text-[10px] text-slate-500 font-medium truncate max-w-[150px] md:max-w-full">
-                                                        {p.offer_snapshot.tariff_name}
-                                                    </p>
+
+                                                    <div className="text-right flex flex-col items-end">
+                                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Ahorro</p>
+                                                        <p className={`text-base font-bold ${roiHigh ? 'text-emerald-600' : 'text-slate-700'}`}>
+                                                            +{Math.round(p.annual_savings)}€
+                                                        </p>
+                                                        {roiHigh && (
+                                                            <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full mt-0.5">
+                                                                {p.savings_percent.toFixed(0)}% OFF
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <div className="text-right">
-                                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Ahorro</p>
-                                                    <p className="text-base font-bold text-emerald-600">
-                                                        +{Math.round(p.annual_savings)}€
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            {/* Status Badge Mini */}
-                                            <div className={`absolute top-0 right-0 h-full w-1 ${p.status === 'accepted' ? 'bg-emerald-500' : 'bg-transparent'}`}></div>
-                                        </Link>
-                                    ))}
+                                                {/* Status Badge Mini */}
+                                                <div className={`absolute top-0 right-0 h-full w-1 ${p.status === 'accepted' ? 'bg-emerald-500' : roiHigh ? 'bg-emerald-400/30' : 'bg-transparent'}`}></div>
+                                            </Link>
+                                        )
+                                    })}
                                 </div>
                             </div>
 

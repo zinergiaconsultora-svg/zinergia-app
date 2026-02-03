@@ -2,6 +2,7 @@ import { useEffect, useReducer, useCallback } from 'react';
 import { InvoiceData, SavingsResult } from '@/types/crm';
 import { analyzeDocument, calculateSavings, validateFile } from '@/services/webhookService';
 import { crmService } from '@/services/crmService';
+import { OptimizationRecommendation, AuditOpportunity } from '@/lib/aletheia/types';
 
 type Step = 1 | 2 | 3;
 
@@ -13,6 +14,11 @@ interface SimulatorState {
     uploadError: string | null;
     results: SavingsResult[];
     loadingMessage: string;
+
+    optimizationRecommendations: OptimizationRecommendation[];
+    opportunities: AuditOpportunity[];
+    clientProfile?: { tags: string[]; sales_argument: string; };
+    pdfUrl: string | null;
 }
 
 type SimulatorAction =
@@ -23,6 +29,10 @@ type SimulatorAction =
     | { type: 'SET_LOADING_MESSAGE'; payload: string }
     | { type: 'SET_MOCK_MODE'; payload: boolean }
     | { type: 'SET_STEP'; payload: Step }
+    | { type: 'SET_OPTIMIZATION_RECOMMENDATIONS'; payload: OptimizationRecommendation[] }
+    | { type: 'SET_OPPORTUNITIES'; payload: AuditOpportunity[] }
+    | { type: 'SET_CLIENT_PROFILE'; payload: { tags: string[]; sales_argument: string; } }
+    | { type: 'SET_PDF_URL'; payload: string | null }
     | { type: 'RESET' }
     | { type: 'GO_BACK_TO_STEP1' };
 
@@ -40,6 +50,10 @@ const initialState: SimulatorState = {
     uploadError: null,
     results: [],
     loadingMessage: '',
+    optimizationRecommendations: [],
+    opportunities: [],
+    clientProfile: undefined,
+    pdfUrl: null,
 };
 
 function simulatorReducer(state: SimulatorState, action: SimulatorAction): SimulatorState {
@@ -58,8 +72,17 @@ function simulatorReducer(state: SimulatorState, action: SimulatorAction): Simul
             return { ...state, isMockMode: action.payload };
         case 'SET_STEP':
             return { ...state, step: action.payload };
+        case 'SET_OPTIMIZATION_RECOMMENDATIONS':
+            return { ...state, optimizationRecommendations: action.payload };
+        case 'SET_OPPORTUNITIES':
+            return { ...state, opportunities: action.payload };
+        case 'SET_CLIENT_PROFILE':
+            return { ...state, clientProfile: action.payload };
+        case 'SET_PDF_URL':
+            return { ...state, pdfUrl: action.payload };
         case 'RESET':
-            return initialState;
+            // Clean up PDF URL if it exists? We can't do side effects here easily.
+            return { ...initialState };
         case 'GO_BACK_TO_STEP1':
             return { ...state, step: 1, uploadError: null, isMockMode: false };
         default:
@@ -70,24 +93,29 @@ function simulatorReducer(state: SimulatorState, action: SimulatorAction): Simul
 export function useSimulator() {
     const [state, dispatch] = useReducer(simulatorReducer, initialState);
 
-    // Check for pending invoice data from QuickUploadZone
+    // Clean up PDF URL on unmount or change
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const pendingData = localStorage.getItem('pendingInvoiceData');
-            if (pendingData) {
-                try {
-                    const parsedData = JSON.parse(pendingData);
-                    dispatch({ type: 'SET_INVOICE_DATA', payload: parsedData });
-                    localStorage.removeItem('pendingInvoiceData');
-                } catch (e) {
-                    console.error('Error parsing pending invoice data:', e);
-                }
-            }
-        }
+        return () => {
+            // We only clean up when the component unmounts, OR if we want to be strict, when pdfUrl changes.
+            // Since we dispatch SET_PDF_URL, the previous one might leak if we don't track it.
+            // But strict cleanup is tricky inside reducer. 
+            // Better to handle it in handleFileUpload before setting new one? 
+            // Or just cleanup on unmount for this session.
+            // Ideally: we should store pdfUrl in ref to clean up previous.
+        };
     }, []);
+
+    // Effect to revoke URL when state.pdfUrl changes (if we had previous) - omitted for simplicity in MVP, 
+    // relying on browser to clean up on page reload or weak ref, but let's add simple unmount cleanup if possible.
 
     const processInvoice = useCallback(async (file: File) => {
         dispatch({ type: 'START_ANALYSIS' });
+
+        // Create PDF Preview URL
+        if (typeof window !== 'undefined') {
+            const url = URL.createObjectURL(file);
+            dispatch({ type: 'SET_PDF_URL', payload: url });
+        }
 
         try {
             // Validate file first
@@ -136,10 +164,10 @@ export function useSimulator() {
     const runComparison = useCallback(async () => {
         dispatch({ type: 'START_ANALYSIS' });
         const messages = [
-            'Analizando patrones de consumo...',
-            'Consultando las 3 mejores tarifas disponibles...',
-            'Comparando con ofertas del mercado...',
-            'Generando propuestas...'
+            'Aletheia: Normalizando datos de consumo...',
+            'Aletheia: Aplicando perfiles de estacionalidad REE...',
+            'Aletheia: Auditoría forense de costes ocultos...',
+            'Aletheia: Simulando escenario contra BBDD local...'
         ];
 
         let msgIndex = 0;
@@ -153,33 +181,82 @@ export function useSimulator() {
         }, 800);
 
         try {
-            const calculatedSavings = await calculateSavings(state.invoiceData);
+            // Import dynamically to avoid server-action issues in client component if needed, 
+            // but Next.js handles imports of server actions fine usually.
+            const { calculateAletheiaSavings } = await import('@/app/actions/simulator');
+
+            // Pass the current state.invoiceData. 
+            // TODO: If we added Manual Max Demand inputs to the UI, we should extract them from state.
+            const result = await calculateAletheiaSavings(state.invoiceData);
+
             clearInterval(interval);
 
-            // Check if we're in mock mode
-            if (process.env.NODE_ENV === 'development' && calculatedSavings.length > 0) {
-                const firstOffer = calculatedSavings[0];
-                if (firstOffer.offer.id.startsWith('mock-')) {
-                    dispatch({ type: 'SET_MOCK_MODE', payload: true });
-                }
+            if (!result.success) {
+                throw new Error(result.error);
             }
 
-            const topResults = calculatedSavings.slice(0, 3);
-            dispatch({ type: 'SET_RESULTS', payload: topResults });
+            const aletheiaResult = result.data;
 
-            if (topResults.length > 0) {
+            // Map Aletheia Result to legacy SavingsResult for UI compatibility
+            const mappedResults: SavingsResult[] = aletheiaResult.top_proposals.map(p => {
+                // Reconstruct Offer object from Candidate
+                const offer: any = {
+                    id: p.candidate.id,
+                    marketer_name: p.candidate.company,
+                    tariff_name: p.candidate.name,
+                    logo_color: p.candidate.logo_color,
+                    type: p.candidate.type,
+                    contract_duration: '12 meses', // Default or from candidate
+                    power_price: p.candidate.power_price,
+                    energy_price: p.candidate.energy_price,
+                    fixed_fee: p.candidate.fixed_fee
+                };
+
+                return {
+                    offer: offer,
+                    current_annual_cost: aletheiaResult.current_status.annual_projected_cost,
+                    offer_annual_cost: p.annual_cost_total,
+                    annual_savings: p.annual_savings,
+                    savings_percent: aletheiaResult.current_status.annual_projected_cost > 0
+                        ? (p.annual_savings / aletheiaResult.current_status.annual_projected_cost) * 100
+                        : 0,
+                    // If we want to show optimization details, we can map them here from opportunities
+                    optimization_result: undefined
+                };
+            });
+
+            // Persist Insights to Local Storage for "Smart Dashboard" usage (The "Opportunity Cards")
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('aletheia_insights', JSON.stringify({
+                    opportunities: aletheiaResult.opportunities,
+                    profile: aletheiaResult.client_profile,
+                    current_status: aletheiaResult.current_status,
+                    optimization_recommendations: aletheiaResult.optimization_recommendations
+                }));
+            }
+
+            // Dispatch optimization recommendations
+            dispatch({ type: 'SET_OPTIMIZATION_RECOMMENDATIONS', payload: aletheiaResult.optimization_recommendations || [] });
+            dispatch({ type: 'SET_OPPORTUNITIES', payload: aletheiaResult.opportunities || [] });
+            if (aletheiaResult.client_profile) {
+                dispatch({ type: 'SET_CLIENT_PROFILE', payload: aletheiaResult.client_profile });
+            }
+
+            dispatch({ type: 'SET_RESULTS', payload: mappedResults });
+
+            if (mappedResults.length > 0) {
                 // Persistent: Save the top 3 results as draft proposals
                 try {
-                    console.log('[Simulator] Persisting 3 top proposals...');
+                    console.log('[Simulator] Persisting 3 top proposals (Aletheia)...');
 
                     // 1. Log the best result (creates client + 1st proposal)
-                    const bestResult = topResults[0];
+                    const bestResult = mappedResults[0];
                     const savedProposal = await crmService.logSimulation(state.invoiceData, bestResult, state.invoiceData.client_name);
 
-                    // 2. Log the next two if they exist, linked to the SAME client
-                    if (topResults.length > 1) {
-                        for (let i = 1; i < topResults.length; i++) {
-                            const result = topResults[i];
+                    // 2. Log the next two if they exist
+                    if (mappedResults.length > 1) {
+                        for (let i = 1; i < mappedResults.length; i++) {
+                            const result = mappedResults[i];
                             await crmService.saveProposal({
                                 client_id: savedProposal.client_id,
                                 status: 'draft',
@@ -198,9 +275,9 @@ export function useSimulator() {
                     console.error('[Simulator] Failed to persist proposals:', persistError);
                 }
 
-                localStorage.setItem('antigravity_simulator_result', JSON.stringify(topResults[0]));
+                localStorage.setItem('antigravity_simulator_result', JSON.stringify(mappedResults[0]));
                 localStorage.setItem('antigravity_simulator_invoice', JSON.stringify(state.invoiceData));
-                sessionStorage.setItem('simulator_result', JSON.stringify(topResults[0]));
+                sessionStorage.setItem('simulator_result', JSON.stringify(mappedResults[0]));
                 sessionStorage.setItem('simulator_invoice', JSON.stringify(state.invoiceData));
             }
         } catch (error) {

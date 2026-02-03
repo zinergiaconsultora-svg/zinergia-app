@@ -28,6 +28,7 @@ interface SimulatorFormProps {
     isAnalyzing: boolean;
     loadingMessage: string;
     powerType: string;
+    pdfUrl?: string | null;
 }
 
 export const SimulatorForm: React.FC<SimulatorFormProps> = ({
@@ -37,9 +38,14 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     onBack,
     isAnalyzing,
     loadingMessage,
-    powerType
+    powerType,
+    pdfUrl
 }) => {
-    // Memoize visible periods to prevent recalculation on every render
+
+
+    // Toggle for PDF View
+    const [showPdf, setShowPdf] = React.useState(true);
+
     const visibleEnergyPeriods = useMemo(() => {
         return [1, 2, 3, 4, 5, 6].filter(p => (powerType === '2.0' ? p <= 3 : powerType === '3.0' ? p <= 6 : true));
     }, [powerType]);
@@ -73,6 +79,18 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                 </motion.button>
 
                 <div className="flex items-center gap-4 bg-white/40 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/60 shadow-sm">
+                    {/* Toggle PDF View Button */}
+                    {pdfUrl && (
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setShowPdf(!showPdf)}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${showPdf ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500 hover:text-emerald-600'}`}
+                        >
+                            {showPdf ? 'Ocultar PDF' : 'Ver PDF Original'}
+                        </motion.button>
+                    )}
+
                     <div className="text-right">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estado Auditoría</p>
                         <p className="text-sm font-bold text-slate-900 flex items-center gap-2 justify-end">
@@ -83,9 +101,29 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Left Column: Analysis & Groups */}
-                <div className="lg:col-span-8 space-y-8">
+            <div className={`grid grid-cols-1 ${showPdf && pdfUrl ? 'xl:grid-cols-2 gap-8' : 'lg:grid-cols-12 gap-8'}`}>
+
+                {/* PDF PREVIEW PANEL */}
+                {showPdf && pdfUrl && (
+                    <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        className="h-[800px] bg-slate-800 rounded-2xl overflow-hidden shadow-2xl border border-slate-700 sticky top-4"
+                    >
+                        <div className="bg-slate-900 px-4 py-2 flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Documento Original</span>
+                        </div>
+                        <iframe
+                            src={pdfUrl}
+                            className="w-full h-full"
+                            title="PDF Preview"
+                        />
+                    </motion.div>
+                )}
+
+                {/* Left Column: Analysis & Groups (Adjusted Span) */}
+                <div className={showPdf && pdfUrl ? 'space-y-8' : 'lg:col-span-8 space-y-8'}>
 
                     {/* Detection Summary Card */}
                     <Card className="relative overflow-hidden border-2 border-emerald-100 bg-white/80">
@@ -126,6 +164,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                 value={data.client_name}
                                 onChange={(e) => onUpdate('client_name', e.target.value)}
                                 placeholder="Nombre completo"
+                                warning={data.client_name && data.client_name.length < 5 ? 'Nombre muy corto (¿OCR incompleto?)' : undefined}
                             />
                             <Input
                                 label="CIF / DNI"
@@ -133,6 +172,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                 value={data.dni_cif}
                                 onChange={(e) => onUpdate('dni_cif', e.target.value)}
                                 placeholder="Identificación"
+                                warning={data.dni_cif && !/^[0-9A-Z]{9}$/.test(data.dni_cif) ? 'Formato inusual' : undefined}
                             />
                             <Input
                                 label="Comercializadora Actual"
@@ -146,6 +186,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                 icon={<Hash size={16} />}
                                 value={data.invoice_number}
                                 onChange={(e) => onUpdate('invoice_number', e.target.value)}
+                                warning={!data.invoice_number ? 'Dato no encontrado en el PDF' : undefined}
                             />
                         </Card>
                     </div>
@@ -163,6 +204,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                     icon={<Activity size={16} />}
                                     value={data.cups}
                                     error={!isCupsValid && data.cups ? 'Longitud de CUPS sospechosa' : undefined}
+                                    warning={isCupsValid && !data.cups?.startsWith('ES') ? 'CUPS debe empezar por ES' : undefined}
                                     onChange={(e) => onUpdate('cups', e.target.value.toUpperCase())}
                                     className="font-mono"
                                 />
@@ -172,6 +214,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                 icon={<MapPin size={16} />}
                                 value={data.supply_address}
                                 onChange={(e) => onUpdate('supply_address', e.target.value)}
+                                warning={data.supply_address && data.supply_address.length < 10 ? 'Dirección incompleta' : undefined}
                             />
                             <div className="grid grid-cols-2 gap-4">
                                 <Input
@@ -194,7 +237,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                 </div>
 
                 {/* Right Column: Values & Metrics */}
-                <div className="lg:col-span-4 space-y-8">
+                <div className={showPdf && pdfUrl ? 'space-y-8' : 'lg:col-span-4 space-y-8'}>
 
                     {/* Energy Sectors */}
                     <div className="space-y-4">
@@ -256,6 +299,34 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                         FALTA POTENCIA CONTRATADA
                                     </div>
                                 )}
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* Maximeter (Demandas Máximas) */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3 px-2">
+                            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Maxímetro (kW)</h2>
+                            <span className="text-[10px] uppercase font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded">Opcional</span>
+                        </div>
+                        <Card className="bg-purple-50/30 border border-purple-100 shadow-sm">
+                            <div className="space-y-3">
+                                {visiblePowerPeriods.map(p => {
+                                    const field = `max_demand_p${p}` as keyof InvoiceData;
+                                    return (
+                                        <div key={`max-demand-${p}`} className="flex items-center justify-between gap-4">
+                                            <span className="text-xs font-black text-purple-600 bg-purple-100 px-2 py-1 rounded w-8 text-center">P{p}</span>
+                                            <input
+                                                type="number"
+                                                aria-label={`Max Demand P${p}`}
+                                                value={data[field] as number || ''}
+                                                onChange={(e) => onUpdate(field, parseFloat(e.target.value) || 0)}
+                                                placeholder="0.00"
+                                                className="flex-1 bg-transparent border-b border-purple-200 focus:border-purple-500 focus:outline-none text-right font-bold text-slate-800 text-sm py-1 placeholder:text-slate-300"
+                                            />
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </Card>
                     </div>

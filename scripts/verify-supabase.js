@@ -11,12 +11,22 @@ dotenv.config({ path: '.env.local' });
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-    console.error('❌ Error: No se encontraron las credenciales de Supabase en .env.local');
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Use Service Role Key preferentialy for admin scripts to bypass RLS
+const clientKey = SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+
+if (!SUPABASE_URL || !clientKey) {
+    console.error('❌ Error: No se encontraron las credenciales de Supabase (URL o KEY) en .env.local');
     process.exit(1);
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = createClient(SUPABASE_URL, clientKey, {
+    auth: {
+        autoRefreshToken: false,
+        persistSession: false
+    }
+});
 
 console.log('🔍 Verificando configuración de Supabase...\n');
 
@@ -29,7 +39,7 @@ async function verifySetup() {
         const { error, count } = await supabase
             .from('lv_zinergia_tarifas')
             .select('*', { count: 'exact', head: true });
-        
+
         if (error) {
             console.log(`   ❌ Error: ${error.message}\n`);
             results.push({ check: 'lv_zinergia_tarifas', status: 'FAIL', error: error.message });
@@ -48,7 +58,7 @@ async function verifySetup() {
         const { error, count } = await supabase
             .from('v_active_tariffs')
             .select('*', { count: 'exact', head: true });
-        
+
         if (error) {
             console.log(`   ❌ Error: ${error.message}\n`);
             results.push({ check: 'v_active_tariffs', status: 'FAIL', error: error.message });
@@ -68,7 +78,7 @@ async function verifySetup() {
             .from('lv_zinergia_tarifas')
             .select('tariff_type, offer_type')
             .eq('is_active', true);
-        
+
         if (error) {
             console.log(`   ❌ Error: ${error.message}\n`);
             results.push({ check: 'tariff_types', status: 'FAIL', error: error.message });
@@ -78,7 +88,7 @@ async function verifySetup() {
                 const key = `${t.tariff_type} - ${t.offer_type}`;
                 types[key] = (types[key] || 0) + 1;
             });
-            
+
             console.log('   ✅ PASS - Tipos encontrados:');
             Object.entries(types).forEach(([type, count]) => {
                 console.log(`      ${type}: ${count}`);
@@ -98,7 +108,7 @@ async function verifySetup() {
             .from('lv_zinergia_tarifas')
             .select('company')
             .eq('is_active', true);
-        
+
         if (error) {
             console.log(`   ❌ Error: ${error.message}\n`);
             results.push({ check: 'tariff_companies', status: 'FAIL', error: error.message });
@@ -126,7 +136,7 @@ async function verifySetup() {
             .eq('is_active', true)
             .limit(5)
             .order('company', { ascending: true });
-        
+
         if (error) {
             console.log(`   ❌ Error: ${error.message}\n`);
         } else {
@@ -145,15 +155,15 @@ async function verifySetup() {
     console.log('━'.repeat(50));
     const passed = results.filter(r => r.status === 'PASS').length;
     const total = results.length;
-    
+
     results.forEach(r => {
         const icon = r.status === 'PASS' ? '✅' : '❌';
-        const msg = r.status === 'PASS' 
+        const msg = r.status === 'PASS'
             ? `${r.check}${r.count ? ` (${r.count} registros)` : ''}`
             : `${r.check} - ${r.error}`;
         console.log(`${icon} ${msg}`);
     });
-    
+
     console.log('━'.repeat(50));
     console.log(`\nResultado: ${passed}/${total} checks pasaron\n`);
 

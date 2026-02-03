@@ -21,12 +21,16 @@ export const SimulatorView = () => {
         uploadError,
         results,
         loadingMessage,
+        optimizationRecommendations,
+        opportunities,
         handleFileUpload,
         handleDrop,
         handleDragOver,
         runComparison,
         reset: handleReset,
-        goBackToStep1
+        goBackToStep1,
+        pdfUrl,
+        clientProfile
     } = useSimulatorContext();
 
     const updateInvoiceField = <K extends keyof InvoiceData>(key: K, value: InvoiceData[K]) => {
@@ -103,6 +107,8 @@ export const SimulatorView = () => {
                                 isAnalyzing={isAnalyzing}
                                 loadingMessage={loadingMessage}
                                 powerType={powerType}
+
+                                pdfUrl={pdfUrl}
                             />
                             {/* OVERLAY: Mostrando durante la comparación */}
                             <LoadingOverlay
@@ -119,6 +125,10 @@ export const SimulatorView = () => {
                             isMockMode={isMockMode}
                             onReset={handleReset}
                             powerType={powerType}
+                            optimizationRecommendations={optimizationRecommendations}
+                            opportunities={opportunities}
+                            invoiceData={invoiceData}
+                            clientProfile={clientProfile}
                         />
                     )}
 
