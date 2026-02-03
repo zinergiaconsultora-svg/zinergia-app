@@ -16,6 +16,9 @@ export async function login(formData: FormData) {
             password: formData.get('password') as string,
         }
 
+        console.log('Login attempt for:', data.email)
+        console.log('Using Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+
         if (!data.email || !data.password) {
             return { error: 'Por favor, rellena todos los campos' }
         }
@@ -23,7 +26,8 @@ export async function login(formData: FormData) {
         const { error } = await supabase.auth.signInWithPassword(data)
 
         if (error) {
-            return { error: 'Credenciales incorrectas o usuario no encontrado' }
+            console.error('Supabase Auth Error:', error.message, error.status)
+            return { error: `Error de Supabase: ${error.message} (${error.status})` }
         }
     } catch (error: unknown) {
         console.error('Login error:', error)

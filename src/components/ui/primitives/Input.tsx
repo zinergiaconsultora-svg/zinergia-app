@@ -4,11 +4,12 @@ import { cn } from '@/lib/utils';
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     label?: string;
     error?: string;
+    warning?: string;
     icon?: React.ReactNode;
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-    ({ className, label, error, icon, id, ...props }, ref) => {
+    ({ className, label, error, warning, icon, id, ...props }, ref) => {
         const generatedId = React.useId();
         const inputId = id || generatedId;
 
@@ -30,13 +31,14 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
                             "flex h-10 w-full rounded-2xl border border-slate-200 bg-white/50 backdrop-blur-md px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-body text-slate-700",
                             "hover:bg-white/80 hover:border-slate-300",
                             icon ? "pl-10" : "",
-                            error ? "border-red-300 focus:border-red-500 focus:ring-red-200" : "",
+                            error ? "border-red-300 focus:border-red-500 focus:ring-red-200" :
+                                warning ? "border-amber-300 focus:border-amber-500 focus:ring-amber-200 bg-amber-50/30" : "",
                             className
                         )}
                         {...props}
                     />
                     {icon && (
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors">
+                        <div className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${error ? 'text-red-400' : warning ? 'text-amber-500' : 'text-slate-400 group-focus-within:text-emerald-500'}`}>
                             {icon}
                         </div>
                     )}
@@ -44,6 +46,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
                 {error && (
                     <p className="text-xs text-red-500 font-medium ml-1 animate-slide-up">
                         {error}
+                    </p>
+                )}
+                {warning && !error && (
+                    <p className="text-xs text-amber-600 font-medium ml-1 animate-slide-up">
+                        {warning}
                     </p>
                 )}
             </div>

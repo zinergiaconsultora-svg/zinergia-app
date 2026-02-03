@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { SavingsResult } from '../../../types/crm';
-import { Download, Mail, ShieldCheck, Zap, Loader2, FileText } from 'lucide-react';
-// Lint fix: removed unused imports (Phone, MapPin, Globe)
+import { Download, Mail, ShieldCheck, Zap, Loader2, FileText, TrendingDown, Lightbulb } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { formatCurrency } from '@/lib/utils/format';
 
@@ -665,245 +664,167 @@ ${styles}
         <div className="max-w-4xl mx-auto font-sans">
             <div ref={cardRef}>
                 {/* --- DIGITAL CONTRACT CARD (Screen View) --- */}
-                <div
-                    className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200 relative mb-4 print:shadow-none print:border print:rounded-none bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:24px_24px]"
-                >
-                    {/* Header - Corporate & Elegant */}
-                    <div className="p-5 md:p-6 relative overflow-hidden bg-white border-b border-slate-100">
-                        <div className={`absolute top-0 left-0 right-0 h-[2px] ${isSecondary ? 'bg-slate-300' : 'bg-indigo-600/80'}`}></div>
+                <div className="relative mb-4 group transition-all duration-300 hover:translate-y-[-2px]">
+                    {/* Glassmorphism Container */}
+                    <div className="absolute inset-0 bg-white/60 backdrop-blur-xl rounded-[2rem] border border-white/40 shadow-xl shadow-slate-200/50"></div>
 
-                        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                            <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 ${isSecondary ? 'bg-slate-50' : 'bg-indigo-50/50'} rounded-lg flex items-center justify-center border border-slate-100`}>
-                                    <Zap className={isSecondary ? 'text-slate-400 fill-slate-400' : 'text-indigo-600 fill-indigo-600'} size={16} />
+                    <div className="relative z-10 p-1">
+                        {/* Header - Minimalist */}
+                        <div className="p-6 pb-2 md:flex md:justify-between md:items-start">
+                            <div className="flex items-center gap-4">
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${isSecondary ? 'bg-white text-slate-400' : 'bg-slate-900 text-white'}`}>
+                                    <Zap size={20} className={isSecondary ? 'opacity-50' : ''} />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-semibold tracking-tight text-slate-900">Zinergia <span className="font-light text-slate-500">Propuesta</span></h2>
-                                    <p className="text-slate-400 text-[9px] uppercase tracking-[0.2em] font-bold mt-1 opacity-80">Solución Energética Inteligente</p>
+                                    <h2 className="text-xl font-medium tracking-tight text-slate-900">
+                                        Zinergia <span className="opacity-40 font-light">Propuesta</span>
+                                    </h2>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <div className={`w-1.5 h-1.5 rounded-full ${isSecondary ? 'bg-amber-400' : 'bg-emerald-500 animate-pulse'}`}></div>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{title}</p>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="flex flex-col items-end gap-1">
-                                <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100/50">
-                                    <ShieldCheck size={14} className="opacity-80" />
-                                    <span className="text-[10px] font-bold uppercase tracking-wider">Ahorro Validado</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-slate-400">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                                    <span className="text-[10px] font-medium uppercase tracking-widest">{title}</span>
-                                </div>
+                            <div className="mt-4 md:mt-0 flex gap-2">
+                                <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+                                    {documentDate}
+                                </span>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Main Content Areas */}
-                    <div className="p-2 sm:p-3 grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-3">
-                        {/* LEFT: Financial Summary */}
-                        <div className="lg:col-span-8 space-y-2 sm:space-y-3">
-                            {/* Savings Hero Section */}
-                            <div className="relative overflow-hidden bg-slate-900 text-white rounded-[1.5rem] p-4 sm:p-5 shadow-xl shadow-slate-900/10">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
-                                <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl -ml-12 -mb-12"></div>
+                        {/* Main Content */}
+                        <div className="p-2 sm:p-3 grid grid-cols-1 lg:grid-cols-12 gap-3">
+                            {/* LEFT: Financial Core */}
+                            <div className="lg:col-span-8">
+                                {/* Savings Card - Dark Premium */}
+                                <div className="h-full relative overflow-hidden bg-slate-900 text-white rounded-[1.75rem] p-6 shadow-2xl shadow-slate-900/20 flex flex-col justify-between group-hover:shadow-slate-900/30 transition-shadow">
+                                    {/* Abstract shapes */}
+                                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl -ml-20 -mb-20"></div>
 
-                                <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                                     <div>
-                                        <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-white/10 backdrop-blur-sm rounded-lg border border-white/10 mb-3">
-                                            <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest">Ahorro Anual Estimado</span>
+                                        <p className="text-indigo-300 text-[10px] font-bold uppercase tracking-[0.2em] mb-2">Ahorro Estimado</p>
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-5xl md:text-6xl font-light tracking-tighter">
+                                                {formatCurrency(result.annual_savings).replace('€', '')}
+                                            </span>
+                                            <span className="text-2xl text-slate-400 font-light">€</span>
                                         </div>
-                                        <div className="flex items-baseline gap-2">
-                                            <span className="text-4xl font-black tracking-tight">{formatCurrency(result.annual_savings)}</span>
-                                            <span className="text-indigo-400 font-bold text-xs">/ año</span>
-                                        </div>
-                                        <p className="text-slate-400 text-[11px] mt-1.5 max-w-[200px] leading-relaxed">
-                                            Ahorro directo proyectado basado en tu consumo real actual.
+                                        <p className="text-slate-400 text-sm mt-2 font-light max-w-xs">
+                                            Reducción anual proyectada basada en tu consumo real.
                                         </p>
                                     </div>
 
-                                    <div className="flex flex-col items-start sm:items-end w-full sm:w-auto">
-                                        <div className="w-full sm:w-20 h-20 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 flex flex-col items-center justify-center relative group">
-                                            <div className="text-2xl font-black text-emerald-400">{Math.round(result.savings_percent)}%</div>
-                                            <div className="text-[8px] font-bold text-slate-500 uppercase tracking-tight mt-0.5">Eficiencia</div>
-                                            <svg className="absolute inset-0 w-full h-full -rotate-90 p-1">
-                                                <circle cx="40" cy="40" r="34" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/5" />
-                                                <circle cx="40" cy="40" r="34" fill="none" stroke="currentColor" strokeWidth="3"
-                                                    strokeDasharray={`${(result.savings_percent / 100) * 213} 213`}
-                                                    className="text-emerald-500/40" />
-                                            </svg>
+                                    {/* Stats Grid */}
+                                    <div className="grid grid-cols-3 gap-8 mt-8 pt-8 border-t border-white/5">
+                                        <div>
+                                            <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Actual</div>
+                                            <div className="text-lg font-medium text-slate-300">{formatCurrency(result.current_annual_cost)}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[9px] font-bold text-emerald-500/80 uppercase tracking-widest mb-1">Nuevo</div>
+                                            <div className="text-lg font-medium text-white">{formatCurrency(result.offer_annual_cost)}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Eficiencia</div>
+                                            <div className="text-lg font-medium text-emerald-400">+{Math.round(result.savings_percent)}%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* RIGHT: Details & Actions */}
+                            <div className="lg:col-span-4 flex flex-col gap-2">
+                                {/* Offer Details */}
+                                <div className="bg-white/50 rounded-3xl p-5 border border-white/60">
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-10 h-10 ${result.offer.logo_color || 'bg-slate-800'} rounded-xl flex items-center justify-center text-white font-bold shadow-sm`}>
+                                                {result.offer.marketer_name.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Comercializadora</p>
+                                                <p className="text-sm font-semibold text-slate-900">{result.offer.marketer_name}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-400 border border-slate-100">
+                                                <FileText size={18} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Tarifa</p>
+                                                <p className="text-sm font-semibold text-slate-900 line-clamp-1">{result.offer.tariff_name}</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Quick Facts Bar */}
-                                <div className="grid grid-cols-3 gap-2 mt-5 pt-5 border-t border-white/10">
-                                    <div className="text-center sm:text-left">
-                                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Costo Actual</div>
-                                        <div className="text-xs font-bold text-slate-300">{formatCurrency(result.current_annual_cost)}</div>
-                                    </div>
-                                    <div className="text-center sm:text-left">
-                                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Nuevo Costo</div>
-                                        <div className="text-xs font-bold text-white">{formatCurrency(result.offer_annual_cost)}</div>
-                                    </div>
-                                    <div className="text-center sm:text-left">
-                                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Validez</div>
-                                        <div className="text-xs font-bold text-indigo-400">{offerValidity}</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Offer Details Grid */}
-                            <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                                <div className="p-3 sm:p-3.5 bg-slate-50 rounded-[1.25rem] border border-slate-100 flex items-center gap-3 sm:gap-4">
-                                    <div className={`w-8 h-8 sm:w-10 sm:h-10 ${result.offer.logo_color || 'bg-slate-200'} rounded-xl shadow-sm flex items-center justify-center text-white text-[10px] font-bold shrink-0`}>
-                                        {result.offer.marketer_name.charAt(0)}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">{result.offer.marketer_name}</p>
-                                        <p className="text-xs font-bold text-slate-900 truncate tracking-tight">{result.offer.tariff_name}</p>
-                                    </div>
-                                </div>
-
-                                <div className="p-3 sm:p-3.5 bg-slate-50 rounded-[1.25rem] border border-slate-100 flex items-center gap-3 sm:gap-4">
-                                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center text-indigo-600 shrink-0">
-                                        <FileText size={16} />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">Permanencia</p>
-                                        <p className="text-xs font-bold text-slate-900 truncate tracking-tight">{result.offer.contract_duration || 'Sin compromiso'}</p>
+                                {/* Actions */}
+                                <div className="flex-1 bg-slate-50/50 rounded-3xl p-2 border border-white/60 flex flex-col justify-end gap-2">
+                                    <button
+                                        onClick={handleWhatsAppShare}
+                                        className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-medium text-sm transition-all shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center justify-center gap-2 group/btn"
+                                    >
+                                        <span>Compartir</span>
+                                        <svg className="w-4 h-4 opacity-80 group-hover/btn:translate-x-0.5 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.316 1.592 5.43 0 9.856-4.426 9.858-9.855.002-5.43-4.425-9.851-9.857-9.851-5.43 0-9.854 4.427-9.856 9.856-.001 2.189.633 4.068 1.842 5.756l-1.103 4.028 4.1-.1.076.01.076-.01z" /></svg>
+                                    </button>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={onEmail}
+                                            className="flex-1 py-3 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-2xl font-medium text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+                                        >
+                                            <Mail size={16} className="text-slate-400" />
+                                            <span>Email</span>
+                                        </button>
+                                        <button
+                                            onClick={handleDownloadPdf}
+                                            disabled={isGeneratingPdf}
+                                            className="flex-1 py-3 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-2xl font-medium text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+                                        >
+                                            {isGeneratingPdf ? <Loader2 size={16} className="animate-spin text-indigo-500" /> : <Download size={16} className="text-slate-400" />}
+                                            <span>PDF</span>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            {/* Share Buttons (Digital Only) */}
-                            <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                                <button
-                                    onClick={handleWhatsAppShare}
-                                    className="flex items-center justify-center gap-2 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl sm:rounded-2xl font-bold text-xs transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
-                                >
-                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.316 1.592 5.43 0 9.856-4.426 9.858-9.855.002-5.43-4.425-9.851-9.857-9.851-5.43 0-9.854 4.427-9.856 9.856-.001 2.189.633 4.068 1.842 5.756l-1.103 4.028 4.1-.1.076.01.076-.01z" />
+                        {/* Optimization Strip */}
+                        {result.optimization_result && (
+                            <div className="mx-2 mb-2 p-3 bg-emerald-50/50 rounded-2xl border border-emerald-100/50 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                                    <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Potencia Optimizada Incluida</span>
+                                </div>
+                                <span className="text-xs font-bold text-emerald-600">
+                                    +{formatCurrency(result.optimization_result.annual_optimization_savings)} extra
+                                </span>
+                            </div>
+                        )}
+
+                        {/* Advisor Notes Section */}
+                        <div className="mx-2 mb-2">
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-start pt-3 pointer-events-none">
+                                    <svg className="w-4 h-4 text-amber-500/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                     </svg>
-                                    <span>Compartir por WhatsApp</span>
-                                </button>
-                                <button
-                                    onClick={onEmail}
-                                    className="flex items-center justify-center gap-2 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl sm:rounded-2xl font-bold text-xs transition-all shadow-lg shadow-slate-900/10 active:scale-95"
-                                >
-                                    <Mail size={16} />
-                                    <span>Enviar por Email</span>
-                                </button>
-                            </div>
-
-                            {/* Optimization Highlights */}
-                            {result.optimization_result && (
-                                <div className="bg-emerald-50/30 rounded-2xl border border-emerald-100/50 p-3 sm:p-5">
-                                    <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                                        <div className="p-1 px-2 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-bold uppercase tracking-widest">Optimización Activa</div>
-                                    </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-2 overflow-x-auto no-scrollbar pb-1">
-                                        {Object.entries(result.optimization_result.optimized_powers).map(([p, val]) => (
-                                            <div key={p} className="flex flex-col min-w-0">
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{p.toUpperCase()}</span>
-                                                <span className="text-sm font-black text-slate-700">{val} <span className="text-[10px] font-normal text-slate-400">kW</span></span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="mt-4 pt-4 border-t border-emerald-100/50 flex justify-between items-center px-2">
-                                        <span className="text-[10px] font-bold text-slate-500 uppercase">Ahorro Técnico Potencia</span>
-                                        <span className="text-sm font-black text-emerald-600">+{formatCurrency(result.optimization_result.annual_optimization_savings)}</span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Advisor Notes */}
-                            <div className="bg-amber-50/40 rounded-2xl border border-amber-100/60 p-4">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
-                                        <Zap size={16} />
-                                    </div>
-                                    <h3 className="text-xs font-bold text-amber-900 uppercase tracking-wider">Notas del Asesor</h3>
                                 </div>
                                 <textarea
+                                    className="w-full pl-10 pr-4 py-3 bg-amber-50/30 border border-amber-100/50 rounded-xl text-xs text-amber-900 placeholder-amber-400/70 focus:ring-2 focus:ring-amber-200/50 focus:border-amber-200/50 transition-all resize-none min-h-[60px]"
+                                    placeholder="Añadir notas del asesor para el cliente..."
                                     value={advisorNotes}
                                     onChange={(e) => setAdvisorNotes(e.target.value)}
-                                    placeholder="Ej: Recomendamos contratar este mes para aprovechar la bonificación de bienvenida..."
-                                    className="w-full bg-white/50 border border-amber-200/50 rounded-xl p-3 text-sm text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 outline-none transition-all resize-none h-20"
                                 />
-                            </div>
-                        </div>
-
-                        {/* RIGHT: QR & Visual */}
-                        <div className="lg:col-span-4 space-y-3">
-                            <div className="bg-slate-50 rounded-[1.5rem] p-5 border border-slate-100 text-center flex flex-col items-center justify-center h-full sm:min-h-[260px]">
-                                <div className="relative mb-5">
-                                    <div className="w-20 h-20 bg-white rounded-2xl shadow-lg border border-slate-100 flex items-center justify-center p-2 relative z-10 overflow-hidden">
-                                        <QRCodeSVG
-                                            value={typeof window !== 'undefined' ? window.location.href : ''}
-                                            size={64}
-                                            level="H"
-                                            includeMargin={false}
-                                        />
-                                    </div>
-                                    <div className="absolute inset-0 bg-indigo-500/20 rounded-2xl blur-xl animate-pulse -z-0"></div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-tight">Escanea para contratar</h4>
-                                    <p className="text-[9px] text-slate-400 leading-normal px-2">
-                                        Acceso directo a la formalización digital del contrato. Sin papeleo.
-                                    </p>
-                                </div>
-
-                                <div className="mt-8 pt-6 border-t border-slate-200/50 w-full hidden lg:block">
-                                    <div className="flex flex-col gap-3">
-                                        <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2">
-                                            <span>Autenticidad</span>
-                                            <span className="text-indigo-600">Verificada</span>
-                                        </div>
-                                        <div className="flex gap-1 justify-center">
-                                            {[1, 2, 3, 4, 5].map(i => (
-                                                <div key={i} className="w-1.5 h-6 bg-slate-200/60 rounded-full"></div>
-                                            ))}
-                                            <div className="w-1.5 h-6 bg-indigo-500 rounded-full"></div>
-                                            {[1, 2, 3, 4].map(i => (
-                                                <div key={i + 10} className="w-2 h-6 bg-slate-100 rounded-full"></div>
-                                            ))}
-                                        </div>
-                                    </div>
+                                <div className="absolute bottom-2 right-3 text-[9px] font-bold text-amber-400/60 uppercase tracking-widest pointer-events-none">
+                                    Notas Privadas
                                 </div>
                             </div>
                         </div>
+
                     </div>
                 </div>
-            </div>
-
-            {/* ACTION BAR */}
-            <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                <button
-                    onClick={handleDownloadPdf}
-                    disabled={isGeneratingPdf}
-                    className="flex-1 flex items-center justify-center gap-3 py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm shadow-xl shadow-slate-900/10 hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-50"
-                >
-                    {isGeneratingPdf ? (
-                        <>
-                            <Loader2 size={20} className="animate-spin" />
-                            <span>Generando Auditoría...</span>
-                        </>
-                    ) : (
-                        <>
-                            <Download size={20} />
-                            <span>Descargar Auditoría PDF</span>
-                        </>
-                    )}
-                </button>
-
-                {onReset && (
-                    <button
-                        onClick={onReset}
-                        className="sm:px-8 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold text-sm hover:bg-slate-50 transition-all active:scale-95"
-                    >
-                        Nueva Simulación
-                    </button>
-                )}
             </div>
         </div>
     );

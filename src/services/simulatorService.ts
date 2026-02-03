@@ -4,6 +4,7 @@
 
 import { InvoiceData, SavingsResult } from '@/types/crm';
 import { createClient } from '@/lib/supabase/client';
+import { OptimizationRecommendation } from '@/lib/aletheia/types';
 
 import { analyzeDocumentAction } from '@/app/actions/ocr';
 import { calculateSavingsAction } from '@/app/actions/compare';
@@ -141,90 +142,217 @@ export async function deleteSimulation(simulationId: string): Promise<void> {
 
 export async function exportResultsToPDF(
     invoiceData: InvoiceData,
-    results: SavingsResult[]
+    results: SavingsResult[],
+    optimizationRecommendations?: OptimizationRecommendation[]
 ): Promise<void> {
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF();
 
-    // Colors
-    const primaryColor = [37, 99, 235] as const; // Blue
-    const successColor = [16, 163, 127] as const; // Green
+    // Zinergia Brand Colors
+    const primaryColor = [16, 163, 127] as const; // Emerald-500
+    const secondaryColor = [20, 184, 166] as const; // Teal-500
+    const accentColor = [5, 150, 105] as const; // Emerald-600
+    const darkColor = [15, 23, 42] as const; // Slate-900
+    const successColor = [34, 197, 94] as const; // Green-500
+    const warningColor = [251, 146, 60] as const; // Orange-400
 
-    // Header
+    // Header with Zinergia branding
     doc.setFillColor(...primaryColor);
-    doc.rect(0, 0, 210, 40, 'F');
+    doc.rect(0, 0, 210, 50, 'F');
+
+    // Gradient effect
+    doc.setFillColor(...secondaryColor);
+    doc.rect(0, 30, 210, 20, 'F');
 
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
-    doc.text('Comparación de Tarifas', 105, 20, { align: 'center' });
+    doc.setFontSize(28);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Zinergia', 20, 20);
 
     doc.setFontSize(12);
-    doc.text('Informe de Ahorro Energético', 105, 30, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.text('Informe de Comparación de Tarifas Eléctricas', 20, 30);
+    doc.setFontSize(10);
+    doc.text('Análisis Inteligente de Ahorro Energético', 20, 37);
 
-    // Invoice Summary
-    let yPosition = 55;
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(16);
-    doc.text('Resumen de Factura', 20, yPosition);
-    yPosition += 10;
+    doc.setFontSize(10);
+    doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}`, 190, 20, { align: 'right' });
 
+    let yPosition = 60;
+
+    // Client Information Section
+    doc.setFillColor(...primaryColor);
+    doc.roundedRect(15, yPosition, 180, 8, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Información del Cliente', 20, yPosition + 6);
+    yPosition += 12;
+
+    doc.setFillColor(249, 250, 251); // Light gray
+    doc.roundedRect(15, yPosition, 180, 30, 2, 2, 'F');
+
+    doc.setTextColor(...darkColor);
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(11);
-    doc.text(`Cliente: ${invoiceData.client_name || 'N/A'}`, 20, yPosition);
-    yPosition += 7;
-    doc.text(`Comercializadora: ${invoiceData.company_name || 'N/A'}`, 20, yPosition);
-    yPosition += 7;
-    doc.text(`Tarifa: ${invoiceData.tariff_name || 'N/A'}`, 20, yPosition);
-    yPosition += 7;
-    doc.text(`Consumo Anual Estimado: €${(invoiceData.total_amount || 0).toFixed(2)}`, 20, yPosition);
-    yPosition += 15;
+    doc.text(`Cliente: ${invoiceData.client_name || 'N/A'}`, 20, yPosition + 8);
+    doc.text(`Comercializadora Actual: ${invoiceData.company_name || 'N/A'}`, 20, yPosition + 16);
+    doc.text(`Tarifa Actual: ${invoiceData.tariff_name || invoiceData.detected_power_type || 'N/A'}`, 20, yPosition + 24);
 
-    // Results
-    doc.setFontSize(16);
-    doc.text('Propuestas de Ahorro', 20, yPosition);
-    yPosition += 10;
+    yPosition += 38;
 
-    results.forEach((result, index) => {
-        if (yPosition > 250) {
+    // Current Consumption Summary
+    const totalConsumption = (invoiceData.energy_p1 || 0) + (invoiceData.energy_p2 || 0) + (invoiceData.energy_p3 || 0) +
+                            (invoiceData.energy_p4 || 0) + (invoiceData.energy_p5 || 0) + (invoiceData.energy_p6 || 0);
+
+    doc.setFillColor(...primaryColor);
+    doc.roundedRect(15, yPosition, 180, 8, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Consumo Actual', 20, yPosition + 6);
+    yPosition += 12;
+
+    doc.setFillColor(249, 250, 251);
+    doc.roundedRect(15, yPosition, 180, 25, 2, 2, 'F');
+
+    doc.setTextColor(...darkColor);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.text(`Consumo Total: ${totalConsumption.toFixed(0)} kWh`, 20, yPosition + 8);
+    doc.text(`Costo Anual Estimado: €${(results[0]?.current_annual_cost || 0).toFixed(2)}`, 20, yPosition + 16);
+
+    yPosition += 33;
+
+    // Optimization Recommendations Section
+    if (optimizationRecommendations && optimizationRecommendations.length > 0) {
+        doc.setFillColor(...warningColor);
+        doc.roundedRect(15, yPosition, 180, 8, 2, 2, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Recomendaciones de Optimización', 20, yPosition + 6);
+        yPosition += 12;
+
+        optimizationRecommendations.slice(0, 3).forEach((rec, idx) => {
+            if (yPosition > 220) {
+                doc.addPage();
+                yPosition = 20;
+            }
+
+            const priorityColor = rec.priority === 'HIGH' ? successColor : (rec.priority === 'MEDIUM' ? warningColor : [100, 116, 139] as const);
+
+            doc.setFillColor(249, 250, 251);
+            doc.roundedRect(15, yPosition, 180, 35, 2, 2, 'F');
+
+            doc.setFillColor(priorityColor[0], priorityColor[1], priorityColor[2]);
+            doc.roundedRect(15, yPosition, 4, 35, 2, 2, 'F');
+
+            doc.setTextColor(...darkColor);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.text(rec.title, 25, yPosition + 8);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            const descriptionLines = doc.splitTextToSize(rec.description, 155);
+            doc.text(descriptionLines, 25, yPosition + 16);
+
+            if (rec.annual_savings > 0) {
+                doc.setTextColor(...successColor);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`Ahorro Potencial: €${rec.annual_savings.toFixed(0)}/año`, 25, yPosition + 28);
+            }
+
+            yPosition += 40;
+        });
+
+        yPosition += 5;
+    }
+
+    // Top 3 Proposals Section
+    if (yPosition > 200) {
+        doc.addPage();
+        yPosition = 20;
+    }
+
+    doc.setFillColor(...accentColor);
+    doc.roundedRect(15, yPosition, 180, 8, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Top 3 Propuestas de Ahorro', 20, yPosition + 6);
+    yPosition += 12;
+
+    results.slice(0, 3).forEach((result, index) => {
+        if (yPosition > 230) {
             doc.addPage();
             yPosition = 20;
         }
 
-        // Card background
-        doc.setFillColor(250, 250, 250);
-        doc.roundedRect(15, yPosition - 5, 180, 50, 3, 3, 'F');
-
-        // Highlight best offer
+        // Card style
         if (index === 0) {
             doc.setFillColor(...successColor);
-            doc.roundedRect(15, yPosition - 5, 180, 50, 3, 3, 'S');
-            doc.setTextColor(255, 255, 255);
+            doc.roundedRect(15, yPosition - 2, 180, 55, 3, 3, 'F');
+            doc.setFillColor(255, 255, 255);
+            doc.roundedRect(15, yPosition - 2, 180, 55, 3, 3, 'S');
+            doc.setFillColor(240, 253, 244);
+            doc.roundedRect(16, yPosition - 1, 178, 53, 2, 2, 'F');
         } else {
-            doc.setTextColor(0, 0, 0);
+            doc.setFillColor(249, 250, 251);
+            doc.roundedRect(15, yPosition - 2, 180, 55, 3, 3, 'F');
         }
 
-        doc.setFontSize(14);
-        doc.text(`${index + 1}. ${result.offer.marketer_name}`, 20, yPosition + 5);
+        doc.setTextColor(...darkColor);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(13);
 
+        const rankLabel = index === 0 ? '⭐ MEJOR OPCIÓN' : `Opción #${index + 1}`;
+        doc.text(rankLabel, 20, yPosition + 8);
+
+        doc.setFontSize(12);
+        doc.text(result.offer.marketer_name, 20, yPosition + 18);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`Tarifa: ${result.offer.tariff_name}`, 20, yPosition + 26);
+        doc.text(`Tipo: ${result.offer.type === 'fixed' ? 'Precio Fijo' : 'Indexado'}`, 20, yPosition + 33);
+
+        // Price and Savings on the right
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(11);
-        doc.text(`Tarifa: ${result.offer.tariff_name}`, 20, yPosition + 12);
-        doc.text(`Costo Anual: €${result.offer_annual_cost.toFixed(2)}`, 20, yPosition + 19);
-        doc.text(`Ahorro: €${result.annual_savings.toFixed(2)} (${result.savings_percent.toFixed(1)}%)`, 20, yPosition + 26);
+        doc.text(`€${result.offer_annual_cost.toFixed(2)}/año`, 140, yPosition + 8);
 
-        yPosition += 55;
+        doc.setTextColor(...successColor);
+        doc.text(`€${result.annual_savings.toFixed(2)}`, 140, yPosition + 18);
+        doc.setFontSize(10);
+        doc.text(`${result.savings_percent.toFixed(1)}% descuento`, 140, yPosition + 25);
+
+        yPosition += 60;
     });
 
     // Footer
-    doc.setFontSize(9);
-    doc.setTextColor(128, 128, 128);
-    doc.text(
-        `Generado por Zinergia - ${new Date().toLocaleDateString('es-ES')}`,
-        105,
-        285,
-        { align: 'center' }
-    );
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, 285, 210, 7, 'F');
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text(
+            `Generado por Zinergia - ${new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}`,
+            105,
+            289,
+            { align: 'center' }
+        );
+        doc.text(`Página ${i} de ${pageCount}`, 190, 289, { align: 'right' });
+    }
 
     // Save
-    doc.save(`comparacion-tarifas-${Date.now()}.pdf`);
+    const fileName = `zinergia-comparacion-${invoiceData.client_name?.replace(/\s+/g, '-')}-${Date.now()}.pdf`;
+    doc.save(fileName);
 }
 
 // ============================================================================

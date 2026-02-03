@@ -167,6 +167,19 @@ export interface Proposal {
     clients?: {
         name: string;
     };
+    aletheia_summary?: {
+        client_profile: {
+            tags: string[];
+            sales_argument: string;
+        };
+        opportunities: {
+            type: string;
+            description: string;
+            annual_savings: number;
+            priority: string;
+        }[];
+        recommendations: any[]; // Full list of recommendations
+    };
 }
 
 

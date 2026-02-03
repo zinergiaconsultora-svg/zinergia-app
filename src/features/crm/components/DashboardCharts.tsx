@@ -72,32 +72,34 @@ export const SavingsTrendChart = () => {
 
     return (
         <div className="h-full w-full">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                <AreaChart data={data} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
-                    <defs>
-                        <linearGradient id="colorSavings" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
-                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                        </linearGradient>
-                    </defs>
-                    <Tooltip
-                        contentStyle={TOOLTIP_CONTENT_STYLE}
-                        itemStyle={TOOLTIP_ITEM_STYLE}
-                        cursor={TOOLTIP_CURSOR_STYLE}
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        formatter={(value: any) => [formatCurrency(value), 'Ahorro']}
-                    />
-                    <Area
-                        type="monotone"
-                        dataKey="value"
-                        stroke="#10b981"
-                        strokeWidth={2}
-                        fillOpacity={1}
-                        fill="url(#colorSavings)"
-                        animationDuration={1500}
-                    />
-                </AreaChart>
-            </ResponsiveContainer>
+            <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                    <AreaChart data={data} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+                        <defs>
+                            <linearGradient id="colorSavings" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                            </linearGradient>
+                        </defs>
+                        <Tooltip
+                            contentStyle={TOOLTIP_CONTENT_STYLE}
+                            itemStyle={TOOLTIP_ITEM_STYLE}
+                            cursor={TOOLTIP_CURSOR_STYLE}
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            formatter={(value: any) => [formatCurrency(value), 'Ahorro']}
+                        />
+                        <Area
+                            type="monotone"
+                            dataKey="value"
+                            stroke="#10b981"
+                            strokeWidth={2}
+                            fillOpacity={1}
+                            fill="url(#colorSavings)"
+                            animationDuration={1500}
+                        />
+                    </AreaChart>
+                </ResponsiveContainer>
+            </div>
         </div>
     );
 };
@@ -120,28 +122,30 @@ export const PipelinePieChart = ({
 
     return (
         <div className="h-full w-full relative">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                <PieChart>
-                    <Pie
-                        data={data}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={40}
-                        outerRadius={55}
-                        paddingAngle={5}
-                        dataKey="value"
-                        stroke="none"
-                    >
-                        {data.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                    </Pie>
-                    <Tooltip
-                        contentStyle={PIE_TOOLTIP_CONTENT_STYLE}
-                        itemStyle={PIE_TOOLTIP_ITEM_STYLE}
-                    />
-                </PieChart>
-            </ResponsiveContainer>
+            <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                    <PieChart>
+                        <Pie
+                            data={data}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={40}
+                            outerRadius={55}
+                            paddingAngle={5}
+                            dataKey="value"
+                            stroke="none"
+                        >
+                            {data.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                        </Pie>
+                        <Tooltip
+                            contentStyle={PIE_TOOLTIP_CONTENT_STYLE}
+                            itemStyle={PIE_TOOLTIP_ITEM_STYLE}
+                        />
+                    </PieChart>
+                </ResponsiveContainer>
+            </div>
             {/* Center Text */}
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
                 <span className="block text-xl md:text-2xl font-light text-slate-700 tracking-tight">{active + won}</span>
