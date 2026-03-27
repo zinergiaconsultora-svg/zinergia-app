@@ -34,6 +34,12 @@ export default async function AdminLayout({
                         >
                             📈 Reporting
                         </a>
+                        <a
+                            href="/admin/academy"
+                            className="px-3 py-1.5 rounded-md text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-700/60 transition-all"
+                        >
+                            🎓 Academy
+                        </a>
                     </nav>
                 </div>
                 <div className="flex items-center gap-3">
