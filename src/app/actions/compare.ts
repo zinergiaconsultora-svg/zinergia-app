@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { AletheiaEngine } from '@/lib/aletheia/engine';
 import { aletheiaResultToWebhookShape, crmToAletheiaInvoice, offerToTariffCandidate } from '@/lib/aletheia/adapter';
 
-const N8N_TIMEOUT_MS = env.N8N_TIMEOUT_MS;
+const N8N_TIMEOUT_MS = Number(env.N8N_TIMEOUT_MS) || 10_000;
 
 // ── Aletheia local fallback ───────────────────────────────────────────────────
 

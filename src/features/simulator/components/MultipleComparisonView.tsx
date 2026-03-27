@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Upload, X, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { useMultipleComparison, ComparisonInvoice } from '@/hooks/useMultipleComparison';
+import { useMultipleComparison, ComparisonInvoice } from '../hooks/useMultipleComparison';
 import { DigitalProposalCard } from '@/features/comparator/components/DigitalProposalCard';
 
 export const MultipleComparisonView = () => {
