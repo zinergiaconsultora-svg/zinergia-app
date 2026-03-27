@@ -6,7 +6,7 @@ import { CommissionRule } from '@/types/crm'
 
 // Hardcoded fallback used when the commission_rules table doesn't exist yet
 // or has no active rule. Matches the seeded default.
-export const DEFAULT_COMMISSION_RULE: Omit<CommissionRule, 'id' | 'created_at' | 'effective_from'> = {
+const DEFAULT_COMMISSION_RULE: Omit<CommissionRule, 'id' | 'created_at' | 'effective_from'> = {
     name: 'Regla por defecto',
     commission_rate: 0.15,
     agent_share: 0.30,
