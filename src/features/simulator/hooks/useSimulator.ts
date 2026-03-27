@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useCallback } from 'react';
 import { InvoiceData, SavingsResult } from '@/types/crm';
-import { analyzeDocument, calculateSavings, validateFile } from '@/services/webhookService';
+import { analyzeDocumentWithRetry as analyzeDocument, calculateSavingsWithRetry as calculateSavings, validateFile } from '@/services/simulatorService';
 import { crmService } from '@/services/crmService';
 import { OptimizationRecommendation, AuditOpportunity } from '@/lib/aletheia/types';
 

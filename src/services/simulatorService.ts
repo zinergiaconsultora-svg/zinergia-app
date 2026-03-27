@@ -58,6 +58,17 @@ export interface SimulationRecord {
     best_offer_id: string;
 }
 
+export function validateFile(file: File): { valid: boolean; error?: string } {
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.type !== 'application/pdf') {
+        return { valid: false, error: 'Solo se permiten archivos PDF' };
+    }
+    if (file.size > MAX_SIZE) {
+        return { valid: false, error: 'El archivo excede 10MB' };
+    }
+    return { valid: true };
+}
+
 export async function saveSimulation(
     invoiceData: InvoiceData,
     results: SavingsResult[],
