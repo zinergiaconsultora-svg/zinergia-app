@@ -30,7 +30,8 @@ export const SimulatorView = () => {
         reset: handleReset,
         goBackToStep1,
         pdfUrl,
-        clientProfile
+        clientProfile,
+        savedProposalId
     } = useSimulatorContext();
 
     const updateInvoiceField = <K extends keyof InvoiceData>(key: K, value: InvoiceData[K]) => {
@@ -129,6 +130,7 @@ export const SimulatorView = () => {
                             opportunities={opportunities}
                             invoiceData={invoiceData}
                             clientProfile={clientProfile}
+                            savedProposalId={savedProposalId}
                         />
                     )}
 

@@ -241,8 +241,8 @@ export default function DashboardView() {
                     </div>
                 </motion.div>
 
-                {/* 2. KPIs ROW (Fixed Height ~80px) */}
-                <motion.div variants={item} className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 shrink-0 h-[80px]">
+                {/* 2. KPIs ROW (Responsive Height) */}
+                <motion.div variants={item} className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 shrink-0 h-auto lg:h-[80px]">
                     <GlassKpiCard label="Ahorro Detectado" value={formatCurrency(stats.financials.total_detected)} icon={TrendingUp} delay={0.1} />
                     <GlassKpiCard label="Objetivo Mensual" value={`${goalProgress}%`} subValue={formatCurrency(MONTHLY_GOAL)} icon={Target} progress={goalProgress} delay={0.2} />
                     <GlassKpiCard label="Pipeline Activo" value={formatCurrency(stats.financials.pipeline)} icon={Layers} delay={0.3} />
@@ -262,7 +262,7 @@ export default function DashboardView() {
                 <motion.div variants={item} className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4">
 
                     {/* LEFT COLUMN (Charts) - 6 Cols */}
-                    <div className="lg:col-span-8 flex flex-col gap-4 min-h-0 h-full">
+                    <div className="lg:col-span-8 flex flex-col gap-4 min-h-0 h-auto lg:h-full">
                         {/* Top: Trend Chart */}
                         <div className="flex-[3] min-h-0 bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-3 relative flex flex-col group hover:bg-white/80 transition-colors">
                             <SectionHeader title="Tendencia de Ahorro" link="Ver Reporte" />
@@ -274,7 +274,7 @@ export default function DashboardView() {
                         </div>
 
                         {/* Bottom: Split (Pipeline + Activity) */}
-                        <div className="flex-[2] min-h-0 grid grid-cols-2 gap-4">
+                        <div className="flex-[2] min-h-0 grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Pipeline */}
                             <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-3 flex flex-col hover:bg-white/80 transition-colors">
                                 <SectionHeader title="Distribución" />
@@ -319,7 +319,7 @@ export default function DashboardView() {
                     </div>
 
                     {/* RIGHT COLUMN (Gamification) - 4 Cols */}
-                    <div className="lg:col-span-4 flex flex-col gap-4 min-h-0 h-full">
+                    <div className="lg:col-span-4 flex flex-col gap-4 min-h-0 h-auto lg:h-full">
                         {/* Leaderboard - Flex Grow to fill space */}
                         <div className="flex-[3] min-h-0 bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-0 overflow-hidden flex flex-col">
                             <div className="p-3 pb-0">

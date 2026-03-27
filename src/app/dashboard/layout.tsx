@@ -7,7 +7,7 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 gradient-organic relative selection:bg-indigo-100 dark:selection:bg-indigo-900 text-slate-900 dark:text-slate-100 font-sans pt-24 md:pt-28">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 gradient-organic relative selection:bg-indigo-100 dark:selection:bg-indigo-900 text-slate-900 dark:text-slate-100 font-sans pt-24 md:pt-28 pb-24 lg:pb-0">
             {/* New Global Top Navigation */}
             <NavigationTop />
 

@@ -26,6 +26,7 @@ interface SimulatorResultsProps {
     opportunities?: AuditOpportunity[];
     clientProfile?: { tags: string[]; sales_argument: string; };
     invoiceData?: InvoiceData;
+    savedProposalId?: string | null;
 }
 
 export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
@@ -36,7 +37,8 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
     optimizationRecommendations = [],
     opportunities = [],
     invoiceData,
-    clientProfile
+    clientProfile,
+    savedProposalId,
 }) => {
     const [isExporting, setIsExporting] = React.useState(false);
     const [isSaving, setIsSaving] = React.useState(false);
@@ -152,6 +154,14 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                 toast.success('Email enviado correctamente con la propuesta adjunta.');
                 setShowEmailModal(false);
                 setEmailAddress('');
+
+                // Update proposal status to 'sent' if we have the saved proposal ID
+                if (savedProposalId) {
+                    const { crmService } = await import('@/services/crmService');
+                    await crmService.updateProposalStatus(savedProposalId, 'sent').catch(() => {
+                        // Non-critical: don't block UX if status update fails
+                    });
+                }
             } else {
                 toast.error('Error al enviar el email: ' + response.error);
             }

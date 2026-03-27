@@ -19,6 +19,7 @@ interface SimulatorState {
     opportunities: AuditOpportunity[];
     clientProfile?: { tags: string[]; sales_argument: string; };
     pdfUrl: string | null;
+    savedProposalId: string | null;
 }
 
 type SimulatorAction =
@@ -33,6 +34,7 @@ type SimulatorAction =
     | { type: 'SET_OPPORTUNITIES'; payload: AuditOpportunity[] }
     | { type: 'SET_CLIENT_PROFILE'; payload: { tags: string[]; sales_argument: string; } }
     | { type: 'SET_PDF_URL'; payload: string | null }
+    | { type: 'SET_SAVED_PROPOSAL_ID'; payload: string }
     | { type: 'RESET' }
     | { type: 'GO_BACK_TO_STEP1' };
 
@@ -54,6 +56,7 @@ const initialState: SimulatorState = {
     opportunities: [],
     clientProfile: undefined,
     pdfUrl: null,
+    savedProposalId: null,
 };
 
 function simulatorReducer(state: SimulatorState, action: SimulatorAction): SimulatorState {
@@ -80,6 +83,8 @@ function simulatorReducer(state: SimulatorState, action: SimulatorAction): Simul
             return { ...state, clientProfile: action.payload };
         case 'SET_PDF_URL':
             return { ...state, pdfUrl: action.payload };
+        case 'SET_SAVED_PROPOSAL_ID':
+            return { ...state, savedProposalId: action.payload };
         case 'RESET':
             // Clean up PDF URL if it exists? We can't do side effects here easily.
             return { ...initialState };
@@ -221,6 +226,7 @@ export function useSimulator() {
                         // 1. Log the best result (creates client + 1st proposal)
                         const bestResult = mappedResults[0];
                         const savedProposal = await crmService.logSimulation(state.invoiceData, bestResult, state.invoiceData.client_name);
+                        dispatch({ type: 'SET_SAVED_PROPOSAL_ID', payload: savedProposal.id });
 
                         // 2. Log the next two if they exist
                         if (mappedResults.length > 1) {
