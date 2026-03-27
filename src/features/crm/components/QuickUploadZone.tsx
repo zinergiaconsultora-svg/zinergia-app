@@ -11,15 +11,12 @@ export function QuickUploadZone() {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
 
-    const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
+    const processAndRedirect = useCallback(async (file: File) => {
         setIsAnalyzing(true);
         try {
             const result = await analyzeDocumentWithRetry(file);
-            // Store result in localStorage for the simulator page to pick up
-            localStorage.setItem('pendingInvoiceData', JSON.stringify(result));
+            // Pass OCR result to simulator via sessionStorage (session-scoped, no persistence issues)
+            sessionStorage.setItem('pendingInvoiceData', JSON.stringify(result));
             router.push('/dashboard/simulator');
         } catch (error) {
             console.error('Error analyzing document:', error);
@@ -29,28 +26,22 @@ export function QuickUploadZone() {
         }
     }, [router]);
 
+    const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        await processAndRedirect(file);
+    }, [processAndRedirect]);
+
     const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         setIsDragging(false);
-        
         const file = e.dataTransfer.files[0];
         if (!file || file.type !== 'application/pdf') {
             toast.error('Por favor, sube un archivo PDF válido');
             return;
         }
-
-        setIsAnalyzing(true);
-        try {
-            const result = await analyzeDocumentWithRetry(file);
-            localStorage.setItem('pendingInvoiceData', JSON.stringify(result));
-            router.push('/dashboard/simulator');
-        } catch (error) {
-            console.error('Error analyzing document:', error);
-            toast.error('Error al analizar el documento. Por favor, intente de nuevo.');
-        } finally {
-            setIsAnalyzing(false);
-        }
-    }, [router]);
+        await processAndRedirect(file);
+    }, [processAndRedirect]);
 
     const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
