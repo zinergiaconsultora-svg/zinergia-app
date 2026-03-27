@@ -124,12 +124,13 @@ export function useSimulator() {
                 throw new Error(validation.error);
             }
 
-            const data = await analyzeDocument(file);
+            const { data, isMock } = await analyzeDocument(file);
 
             if (!data) {
                 throw new Error('No se pudieron extraer datos de la factura');
             }
 
+            dispatch({ type: 'SET_MOCK_MODE', payload: isMock });
             dispatch({ type: 'SET_INVOICE_DATA', payload: data });
         } catch (error) {
             console.error('Error processing invoice:', error);
@@ -245,31 +246,33 @@ export function useSimulator() {
             dispatch({ type: 'SET_RESULTS', payload: mappedResults });
 
             if (mappedResults.length > 0) {
-                // Persistent: Save the top 3 results as draft proposals
-                try {
-                    // 1. Log the best result (creates client + 1st proposal)
-                    const bestResult = mappedResults[0];
-                    const savedProposal = await crmService.logSimulation(state.invoiceData, bestResult, state.invoiceData.client_name);
+                // Only persist real data — never save mock OCR results to DB
+                if (!state.isMockMode) {
+                    try {
+                        // 1. Log the best result (creates client + 1st proposal)
+                        const bestResult = mappedResults[0];
+                        const savedProposal = await crmService.logSimulation(state.invoiceData, bestResult, state.invoiceData.client_name);
 
-                    // 2. Log the next two if they exist
-                    if (mappedResults.length > 1) {
-                        for (let i = 1; i < mappedResults.length; i++) {
-                            const result = mappedResults[i];
-                            await crmService.saveProposal({
-                                client_id: savedProposal.client_id,
-                                status: 'draft',
-                                offer_snapshot: result.offer,
-                                calculation_data: state.invoiceData,
-                                annual_savings: result.annual_savings,
-                                current_annual_cost: result.current_annual_cost,
-                                offer_annual_cost: result.offer_annual_cost,
-                                savings_percent: result.savings_percent,
-                                optimization_result: result.optimization_result
-                            });
+                        // 2. Log the next two if they exist
+                        if (mappedResults.length > 1) {
+                            for (let i = 1; i < mappedResults.length; i++) {
+                                const result = mappedResults[i];
+                                await crmService.saveProposal({
+                                    client_id: savedProposal.client_id,
+                                    status: 'draft',
+                                    offer_snapshot: result.offer,
+                                    calculation_data: state.invoiceData,
+                                    annual_savings: result.annual_savings,
+                                    current_annual_cost: result.current_annual_cost,
+                                    offer_annual_cost: result.offer_annual_cost,
+                                    savings_percent: result.savings_percent,
+                                    optimization_result: result.optimization_result
+                                });
+                            }
                         }
+                    } catch (persistError) {
+                        console.error('[Simulator] Failed to persist proposals:', persistError);
                     }
-                } catch (persistError) {
-                    console.error('[Simulator] Failed to persist proposals:', persistError);
                 }
 
                 localStorage.setItem('antigravity_simulator_result', JSON.stringify(mappedResults[0]));
