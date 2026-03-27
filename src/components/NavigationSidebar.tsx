@@ -44,7 +44,7 @@ const DEFAULT_GAMIFICATION = {
         { id: '1', title: 'Primera Venta', icon: '⚡', color: 'bg-yellow-100 text-yellow-600 border-yellow-200', unlocked: true },
         { id: '2', title: 'Club 100k', icon: '💎', color: 'bg-indigo-100 text-indigo-600 border-indigo-200', unlocked: true },
         { id: '3', title: 'Networker', icon: '🌐', color: 'bg-emerald-100 text-emerald-600 border-emerald-200', unlocked: true },
-        { id: '4', title: 'Master Energía', icon: '🔋', color: 'bg-slate-100 text-slate-400 border-slate-200', unlocked: false },
+        { id: '4', title: 'Experto Energía', icon: '🔋', color: 'bg-slate-100 text-slate-400 border-slate-200', unlocked: false },
     ]
 };
 
@@ -108,7 +108,7 @@ const GamificationWidget = React.memo(({ level, xp, nextLevelXp }: GamificationW
             <div className="relative z-10 flex justify-between items-start mb-3">
                 <div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Nivel {level}</p>
-                    <p className="text-sm font-black text-white">Master Energía</p>
+                    <p className="text-sm font-black text-white">Agente Experto</p>
                 </div>
                 <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30" aria-hidden="true">
                     <Trophy size={14} className="text-indigo-300" />

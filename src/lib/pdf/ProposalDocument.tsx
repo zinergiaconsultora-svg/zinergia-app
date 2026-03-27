@@ -157,7 +157,7 @@ export const ProposalDocument: React.FC<ProposalDocumentProps> = ({ proposal }) 
                 </View>
 
                 {/* Technical Analysis */}
-                <Text style={[styles.title, { marginTop: 20 }]}>Análisis Técnico (Aletheia Engine)</Text>
+                <Text style={[styles.title, { marginTop: 20 }]}>Análisis Técnico</Text>
 
                 {proposal.aletheia_summary?.client_profile?.sales_argument && (
                     <View style={[styles.card, { backgroundColor: '#f0fdf4', borderColor: '#dcfce7', borderWidth: 1 }]}>
@@ -187,7 +187,7 @@ export const ProposalDocument: React.FC<ProposalDocumentProps> = ({ proposal }) 
 
                 {/* Disclaimer/Footer */}
                 <Text style={styles.footer}>
-                    Generado por Aletheia Engine para Zinergia Consultora.
+                    Generado por Zinergia Consultora.
                     Este documento es una simulación basada en datos históricos y no constituye una oferta vinculante.
                 </Text>
 

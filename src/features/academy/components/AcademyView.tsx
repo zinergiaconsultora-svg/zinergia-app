@@ -90,7 +90,7 @@ export const AcademyView: React.FC = () => {
                         Zinergia Academy<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">.</span>
                     </h1>
                     <p className="text-slate-500 mt-4 max-w-lg font-light">
-                        Bienvenido al centro de formación y recursos. Aquí encontrarás todo el material necesario para tu crecimiento en la red Nexus.
+                        Bienvenido al centro de formación y recursos. Aquí encontrarás todo el material necesario para tu crecimiento en Zinergia.
                     </p>
                 </div>
 

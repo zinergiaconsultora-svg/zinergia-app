@@ -51,7 +51,7 @@ export const ManageNetworkView: React.FC = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900 mb-2">Mi Red &quot;Nexus&quot;</h1>
+                    <h1 className="text-3xl font-bold text-slate-900 mb-2">Mi Red</h1>
                     <p className="text-slate-500 flex items-center gap-2 font-light">
                         <Layers size={16} />
                         Gestión jerárquica de franquicias y colaboradores
