@@ -96,6 +96,7 @@ export function useWallet() {
         totalEarned,
         franchisePersonal,
         franchiseNetwork,
-        handleSimulateSale
+        handleSimulateSale,
+        reloadCommissions: loadData,
     };
 }

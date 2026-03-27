@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useTransition } from 'react';
 import { motion } from 'framer-motion';
 import {
     Wallet,
@@ -11,13 +11,24 @@ import {
     DollarSign,
     CheckCircle2,
     Calendar,
-    Briefcase
+    Briefcase,
+    ShieldCheck,
+    Users,
+    ChevronDown,
+    ChevronUp
 } from 'lucide-react';
 import { useWallet } from '../hooks/useWallet';
 import { formatCurrency, formatDate } from '@/lib/utils/format';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
+import { clearCommissionAction, payCommissionAction } from '@/app/actions/commissions';
+import { Commission } from '@/types/crm';
 
-export default function WalletView() {
+interface WalletViewProps {
+    canManage?: boolean;
+    allCommissions?: Commission[];
+}
+
+export default function WalletView({ canManage = false, allCommissions: initialAll = [] }: WalletViewProps) {
     const {
         commissions,
         loading,
@@ -28,8 +39,48 @@ export default function WalletView() {
         totalEarned,
         franchisePersonal,
         franchiseNetwork,
-        handleSimulateSale
+        handleSimulateSale,
+        reloadCommissions,
     } = useWallet();
+
+    // Admin panel state
+    const [allCommissions, setAllCommissions] = useState<Commission[]>(initialAll);
+    const [adminFilter, setAdminFilter] = useState<'pending' | 'cleared' | 'paid' | 'all'>('pending');
+    const [showAdmin, setShowAdmin] = useState(true);
+    const [isPending, startTransition] = useTransition();
+
+    const handleClear = (id: string) => {
+        startTransition(async () => {
+            try {
+                await clearCommissionAction(id);
+                setAllCommissions(prev => prev.map(c => c.id === id ? { ...c, status: 'cleared' } : c));
+            } catch (e) {
+                alert(e instanceof Error ? e.message : 'Error al aprobar');
+            }
+        });
+    };
+
+    const handlePay = (id: string) => {
+        startTransition(async () => {
+            try {
+                await payCommissionAction(id);
+                setAllCommissions(prev => prev.map(c => c.id === id ? { ...c, status: 'paid' } : c));
+                reloadCommissions();
+            } catch (e) {
+                alert(e instanceof Error ? e.message : 'Error al marcar como pagado');
+            }
+        });
+    };
+
+    const filteredAdmin = adminFilter === 'all'
+        ? allCommissions
+        : allCommissions.filter(c => c.status === adminFilter);
+
+    const adminCounts = {
+        pending: allCommissions.filter(c => c.status === 'pending').length,
+        cleared: allCommissions.filter(c => c.status === 'cleared').length,
+        paid: allCommissions.filter(c => c.status === 'paid').length,
+    };
 
     const nextPayoutDate = new Date();
     nextPayoutDate.setDate(15); // Hypothetical payout on the 15th
@@ -188,11 +239,16 @@ export default function WalletView() {
                                 </div>
                                 <div>
                                     <h3 className="text-sm font-black text-slate-900 leading-tight">Solicitar Retiro</h3>
-                                    <p className="text-xs text-slate-500 font-medium mt-0.5">Transferencia inmediata a su cuenta</p>
+                                    <p className="text-xs text-slate-500 font-medium mt-0.5">
+                                        {availableBalance > 0
+                                            ? `${formatCurrency(availableBalance)} disponibles para retirar`
+                                            : 'Sin saldo disponible aún'}
+                                    </p>
                                 </div>
                             </div>
                             <button
-                                disabled={availableBalance === 0}
+                                type="button"
+                                disabled={availableBalance === 0 || isPending}
                                 className="w-full sm:w-auto bg-slate-900 text-white px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-95 text-center"
                             >
                                 Retirar Fondos
@@ -201,6 +257,116 @@ export default function WalletView() {
                     </motion.div>
                 </div>
             </div>
+
+            {/* ADMIN PANEL — only visible to admin/franchise */}
+            {canManage && (
+                <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-sm border border-white/60 overflow-hidden relative z-10">
+                    <button
+                        type="button"
+                        onClick={() => setShowAdmin(v => !v)}
+                        className="w-full p-6 flex justify-between items-center hover:bg-slate-50/50 transition-colors"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-indigo-100 rounded-xl"><ShieldCheck size={18} className="text-indigo-600" /></div>
+                            <div className="text-left">
+                                <h3 className="font-bold text-slate-900 text-sm">Panel de Administración de Comisiones</h3>
+                                <p className="text-xs text-slate-500">
+                                    {adminCounts.pending} pendientes · {adminCounts.cleared} aprobadas · {adminCounts.paid} pagadas
+                                </p>
+                            </div>
+                        </div>
+                        {showAdmin ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+                    </button>
+
+                    {showAdmin && (
+                        <>
+                            {/* Filter tabs */}
+                            <div className="px-6 pb-3 flex gap-2 border-b border-slate-100">
+                                {(['pending', 'cleared', 'paid', 'all'] as const).map(f => (
+                                    <button
+                                        type="button"
+                                        key={f}
+                                        onClick={() => setAdminFilter(f)}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${adminFilter === f ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                                    >
+                                        {f === 'pending' ? `Pendientes (${adminCounts.pending})` :
+                                         f === 'cleared' ? `Aprobadas (${adminCounts.cleared})` :
+                                         f === 'paid'    ? `Pagadas (${adminCounts.paid})` : 'Todas'}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="divide-y divide-slate-50">
+                                {filteredAdmin.length === 0 ? (
+                                    <div className="p-8 text-center text-slate-400 text-sm flex flex-col items-center gap-2">
+                                        <Users size={32} className="opacity-30" />
+                                        No hay comisiones en este estado.
+                                    </div>
+                                ) : filteredAdmin.map(comm => (
+                                    <div key={comm.id} className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors gap-4">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-xs ${
+                                                comm.status === 'paid'    ? 'bg-green-100 text-green-600' :
+                                                comm.status === 'cleared' ? 'bg-indigo-100 text-indigo-600' :
+                                                                             'bg-amber-100 text-amber-600'
+                                            }`}>
+                                                {comm.status === 'paid' ? <CheckCircle2 size={16} /> :
+                                                 comm.status === 'cleared' ? <Wallet size={16} /> : <Clock size={16} />}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-bold text-slate-900 truncate">
+                                                    {comm.proposals?.clients?.name || `Propuesta ${comm.proposal_id.slice(0, 6)}`}
+                                                </p>
+                                                <p className="text-xs text-slate-400 flex items-center gap-1.5">
+                                                    <Calendar size={10} />
+                                                    {formatDate(comm.created_at)}
+                                                    <span className="text-slate-300">·</span>
+                                                    Agente: <span className="font-mono">{comm.agent_id.slice(0, 8)}</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3 shrink-0">
+                                            <div className="text-right">
+                                                <p className="text-sm font-bold text-slate-900">
+                                                    Agente: {formatCurrency(comm.agent_commission)}
+                                                </p>
+                                                <p className="text-xs text-slate-400">
+                                                    Franquicia: {formatCurrency(comm.franchise_profit)}
+                                                </p>
+                                            </div>
+                                            {comm.status === 'pending' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleClear(comm.id)}
+                                                    disabled={isPending}
+                                                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+                                                >
+                                                    Aprobar
+                                                </button>
+                                            )}
+                                            {comm.status === 'cleared' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handlePay(comm.id)}
+                                                    disabled={isPending}
+                                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+                                                >
+                                                    Marcar Pagada
+                                                </button>
+                                            )}
+                                            {comm.status === 'paid' && (
+                                                <span className="px-3 py-1.5 bg-green-100 text-green-700 text-xs font-bold rounded-lg">
+                                                    ✓ Pagada
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </div>
+            )}
 
             {/* Recent Transactions List */}
             <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-sm border border-white/60 overflow-hidden relative z-10">
