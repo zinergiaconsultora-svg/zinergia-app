@@ -81,7 +81,7 @@ export const NavigationTop = () => {
 
     return (
         <>
-            <header className="fixed top-0 left-0 right-0 z-50 px-4 py-1.5 md:px-8 md:py-2 pointer-events-none">
+            <header className="fixed top-0 left-0 right-0 z-50 px-4 pt-safe pb-0 md:px-8 pointer-events-none">
             <motion.div
                 style={{ width: progressWidth }}
                 className="fixed top-0 left-0 h-[1px] bg-indigo-500 z-[60] shadow-[0_0_8px_rgba(99,102,241,0.3)]"
@@ -231,9 +231,9 @@ export const NavigationTop = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
-                        className="lg:hidden fixed bottom-24 left-4 right-4 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border border-slate-100 dark:border-slate-800 rounded-[2.5rem] shadow-2xl p-6 z-[60] overflow-y-auto max-h-[70vh]"
+                        className="lg:hidden fixed bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] left-4 right-4 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border border-slate-100 dark:border-slate-800 rounded-[2.5rem] shadow-2xl p-5 z-[60] overflow-y-auto max-h-[60vh]"
                     >
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-3 gap-2">
                             {navItems.map((item) => {
                                 const Icon = item.icon;
                                 const isActive = pathname === item.href;
@@ -242,13 +242,13 @@ export const NavigationTop = () => {
                                         key={item.name}
                                         href={item.href}
                                         onClick={() => setIsMobileMenuOpen(false)}
-                                        className={`flex flex-col items-center justify-center gap-3 p-5 rounded-[2rem] transition-all ${isActive
-                                            ? 'bg-energy-500 text-white shadow-xl shadow-energy-500/20 scale-[1.02]'
-                                            : 'bg-slate-50 text-slate-500 active:bg-slate-100'
+                                        className={`flex flex-col items-center justify-center gap-2 p-3 rounded-2xl transition-all ${isActive
+                                            ? 'bg-energy-500 text-white shadow-lg shadow-energy-500/20'
+                                            : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 active:bg-slate-100'
                                             }`}
                                     >
-                                        <Icon size={28} strokeWidth={1.5} />
-                                        <span className="text-[10px] font-bold uppercase tracking-[0.2em]">{item.name}</span>
+                                        <Icon size={22} strokeWidth={1.5} />
+                                        <span className="text-[10px] font-semibold uppercase tracking-wider">{item.name}</span>
                                     </Link>
                                 );
                             })}
@@ -258,14 +258,14 @@ export const NavigationTop = () => {
                                 <a
                                     href="/admin"
                                     onClick={() => setIsMobileMenuOpen(false)}
-                                    className={`flex flex-col items-center justify-center gap-3 p-5 rounded-[2rem] transition-all col-span-2 ${
+                                    className={`flex flex-col items-center justify-center gap-2 p-3 rounded-2xl transition-all ${
                                         pathname.startsWith('/admin')
-                                            ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20 scale-[1.02]'
-                                            : 'bg-indigo-50 text-indigo-600 active:bg-indigo-100'
+                                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                                            : 'bg-indigo-50 dark:bg-indigo-950 text-indigo-600 active:bg-indigo-100'
                                     }`}
                                 >
-                                    <Shield size={28} strokeWidth={1.5} />
-                                    <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Admin</span>
+                                    <Shield size={22} strokeWidth={1.5} />
+                                    <span className="text-[10px] font-semibold uppercase tracking-wider">Admin</span>
                                 </a>
                             )}
                         </div>
@@ -276,7 +276,7 @@ export const NavigationTop = () => {
 
             {/* --- MÓVIL: BOTTOM TAB BAR (Estilo iOS) --- */}
             <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-3xl border-t border-slate-200/50 dark:border-slate-800/50 pb-safe pt-2 px-2 shadow-[0_-8px_30px_rgba(0,0,0,0.05)]">
-                <div className="flex items-center justify-evenly max-w-md mx-auto relative pb-7 pt-1">
+                <div className="flex items-center justify-evenly max-w-md mx-auto relative pt-1 pb-1">
                     {navItems.slice(0, 4).map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));

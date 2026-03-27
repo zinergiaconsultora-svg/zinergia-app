@@ -206,6 +206,37 @@ h3 {
   }
 }
 
+/* =============================================
+   iOS Safe Area Utilities
+   ============================================= */
+
+/* Necesario para viewport-fit: cover (notch + home bar) */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.mt-safe {
+  margin-top: env(safe-area-inset-top, 0px);
+}
+.mb-safe {
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Fix iOS Safari 100vh bug — usar siempre dvh cuando sea posible */
+.h-screen-safe {
+  height: 100dvh;
+}
+.min-h-screen-safe {
+  min-height: 100dvh;
+}
+
+/* Scroll suave en iOS */
+.scroll-touch {
+  overscroll-behavior-y: contain;
+}
+
 @media print {
   @page {
     margin: 0;

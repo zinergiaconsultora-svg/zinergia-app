@@ -169,7 +169,7 @@ export default function DashboardView() {
     if (loading) return <DashboardSkeleton />;
 
     return (
-        <div className="h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-300 font-sans overflow-hidden flex flex-col relative selection:bg-indigo-100">
+        <div className="min-h-[100dvh] w-full bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-300 font-sans overflow-x-hidden flex flex-col relative selection:bg-indigo-100">
             {/* Background Effects - Optimized with contain and will-change */}
             <div className="fixed inset-0 pointer-events-none" style={{ contain: 'paint' }}>
                 <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-indigo-200/30 dark:bg-indigo-900/20 rounded-full blur-[80px] mix-blend-multiply dark:mix-blend-screen opacity-50 will-change-transform"></div>
@@ -180,7 +180,7 @@ export default function DashboardView() {
                 variants={container}
                 initial="hidden"
                 animate="show"
-                className="flex-1 flex flex-col p-4 md:p-6 gap-6 md:gap-8 max-w-[1700px] mx-auto w-full z-10"
+                className="flex-1 flex flex-col p-3 md:p-6 gap-4 md:gap-8 max-w-[1700px] mx-auto w-full z-10"
             >
                 {/* 0. HERO UPLOAD SECTION (Imposing & Professional) */}
                 <motion.div
@@ -189,15 +189,15 @@ export default function DashboardView() {
                 >
                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-emerald-500/10 to-teal-500/10 blur-3xl opacity-50 rounded-[3rem]" />
 
-                    <div className="relative glass-premium rounded-[2.5rem] border border-white/20 shadow-2xl overflow-hidden p-8 md:p-12 flex flex-col lg:flex-row items-center gap-10">
+                    <div className="relative glass-premium rounded-2xl md:rounded-[2.5rem] border border-white/20 shadow-2xl overflow-hidden p-5 md:p-8 lg:p-12 flex flex-col lg:flex-row items-center gap-4 md:gap-6 lg:gap-10">
                         {/* Shimmer Effect - Optimized with will-change */}
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 will-change-transform" />
 
                         <div className="flex-1 text-center lg:text-left">
-<h2 className="text-2xl md:text-3xl lg:text-4xl font-display font-bold text-slate-800 dark:text-white leading-tight mb-4 tracking-tight">
+                            <h2 className="text-xl md:text-3xl lg:text-4xl font-display font-bold text-slate-800 dark:text-white leading-tight mb-2 md:mb-4 tracking-tight">
                                 Optimiza tu <span className="text-transparent bg-clip-text bg-gradient-to-r from-energy-600 to-energy-400">Energía</span> en segundos
                             </h2>
-                            <p className="text-slate-500 dark:text-slate-400 text-lg max-w-xl mx-auto lg:mx-0 font-body">
+                            <p className="text-slate-500 dark:text-slate-400 text-sm md:text-lg max-w-xl mx-auto lg:mx-0 font-body hidden xs:block">
                                 Sube tu factura PDF y deja que nuestra ingeniería detecte el mayor ahorro posible para tus clientes.
                             </p>
                         </div>
@@ -244,7 +244,7 @@ export default function DashboardView() {
                 </motion.div>
 
                 {/* 2. KPIs ROW (Responsive Height) */}
-                <motion.div variants={item} className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 shrink-0 h-auto lg:h-[80px]">
+                <motion.div variants={item} className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 shrink-0">
                     <GlassKpiCard label="Ahorro Detectado" value={formatCurrency(stats.financials.total_detected)} icon={TrendingUp} delay={0.1} />
                     <GlassKpiCard label="Objetivo Mensual" value={`${goalProgress}%`} subValue={formatCurrency(MONTHLY_GOAL)} icon={Target} progress={goalProgress} delay={0.2} />
                     <GlassKpiCard label="Pipeline Activo" value={formatCurrency(stats.financials.pipeline)} icon={Layers} delay={0.3} />
@@ -261,22 +261,20 @@ export default function DashboardView() {
                 </motion.div>
 
                 {/* 3. MAIN BENTO GRID (Fills remaining height) */}
-                <motion.div variants={item} className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4">
+                <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
-                    {/* LEFT COLUMN (Charts) - 6 Cols */}
-                    <div className="lg:col-span-8 flex flex-col gap-4 min-h-0 h-auto lg:h-full">
+                    {/* LEFT COLUMN (Charts) */}
+                    <div className="lg:col-span-8 flex flex-col gap-4">
                         {/* Top: Trend Chart */}
-                        <div className="flex-[3] min-h-0 bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-3 relative flex flex-col group hover:bg-white/80 transition-colors">
+                        <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-3 flex flex-col group hover:bg-white/80 transition-colors">
                             <SectionHeader title="Tendencia de Ahorro" link="Ver Reporte" />
-                            <div className="flex-1 w-full min-h-0 mt-1 relative">
-                                <div className="absolute inset-0">
-                                    <SavingsTrendChart data={stats.savingsTrend ?? []} />
-                                </div>
+                            <div className="mt-1 h-[200px] md:h-[240px]">
+                                <SavingsTrendChart data={stats.savingsTrend ?? []} />
                             </div>
                         </div>
 
                         {/* Bottom: Split (Pipeline + Activity) */}
-                        <div className="flex-[2] min-h-0 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Pipeline */}
                             <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-3 flex flex-col hover:bg-white/80 transition-colors">
                                 <SectionHeader title="Distribución" />
@@ -320,24 +318,24 @@ export default function DashboardView() {
                         </div>
                     </div>
 
-                    {/* RIGHT COLUMN (Gamification) - 4 Cols */}
-                    <div className="lg:col-span-4 flex flex-col gap-4 min-h-0 h-auto lg:h-full">
-                        {/* Leaderboard - Flex Grow to fill space */}
-                        <div className="flex-[3] min-h-0 bg-white/70 backdrop-blur-xl rounded-2xl border border-white/80 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-0 overflow-hidden flex flex-col">
+                    {/* RIGHT COLUMN (Gamification) */}
+                    <div className="lg:col-span-4 flex flex-col gap-4">
+                        {/* Leaderboard */}
+                        <div className="bg-white/70 backdrop-blur-xl rounded-2xl border border-white/80 shadow-lg p-0 overflow-hidden flex flex-col">
                             <div className="p-3 pb-0">
                                 <SectionHeader title="Top Performers" />
                             </div>
-                            <div className="flex-1 overflow-y-auto p-3 pt-2 custom-scrollbar">
+                            <div className="overflow-y-auto max-h-64 p-3 pt-2 custom-scrollbar">
                                 <LeaderboardWidget />
                             </div>
                         </div>
 
-                        {/* Achievements - Smaller fixed height or flex */}
-                        <div className="flex-[2] min-h-0 bg-white/70 backdrop-blur-xl rounded-2xl border border-white/80 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-0 overflow-hidden flex flex-col">
+                        {/* Achievements */}
+                        <div className="bg-white/70 backdrop-blur-xl rounded-2xl border border-white/80 shadow-lg p-0 overflow-hidden flex flex-col">
                             <div className="p-3 pb-0">
                                 <SectionHeader title="Logros" />
                             </div>
-                            <div className="flex-1 overflow-y-auto p-3 pt-2 custom-scrollbar">
+                            <div className="overflow-y-auto max-h-48 p-3 pt-2 custom-scrollbar">
                                 <AchievementsWidget />
                             </div>
                         </div>
