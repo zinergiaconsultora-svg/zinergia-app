@@ -208,6 +208,20 @@ export interface NetworkUser {
     } | null;
 }
 
+export interface CommissionRule {
+    id: string;
+    name: string;
+    commission_rate: number;   // % of annual_savings as pot (e.g. 0.15)
+    agent_share: number;       // Agent's cut of pot (e.g. 0.30)
+    franchise_share: number;   // Franchise's cut of pot (e.g. 0.50)
+    hq_share: number;          // HQ's cut of pot (e.g. 0.20)
+    points_per_win: number;    // Gamification points awarded on win
+    is_active: boolean;
+    effective_from: string;
+    created_by?: string;
+    created_at: string;
+}
+
 // Sprint 3: Commissions & Gamification
 export interface Commission {
     id: string;
