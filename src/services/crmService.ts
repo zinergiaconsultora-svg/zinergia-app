@@ -75,7 +75,7 @@ export const crmService = {
         if (data?.offers) {
             return data.offers.map((offer: any) => ({
                 offer: {
-                    id: offer.id || Math.random().toString(36).substr(2, 9),
+                    id: offer.id || crypto.randomUUID(),
                     marketer_name: offer.marketer_name || 'Comercializadora',
                     tariff_name: offer.tariff_name || 'Tarifa',
                     logo_color: offer.logo_color || 'bg-blue-600',

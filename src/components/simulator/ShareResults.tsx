@@ -36,7 +36,7 @@ export const ShareResults: React.FC<ShareResultsProps> = ({ simulationId }) => {
                     simulation_id: simulationId,
                     expires_at: expiresAt.toISOString(),
                     // Generate unique slug
-                    slug: Math.random().toString(36).substring(2, 10),
+                    slug: crypto.randomUUID().replace(/-/g, '').substring(0, 10),
                 })
                 .select('slug')
                 .single();

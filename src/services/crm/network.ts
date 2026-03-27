@@ -17,7 +17,12 @@ export const networkService = {
         if (error) throw error;
 
         const profiles = rawProfiles || [];
-        const { data: allClients } = await supabase.from('clients').select('owner_id, status');
+
+        // Scope to owners in this tree — avoids fetching all accessible rows
+        const profileIds = profiles.map(p => p.id);
+        const { data: allClients } = profileIds.length
+            ? await supabase.from('clients').select('owner_id, status').in('owner_id', profileIds)
+            : { data: [] };
 
         const clientCounts: Record<string, number> = {};
         const volumeCounts: Record<string, number> = {};
@@ -69,7 +74,7 @@ export const networkService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const code = crypto.randomUUID().replace(/-/g, '').substring(0, 8).toUpperCase();
 
         const { data, error } = await supabase
             .from('network_invitations')
