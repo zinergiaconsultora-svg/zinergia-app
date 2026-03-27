@@ -9,8 +9,9 @@ import { PwaRegister } from "@/components/PwaRegister";
 const quicksand = Quicksand({
     variable: "--font-sans",
     subsets: ["latin"],
-    weight: ["300", "400", "500", "600"],
+    weight: ["300", "400", "600"],
     display: "swap",
+    preload: true,
 });
 
 
@@ -43,6 +44,10 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="es" suppressHydrationWarning>
+            <head>
+                <link rel="preconnect" href="https://gmjgkzaxmkaggsyczwcm.supabase.co" crossOrigin="anonymous" />
+                <link rel="dns-prefetch" href="https://gmjgkzaxmkaggsyczwcm.supabase.co" />
+            </head>
             <body
                 className={`${quicksand.variable} antialiased font-light`}
             >

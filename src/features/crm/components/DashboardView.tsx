@@ -298,11 +298,11 @@ export default function DashboardView() {
                             </div>
 
                             {/* Recent Activity (Compact List) */}
-                            <div className="bg-white/60 dark:bg-slate-800/40 backdrop-blur-md rounded-2xl border border-white/60 dark:border-white/5 shadow-sm p-3 flex flex-col hover:bg-white/80 dark:hover:bg-slate-800/60 transition-colors overflow-hidden">
+                            <div className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border border-white/80 dark:border-white/10 shadow-lg hover:shadow-xl hover:-translate-y-1 p-3 flex flex-col transition-all duration-300 overflow-hidden">
                                 <SectionHeader title="Actividad Reciente" />
                                 <div className="flex-1 overflow-y-auto mt-2 space-y-2 pr-1 custom-scrollbar">
                                     {stats.recentProposals.slice(0, 5).map((proposal) => (
-                                        <div key={proposal.id} onClick={() => router.push(`/dashboard/proposals/${proposal.id}`)} className="flex items-center justify-between p-2 rounded-lg bg-white/50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-500/30 cursor-pointer group transition-all">
+                                        <div key={proposal.id} onClick={() => router.push(`/dashboard/proposals/${proposal.id}`)} className="flex items-center justify-between p-2 rounded-lg bg-white/50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500/50 hover:shadow-md hover:bg-white cursor-pointer group transition-all duration-300">
                                             <div className="flex items-center gap-2 min-w-0">
                                                 <div className={`w-1.5 h-1.5 rounded-full ${proposal.status === 'accepted' ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}></div>
                                                 <div className="min-w-0">
@@ -321,7 +321,7 @@ export default function DashboardView() {
                     {/* RIGHT COLUMN (Gamification) - 4 Cols */}
                     <div className="lg:col-span-4 flex flex-col gap-4 min-h-0 h-auto lg:h-full">
                         {/* Leaderboard - Flex Grow to fill space */}
-                        <div className="flex-[3] min-h-0 bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-0 overflow-hidden flex flex-col">
+                        <div className="flex-[3] min-h-0 bg-white/70 backdrop-blur-xl rounded-2xl border border-white/80 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-0 overflow-hidden flex flex-col">
                             <div className="p-3 pb-0">
                                 <SectionHeader title="Top Performers" />
                             </div>
@@ -331,7 +331,7 @@ export default function DashboardView() {
                         </div>
 
                         {/* Achievements - Smaller fixed height or flex */}
-                        <div className="flex-[2] min-h-0 bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-0 overflow-hidden flex flex-col">
+                        <div className="flex-[2] min-h-0 bg-white/70 backdrop-blur-xl rounded-2xl border border-white/80 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-0 overflow-hidden flex flex-col">
                             <div className="p-3 pb-0">
                                 <SectionHeader title="Logros" />
                             </div>
@@ -372,7 +372,7 @@ interface KpiCardProps {
 
 function GlassKpiCard({ label, value, icon: Icon, subValue, progress, delay = 0 }: KpiCardProps) {
     return (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay }} className="flex flex-col justify-between p-3 bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm transition-all hover:shadow-md">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay }} className="flex flex-col justify-between p-3 bg-white/70 backdrop-blur-xl rounded-2xl border border-white/80 shadow-lg hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 transition-all duration-300 cursor-default">
             <div className="flex items-center justify-between text-slate-400 mb-1">
                 <span className="text-[9px] font-medium uppercase tracking-widest opacity-80">{label}</span>
                 <Icon size={13} strokeWidth={1.5} className="opacity-70" />

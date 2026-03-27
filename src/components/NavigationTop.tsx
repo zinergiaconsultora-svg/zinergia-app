@@ -17,12 +17,14 @@ import {
     LogOut,
     Trophy,
     Menu,
-    X
+    X,
+    Shield
 } from 'lucide-react';
 import { ZinergiaLogo } from './ui/ZinergiaLogo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { crmService } from '@/services/crmService';
 import { logout } from '@/app/auth/actions';
+import { createClient } from '@/lib/supabase/client';
 
 const navItems = [
     { name: 'Inicio',      href: '/dashboard',           icon: LayoutDashboard },
@@ -47,12 +49,23 @@ export const NavigationTop = () => {
     const [gamification, setGamification] = useState(DEFAULT_GAMIFICATION);
     const [hoveredItem, setHoveredItem] = useState<string | null>(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     useEffect(() => {
         let mounted = true;
         crmService.getUserGamificationStats().then(data => {
             if (mounted && data) setGamification(data);
         }).catch(() => { });
+
+        // Check admin role for conditional nav link
+        const supabase = createClient();
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (!user || !mounted) return;
+            supabase.from('profiles').select('role').eq('id', user.id).maybeSingle().then(({ data: profile }) => {
+                if (mounted && profile?.role === 'admin') setIsAdmin(true);
+            });
+        });
+
         return () => { mounted = false; };
     }, []);
 
@@ -143,6 +156,21 @@ export const NavigationTop = () => {
                                     </div>
                                 );
                             })}
+
+                            {/* Admin Link - Solo visible para admins */}
+                            {isAdmin && (
+                                <a
+                                    href="/admin"
+                                    className={`relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300 ${
+                                        pathname.startsWith('/admin')
+                                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                                            : 'text-indigo-400 hover:bg-indigo-50/50 hover:text-indigo-600'
+                                    }`}
+                                    title="Admin Panel"
+                                >
+                                    <Shield size={22} strokeWidth={1.5} />
+                                </a>
+                            )}
                         </div>
                     </div>
 
@@ -224,6 +252,22 @@ export const NavigationTop = () => {
                                     </Link>
                                 );
                             })}
+
+                            {/* Admin Link - Menú Móvil */}
+                            {isAdmin && (
+                                <a
+                                    href="/admin"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className={`flex flex-col items-center justify-center gap-3 p-5 rounded-[2rem] transition-all col-span-2 ${
+                                        pathname.startsWith('/admin')
+                                            ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20 scale-[1.02]'
+                                            : 'bg-indigo-50 text-indigo-600 active:bg-indigo-100'
+                                    }`}
+                                >
+                                    <Shield size={28} strokeWidth={1.5} />
+                                    <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Admin</span>
+                                </a>
+                            )}
                         </div>
                     </motion.div>
                 )}

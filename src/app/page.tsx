@@ -37,9 +37,10 @@ export default function LandingPage() {
             src="/images/login-bg-bulb.png"
             alt="Realistic Lightbulb Background"
             fill
-            sizes="50vw"
+            sizes="(max-width: 1023px) 0px, 50vw"
             className="object-cover opacity-90"
-            priority
+            loading="eager"
+            fetchPriority="high"
           />
           {/* Subtle gradient to ensure text legibility without hiding the bulb's detail */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] via-[#0F172A]/40 to-transparent mix-blend-multiply"></div>
@@ -69,17 +70,21 @@ export default function LandingPage() {
       </div>
 
       {/* RIGHT SIDE: Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-white relative">
-        <div className="w-full max-w-sm space-y-8">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-slate-50/50 relative">
+        {/* Subtle background decorative shapes */}
+        <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 w-96 h-96 bg-indigo-50 rounded-full blur-3xl opacity-50 mix-blend-multiply pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 w-72 h-72 bg-blue-50 rounded-full blur-3xl opacity-50 mix-blend-multiply pointer-events-none"></div>
 
+        <div className="w-full max-w-[420px] backdrop-blur-2xl bg-white/70 border border-white p-8 sm:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative z-10 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-500">
+          
           {/* Logo - Prominent in the white side */}
           <div className="flex justify-center mb-10">
-            <div className="transform scale-150" aria-hidden="true">
+            <div className="transform scale-150 drop-shadow-sm" aria-hidden="true">
               <ZinergiaLogo className="w-32 text-slate-900" />
             </div>
           </div>
 
-          <div className="text-center">
+          <div className="text-center mb-8">
             <h1 id="login-heading" className="text-2xl font-bold tracking-tight text-slate-900">Bienvenido</h1>
             <p className="text-sm text-slate-500 mt-2 font-medium">Introduce tus credenciales para acceder</p>
           </div>
@@ -135,8 +140,8 @@ export default function LandingPage() {
             <Button
               type="submit"
               isLoading={loading}
-              className="w-full py-6 text-base rounded-2xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30"
-              rightIcon={<ArrowRight size={18} />}
+              className="w-full py-6 mt-4 text-base rounded-2xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:-translate-y-1 transition-all duration-300"
+              rightIcon={<ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
               size="lg"
             >
               Iniciar Sesión

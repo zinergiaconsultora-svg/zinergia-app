@@ -1,10 +1,19 @@
-import { useEffect, useReducer, useCallback } from 'react';
+import { useEffect, useReducer, useCallback, useRef } from 'react';
 import { InvoiceData, SavingsResult } from '@/types/crm';
-import { analyzeDocumentWithRetry as analyzeDocument, calculateSavingsWithRetry as calculateSavings, validateFile } from '@/services/simulatorService';
+import { analyzeDocumentWithRetry as analyzeDocument, validateFile } from '@/services/simulatorService';
 import { crmService } from '@/services/crmService';
 import { OptimizationRecommendation, AuditOpportunity } from '@/lib/aletheia/types';
+import { createClient } from '@/lib/supabase/client';
 
 type Step = 1 | 2 | 3;
+
+// Tipo para los rows de ocr_jobs recibidos via Realtime
+interface OcrJobRow {
+    id: string;
+    status: 'processing' | 'completed' | 'failed';
+    invoice_data: InvoiceData | null;
+    error_message: string | null;
+}
 
 interface SimulatorState {
     step: Step;
@@ -95,26 +104,72 @@ function simulatorReducer(state: SimulatorState, action: SimulatorAction): Simul
     }
 }
 
+const OCR_REALTIME_TIMEOUT_MS = 90_000;
+
 export function useSimulator() {
     const [state, dispatch] = useReducer(simulatorReducer, initialState);
+    const activeChannelRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null);
 
     // Pick up pre-analyzed invoice from QuickUploadZone (dashboard shortcut)
     useEffect(() => {
         if (typeof window === 'undefined') return;
+        
+        // 1. Mock Data handling
         const raw = sessionStorage.getItem('pendingInvoiceData');
-        if (!raw) return;
-        sessionStorage.removeItem('pendingInvoiceData');
-        try {
-            const { data, isMock } = JSON.parse(raw) as { data: InvoiceData; isMock: boolean };
-            dispatch({ type: 'SET_MOCK_MODE', payload: isMock });
-            dispatch({ type: 'SET_INVOICE_DATA', payload: data });
-        } catch {
-            // Malformed entry — ignore
+        if (raw) {
+            sessionStorage.removeItem('pendingInvoiceData');
+            try {
+                const { data, isMock } = JSON.parse(raw) as { data: InvoiceData; isMock: boolean };
+                dispatch({ type: 'SET_MOCK_MODE', payload: isMock });
+                dispatch({ type: 'SET_INVOICE_DATA', payload: data });
+            } catch {
+                // Malformed entry — ignore
+            }
+            return;
+        }
+
+        // 2. Async Job Handling (Realtime)
+        const jobId = sessionStorage.getItem('pendingOcrJobId');
+        if (jobId) {
+            sessionStorage.removeItem('pendingOcrJobId');
+            dispatch({ type: 'START_ANALYSIS' });
+            dispatch({ type: 'SET_LOADING_MESSAGE', payload: 'Procesando documento con IA...' });
+            
+            const supabase = createClient();
+            const channel = supabase.channel(`ocr_job_${jobId}`)
+                .on(
+                    'postgres_changes',
+                    { event: 'UPDATE', schema: 'public', table: 'ocr_jobs', filter: `id=eq.${jobId}` },
+                    (payload: { new: OcrJobRow }) => {
+                        const updatedJob = payload.new;
+                        clearTimeout(timeoutId);
+                        if (updatedJob.status === 'completed') {
+                            dispatch({ type: 'SET_INVOICE_DATA', payload: updatedJob.invoice_data as InvoiceData });
+                            supabase.removeChannel(channel);
+                        } else if (updatedJob.status === 'failed') {
+                            dispatch({ type: 'SET_ERROR', payload: updatedJob.error_message || 'Error en procesamiento OCR' });
+                            supabase.removeChannel(channel);
+                        }
+                    }
+                )
+                .subscribe();
+
+            // Safety net: si N8N no responde en 90s, abortar
+            const timeoutId = setTimeout(() => {
+                dispatch({ type: 'SET_ERROR', payload: 'El servidor tardó demasiado en procesar el documento. Inténtalo de nuevo.' });
+                supabase.removeChannel(channel);
+            }, OCR_REALTIME_TIMEOUT_MS);
+
+            return () => {
+                clearTimeout(timeoutId);
+                supabase.removeChannel(channel);
+            };
         }
     }, []);
 
     const processInvoice = useCallback(async (file: File) => {
         dispatch({ type: 'START_ANALYSIS' });
+        dispatch({ type: 'SET_LOADING_MESSAGE', payload: 'Enviando documento de forma segura...' });
 
         // Create PDF Preview URL
         if (typeof window !== 'undefined') {
@@ -126,17 +181,54 @@ export function useSimulator() {
             // Validate file first
             const validation = validateFile(file);
             if (!validation.valid) {
-                throw new Error(validation.error);
+                throw new Error(validation.error!);
             }
 
-            const { data, isMock } = await analyzeDocument(file);
+            const result = await analyzeDocument(file);
 
-            if (!data) {
-                throw new Error('No se pudieron extraer datos de la factura');
+            if (result.isMock && result.data) {
+                dispatch({ type: 'SET_MOCK_MODE', payload: true });
+                dispatch({ type: 'SET_INVOICE_DATA', payload: result.data });
+                return;
             }
 
-            dispatch({ type: 'SET_MOCK_MODE', payload: isMock });
-            dispatch({ type: 'SET_INVOICE_DATA', payload: data });
+            if (!result.jobId) {
+                throw new Error('No se pudo iniciar el procesamiento en segundo plano');
+            }
+
+            dispatch({ type: 'SET_LOADING_MESSAGE', payload: 'Procesando documento con IA...' });
+            
+            const supabase = createClient();
+            const channel = supabase.channel(`local_job_${result.jobId}`)
+                .on(
+                    'postgres_changes',
+                    { event: 'UPDATE', schema: 'public', table: 'ocr_jobs', filter: `id=eq.${result.jobId}` },
+                    (payload: { new: OcrJobRow }) => {
+                        const updatedJob = payload.new;
+                        clearTimeout(timeoutId);
+                        if (updatedJob.status === 'completed') {
+                            dispatch({ type: 'SET_INVOICE_DATA', payload: updatedJob.invoice_data as InvoiceData });
+                            supabase.removeChannel(channel);
+                            activeChannelRef.current = null;
+                        } else if (updatedJob.status === 'failed') {
+                            dispatch({ type: 'SET_ERROR', payload: updatedJob.error_message || 'Error en análisis OCR' });
+                            supabase.removeChannel(channel);
+                            activeChannelRef.current = null;
+                        }
+                    }
+                )
+                .subscribe();
+
+            // Guardar referencia para cleanup al desmontar
+            activeChannelRef.current = channel;
+
+            // Safety net: si N8N no responde en 90s, abortar
+            const timeoutId = setTimeout(() => {
+                dispatch({ type: 'SET_ERROR', payload: 'El servidor tardó demasiado en procesar el documento. Inténtalo de nuevo.' });
+                supabase.removeChannel(channel);
+                activeChannelRef.current = null;
+            }, OCR_REALTIME_TIMEOUT_MS);
+
         } catch (error) {
             console.error('Error processing invoice:', error);
             dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Error al procesar la factura' });
@@ -184,11 +276,11 @@ export function useSimulator() {
             // Map Aletheia Result to legacy SavingsResult for UI compatibility
             const mappedResults: SavingsResult[] = aletheiaResult.top_proposals.map(p => {
                 // Reconstruct Offer object from Candidate
-                const offer: any = {
+                const offer: SavingsResult['offer'] = {
                     id: p.candidate.id,
                     marketer_name: p.candidate.company,
                     tariff_name: p.candidate.name,
-                    logo_color: p.candidate.logo_color,
+                    logo_color: p.candidate.logo_color || 'bg-blue-600',
                     type: p.candidate.type,
                     contract_duration: '12 meses', // Default or from candidate
                     power_price: p.candidate.power_price,
@@ -255,7 +347,7 @@ export function useSimulator() {
             console.error('Comparison failed', error);
             dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Error al realizar la comparación' });
         }
-    }, [state.invoiceData]);
+    }, [state.invoiceData, state.isMockMode]);
 
     const goBackToStep1 = useCallback(() => {
         dispatch({ type: 'GO_BACK_TO_STEP1' });
