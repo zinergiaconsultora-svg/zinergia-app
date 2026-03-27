@@ -164,33 +164,11 @@ export function useSimulator() {
 
     const runComparison = useCallback(async () => {
         dispatch({ type: 'START_ANALYSIS' });
-        const messages = [
-            'Normalizando datos de consumo...',
-            'Aplicando perfiles de estacionalidad...',
-            'Detectando costes ocultos...',
-            'Calculando las mejores ofertas...'
-        ];
-
-        let msgIndex = 0;
-        dispatch({ type: 'SET_LOADING_MESSAGE', payload: messages[0] });
-
-        const interval = setInterval(() => {
-            msgIndex++;
-            if (msgIndex < messages.length) {
-                dispatch({ type: 'SET_LOADING_MESSAGE', payload: messages[msgIndex] });
-            }
-        }, 800);
+        dispatch({ type: 'SET_LOADING_MESSAGE', payload: 'Calculando las mejores ofertas...' });
 
         try {
-            // Import dynamically to avoid server-action issues in client component if needed, 
-            // but Next.js handles imports of server actions fine usually.
             const { calculateAletheiaSavings } = await import('@/app/actions/simulator');
-
-            // Pass the current state.invoiceData. 
-            // manualMaxDemand not yet exposed in UI — pass undefined to use OCR-detected values
             const result = await calculateAletheiaSavings(state.invoiceData);
-
-            clearInterval(interval);
 
             if (!result.success) {
                 throw new Error(result.error);
@@ -238,6 +216,7 @@ export function useSimulator() {
             if (mappedResults.length > 0) {
                 // Only persist real data — never save mock OCR results to DB
                 if (!state.isMockMode) {
+                    dispatch({ type: 'SET_LOADING_MESSAGE', payload: 'Guardando propuestas...' });
                     try {
                         // 1. Log the best result (creates client + 1st proposal)
                         const bestResult = mappedResults[0];
@@ -268,7 +247,6 @@ export function useSimulator() {
             }
         } catch (error) {
             console.error('Comparison failed', error);
-            clearInterval(interval);
             dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Error al realizar la comparación' });
         }
     }, [state.invoiceData]);
