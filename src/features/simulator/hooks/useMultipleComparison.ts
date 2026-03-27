@@ -34,11 +34,12 @@ export function useMultipleComparison() {
                 )
             );
 
-            const data = await analyzeDocumentWithRetry(file);
+            const response = await analyzeDocumentWithRetry(file);
+            const invoiceData = response && 'data' in response ? response.data : response;
 
             setInvoices((prev: ComparisonInvoice[]) => {
                 const updated = prev.map(inv => 
-                    inv.id === id ? { ...inv, data, status: 'analyzed' as const } : inv
+                    inv.id === id ? { ...inv, data: invoiceData as InvoiceData, status: 'analyzed' as const } : inv
                 );
                 
                 // Check if all analyzed, then compare all

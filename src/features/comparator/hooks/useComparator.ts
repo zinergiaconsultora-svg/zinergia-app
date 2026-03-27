@@ -45,14 +45,14 @@ export function useComparator() {
         setUploadError(null);
 
         try {
-            const data = await crmService.analyzeDocument(file);
+            const response = await crmService.analyzeDocument(file);
 
-            if (!data) {
+            if (!response || !response.data) {
                 throw new Error('No se pudieron extraer datos de la factura');
             }
 
-            setInvoiceData(data);
-            setClientName(data.client_name || '');
+            setInvoiceData(response.data);
+            setClientName(response.data.client_name || '');
             setStep(2);
         } catch (error) {
             console.error('Error processing invoice:', error);

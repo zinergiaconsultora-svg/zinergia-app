@@ -1,0 +1,12 @@
+src/features/simulator/hooks/useMultipleComparison.ts(39,25): error TS2345: Argument of type '(prev: ComparisonInvoice[]) => (ComparisonInvoice | { data: { data: InvoiceData; isMock: boolean; }; status: "analyzed"; id: string; file: File; results?: SavingsResult[]; error?: string; })[]' is not assignable to parameter of type 'SetStateAction<ComparisonInvoice[]>'.
+  Type '(prev: ComparisonInvoice[]) => (ComparisonInvoice | { data: { data: InvoiceData; isMock: boolean; }; status: "analyzed"; id: string; file: File; results?: SavingsResult[]; error?: string; })[]' is not assignable to type '(prevState: ComparisonInvoice[]) => ComparisonInvoice[]'.
+    Type '(ComparisonInvoice | { data: { data: InvoiceData; isMock: boolean; }; status: "analyzed"; id: string; file: File; results?: SavingsResult[] | undefined; error?: string | undefined; })[]' is not assignable to type 'ComparisonInvoice[]'.
+      Type 'ComparisonInvoice | { data: { data: InvoiceData; isMock: boolean; }; status: "analyzed"; id: string; file: File; results?: SavingsResult[] | undefined; error?: string | undefined; }' is not assignable to type 'ComparisonInvoice'.
+        Type '{ data: { data: InvoiceData; isMock: boolean; }; status: "analyzed"; id: string; file: File; results?: SavingsResult[]; error?: string; }' is not assignable to type 'ComparisonInvoice'.
+          Types of property 'data' are incompatible.
+            Type '{ data: InvoiceData; isMock: boolean; }' is missing the following properties from type 'InvoiceData': period_days, power_p1, power_p2, power_p3, and 9 more.
+src/features/simulator/hooks/useMultipleComparison.ts(47,40): error TS2345: Argument of type '(ComparisonInvoice | { data: { data: InvoiceData; isMock: boolean; }; status: "analyzed"; id: string; file: File; results?: SavingsResult[] | undefined; error?: string | undefined; })[]' is not assignable to parameter of type 'ComparisonInvoice[]'.
+  Type 'ComparisonInvoice | { data: { data: InvoiceData; isMock: boolean; }; status: "analyzed"; id: string; file: File; results?: SavingsResult[] | undefined; error?: string | undefined; }' is not assignable to type 'ComparisonInvoice'.
+    Type '{ data: { data: InvoiceData; isMock: boolean; }; status: "analyzed"; id: string; file: File; results?: SavingsResult[]; error?: string; }' is not assignable to type 'ComparisonInvoice'.
+      Types of property 'data' are incompatible.
+        Type '{ data: InvoiceData; isMock: boolean; }' is missing the following properties from type 'InvoiceData': period_days, power_p1, power_p2, power_p3, and 9 more.

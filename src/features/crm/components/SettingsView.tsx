@@ -116,8 +116,9 @@ export default function SettingsView({
         setLoading(true);
         setSaveError(null);
         try {
-            const extractedData = await crmService.analyzeDocument(file);
-            if (extractedData) {
+            const response = await crmService.analyzeDocument(file);
+            if (response && response.data) {
+                const extractedData = response.data;
                 setSettings(prev => ({
                     ...prev,
                     companyName: extractedData.company_name || extractedData.client_name || prev.companyName,
