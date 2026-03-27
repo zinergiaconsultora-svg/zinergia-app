@@ -1,18 +1,23 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+/**
+ * Middleware de Autenticación Zinergia
+ * Implementa protección de rutas y refresco de sesión Supabase.
+ */
 export async function middleware(request: NextRequest) {
-    // 1. Safety check for environment variables
+    const { pathname } = request.nextUrl
+
+    // 1. Comprobación de variables de entorno
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
         console.error('Middleware Error: Missing Supabase Environment Variables!')
-        return NextResponse.next({ request })
+        return NextResponse.next()
     }
 
-    try {
-        let supabaseResponse = NextResponse.next({
-            request,
-        })
+    // 2. Inicializar el cliente Supabase (Server Side)
+    let response = NextResponse.next({ request })
 
+    try {
         const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -22,53 +27,45 @@ export async function middleware(request: NextRequest) {
                         return request.cookies.getAll()
                     },
                     setAll(cookiesToSet) {
-                        cookiesToSet.forEach(({ name, value }) =>
-                            request.cookies.set(name, value)
-                        )
-                        supabaseResponse = NextResponse.next({
-                            request,
-                        })
+                        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+                        response = NextResponse.next({ request })
                         cookiesToSet.forEach(({ name, value, options }) =>
-                            supabaseResponse.cookies.set(name, value, options)
+                            response.cookies.set(name, value, options)
                         )
                     },
                 },
             }
         )
 
-        // IMPORTANT: You *must* run the getUser method in the middleware
-        // to maintain auth state between server and client.
-        const {
-            data: { user },
-        } = await supabase.auth.getUser()
+        // 3. Obtener usuario (refresca sesión si es necesario)
+        const { data: { user } } = await supabase.auth.getUser()
 
-        // Protect the dashboard route
-        if (request.nextUrl.pathname.startsWith('/dashboard') && !user) {
-            return NextResponse.redirect(new URL('/', request.url))
+        // 4. Lógica de Redirección Proactiva
+        const isPublicRoute = pathname === '/' || pathname.startsWith('/join') || pathname.startsWith('/auth/callback')
+
+        // Caso A: No autenticado intentando entrar a ruta privada
+        if (!user && !isPublicRoute) {
+            const redirectUrl = new URL('/', request.url)
+            if (pathname !== '/') {
+                redirectUrl.searchParams.set('redirect_to', pathname)
+            }
+            return NextResponse.redirect(redirectUrl)
         }
 
-        // Redirect to dashboard if logged in and on home page
-        if (request.nextUrl.pathname === '/' && user) {
+        // Caso B: Autenticado intentando entrar al login (landing)
+        if (user && pathname === '/') {
             return NextResponse.redirect(new URL('/dashboard', request.url))
         }
-
-        return supabaseResponse
     } catch (e) {
-        console.error('Middleware execution error:', e)
-        // In case of error, allow the request to proceed to avoid bricking the entire site
-        return NextResponse.next({ request })
+        // Fail-open: si Supabase no responde, dejamos pasar la request.
+        // Las rutas privadas fallarán por su cuenta; las públicas seguirán funcionando.
+        console.error('Middleware: Supabase auth check failed, failing open.', e)
     }
+
+    return response
 }
 
 export const config = {
-    matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         * Feel free to modify this pattern to include more paths.
-         */
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-    ],
+    // Excluye: todos los assets de Next.js, rutas /api (gestionan su propia auth), favicon e imágenes
+    matcher: ['/((?!_next|api|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }

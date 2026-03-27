@@ -37,6 +37,7 @@ export default function LandingPage() {
             src="/images/login-bg-bulb.png"
             alt="Realistic Lightbulb Background"
             fill
+            sizes="50vw"
             className="object-cover opacity-90"
             priority
           />
