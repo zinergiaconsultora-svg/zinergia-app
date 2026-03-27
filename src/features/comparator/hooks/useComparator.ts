@@ -106,8 +106,6 @@ export function useComparator() {
             setResults(topResults);
 
             if (topResults.length > 0) {
-                localStorage.setItem('antigravity_comparator_result', JSON.stringify(topResults[0]));
-                localStorage.setItem('antigravity_comparator_invoice', JSON.stringify(invoiceData));
                 sessionStorage.setItem('comparator_result', JSON.stringify(topResults[0]));
                 sessionStorage.setItem('comparator_invoice', JSON.stringify(invoiceData));
                 setStep(4);
