@@ -29,16 +29,18 @@ interface OfferCardProps {
     offer: Offer;
     isSelected: boolean;
     isDeleteConfirm: boolean;
+    canWrite: boolean;
     onSelect: (id: string) => void;
     onDelete: (id: string, e?: React.MouseEvent) => void;
 }
 
-const OfferCard = memo(function OfferCard({ 
-    offer, 
-    isSelected, 
-    isDeleteConfirm, 
-    onSelect, 
-    onDelete 
+const OfferCard = memo(function OfferCard({
+    offer,
+    isSelected,
+    isDeleteConfirm,
+    canWrite,
+    onSelect,
+    onDelete
 }: OfferCardProps) {
     const handleClick = useCallback(() => {
         onSelect(offer.id);
@@ -96,17 +98,20 @@ const OfferCard = memo(function OfferCard({
                     <div className="text-[10px] font-mono font-medium text-slate-700">{Number(offer.energy_price?.p3).toFixed(4)}</div>
                 </div>
             </div>
-            {/* Action Footer for Card */}
-            <div className="mt-3 flex justify-end">
-                <button
-                    onClick={handleDeleteClick}
-                    className={`p-1.5 rounded transition-colors ${isDeleteConfirm ? 'bg-rose-600 text-white' : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'}`}
-                    title="Eliminar"
-                    aria-label={isDeleteConfirm ? "Confirmar borrado" : "Eliminar tarifa"}
-                >
-                    {isDeleteConfirm ? <span className="text-[9px] font-bold px-1">¿Borrar?</span> : <Trash2 size={14} />}
-                </button>
-            </div>
+            {/* Action Footer for Card — only shown to admin/franchise */}
+            {canWrite && (
+                <div className="mt-3 flex justify-end">
+                    <button
+                        type="button"
+                        onClick={handleDeleteClick}
+                        className={`p-1.5 rounded transition-colors ${isDeleteConfirm ? 'bg-rose-600 text-white' : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'}`}
+                        title="Eliminar"
+                        aria-label={isDeleteConfirm ? "Confirmar borrado" : "Eliminar tarifa"}
+                    >
+                        {isDeleteConfirm ? <span className="text-[9px] font-bold px-1">¿Borrar?</span> : <Trash2 size={14} />}
+                    </button>
+                </div>
+            )}
         </motion.div>
     );
 });
@@ -115,7 +120,11 @@ const OfferCard = memo(function OfferCard({
  * Enhanced Tariff Manager View 2.0
  * "Master-Detail" Design Pattern
  */
-export default function TariffManagerView() {
+interface TariffManagerViewProps {
+    canWrite?: boolean;
+}
+
+export default function TariffManagerView({ canWrite = false }: TariffManagerViewProps) {
     const router = useRouter();
     const [offers, setOffers] = useState<Offer[]>([]);
     const [loading, setLoading] = useState(true);
@@ -404,13 +413,16 @@ export default function TariffManagerView() {
                                 <TableIcon size={14} />
                             </button>
                         </div>
-                        <button
-                            onClick={handleCreate}
-                            className="bg-slate-900 text-white p-2 rounded-lg hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/10"
-                            aria-label="Nueva Tarifa"
-                        >
-                            <Plus size={18} />
-                        </button>
+                        {canWrite && (
+                            <button
+                                type="button"
+                                onClick={handleCreate}
+                                className="bg-slate-900 text-white p-2 rounded-lg hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/10"
+                                aria-label="Nueva Tarifa"
+                            >
+                                <Plus size={18} />
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -426,6 +438,7 @@ export default function TariffManagerView() {
                                     offer={offer}
                                     isSelected={selectedOfferId === offer.id}
                                     isDeleteConfirm={deleteConfirmId === offer.id}
+                                    canWrite={canWrite}
                                     onSelect={handleSelectOffer}
                                     onDelete={handleDelete}
                                 />
@@ -527,33 +540,37 @@ export default function TariffManagerView() {
 
                         </div>
 
-                        {/* Detail Footer Actions */}
-                        <div className="p-6 border-t border-slate-200 bg-white flex gap-3 shrink-0 pb-10">
-                            <button
-                                onClick={() => handleEdit(activeOffer)}
-                                className="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-3 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 border border-indigo-200"
-                            >
-                                <Edit3 size={16} />
-                                Editar Tarifa
-                            </button>
-                            <button
-                                onClick={(e) => handleDelete(activeOffer.id, e)}
-                                className={`
-                                    min-w-[48px] px-3 rounded-xl flex items-center justify-center transition-all border
-                                    ${deleteConfirmId === activeOffer.id
-                                        ? 'bg-rose-600 text-white border-rose-600 hover:bg-rose-700 w-auto'
-                                        : 'bg-white hover:bg-rose-50 text-slate-300 hover:text-rose-600 border-slate-200 hover:border-rose-200 w-12'
-                                    }
-                                `}
-                                aria-label="Eliminar Tarifa"
-                            >
-                                {deleteConfirmId === activeOffer.id ? (
-                                    <span className="text-xs font-bold whitespace-nowrap">¿Confirmar?</span>
-                                ) : (
-                                    <Trash2 size={18} />
-                                )}
-                            </button>
-                        </div>
+                        {/* Detail Footer Actions — only shown to admin/franchise */}
+                        {canWrite && (
+                            <div className="p-6 border-t border-slate-200 bg-white flex gap-3 shrink-0 pb-10">
+                                <button
+                                    type="button"
+                                    onClick={() => handleEdit(activeOffer)}
+                                    className="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-3 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 border border-indigo-200"
+                                >
+                                    <Edit3 size={16} />
+                                    Editar Tarifa
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={(e) => handleDelete(activeOffer.id, e)}
+                                    className={`
+                                        min-w-[48px] px-3 rounded-xl flex items-center justify-center transition-all border
+                                        ${deleteConfirmId === activeOffer.id
+                                            ? 'bg-rose-600 text-white border-rose-600 hover:bg-rose-700 w-auto'
+                                            : 'bg-white hover:bg-rose-50 text-slate-300 hover:text-rose-600 border-slate-200 hover:border-rose-200 w-12'
+                                        }
+                                    `}
+                                    aria-label="Eliminar Tarifa"
+                                >
+                                    {deleteConfirmId === activeOffer.id ? (
+                                        <span className="text-xs font-bold whitespace-nowrap">¿Confirmar?</span>
+                                    ) : (
+                                        <Trash2 size={18} />
+                                    )}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     /* EMPTY STATE for Right Panel */
@@ -564,29 +581,32 @@ export default function TariffManagerView() {
                         <h3 className="text-slate-900 font-bold text-lg mb-2">Selecciona una Tarifa</h3>
                         <p className="text-slate-500 text-sm max-w-[200px]">Haz clic en cualquier tarifa de la lista para ver sus detalles completos, editarla o eliminarla.</p>
 
-                        <div className="mt-8 pt-8 border-t border-slate-200 w-full">
-                            <div className="bg-indigo-50 rounded-xl p-4 text-left">
-                                <h4 className="text-indigo-900 font-bold text-xs uppercase mb-2 flex items-center gap-2">
-                                    <Upload size={12} />
-                                    Importación Rápida
-                                </h4>
-                                <p className="text-indigo-700/80 text-xs mb-3">Puedes importar múltiples tarifas usando un archivo CSV.</p>
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    accept=".csv"
-                                    className="hidden"
-                                    onChange={handleCsvImport}
-                                    aria-label="Subir archivo CSV de tarifas"
-                                />
-                                <button
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-xs font-bold transition-colors"
-                                >
-                                    {isImporting ? 'Importando...' : 'Subir CSV'}
-                                </button>
+                        {canWrite && (
+                            <div className="mt-8 pt-8 border-t border-slate-200 w-full">
+                                <div className="bg-indigo-50 rounded-xl p-4 text-left">
+                                    <h4 className="text-indigo-900 font-bold text-xs uppercase mb-2 flex items-center gap-2">
+                                        <Upload size={12} />
+                                        Importación Rápida
+                                    </h4>
+                                    <p className="text-indigo-700/80 text-xs mb-3">Puedes importar múltiples tarifas usando un archivo CSV.</p>
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        accept=".csv"
+                                        className="hidden"
+                                        onChange={handleCsvImport}
+                                        aria-label="Subir archivo CSV de tarifas"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-xs font-bold transition-colors"
+                                    >
+                                        {isImporting ? 'Importando...' : 'Subir CSV'}
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 )}
             </aside>

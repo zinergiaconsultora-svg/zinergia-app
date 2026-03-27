@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/client';
 import { InvoiceData, SavingsResult, Offer } from '@/types/crm';
 import { analyzeDocumentAction } from '@/app/actions/ocr';
 import { calculateSavingsAction } from '@/app/actions/compare';
+import { saveOfferAction, deleteOfferAction } from '@/app/actions/offers';
 
 // Atomic Services
 import { clientService } from './crm/clients';
@@ -105,32 +106,9 @@ export const crmService = {
         return data || [];
     },
 
-    async saveOffer(offer: Partial<Offer>) {
-        const supabase = createClient();
-        if (offer.id) {
-            const { data, error } = await supabase
-                .from('lv_zinergia_tarifas')
-                .update(offer)
-                .eq('id', offer.id)
-                .select()
-                .single();
-            if (error) throw error;
-            return data;
-        }
-        const { data, error } = await supabase
-            .from('lv_zinergia_tarifas')
-            .insert(offer)
-            .select()
-            .single();
-        if (error) throw error;
-        return data;
-    },
-
-    async deleteOffer(id: string) {
-        const supabase = createClient();
-        const { error } = await supabase.from('lv_zinergia_tarifas').delete().eq('id', id);
-        if (error) throw error;
-    },
+    // Tariff mutations — role-protected via Server Actions (admin/franchise only)
+    saveOffer: saveOfferAction,
+    deleteOffer: deleteOfferAction,
 
     async getOffers(): Promise<Offer[]> {
         const supabase = createClient();
