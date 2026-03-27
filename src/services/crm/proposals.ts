@@ -3,6 +3,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { Proposal, SavingsResult, InvoiceData } from '@/types/crm';
 import { AletheiaResult } from '@/lib/aletheia/types';
 import { getFranchiseId } from './shared';
+import { updateProposalStatusAction } from '@/app/actions/proposals';
 
 export const proposalService = {
     async getProposalsByClient(clientId: string, serverClient?: SupabaseClient) {
@@ -150,16 +151,6 @@ export const proposalService = {
         return data as Proposal[];
     },
 
-    async updateProposalStatus(id: string, status: Proposal['status']) {
-        const supabase = createClient();
-        const { data, error } = await supabase
-            .from('proposals')
-            .update({ status })
-            .eq('id', id)
-            .select()
-            .single();
-
-        if (error) throw error;
-        return data;
-    }
+    // Delegates to Server Action: updates status + triggers commissions if accepted
+    updateProposalStatus: updateProposalStatusAction,
 };
