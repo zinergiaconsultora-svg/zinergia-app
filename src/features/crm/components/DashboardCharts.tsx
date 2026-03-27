@@ -58,17 +58,7 @@ const PIE_TOOLTIP_CONTENT_STYLE = {
 
 const PIE_TOOLTIP_ITEM_STYLE = { color: '#1e293b' } as const;
 
-export const SavingsTrendChart = () => {
-    // MOCK DATA for Visual Demonstration
-    const data = [
-        { name: 'Jul', value: 12000 },
-        { name: 'Ago', value: 18500 },
-        { name: 'Sep', value: 15000 },
-        { name: 'Oct', value: 24000 },
-        { name: 'Nov', value: 32000 },
-        { name: 'Dic', value: 38500 },
-        { name: 'Ene', value: 45000 },
-    ];
+export const SavingsTrendChart = ({ data }: { data: { name: string; value: number }[] }) => {
 
     return (
         <div className="h-full w-full">
