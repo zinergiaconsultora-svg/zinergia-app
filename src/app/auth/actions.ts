@@ -16,9 +16,6 @@ export async function login(formData: FormData) {
             password: formData.get('password') as string,
         }
 
-        console.log('Login attempt for:', data.email)
-        console.log('Using Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
-
         if (!data.email || !data.password) {
             return { error: 'Por favor, rellena todos los campos' }
         }

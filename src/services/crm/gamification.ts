@@ -100,7 +100,7 @@ export const gamificationService = {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+            const { data: profile } = await supabase.from('profiles').select('franchise_id, role').eq('id', user.id).single();
             if (!profile) return;
 
             const pot = (proposal.annual_savings || 1000) * 0.15;

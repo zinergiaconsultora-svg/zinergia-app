@@ -53,7 +53,6 @@ export function useComparator() {
 
             setInvoiceData(data);
             setClientName(data.client_name || '');
-            console.log('✅ Data extracted, moving to step 2');
             setStep(2);
         } catch (error) {
             console.error('Error processing invoice:', error);
@@ -111,8 +110,6 @@ export function useComparator() {
                 localStorage.setItem('antigravity_comparator_invoice', JSON.stringify(invoiceData));
                 sessionStorage.setItem('comparator_result', JSON.stringify(topResults[0]));
                 sessionStorage.setItem('comparator_invoice', JSON.stringify(invoiceData));
-                console.log('💾 Data saved to localStorage and sessionStorage for ProposalView');
-
                 setStep(4);
             }
         } catch (error) {

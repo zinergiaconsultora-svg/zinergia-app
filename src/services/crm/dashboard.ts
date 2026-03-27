@@ -24,7 +24,7 @@ export const dashboardService = {
                 .order('created_at', { ascending: false })
                 .limit(5),
             supabase.from('clients')
-                .select('*')
+                .select('id, name, status, created_at, cups, address, city')
                 .eq('franchise_id', franchiseId)
                 .order('created_at', { ascending: false })
                 .limit(5)

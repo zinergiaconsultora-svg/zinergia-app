@@ -26,7 +26,7 @@ export default function JoinNetworkPage() {
             const supabase = createClient();
             const { data, error } = await supabase
                 .from('network_invitations')
-                .select('*')
+                .select('id, email, role, creator_id')
                 .eq('code', code)
                 .eq('used', false)
                 .single();
