@@ -26,11 +26,11 @@ export const StatValue: React.FC<StatValueProps> = ({ value, unit, trend, descri
     return (
         <div className="flex flex-col">
             <div className="flex items-baseline gap-1.5">
-                <span className={`font-black text-slate-900 dark:text-white tabular-nums tracking-tight ${sizeClasses[size]}`}>
+                <span className={`font-light text-slate-900 dark:text-white tabular-nums tracking-tight ${sizeClasses[size]}`}>
                     {value}
                 </span>
                 {unit && (
-                    <span className="text-sm font-bold text-slate-400">{unit}</span>
+                    <span className="text-sm font-medium text-slate-400">{unit}</span>
                 )}
             </div>
 
@@ -38,8 +38,8 @@ export const StatValue: React.FC<StatValueProps> = ({ value, unit, trend, descri
                 <div className="flex items-center gap-2 mt-1">
                     {trend && (
                         <div className={`
-                            text-[10px] font-bold uppercase tracking-wider flex items-center gap-1
-                            ${isGood ? 'text-emerald-600' : 'text-rose-600'}
+                            text-[10px] font-medium uppercase tracking-wider flex items-center gap-1
+                            ${isGood ? 'text-emerald-500' : 'text-rose-500'}
                         `}>
                             <span>{isPositive ? '↑' : '↓'} {Math.abs(trend.value).toFixed(1)}%</span>
                         </div>

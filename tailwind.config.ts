@@ -11,9 +11,9 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                display: ['var(--font-display)', 'sans-serif'],
+                display: ['var(--font-sans)', 'sans-serif'],
                 sans: ['var(--font-sans)', 'sans-serif'],
-                mono: ['var(--font-mono)', 'monospace'],
+                mono: ['monospace'],
             },
             colors: {
                 background: "var(--background)",
@@ -167,8 +167,8 @@ export default {
                 },
             },
             boxShadow: {
-                'floating': '0 12px 48px rgba(30, 41, 59, 0.12)',
-                'interaction': '0 8px 32px rgba(30, 41, 59, 0.08)',
+                'floating': '0 20px 40px -10px rgba(0, 0, 0, 0.04)',
+                'interaction': '0 8px 20px -5px rgba(0, 0, 0, 0.03)',
             },
         },
     },

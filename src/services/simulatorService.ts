@@ -360,12 +360,77 @@ export async function exportResultsToPDF(
 // ============================================================================
 
 export async function exportResultsToExcel(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _invoiceData: InvoiceData,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _results: SavingsResult[]
+    invoiceData: InvoiceData,
+    results: SavingsResult[]
 ): Promise<void> {
-    // TODO: Re-implementar con librería segura
-    console.warn('Export to Excel temporarily disabled');
-    throw new Error('Excel export temporarily disabled');
+    const XLSX = await import('xlsx');
+
+    // ── Sheet 1: Resumen del cliente ────────────────────────────────────────
+    const totalKwh =
+        (invoiceData.energy_p1 || 0) + (invoiceData.energy_p2 || 0) +
+        (invoiceData.energy_p3 || 0) + (invoiceData.energy_p4 || 0) +
+        (invoiceData.energy_p5 || 0) + (invoiceData.energy_p6 || 0);
+
+    const summaryData = [
+        ['INFORME DE COMPARACIÓN DE TARIFAS — ZINERGIA', ''],
+        ['Fecha', new Date().toLocaleDateString('es-ES')],
+        ['Cliente', invoiceData.client_name || 'N/A'],
+        ['Comercializadora actual', invoiceData.company_name || 'N/A'],
+        ['Tarifa actual', invoiceData.tariff_name || invoiceData.detected_power_type || 'N/A'],
+        ['Consumo total factura (kWh)', totalKwh],
+        ['Días facturados', invoiceData.period_days],
+        ['Coste anual actual (€)', results[0]?.current_annual_cost?.toFixed(2) || 'N/A'],
+    ];
+
+    // ── Sheet 2: Comparativa de ofertas ────────────────────────────────────
+    const offersHeader = [
+        'Pos.', 'Comercializadora', 'Tarifa', 'Tipo',
+        'Coste anual (€)', 'Ahorro anual (€)', 'Ahorro (%)',
+        'P1 Potencia', 'P2 Potencia', 'P3 Potencia',
+        'P1 Energía', 'P2 Energía', 'P3 Energía',
+        'Permanencia',
+    ];
+
+    const offersRows = results.map((r, i) => [
+        i + 1,
+        r.offer.marketer_name,
+        r.offer.tariff_name,
+        r.offer.type === 'fixed' ? 'Precio Fijo' : 'Indexado',
+        r.offer_annual_cost.toFixed(2),
+        r.annual_savings.toFixed(2),
+        r.savings_percent.toFixed(1) + '%',
+        r.offer.power_price?.p1 || 0,
+        r.offer.power_price?.p2 || 0,
+        r.offer.power_price?.p3 || 0,
+        r.offer.energy_price?.p1 || 0,
+        r.offer.energy_price?.p2 || 0,
+        r.offer.energy_price?.p3 || 0,
+        r.offer.contract_duration || 'Sin permanencia',
+    ]);
+
+    // ── Sheet 3: Consumo por periodos ───────────────────────────────────────
+    const consumptionData = [
+        ['Periodo', 'Potencia contratada (kW)', 'Energía consumida (kWh)'],
+        ['P1', invoiceData.power_p1 || 0, invoiceData.energy_p1 || 0],
+        ['P2', invoiceData.power_p2 || 0, invoiceData.energy_p2 || 0],
+        ['P3', invoiceData.power_p3 || 0, invoiceData.energy_p3 || 0],
+        ['P4', invoiceData.power_p4 || 0, invoiceData.energy_p4 || 0],
+        ['P5', invoiceData.power_p5 || 0, invoiceData.energy_p5 || 0],
+        ['P6', invoiceData.power_p6 || 0, invoiceData.energy_p6 || 0],
+    ];
+
+    // ── Assemble workbook ───────────────────────────────────────────────────
+    const wb = XLSX.utils.book_new();
+
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumen');
+
+    const wsOffers = XLSX.utils.aoa_to_sheet([offersHeader, ...offersRows]);
+    XLSX.utils.book_append_sheet(wb, wsOffers, 'Comparativa');
+
+    const wsConsumption = XLSX.utils.aoa_to_sheet(consumptionData);
+    XLSX.utils.book_append_sheet(wb, wsConsumption, 'Consumo');
+
+    const fileName = `zinergia-comparacion-${invoiceData.client_name?.replace(/\s+/g, '-') || 'cliente'}-${Date.now()}.xlsx`;
+    XLSX.writeFile(wb, fileName);
 }
