@@ -67,7 +67,8 @@ export const NavigationTop = () => {
     const xpPercent = Math.min((gamification.xp / gamification.nextLevelXp) * 100, 100);
 
     return (
-        <header className="fixed top-0 left-0 right-0 z-50 px-4 py-1.5 md:px-8 md:py-2 pointer-events-none">
+        <>
+            <header className="fixed top-0 left-0 right-0 z-50 px-4 py-1.5 md:px-8 md:py-2 pointer-events-none">
             <motion.div
                 style={{ width: progressWidth }}
                 className="fixed top-0 left-0 h-[1px] bg-indigo-500 z-[60] shadow-[0_0_8px_rgba(99,102,241,0.3)]"
@@ -184,10 +185,10 @@ export const NavigationTop = () => {
                             <LogOut size={18} />
                         </button>
 
-                        {/* Mobile Menu Toggle */}
+                        {/* Mobile Menu Toggle (Oculto en Nuevo Diseño TabBar) */}
                         <button
                             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                            className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-slate-900 text-white shadow-md active:scale-95"
+                            className="hidden w-9 h-9 items-center justify-center rounded-xl bg-slate-900 text-white shadow-md active:scale-95"
                         >
                             {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
                         </button>
@@ -199,10 +200,10 @@ export const NavigationTop = () => {
             <AnimatePresence>
                 {isMobileMenuOpen && (
                     <motion.div
-                        initial={{ opacity: 0, y: -20 }}
+                        initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="lg:hidden absolute top-24 left-4 right-4 bg-white/95 backdrop-blur-xl border border-slate-100 rounded-[2.5rem] shadow-2xl p-6 z-[60]"
+                        exit={{ opacity: 0, y: 20 }}
+                        className="lg:hidden fixed bottom-24 left-4 right-4 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border border-slate-100 dark:border-slate-800 rounded-[2.5rem] shadow-2xl p-6 z-[60] overflow-y-auto max-h-[70vh]"
                     >
                         <div className="grid grid-cols-2 gap-4">
                             {navItems.map((item) => {
@@ -227,6 +228,49 @@ export const NavigationTop = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </header>
+            </header>
+
+            {/* --- MÓVIL: BOTTOM TAB BAR (Estilo iOS) --- */}
+            <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-3xl border-t border-slate-200/50 dark:border-slate-800/50 pb-safe pt-2 px-2 shadow-[0_-8px_30px_rgba(0,0,0,0.05)]">
+                <div className="flex items-center justify-evenly max-w-md mx-auto relative pb-7 pt-1">
+                    {navItems.slice(0, 4).map((item) => {
+                        const Icon = item.icon;
+                        const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+                        
+                        return (
+                            <Link
+                                key={item.name}
+                                href={item.href}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                className="flex flex-col items-center justify-center gap-1 min-w-[3.5rem]"
+                            >
+                                <div className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>
+                                    <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
+                                    {isActive && (
+                                        <motion.div layoutId="mobileTabGlow" className="absolute inset-0 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-xl" />
+                                    )}
+                                </div>
+                                <span className={`text-[10px] font-medium tracking-wide ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
+                                    {item.name}
+                                </span>
+                            </Link>
+                        );
+                    })}
+                    
+                    {/* Botón Menú Expandido */}
+                    <button
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        className="flex flex-col items-center justify-center gap-1 min-w-[3.5rem]"
+                    >
+                        <div className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all ${isMobileMenuOpen ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
+                            {isMobileMenuOpen ? <X size={22} strokeWidth={2} /> : <Menu size={22} strokeWidth={1.5} />}
+                        </div>
+                        <span className={`text-[10px] font-medium tracking-wide ${isMobileMenuOpen ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
+                            Menú
+                        </span>
+                    </button>
+                </div>
+            </nav>
+        </>
     );
 };

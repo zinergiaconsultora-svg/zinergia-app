@@ -66,6 +66,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    // Excluye: todos los assets de Next.js, rutas /api (gestionan su propia auth), favicon e imágenes
-    matcher: ['/((?!_next|api|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+    // Excluye: todos los assets de Next.js, rutas /api, PWA assets (sw.js, manifest), favicon e imágenes
+    matcher: ['/((?!_next|api|favicon\\.ico|manifest\\.webmanifest|sw\\.js|icon|apple-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }

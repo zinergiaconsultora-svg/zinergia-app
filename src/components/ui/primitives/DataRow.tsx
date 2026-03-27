@@ -19,7 +19,7 @@ export const DataRow: React.FC<DataRowProps> = ({
     className = ""
 }) => {
     return (
-        <div className={`flex w-full flex-wrap items-center justify-between gap-y-1 gap-x-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2.5 border border-slate-100 dark:border-slate-800 ${className}`}>
+        <div className={`flex w-full flex-wrap items-center justify-between gap-y-1 gap-x-3 rounded-2xl bg-white dark:bg-slate-900 px-4 py-3.5 shadow-sm border border-slate-100/50 dark:border-slate-800/50 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/80 ${className}`}>
 
             <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 min-w-0 shrink-0">
