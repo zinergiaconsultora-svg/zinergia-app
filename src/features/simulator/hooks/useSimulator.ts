@@ -247,8 +247,6 @@ export function useSimulator() {
             if (mappedResults.length > 0) {
                 // Persistent: Save the top 3 results as draft proposals
                 try {
-                    console.log('[Simulator] Persisting 3 top proposals (Aletheia)...');
-
                     // 1. Log the best result (creates client + 1st proposal)
                     const bestResult = mappedResults[0];
                     const savedProposal = await crmService.logSimulation(state.invoiceData, bestResult, state.invoiceData.client_name);
@@ -270,7 +268,6 @@ export function useSimulator() {
                             });
                         }
                     }
-                    console.log('[Simulator] 3 Proposals persisted successfully');
                 } catch (persistError) {
                     console.error('[Simulator] Failed to persist proposals:', persistError);
                 }

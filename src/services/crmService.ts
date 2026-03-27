@@ -114,7 +114,7 @@ export const crmService = {
         const supabase = createClient();
         const { data, error } = await supabase
             .from('lv_zinergia_tarifas')
-            .select('*')
+            .select('id, company, tariff_name, offer_type, fixed_fee, power_price_p1, power_price_p2, power_price_p3, energy_price_p1, energy_price_p2, energy_price_p3')
             .eq('is_active', true);
         
         if (error) return [];
