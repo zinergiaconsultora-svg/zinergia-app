@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { crmService } from '@/services/crmService';
+import { getActiveCommissionRule } from '@/app/actions/commissionRules';
+import { createClient } from '@/lib/supabase/client';
 import {
     Trophy,
     TrendingUp,
@@ -20,6 +22,7 @@ import {
 } from 'recharts';
 
 interface LeaderboardEntry {
+    id?: string;
     points: number;
     badges: string[];
     profiles: {
@@ -29,15 +32,37 @@ interface LeaderboardEntry {
     } | null;
 }
 
+const REFERENCE_AMOUNT = 1000;
+
 export const NetworkIntelligence: React.FC = () => {
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [loading, setLoading] = useState(true);
+    const [commissionData, setCommissionData] = useState([
+        { name: 'Venta Total', value: REFERENCE_AMOUNT, color: '#f8fafc' },
+        { name: 'Agente', value: 300, color: '#10b981' },
+        { name: 'Franquicia', value: 500, color: '#6366f1' },
+        { name: 'Zinergia', value: 200, color: '#f43f5e' },
+    ]);
+    const [commissionRule, setCommissionRule] = useState({ agent_share: 0.30, franchise_share: 0.50, hq_share: 0.20 });
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
     useEffect(() => {
         async function loadIntelligence() {
             try {
-                const lb = await crmService.getLeaderboard();
+                const [lb, rule, { data: { user } }] = await Promise.all([
+                    crmService.getLeaderboard(),
+                    getActiveCommissionRule(),
+                    createClient().auth.getUser(),
+                ]);
                 setLeaderboard(lb as unknown as LeaderboardEntry[]);
+                setCurrentUserId(user?.id ?? null);
+                setCommissionRule({ agent_share: rule.agent_share, franchise_share: rule.franchise_share, hq_share: rule.hq_share });
+                setCommissionData([
+                    { name: 'Venta Total', value: REFERENCE_AMOUNT, color: '#f8fafc' },
+                    { name: `Agente (${Math.round(rule.agent_share * 100)}%)`, value: Math.round(REFERENCE_AMOUNT * rule.agent_share), color: '#10b981' },
+                    { name: `Franquicia (${Math.round(rule.franchise_share * 100)}%)`, value: Math.round(REFERENCE_AMOUNT * rule.franchise_share), color: '#6366f1' },
+                    { name: `Zinergia (${Math.round(rule.hq_share * 100)}%)`, value: Math.round(REFERENCE_AMOUNT * rule.hq_share), color: '#f43f5e' },
+                ]);
             } catch (err) {
                 console.error(err);
             } finally {
@@ -46,13 +71,6 @@ export const NetworkIntelligence: React.FC = () => {
         }
         loadIntelligence();
     }, []);
-
-    const commissionData = [
-        { name: 'Venta Total', value: 1000, color: '#f8fafc' },
-        { name: 'Agente (30%)', value: 300, color: '#10b981' },
-        { name: 'Franquicia (50%)', value: 500, color: '#6366f1' },
-        { name: 'Zinergia (20%)', value: 200, color: '#f43f5e' }
-    ];
 
     if (loading) return null;
 
@@ -95,15 +113,15 @@ export const NetworkIntelligence: React.FC = () => {
                     <div className="grid grid-cols-3 gap-4 mt-8">
                         <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100/50">
                             <p className="text-[10px] uppercase tracking-wider font-bold text-emerald-600 mb-1">Agente</p>
-                            <p className="text-2xl font-bold text-emerald-900">300€</p>
+                            <p className="text-2xl font-bold text-emerald-900">{Math.round(REFERENCE_AMOUNT * commissionRule.agent_share)}€</p>
                         </div>
                         <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/50">
                             <p className="text-[10px] uppercase tracking-wider font-bold text-indigo-600 mb-1">Franquicia</p>
-                            <p className="text-2xl font-bold text-indigo-900">500€</p>
+                            <p className="text-2xl font-bold text-indigo-900">{Math.round(REFERENCE_AMOUNT * commissionRule.franchise_share)}€</p>
                         </div>
                         <div className="p-4 bg-rose-50/50 rounded-2xl border border-rose-100/50">
                             <p className="text-[10px] uppercase tracking-wider font-bold text-rose-600 mb-1">Zinergia</p>
-                            <p className="text-2xl font-bold text-rose-900">200€</p>
+                            <p className="text-2xl font-bold text-rose-900">{Math.round(REFERENCE_AMOUNT * commissionRule.hq_share)}€</p>
                         </div>
                     </div>
                 </div>
@@ -118,12 +136,26 @@ export const NetworkIntelligence: React.FC = () => {
                             </div>
                             <span className="text-xs font-bold uppercase tracking-[0.2em] text-indigo-400">AI Sales Coach</span>
                         </div>
-                        <h3 className="text-2xl font-bold mb-4 italic">&quot;Tu red de Madrid está convirtiendo un 14% más que la media nacional.&quot;</h3>
-                        <p className="text-slate-400 font-light max-w-lg mb-8">
-                            Hemos detectado que el nuevo manual de ventas del Academy está teniendo un impacto directo en los cierres. Recomendamos aplicarlo también en la sucursal de Barcelona.
-                        </p>
-                        <button className="px-6 py-3 bg-white text-slate-900 rounded-xl font-bold hover:scale-105 transition-transform">
-                            Ver Análisis Completo
+                        {leaderboard.length > 0 ? (
+                            <>
+                                <h3 className="text-2xl font-bold mb-4 italic">
+                                    &quot;{leaderboard[0].profiles?.full_name ?? 'El top agente'} lidera la red con {leaderboard[0].points} puntos.&quot;
+                                </h3>
+                                <p className="text-slate-400 font-light max-w-lg mb-8">
+                                    {leaderboard.length} agente{leaderboard.length !== 1 ? 's' : ''} activo{leaderboard.length !== 1 ? 's' : ''} en el ranking.
+                                    La comisión por agente está configurada al {Math.round(commissionRule.agent_share * 100)}% de cada venta cerrada.
+                                </p>
+                            </>
+                        ) : (
+                            <>
+                                <h3 className="text-2xl font-bold mb-4 italic">&quot;Empieza a cerrar propuestas para aparecer en el ranking.&quot;</h3>
+                                <p className="text-slate-400 font-light max-w-lg mb-8">
+                                    El ranking se actualiza automáticamente con cada propuesta aceptada. La comisión por agente está al {Math.round(commissionRule.agent_share * 100)}%.
+                                </p>
+                            </>
+                        )}
+                        <button onClick={() => window.location.href = '/dashboard/wallet'} className="px-6 py-3 bg-white text-slate-900 rounded-xl font-bold hover:scale-105 transition-transform">
+                            Ver mis comisiones
                         </button>
                     </div>
                 </div>
@@ -179,19 +211,35 @@ export const NetworkIntelligence: React.FC = () => {
                         )}
                     </div>
 
-                    <div className="mt-8 p-6 bg-gradient-to-tr from-amber-500 to-orange-400 rounded-3xl text-white shadow-xl shadow-amber-500/20">
-                        <div className="flex items-center gap-3 mb-2">
-                            <Medal size={20} />
-                            <span className="text-xs font-bold uppercase tracking-wider">Tu Posición</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <h4 className="text-2xl font-bold">#4 en la Red</h4>
-                            <div className="text-right">
-                                <p className="text-xs font-medium opacity-80">Faltan 20 puntos</p>
-                                <p className="text-xs font-bold underline">Subir al Top 3</p>
+                    {(() => {
+                        const myPos = currentUserId ? leaderboard.findIndex(e => e.id === currentUserId) : -1;
+                        const myEntry = myPos >= 0 ? leaderboard[myPos] : null;
+                        const nextEntry = myPos > 0 ? leaderboard[myPos - 1] : null;
+                        const pointsToNext = nextEntry && myEntry ? nextEntry.points - myEntry.points : null;
+                        return (
+                            <div className="mt-8 p-6 bg-gradient-to-tr from-amber-500 to-orange-400 rounded-3xl text-white shadow-xl shadow-amber-500/20">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <Medal size={20} />
+                                    <span className="text-xs font-bold uppercase tracking-wider">Tu Posición</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-2xl font-bold">
+                                        {myPos >= 0 ? `#${myPos + 1} en la Red` : 'Sin ranking aún'}
+                                    </h4>
+                                    {pointsToNext !== null && pointsToNext > 0 ? (
+                                        <div className="text-right">
+                                            <p className="text-xs font-medium opacity-80">Faltan {pointsToNext} puntos</p>
+                                            <p className="text-xs font-bold underline">Subir al #{myPos}</p>
+                                        </div>
+                                    ) : myPos === 0 ? (
+                                        <p className="text-xs font-bold">Líder del ranking</p>
+                                    ) : (
+                                        <p className="text-xs font-medium opacity-80">Cierra propuestas para entrar</p>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    </div>
+                        );
+                    })()}
                 </div>
             </div>
 
