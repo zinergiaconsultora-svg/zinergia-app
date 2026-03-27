@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { crmService } from '@/services/crmService';
 import { Client } from '@/types/crm';
+import { getNotificationsAction, AppNotification } from '@/app/actions/notifications';
 import {
     TrendingUp,
     Target,
@@ -103,10 +104,13 @@ export default function DashboardView() {
     const [loading, setLoading] = useState(true);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
 
-    const [notifications, setNotifications] = useState([
-        { id: '1', type: 'success' as const, title: 'Comisión Aprobada', message: 'La venta de "Restaurante El Molino" ha sido validada.', created_at: new Date().toISOString(), read: false },
-        { id: '2', type: 'info' as const, title: 'Nuevo Recurso', message: 'Se ha añadido "Tarifas 2026 Q1" a la Academy.', created_at: new Date(Date.now() - 3600000).toISOString(), read: false },
-    ]);
+    const [notifications, setNotifications] = useState<AppNotification[]>([]);
+
+    useEffect(() => {
+        getNotificationsAction()
+            .then(data => setNotifications(data))
+            .catch(() => { /* non-fatal — bell stays empty */ });
+    }, []);
 
     useEffect(() => {
         async function loadStats() {
