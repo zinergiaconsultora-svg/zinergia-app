@@ -106,6 +106,7 @@ export interface InvoiceData {
     current_energy_price_p6?: number;
 
     detected_power_type?: string;
+    client_id?: string;
 }
 
 export interface TariffPrice {
