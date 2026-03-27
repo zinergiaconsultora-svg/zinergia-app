@@ -8,8 +8,6 @@ import { Result, ok, err } from '@/lib/result';
 
 export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: any): Promise<Result<AletheiaResult>> {
     try {
-        console.log('🔮 Aletheia: Starting calculation...');
-
         // 1. Fetch Active Tariffs from Supabase
         const supabase = await createClient();
 
@@ -17,7 +15,7 @@ export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: a
         // Note: Using 'lv_zinergia_tarifas' as the source of truth
         const { data: tariffData, error } = await supabase
             .from('lv_zinergia_tarifas')
-            .select('*')
+            .select('id, company, tariff_name, logo_color, offer_type, fixed_fee, power_price_p1, power_price_p2, power_price_p3, power_price_p4, power_price_p5, power_price_p6, energy_price_p1, energy_price_p2, energy_price_p3, energy_price_p4, energy_price_p5, energy_price_p6')
             .eq('is_active', true);
 
         if (error) {
@@ -75,12 +73,8 @@ export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: a
 
         const normalizedInvoice = Normalizer.process(rawInput);
 
-        console.log(`Aletheia: Normalized Invoice (Days=${normalizedInvoice.days_involced})`);
-
         // 4. Run Engine
         const result = AletheiaEngine.run(normalizedInvoice, candidates);
-
-        console.log('Aletheia: Calculation complete. Top offer savings:', result.top_proposals[0]?.annual_savings);
 
         return ok(result);
 
