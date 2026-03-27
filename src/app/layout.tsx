@@ -1,28 +1,17 @@
 import type { Metadata } from "next";
-import { Outfit, Space_Grotesk, DM_Mono } from "next/font/google";
+import { Quicksand } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { Toaster } from "sonner";
 
-const outfit = Outfit({
+const quicksand = Quicksand({
     variable: "--font-sans",
     subsets: ["latin"],
+    weight: ["300", "400", "500", "600"],
     display: "swap",
 });
 
-const spaceGrotesk = Space_Grotesk({
-    variable: "--font-display",
-    subsets: ["latin"],
-    display: "swap",
-});
-
-const dmMono = DM_Mono({
-    variable: "--font-mono",
-    subsets: ["latin"],
-    weight: ["400", "500"],
-    display: "swap",
-});
 
 export const metadata: Metadata = {
     title: "Zinergia - Comparador de Tarifas Eléctricas",
@@ -37,7 +26,7 @@ export default function RootLayout({
     return (
         <html lang="es" suppressHydrationWarning>
             <body
-                className={`${outfit.variable} ${spaceGrotesk.variable} ${dmMono.variable} antialiased`}
+                className={`${quicksand.variable} antialiased font-light`}
             >
                 <ThemeProvider>
                     <GlobalErrorBoundary>
