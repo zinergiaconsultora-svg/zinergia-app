@@ -4,24 +4,27 @@ import { Client } from '@/types/crm';
 import { getFranchiseId, getCached, setCache, invalidateCache } from './shared';
 
 export const clientService = {
-    async getClients(serverClient?: SupabaseClient) {
+    async getClients(serverClient?: SupabaseClient, limit = 20, offset = 0) {
         const supabase = serverClient || createClient();
         const franchiseId = await getFranchiseId(supabase);
         if (!franchiseId) return [];
 
-        const cacheKey = `clients_${franchiseId}`;
-        const cached = getCached<Client[]>(cacheKey);
-        if (cached) return cached;
+        const cacheKey = `clients_${franchiseId}_${offset}`;
+        if (offset === 0) {
+            const cached = getCached<Client[]>(`clients_${franchiseId}`);
+            if (cached) return cached;
+        }
 
         const { data, error } = await supabase
             .from('clients')
             .select('*')
             .eq('franchise_id', franchiseId)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit - 1);
 
         if (error) throw error;
 
-        setCache(cacheKey, data);
+        if (offset === 0) setCache(`clients_${franchiseId}`, data);
         return data as Client[];
     },
 
@@ -56,6 +59,7 @@ export const clientService = {
 
         if (error) throw error;
         invalidateCache(`clients_${franchiseId}`);
+        invalidateCache(`clients_${franchiseId}_0`);
         return data as Client;
     },
 
@@ -70,7 +74,7 @@ export const clientService = {
             .single();
 
         if (error) throw error;
-        if (franchiseId) invalidateCache(`clients_${franchiseId}`);
+        if (franchiseId) { invalidateCache(`clients_${franchiseId}`); invalidateCache(`clients_${franchiseId}_0`); }
         return data as Client;
     },
 
@@ -79,7 +83,7 @@ export const clientService = {
         const franchiseId = await getFranchiseId(supabase);
         const { error } = await supabase.from('clients').delete().eq('id', id);
         if (error) throw error;
-        if (franchiseId) invalidateCache(`clients_${franchiseId}`);
+        if (franchiseId) { invalidateCache(`clients_${franchiseId}`); invalidateCache(`clients_${franchiseId}_0`); }
     },
 
     async getGeolocatedClients() {

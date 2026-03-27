@@ -135,7 +135,7 @@ export const proposalService = {
         if (error) throw error;
     },
 
-    async getRecentProposals(limit = 20) {
+    async getRecentProposals(limit = 20, offset = 0) {
         const supabase = createClient();
         const franchiseId = await getFranchiseId(supabase);
         if (!franchiseId) return [];
@@ -145,7 +145,7 @@ export const proposalService = {
             .select('*, clients(name)')
             .eq('franchise_id', franchiseId)
             .order('created_at', { ascending: false })
-            .limit(limit);
+            .range(offset, offset + limit - 1);
 
         if (error) throw error;
         return data as Proposal[];

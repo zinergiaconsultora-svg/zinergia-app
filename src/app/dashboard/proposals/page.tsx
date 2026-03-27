@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import useSWR from 'swr';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { crmService } from '@/services/crmService';
 import { Proposal } from '@/types/crm';
 import { PieChart, Plus, Clock, Users, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
+
+const PAGE_SIZE = 20;
 
 interface AuditGroup {
     client_id: string;
@@ -14,22 +15,33 @@ interface AuditGroup {
     items: Proposal[];
 }
 
-// SWR fetcher function
-const fetchProposals = async () => {
-    return crmService.getRecentProposals();
-};
-
 export default function ProposalsPage() {
-    // Use SWR for data fetching with caching
-    const { data: proposals = [], isLoading } = useSWR(
-        'recent-proposals',
-        fetchProposals,
-        {
-            revalidateOnFocus: false,
-            dedupingInterval: 5000,
-            refreshInterval: 30000, // Refresh every 30 seconds
+    const [proposals, setProposals] = useState<Proposal[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
+    const [offset, setOffset] = useState(0);
+
+    const fetchProposals = useCallback(async (currentOffset: number, append: boolean) => {
+        try {
+            const data = await crmService.getRecentProposals(PAGE_SIZE, currentOffset);
+            setProposals(prev => append ? [...prev, ...data] : data);
+            setOffset(currentOffset + data.length);
+            setHasMore(data.length === PAGE_SIZE);
+        } catch (err) {
+            console.error('Error loading proposals:', err);
         }
-    );
+    }, []);
+
+    useEffect(() => {
+        fetchProposals(0, false).finally(() => setIsLoading(false));
+    }, [fetchProposals]);
+
+    const loadMore = async () => {
+        setIsLoadingMore(true);
+        await fetchProposals(offset, true);
+        setIsLoadingMore(false);
+    };
 
     // Memoize grouped proposals calculation - Optimized to O(n log n)
     const groupedProposals = useMemo(() => {
@@ -86,119 +98,140 @@ export default function ProposalsPage() {
                     ))}
                 </div>
             ) : groupedProposals.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-                    {groupedProposals.map((group) => (
-                        <div
-                            key={`${group.client_id}-${group.date}`}
-                            className="bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all overflow-hidden flex flex-col group"
-                        >
-                            {/* Card Header: Client Info */}
-                            <div className="p-6 pb-4 flex justify-between items-start">
-                                <div>
-                                    <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                                        {group.clientName}
-                                    </h3>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mt-1.5">
-                                        <Clock size={12} className="text-slate-300" />
-                                        Sesión: {new Date(group.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                    </p>
-                                </div>
-                                <div className="p-2.5 bg-slate-50 rounded-xl text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                                    <Users size={18} />
-                                </div>
-                            </div>
-
-                            {/* Options List */}
-                            <div className="flex-1 p-6 pt-2 space-y-4">
-                                <div className="flex justify-between items-end px-1">
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] opacity-70">Opciones Generadas</p>
-
-                                    {/* Intelligence Badges (Summary for the group based on best proposal) */}
-                                    {group.items[0]?.aletheia_summary?.client_profile?.tags && (
-                                        <div className="flex gap-1">
-                                            {group.items[0].aletheia_summary.client_profile.tags.slice(0, 2).map((tag: string) => (
-                                                <span key={tag} className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100 uppercase tracking-tight">
-                                                    {tag.replace('_', ' ')}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                        {groupedProposals.map((group) => (
+                            <div
+                                key={`${group.client_id}-${group.date}`}
+                                className="bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all overflow-hidden flex flex-col group"
+                            >
+                                {/* Card Header: Client Info */}
+                                <div className="p-6 pb-4 flex justify-between items-start">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                                            {group.clientName}
+                                        </h3>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mt-1.5">
+                                            <Clock size={12} className="text-slate-300" />
+                                            Sesión: {new Date(group.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                        </p>
+                                    </div>
+                                    <div className="p-2.5 bg-slate-50 rounded-xl text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                                        <Users size={18} />
+                                    </div>
                                 </div>
 
-                                <div className="space-y-3">
-                                    {group.items.map((p: Proposal, idx: number) => {
-                                        const roiHigh = p.savings_percent > 30;
-                                        const hasOpp = p.aletheia_summary?.opportunities && p.aletheia_summary.opportunities.length > 0;
+                                {/* Options List */}
+                                <div className="flex-1 p-6 pt-2 space-y-4">
+                                    <div className="flex justify-between items-end px-1">
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] opacity-70">Opciones Generadas</p>
 
-                                        return (
-                                            <Link
-                                                href={`/dashboard/proposals/${p.id}`}
-                                                key={p.id}
-                                                className="block p-4 bg-slate-50/50 rounded-2xl border border-transparent hover:border-indigo-100 hover:bg-white hover:shadow-md transition-all relative overflow-hidden group/item"
-                                            >
-                                                <div className="relative z-10 flex items-center justify-between">
-                                                    <div className="min-w-0 flex-1 pr-4">
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <span className={`text-[8px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${idx === 0 ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                                                                {idx === 0 ? 'Opción A' : 'Opción B'}
-                                                            </span>
-                                                            <span className="text-xs font-semibold text-slate-800 truncate">{p.offer_snapshot.marketer_name}</span>
+                                        {/* Intelligence Badges (Summary for the group based on best proposal) */}
+                                        {group.items[0]?.aletheia_summary?.client_profile?.tags && (
+                                            <div className="flex gap-1">
+                                                {group.items[0].aletheia_summary.client_profile.tags.slice(0, 2).map((tag: string) => (
+                                                    <span key={tag} className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100 uppercase tracking-tight">
+                                                        {tag.replace('_', ' ')}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {group.items.map((p: Proposal, idx: number) => {
+                                            const roiHigh = p.savings_percent > 30;
+                                            const hasOpp = p.aletheia_summary?.opportunities && p.aletheia_summary.opportunities.length > 0;
+
+                                            return (
+                                                <Link
+                                                    href={`/dashboard/proposals/${p.id}`}
+                                                    key={p.id}
+                                                    className="block p-4 bg-slate-50/50 rounded-2xl border border-transparent hover:border-indigo-100 hover:bg-white hover:shadow-md transition-all relative overflow-hidden group/item"
+                                                >
+                                                    <div className="relative z-10 flex items-center justify-between">
+                                                        <div className="min-w-0 flex-1 pr-4">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className={`text-[8px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${idx === 0 ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                                                                    {idx === 0 ? 'Opción A' : 'Opción B'}
+                                                                </span>
+                                                                <span className="text-xs font-semibold text-slate-800 truncate">{p.offer_snapshot.marketer_name}</span>
+                                                            </div>
+
+                                                            {/* Tariff & Tech Info */}
+                                                            <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium">
+                                                                <span className="truncate max-w-[120px]">{p.offer_snapshot.tariff_name}</span>
+
+                                                                {/* Opportunity Indicators */}
+                                                                {hasOpp && (
+                                                                    <div className="flex items-center gap-1 ml-auto md:ml-2 pl-2 border-l border-slate-200">
+                                                                        {p.aletheia_summary!.opportunities.map((opp, i) => (
+                                                                            <span key={i} title={opp.description} className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                                                        ))}
+                                                                        <span className="text-[9px] text-amber-600 font-bold">{p.aletheia_summary!.opportunities.length} Upsells</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
 
-                                                        {/* Tariff & Tech Info */}
-                                                        <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium">
-                                                            <span className="truncate max-w-[120px]">{p.offer_snapshot.tariff_name}</span>
-
-                                                            {/* Opportunity Indicators */}
-                                                            {hasOpp && (
-                                                                <div className="flex items-center gap-1 ml-auto md:ml-2 pl-2 border-l border-slate-200">
-                                                                    {p.aletheia_summary!.opportunities.map((opp, i) => (
-                                                                        <span key={i} title={opp.description} className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                                                                    ))}
-                                                                    <span className="text-[9px] text-amber-600 font-bold">{p.aletheia_summary!.opportunities.length} Upsells</span>
-                                                                </div>
+                                                        <div className="text-right flex flex-col items-end">
+                                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Ahorro</p>
+                                                            <p className={`text-base font-bold ${roiHigh ? 'text-emerald-600' : 'text-slate-700'}`}>
+                                                                +{Math.round(p.annual_savings)}€
+                                                            </p>
+                                                            {roiHigh && (
+                                                                <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full mt-0.5">
+                                                                    {p.savings_percent.toFixed(0)}% OFF
+                                                                </span>
                                                             )}
                                                         </div>
                                                     </div>
-
-                                                    <div className="text-right flex flex-col items-end">
-                                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Ahorro</p>
-                                                        <p className={`text-base font-bold ${roiHigh ? 'text-emerald-600' : 'text-slate-700'}`}>
-                                                            +{Math.round(p.annual_savings)}€
-                                                        </p>
-                                                        {roiHigh && (
-                                                            <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full mt-0.5">
-                                                                {p.savings_percent.toFixed(0)}% OFF
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                {/* Status Badge Mini */}
-                                                <div className={`absolute top-0 right-0 h-full w-1 ${p.status === 'accepted' ? 'bg-emerald-500' : roiHigh ? 'bg-emerald-400/30' : 'bg-transparent'}`}></div>
-                                            </Link>
-                                        )
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Footer: Quick Summary */}
-                            <div className="p-4 px-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between group-hover:bg-indigo-50/30 transition-colors">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                                        <TrendingUp size={14} className="text-indigo-600" />
+                                                    {/* Status Badge Mini */}
+                                                    <div className={`absolute top-0 right-0 h-full w-1 ${p.status === 'accepted' ? 'bg-emerald-500' : roiHigh ? 'bg-emerald-400/30' : 'bg-transparent'}`}></div>
+                                                </Link>
+                                            )
+                                        })}
                                     </div>
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ahorro Máximo</span>
                                 </div>
-                                <div className="flex flex-col items-end">
-                                    <span className="text-lg font-bold text-slate-900 leading-none">
-                                        {Math.round(group.items[0]?.annual_savings || 0)}€
-                                    </span>
-                                    <span className="text-[8px] font-bold text-emerald-600 uppercase tracking-tighter mt-1">Anuales</span>
+
+                                {/* Footer: Quick Summary */}
+                                <div className="p-4 px-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between group-hover:bg-indigo-50/30 transition-colors">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                                            <TrendingUp size={14} className="text-indigo-600" />
+                                        </div>
+                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ahorro Máximo</span>
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-lg font-bold text-slate-900 leading-none">
+                                            {Math.round(group.items[0]?.annual_savings || 0)}€
+                                        </span>
+                                        <span className="text-[8px] font-bold text-emerald-600 uppercase tracking-tighter mt-1">Anuales</span>
+                                    </div>
                                 </div>
                             </div>
+                        ))}
+                    </div>
+
+                    {/* Load More */}
+                    {hasMore && (
+                        <div className="flex justify-center pt-4">
+                            <button
+                                type="button"
+                                onClick={loadMore}
+                                disabled={isLoadingMore}
+                                className="flex items-center gap-2 px-8 py-3.5 bg-white border border-slate-200 text-slate-700 rounded-2xl font-semibold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                {isLoadingMore ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                                        Cargando...
+                                    </>
+                                ) : 'Cargar más propuestas'}
+                            </button>
                         </div>
-                    ))}
-                </div>
+                    )}
+                </>
             ) : (
                 <div className="bg-white rounded-[3rem] p-16 text-center border border-slate-100 shadow-sm max-w-2xl mx-auto mt-12">
                     <div className="w-20 h-20 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
