@@ -26,7 +26,7 @@ export async function getActiveCommissionRule(): Promise<typeof DEFAULT_COMMISSI
         const supabase = await createClient()
         const { data } = await supabase
             .from('commission_rules')
-            .select('*')
+            .select('id, name, commission_rate, agent_share, franchise_share, hq_share, points_per_win, is_active, effective_from, created_by')
             .eq('is_active', true)
             .order('effective_from', { ascending: false })
             .limit(1)
@@ -49,7 +49,7 @@ export async function getCommissionRules(): Promise<CommissionRule[]> {
 
     const { data, error } = await supabase
         .from('commission_rules')
-        .select('*')
+        .select('id, name, commission_rate, agent_share, franchise_share, hq_share, points_per_win, is_active, effective_from, created_by')
         .order('effective_from', { ascending: false })
 
     if (error) throw error

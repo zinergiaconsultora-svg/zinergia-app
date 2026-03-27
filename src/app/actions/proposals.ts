@@ -22,7 +22,7 @@ export async function updateProposalStatusAction(
         .from('proposals')
         .update({ status })
         .eq('id', id)
-        .select('*')
+        .select('id, client_id, franchise_id, created_at, status, offer_snapshot, calculation_data, current_annual_cost, offer_annual_cost, annual_savings, savings_percent, notes, optimization_result, aletheia_summary')
         .single()
 
     if (error) throw error

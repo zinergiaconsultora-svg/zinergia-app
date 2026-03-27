@@ -7,8 +7,6 @@ export async function analyzeDocumentAction(formData: FormData): Promise<Invoice
     const OCR_WEBHOOK_URL = env.OCR_WEBHOOK_URL;
     const WEBHOOK_API_KEY = env.WEBHOOK_API_KEY;
 
-    console.log('[OCR Action] Starting document analysis');
-
     if (!OCR_WEBHOOK_URL) {
         throw new Error('OCR_WEBHOOK_URL is not defined');
     }
@@ -17,21 +15,11 @@ export async function analyzeDocumentAction(formData: FormData): Promise<Invoice
         throw new Error('WEBHOOK_API_KEY is not defined');
     }
 
-    // Diagnostic Logging for Vercel
-    const envCheck = {
-        OCR_WEBHOOK_URL: 'Defined (Length: ' + OCR_WEBHOOK_URL.length + ')',
-        WEBHOOK_API_KEY: 'Defined',
-        NODE_ENV: env.NODE_ENV,
-    };
-    console.log('[OCR Action] Environment Configuration:', JSON.stringify(envCheck, null, 2));
-
     try {
         const file = formData.get('file') as File;
         if (!file) {
             throw new Error('No file provided');
         }
-
-        console.log('[OCR Action] File received:', { name: file.name, size: file.size, type: file.type });
 
         const response = await fetch(OCR_WEBHOOK_URL, {
             method: 'POST',
@@ -40,8 +28,6 @@ export async function analyzeDocumentAction(formData: FormData): Promise<Invoice
             },
             body: formData,
         });
-
-        console.log('[OCR Action] Webhook response status:', response.status);
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -119,11 +105,8 @@ export async function analyzeDocumentAction(formData: FormData): Promise<Invoice
         } as InvoiceData;
 
     } catch (error) {
-        console.error('Server Action OCR Error:', error);
-
-        // Mock data fallback for development
         if (env.NODE_ENV === 'development') {
-            console.warn('⚠️ OCR Webhook failed. Using MOCK data for development.');
+            console.warn('⚠️ OCR Webhook failed. Using MOCK data for development.', error);
             return {
                 client_name: 'Empresa Mock S.L.',
                 dni_cif: 'B12345678',
@@ -143,6 +126,7 @@ export async function analyzeDocumentAction(formData: FormData): Promise<Invoice
             } as InvoiceData;
         }
 
-        throw error;
+        console.error('[OCR] Webhook error:', error);
+        throw new Error('No se ha podido procesar la factura. Verifica que el archivo es legible e inténtalo de nuevo.');
     }
 }

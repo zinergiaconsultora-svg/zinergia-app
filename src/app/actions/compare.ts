@@ -11,12 +11,10 @@ const N8N_TIMEOUT_MS = 10_000;
 // ── Aletheia local fallback ───────────────────────────────────────────────────
 
 async function runAletheiaFallback(invoice: InvoiceData) {
-    console.log('[Compare Action] n8n unavailable — running Aletheia local engine');
-
     const supabase = await createClient();
     const { data: rows, error } = await supabase
         .from('lv_zinergia_tarifas')
-        .select('*')
+        .select('id, company, tariff_name, logo_color, offer_type, fixed_fee, contract_duration, power_price_p1, power_price_p2, power_price_p3, energy_price_p1, energy_price_p2, energy_price_p3')
         .eq('is_active', true);
 
     if (error || !rows || rows.length === 0) {
@@ -47,8 +45,6 @@ async function runAletheiaFallback(invoice: InvoiceData) {
 export async function calculateSavingsAction(invoice: InvoiceData) {
     const COMPARISON_WEBHOOK_URL = env.COMPARISON_WEBHOOK_URL;
     const WEBHOOK_API_KEY = env.WEBHOOK_API_KEY;
-
-    console.log('[Compare Action] Starting savings calculation');
 
     // If webhook is not configured, go straight to local engine
     if (!COMPARISON_WEBHOOK_URL || !WEBHOOK_API_KEY) {
