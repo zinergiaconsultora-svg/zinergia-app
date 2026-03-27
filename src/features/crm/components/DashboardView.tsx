@@ -23,6 +23,7 @@ import { QuickUploadZone } from './QuickUploadZone';
 const LeaderboardWidget = dynamic(() => import('@/features/gamification/components/LeaderboardWidget').then(mod => mod.LeaderboardWidget), { loading: () => <div className="h-64 bg-slate-100/50 animate-pulse rounded-2xl" /> });
 const AchievementsWidget = dynamic(() => import('@/features/gamification/components/AchievementsWidget').then(mod => mod.AchievementsWidget));
 const NotificationsPopover = dynamic(() => import('@/features/crm/components/NotificationsPopover').then(mod => mod.NotificationsPopover), { ssr: false });
+const OcrJobsPanel = dynamic(() => import('./OcrJobsPanel'), { ssr: false, loading: () => <div className="h-32 bg-slate-100/50 animate-pulse rounded-2xl" /> });
 const SavingsTrendChart = dynamic(() => import('./DashboardCharts').then(mod => mod.SavingsTrendChart), { loading: () => <div className="h-full w-full bg-slate-100/20 animate-pulse rounded-lg" /> });
 const PipelinePieChart = dynamic(() => import('./DashboardCharts').then(mod => mod.PipelinePieChart), { loading: () => <div className="h-full w-full bg-slate-100/20 animate-pulse rounded-full" /> });
 
@@ -338,6 +339,11 @@ export default function DashboardView() {
                             <div className="flex-1 overflow-y-auto p-3 pt-2 custom-scrollbar">
                                 <AchievementsWidget />
                             </div>
+                        </div>
+
+                        {/* OCR Jobs History */}
+                        <div className="flex-[2] min-h-0">
+                            <OcrJobsPanel />
                         </div>
                     </div>
                 </motion.div>
