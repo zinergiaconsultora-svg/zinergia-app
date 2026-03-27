@@ -2,12 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { Proposal } from '@/types/crm'
-
-const COMMISSION_RATE = 0.15   // 15% of annual_savings as the commission pot
-const AGENT_SHARE    = 0.30    // Agent receives 30% of pot
-const FRANCHISE_SHARE = 0.50   // Franchise receives 50% of pot
-const HQ_SHARE       = 0.20   // HQ receives 20% of pot
-const POINTS_PER_WIN = 50
+import { getActiveCommissionRule } from './commissionRules'
 
 /**
  * Updates a proposal's status and, if moving to 'accepted',
@@ -66,17 +61,18 @@ async function processCommissions(
 
         if (!profile?.franchise_id) return
 
-        // Calculate commission splits
-        const pot = (proposal.annual_savings || 0) * COMMISSION_RATE
+        // Load active commission rule (falls back to defaults if table missing)
+        const rule = await getActiveCommissionRule()
+        const pot = (proposal.annual_savings || 0) * rule.commission_rate
 
         await supabase.from('network_commissions').insert({
             proposal_id: proposal.id,
             agent_id: user.id,
             franchise_id: profile.franchise_id,
             total_revenue: pot,
-            agent_commission: pot * AGENT_SHARE,
-            franchise_profit: pot * FRANCHISE_SHARE,
-            hq_royalty: pot * HQ_SHARE,
+            agent_commission: pot * rule.agent_share,
+            franchise_profit: pot * rule.franchise_share,
+            hq_royalty: pot * rule.hq_share,
             status: 'pending',
         })
 
@@ -89,7 +85,7 @@ async function processCommissions(
 
         await supabase.from('user_points').upsert({
             user_id: user.id,
-            points: (current?.points || 0) + POINTS_PER_WIN,
+            points: (current?.points || 0) + rule.points_per_win,
             last_updated: new Date().toISOString(),
         })
     } catch (err) {
