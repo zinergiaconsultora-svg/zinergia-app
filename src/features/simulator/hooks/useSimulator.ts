@@ -93,20 +93,20 @@ function simulatorReducer(state: SimulatorState, action: SimulatorAction): Simul
 export function useSimulator() {
     const [state, dispatch] = useReducer(simulatorReducer, initialState);
 
-    // Clean up PDF URL on unmount or change
+    // Pick up pre-analyzed invoice from QuickUploadZone (dashboard shortcut)
     useEffect(() => {
-        return () => {
-            // We only clean up when the component unmounts, OR if we want to be strict, when pdfUrl changes.
-            // Since we dispatch SET_PDF_URL, the previous one might leak if we don't track it.
-            // But strict cleanup is tricky inside reducer. 
-            // Better to handle it in handleFileUpload before setting new one? 
-            // Or just cleanup on unmount for this session.
-            // Ideally: we should store pdfUrl in ref to clean up previous.
-        };
+        if (typeof window === 'undefined') return;
+        const raw = sessionStorage.getItem('pendingInvoiceData');
+        if (!raw) return;
+        sessionStorage.removeItem('pendingInvoiceData');
+        try {
+            const { data, isMock } = JSON.parse(raw) as { data: InvoiceData; isMock: boolean };
+            dispatch({ type: 'SET_MOCK_MODE', payload: isMock });
+            dispatch({ type: 'SET_INVOICE_DATA', payload: data });
+        } catch {
+            // Malformed entry — ignore
+        }
     }, []);
-
-    // Effect to revoke URL when state.pdfUrl changes (if we had previous) - omitted for simplicity in MVP, 
-    // relying on browser to clean up on page reload or weak ref, but let's add simple unmount cleanup if possible.
 
     const processInvoice = useCallback(async (file: File) => {
         dispatch({ type: 'START_ANALYSIS' });
