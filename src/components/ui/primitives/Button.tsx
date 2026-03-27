@@ -19,10 +19,10 @@ export const Button = React.forwardRef<HTMLButtonElement, MotionButtonProps>(
     ({ className, variant = 'primary', size = 'md', isLoading, leftIcon, rightIcon, children, ...props }, ref) => {
 
         const variants = {
-            primary: "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/40 hover:scale-[1.02]",
-            secondary: "bg-white/50 text-slate-700 border border-slate-200/50 hover:bg-white/80 shadow-sm hover:shadow-md",
-            ghost: "bg-transparent text-slate-600 hover:bg-slate-100/50 hover:text-slate-900",
-            danger: "bg-red-50 text-red-600 hover:bg-red-100 border border-red-100",
+            primary: "bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow",
+            secondary: "bg-white/60 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60 hover:bg-white/90 dark:hover:bg-slate-800",
+            ghost: "bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white",
+            danger: "bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-100 dark:border-rose-900/30",
         };
 
         const sizes = {
@@ -37,7 +37,7 @@ export const Button = React.forwardRef<HTMLButtonElement, MotionButtonProps>(
                 ref={ref}
                 whileTap={{ scale: 0.98 }}
                 className={cn(
-                    "inline-flex items-center justify-center gap-2 rounded-full font-medium transition-all font-display disabled:opacity-50 disabled:pointer-events-none",
+                    "inline-flex items-center justify-center gap-2 rounded-2xl font-medium transition-all font-sans disabled:opacity-50 disabled:pointer-events-none",
                     variants[variant],
                     sizes[size],
                     className
