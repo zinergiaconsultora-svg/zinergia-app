@@ -226,16 +226,6 @@ export function useSimulator() {
                 };
             });
 
-            // Persist Insights to Local Storage for "Smart Dashboard" usage (The "Opportunity Cards")
-            if (typeof window !== 'undefined') {
-                localStorage.setItem('aletheia_insights', JSON.stringify({
-                    opportunities: aletheiaResult.opportunities,
-                    profile: aletheiaResult.client_profile,
-                    current_status: aletheiaResult.current_status,
-                    optimization_recommendations: aletheiaResult.optimization_recommendations
-                }));
-            }
-
             // Dispatch optimization recommendations
             dispatch({ type: 'SET_OPTIMIZATION_RECOMMENDATIONS', payload: aletheiaResult.optimization_recommendations || [] });
             dispatch({ type: 'SET_OPPORTUNITIES', payload: aletheiaResult.opportunities || [] });
@@ -275,10 +265,6 @@ export function useSimulator() {
                     }
                 }
 
-                localStorage.setItem('antigravity_simulator_result', JSON.stringify(mappedResults[0]));
-                localStorage.setItem('antigravity_simulator_invoice', JSON.stringify(state.invoiceData));
-                sessionStorage.setItem('simulator_result', JSON.stringify(mappedResults[0]));
-                sessionStorage.setItem('simulator_invoice', JSON.stringify(state.invoiceData));
             }
         } catch (error) {
             console.error('Comparison failed', error);
