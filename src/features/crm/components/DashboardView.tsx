@@ -46,6 +46,7 @@ interface DashboardStats {
         status: string;
         created_at: string;
     }[];
+    savingsTrend?: { name: string; value: number }[];
     pendingActions: {
         id: string;
         client_name: string;
@@ -252,7 +253,7 @@ export default function DashboardView() {
                         <div>
                             <div className="text-[10px] font-medium text-indigo-200 uppercase tracking-wider mb-0.5">Academia</div>
                             <div className="text-xl font-bold flex items-center gap-2">
-                                4 Nuevos <ArrowRight size={14} className="opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all" />
+                                Academy <ArrowRight size={14} className="opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all" />
                             </div>
                         </div>
                         <GraduationCap size={24} className="text-indigo-200/50 group-hover:text-indigo-100 transition-colors" />
@@ -269,7 +270,7 @@ export default function DashboardView() {
                             <SectionHeader title="Tendencia de Ahorro" link="Ver Reporte" />
                             <div className="flex-1 w-full min-h-0 mt-1 relative">
                                 <div className="absolute inset-0">
-                                    <SavingsTrendChart />
+                                    <SavingsTrendChart data={stats.savingsTrend ?? []} />
                                 </div>
                             </div>
                         </div>
