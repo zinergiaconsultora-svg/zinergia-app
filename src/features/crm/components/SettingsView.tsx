@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
@@ -23,7 +23,8 @@ import {
 import { DashboardCard } from './DashboardCard';
 import { crmService } from '@/services/crmService';
 import { saveCommissionRule } from '@/app/actions/commissionRules';
-import { CommissionRule } from '@/types/crm';
+import { saveProfileSettingsAction } from '@/app/actions/profile';
+import { CommissionRule, NetworkUser } from '@/types/crm';
 
 interface SettingsViewProps {
     canManageCommissions?: boolean;
@@ -38,6 +39,8 @@ export default function SettingsView({
 }: SettingsViewProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'profile' | 'commercial' | 'network' | 'commissions'>('profile');
 
     // Mock initial state
@@ -85,24 +88,35 @@ export default function SettingsView({
         }
     };
 
-    // Mock Network Data (for Admin view)
-    const [network] = useState([
-        { id: 1, name: 'Franquicia Madrid Norte', type: 'franchise', owner: 'Juan Pérez', royalty: 10, collaborators: 5, status: 'active' },
-        { id: 2, name: 'Franquicia Barcelona', type: 'franchise', owner: 'Ana Garcia', royalty: 12, collaborators: 3, status: 'active' },
-        { id: 3, name: 'Pedro Colaborador', type: 'collaborator', owner: 'Pedro Lopez', commission: 50, sales: 12, status: 'active' }, // Direct collaborator of Admin
-        { id: 2, name: 'Franquicia Barcelona', type: 'franchise', owner: 'Ana Garcia', royalty: 12, collaborators: 3, status: 'active' },
-        { id: 3, name: 'Pedro Colaborador', type: 'collaborator', owner: 'Pedro Lopez', commission: 50, sales: 12, status: 'active' }, // Direct collaborator of Admin
-    ]);
+    // Real network data
+    const [networkNodes, setNetworkNodes] = useState<NetworkUser[]>([]);
+    const [networkLoading, setNetworkLoading] = useState(false);
+
+    useEffect(() => {
+        if (activeTab !== 'network') return;
+        setNetworkLoading(true);
+        crmService.getNetworkHierarchy()
+            .then(tree => {
+                // Flatten tree: root nodes + their direct children
+                const flat: NetworkUser[] = [];
+                tree.forEach(root => {
+                    flat.push(root);
+                    (root.children || []).forEach(child => flat.push(child));
+                });
+                setNetworkNodes(flat);
+            })
+            .catch(err => console.error('Error loading network:', err))
+            .finally(() => setNetworkLoading(false));
+    }, [activeTab]);
 
     const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
         setLoading(true);
+        setSaveError(null);
         try {
             const extractedData = await crmService.analyzeDocument(file);
-
-
             if (extractedData) {
                 setSettings(prev => ({
                     ...prev,
@@ -110,11 +124,12 @@ export default function SettingsView({
                     nif: extractedData.dni_cif || prev.nif,
                     address: extractedData.supply_address || prev.address
                 }));
-                // TODO: Show success toast
+                setSaveSuccess(true);
+                setTimeout(() => setSaveSuccess(false), 3000);
             }
         } catch (error) {
             console.error('Upload failed:', error);
-            // TODO: Show error toast
+            setSaveError('Error al procesar el documento');
         } finally {
             setLoading(false);
         }
@@ -122,11 +137,18 @@ export default function SettingsView({
 
     const handleSave = useCallback(async () => {
         setLoading(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setLoading(false);
-        // TODO: Show toast success
-    }, []);
+        setSaveSuccess(false);
+        setSaveError(null);
+        try {
+            await saveProfileSettingsAction(settings);
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 3000);
+        } catch (err) {
+            setSaveError(err instanceof Error ? err.message : 'Error al guardar');
+        } finally {
+            setLoading(false);
+        }
+    }, [settings]);
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -213,18 +235,31 @@ export default function SettingsView({
                         </div>
 
                         {activeTab !== 'network' && activeTab !== 'commissions' && (
-                            <button
-                                onClick={handleSave}
-                                disabled={loading}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-energy-600 text-white rounded-xl font-bold hover:bg-energy-700 transition-all shadow-lg shadow-energy-500/30 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ml-2"
-                            >
-                                {loading ? (
-                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : (
-                                    <Save size={18} />
+                            <div className="flex items-center gap-3 ml-2">
+                                {saveSuccess && (
+                                    <span className="text-sm font-medium text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg animate-in fade-in">
+                                        ✓ Guardado
+                                    </span>
                                 )}
-                                Guardar
-                            </button>
+                                {saveError && (
+                                    <span className="text-sm font-medium text-rose-600 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-lg animate-in fade-in">
+                                        {saveError}
+                                    </span>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={handleSave}
+                                    disabled={loading}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-energy-600 text-white rounded-xl font-bold hover:bg-energy-700 transition-all shadow-lg shadow-energy-500/30 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+                                >
+                                    {loading ? (
+                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        <Save size={18} />
+                                    )}
+                                    Guardar
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -299,7 +334,7 @@ export default function SettingsView({
                                         <p className="text-sm text-slate-400 mb-6 max-w-sm">
                                             Aceptamos PDF, JPG o PNG. Nuestro sistema procesará la imagen para extraer Razón Social, NIF y Dirección automáticamente.
                                         </p>
-                                        <button className="px-6 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm shadow-lg shadow-slate-900/20 group-hover:bg-energy-600 group-hover:shadow-energy-600/30 transition-all">
+                                        <button type="button" className="px-6 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm shadow-lg shadow-slate-900/20 group-hover:bg-energy-600 group-hover:shadow-energy-600/30 transition-all">
                                             Seleccionar Archivos
                                         </button>
                                         <div className="relative">
@@ -311,7 +346,7 @@ export default function SettingsView({
                                                 title="Elegir archivo"
                                                 aria-label="Subir documento para extracción de datos"
                                             />
-                                            <button className="px-6 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm shadow-lg shadow-slate-900/20 group-hover:bg-energy-600 group-hover:shadow-energy-600/30 transition-all pointer-events-none">
+                                            <button type="button" className="px-6 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm shadow-lg shadow-slate-900/20 group-hover:bg-energy-600 group-hover:shadow-energy-600/30 transition-all pointer-events-none">
                                                 {loading ? 'Procesando...' : 'Seleccionar Archivos'}
                                             </button>
                                         </div>
@@ -480,7 +515,7 @@ export default function SettingsView({
                                     </span>
                                 </p>
                             </div>
-                            <button className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20">
+                            <button type="button" className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20">
                                 <Plus size={16} />
                                 Nueva Entidad
                             </button>
@@ -584,64 +619,77 @@ export default function SettingsView({
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
-                                    {network.map((node) => (
-                                        <tr key={node.id} className="hover:bg-slate-50/50 transition-colors group">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${node.type === 'franchise' ? 'bg-indigo-600' : 'bg-emerald-500'}`}>
-                                                        {node.name.charAt(0)}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-bold text-slate-900 text-sm">{node.name}</p>
-                                                        <p className="text-xs text-slate-400">{node.owner}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${node.type === 'franchise'
-                                                    ? 'bg-indigo-50 text-indigo-700 border-indigo-100'
-                                                    : 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                                                    }`}>
-                                                    {node.type === 'franchise' ? 'Franquicia' : 'Colaborador'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm text-slate-600">
-                                                    {node.type === 'franchise' ? (
-                                                        <div className="flex flex-col gap-1">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">Retiene {100 - (node.royalty || 0)}%</span>
-                                                                <span className="text-xs text-slate-400">/</span>
-                                                                <span className="text-xs font-bold text-slate-600">Tú {node.royalty || 0}%</span>
-                                                            </div>
-                                                            <span className="text-[10px] text-slate-400">Canon Entrada: 3.000€</span>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex flex-col gap-1">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">Retiene {node.commission || 0}%</span>
-                                                                <span className="text-xs text-slate-400">/</span>
-                                                                <span className="text-xs font-bold text-slate-600">Tú {100 - (node.commission || 0)}%</span>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                {node.type === 'franchise' && (
-                                                    <div className="flex items-center gap-1 text-slate-500 text-sm">
-                                                        <Users size={14} />
-                                                        <span>{node.collaborators} colabs</span>
-                                                    </div>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors" title="Ver opciones">
-                                                    <MoreVertical size={18} />
-                                                </button>
+                                    {networkLoading && (
+                                        <tr>
+                                            <td colSpan={5} className="px-6 py-8 text-center text-sm text-slate-400">
+                                                Cargando red...
                                             </td>
                                         </tr>
-                                    ))}
+                                    )}
+                                    {!networkLoading && networkNodes.length === 0 && (
+                                        <tr>
+                                            <td colSpan={5} className="px-6 py-8 text-center text-sm text-slate-400">
+                                                No hay entidades en tu red todavía.
+                                            </td>
+                                        </tr>
+                                    )}
+                                    {networkNodes.map((node) => {
+                                        const isFranchise = node.role === 'franchise';
+                                        const royalty = node.franchise_config?.royalty_percent ?? 0;
+                                        const childCount = (node.children || []).length;
+                                        return (
+                                            <tr key={node.id} className="hover:bg-slate-50/50 transition-colors group">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${isFranchise ? 'bg-indigo-600' : 'bg-emerald-500'}`}>
+                                                            {node.full_name.charAt(0)}
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-bold text-slate-900 text-sm">{node.franchise_config?.company_name || node.full_name}</p>
+                                                            <p className="text-xs text-slate-400">{node.full_name}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${isFranchise
+                                                        ? 'bg-indigo-50 text-indigo-700 border-indigo-100'
+                                                        : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                                        }`}>
+                                                        {isFranchise ? 'Franquicia' : 'Colaborador'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm text-slate-600">
+                                                        {isFranchise ? (
+                                                            <div className="flex flex-col gap-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">Retiene {100 - royalty}%</span>
+                                                                    <span className="text-xs text-slate-400">/</span>
+                                                                    <span className="text-xs font-bold text-slate-600">Tú {royalty}%</span>
+                                                                </div>
+                                                                <span className="text-[10px] text-slate-400">Canon Entrada: 3.000€</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-xs text-slate-400">Según regla activa</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {isFranchise && childCount > 0 && (
+                                                        <div className="flex items-center gap-1 text-slate-500 text-sm">
+                                                            <Users size={14} />
+                                                            <span>{childCount} colabs</span>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <button type="button" className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors" title="Ver opciones">
+                                                        <MoreVertical size={18} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
