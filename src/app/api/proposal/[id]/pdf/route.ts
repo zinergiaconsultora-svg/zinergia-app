@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { crmService } from '@/services/crmService';
+import { createClient } from '@/lib/supabase/server';
 import { generateProposalPDF } from '@/lib/pdf/generate';
 
 export async function GET(
@@ -7,20 +7,32 @@ export async function GET(
     props: { params: Promise<{ id: string }> }
 ) {
     try {
+        // ── Auth guard ──────────────────────────────────────────────────────
+        const supabase = await createClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+            return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+        }
+
         const params = await props.params;
         const id = params.id;
         if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
 
-        // 1. Fetch Proposal
-        const proposal = await crmService.getProposalById(id);
-        if (!proposal) {
-            return NextResponse.json({ error: 'Proposal not found' }, { status: 404 });
+        // ── Fetch proposal scoped to the authenticated user's franchise ──────
+        const { data: proposal, error: proposalError } = await supabase
+            .from('proposals')
+            .select('*, clients(*), offer_snapshot, calculation_data')
+            .eq('id', id)
+            .single();
+
+        if (proposalError || !proposal) {
+            return NextResponse.json({ error: 'Propuesta no encontrada' }, { status: 404 });
         }
 
-        // 2. Generate PDF
+        // ── Generate PDF ────────────────────────────────────────────────────
         const pdfBuffer = await generateProposalPDF(proposal);
 
-        // 3. Return as PDF Stream
         return new NextResponse(pdfBuffer as unknown as BodyInit, {
             headers: {
                 'Content-Type': 'application/pdf',

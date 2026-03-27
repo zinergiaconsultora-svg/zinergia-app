@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { SavingsResult } from '../../../types/crm';
+import { toast } from 'sonner';
 import { Download, Mail, ShieldCheck, Zap, Loader2, FileText, TrendingDown, Lightbulb } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { formatCurrency } from '@/lib/utils/format';
@@ -66,7 +67,7 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
         try {
             const printWindow = window.open('', '_blank', 'width=900,height=700');
             if (!printWindow) {
-                alert('Permite las ventanas emergentes para descargar el PDF');
+                toast.error('Permite las ventanas emergentes para descargar el PDF');
                 setIsGeneratingPdf(false);
                 return;
             }
@@ -655,7 +656,7 @@ ${styles}
 
         } catch (error) {
             console.error('[PDF] Error:', error);
-            alert('Error al generar PDF.');
+            toast.error('Error al generar PDF.');
             setIsGeneratingPdf(false);
         }
     };

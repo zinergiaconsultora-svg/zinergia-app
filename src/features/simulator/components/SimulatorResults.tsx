@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { DemoModeAlert } from '@/components/ui/DemoModeAlert';
 import { Modal } from '@/components/ui/Modal';
 import { sendProposalEmail } from '@/app/actions/email';
+import { toast } from 'sonner';
 
 import { DigitalProposalCard } from '@/features/comparator/components/DigitalProposalCard';
 import { SavingsResult, Proposal } from '@/types/crm';
@@ -79,7 +80,7 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
             pdf.save(`zinergia-proposal-${invoiceData.client_name || 'draft'}.pdf`);
         } catch (error) {
             console.error('Error exporting PDF:', error);
-            alert('Error al generar el PDF');
+            toast.error('Error al generar el PDF');
         } finally {
             setIsExporting(false);
         }
@@ -109,10 +110,10 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                 invoiceData.client_name,
                 aletheiaSummary as any // Cast as partial AletheiaResult is acceptable for the service logic
             );
-            alert('Propuesta guardada correctamente en CRM');
+            toast.success('Propuesta guardada correctamente en CRM');
         } catch (error) {
             console.error('Error saving proposal:', error);
-            alert('Error al guardar la propuesta');
+            toast.error('Error al guardar la propuesta');
         } finally {
             setIsSaving(false);
         }
@@ -148,15 +149,15 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
             );
 
             if (response.success) {
-                alert('Email enviado correctamente con la propuesta adjunta.');
+                toast.success('Email enviado correctamente con la propuesta adjunta.');
                 setShowEmailModal(false);
                 setEmailAddress('');
             } else {
-                alert('Error al enviar el email: ' + response.error);
+                toast.error('Error al enviar el email: ' + response.error);
             }
         } catch (error) {
             console.error('Error sending email:', error);
-            alert('Error al enviar el email');
+            toast.error('Error al enviar el email');
         } finally {
             setIsSendingEmail(false);
         }

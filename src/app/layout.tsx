@@ -3,6 +3,7 @@ import { Outfit, Space_Grotesk, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
+import { Toaster } from "sonner";
 
 const outfit = Outfit({
     variable: "--font-sans",
@@ -42,6 +43,7 @@ export default function RootLayout({
                     <GlobalErrorBoundary>
                         {children}
                     </GlobalErrorBoundary>
+                    <Toaster position="bottom-right" richColors closeButton />
                 </ThemeProvider>
             </body>
         </html>

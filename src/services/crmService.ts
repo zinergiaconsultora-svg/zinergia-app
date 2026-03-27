@@ -129,16 +129,4 @@ export const crmService = {
         })) as any[];
     },
 
-    async simulateSale(amount = 2500) {
-        const supabase = createClient();
-        const franchiseId = await getFranchiseId(supabase);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user || !franchiseId) throw new Error('Auth fail');
-
-        const { data: client } = await supabase.from('clients').insert({ name: `Demo ${Date.now()}`, franchise_id: franchiseId, status: 'new', owner_id: user.id }).select().single();
-        const { data: proposal } = await supabase.from('proposals').insert({ client_id: client.id, status: 'draft', annual_savings: amount, franchise_id: franchiseId }).select().single();
-        
-        await this.updateProposalStatus(proposal.id, 'accepted');
-        return proposal;
-    }
 };

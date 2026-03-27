@@ -3,6 +3,7 @@ import { X, Send, Mail, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SavingsResult } from '../../../types/crm';
 import { emailService } from '@/services/emailService';
+import { toast } from 'sonner';
 
 interface EmailModalProps {
     isOpen: boolean;
@@ -43,7 +44,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ isOpen, onClose, result 
             }, 2000);
         } catch (error) {
             console.error(error);
-            alert('Error al enviar el email. Inténtalo de nuevo.');
+            toast.error('Error al enviar el email. Inténtalo de nuevo.');
         } finally {
             setSending(false);
         }
