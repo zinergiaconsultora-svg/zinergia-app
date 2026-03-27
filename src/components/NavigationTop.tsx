@@ -51,7 +51,7 @@ export const NavigationTop = () => {
     useEffect(() => {
         let mounted = true;
         crmService.getUserGamificationStats().then(data => {
-            if (mounted) setGamification(data);
+            if (mounted && data) setGamification(data);
         }).catch(() => { });
         return () => { mounted = false; };
     }, []);

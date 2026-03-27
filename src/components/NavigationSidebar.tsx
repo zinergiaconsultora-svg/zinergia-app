@@ -147,7 +147,7 @@ export const NavigationSidebar = React.memo(({ isMobile = false, onItemClick }: 
         const timer = setTimeout(() => {
             if (mounted) {
                 crmService.getUserGamificationStats().then(data => {
-                    if (mounted) setGamification(data);
+                    if (mounted && data) setGamification(data);
                 }).catch(() => {
                 });
             }
