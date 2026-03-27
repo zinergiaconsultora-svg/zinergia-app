@@ -249,7 +249,9 @@ export default function WalletView({ canManage = false, allCommissions: initialA
                             </div>
                             <button
                                 type="button"
-                                disabled={availableBalance === 0 || isPending}
+                                disabled={isPending}
+                                title="La función de retiro estará disponible próximamente"
+                                onClick={() => toast.info('Función de retiro de fondos disponible próximamente. Tu saldo se está acumulando.', { duration: 4000 })}
                                 className="w-full sm:w-auto bg-slate-900 text-white px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-95 text-center"
                             >
                                 Retirar Fondos
