@@ -4,6 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Upload } from 'lucide-react';
 import { analyzeDocumentWithRetry } from '@/services/simulatorService';
+import { toast } from 'sonner';
 
 export function QuickUploadZone() {
     const router = useRouter();
@@ -22,7 +23,7 @@ export function QuickUploadZone() {
             router.push('/dashboard/simulator');
         } catch (error) {
             console.error('Error analyzing document:', error);
-            alert('Error al analizar el documento. Por favor, intente de nuevo.');
+            toast.error('Error al analizar el documento. Por favor, intente de nuevo.');
         } finally {
             setIsAnalyzing(false);
         }
@@ -34,7 +35,7 @@ export function QuickUploadZone() {
         
         const file = e.dataTransfer.files[0];
         if (!file || file.type !== 'application/pdf') {
-            alert('Por favor, sube un archivo PDF válido');
+            toast.error('Por favor, sube un archivo PDF válido');
             return;
         }
 
@@ -45,7 +46,7 @@ export function QuickUploadZone() {
             router.push('/dashboard/simulator');
         } catch (error) {
             console.error('Error analyzing document:', error);
-            alert('Error al analizar el documento. Por favor, intente de nuevo.');
+            toast.error('Error al analizar el documento. Por favor, intente de nuevo.');
         } finally {
             setIsAnalyzing(false);
         }

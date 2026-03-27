@@ -18,6 +18,7 @@ import {
     ChevronUp
 } from 'lucide-react';
 import { useWallet } from '../hooks/useWallet';
+import { toast } from 'sonner';
 import { formatCurrency, formatDate } from '@/lib/utils/format';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { clearCommissionAction, payCommissionAction } from '@/app/actions/commissions';
@@ -55,7 +56,7 @@ export default function WalletView({ canManage = false, allCommissions: initialA
                 await clearCommissionAction(id);
                 setAllCommissions(prev => prev.map(c => c.id === id ? { ...c, status: 'cleared' } : c));
             } catch (e) {
-                alert(e instanceof Error ? e.message : 'Error al aprobar');
+                toast.error(e instanceof Error ? e.message : 'Error al aprobar');
             }
         });
     };
@@ -67,7 +68,7 @@ export default function WalletView({ canManage = false, allCommissions: initialA
                 setAllCommissions(prev => prev.map(c => c.id === id ? { ...c, status: 'paid' } : c));
                 reloadCommissions();
             } catch (e) {
-                alert(e instanceof Error ? e.message : 'Error al marcar como pagado');
+                toast.error(e instanceof Error ? e.message : 'Error al marcar como pagado');
             }
         });
     };

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Shield, Check, Copy, UserPlus, Target } from 'lucide-react';
 import { crmService } from '@/services/crmService';
+import { toast } from 'sonner';
 
 interface InviteModalProps {
     isOpen: boolean;
@@ -24,7 +25,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose }) => 
             setInviteLink(link);
         } catch (err) {
             console.error(err);
-            alert('Error al generar la invitación');
+            toast.error('Error al generar la invitación');
         } finally {
             setIsGenerating(false);
         }

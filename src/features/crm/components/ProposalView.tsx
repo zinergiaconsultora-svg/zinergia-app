@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { InvoiceData, SavingsResult, Client, Proposal, ProposalStatus } from '@/types/crm';
 import { crmService } from '@/services/crmService';
+import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DigitalProposalCard } from '@/features/comparator/components/DigitalProposalCard';
 
@@ -103,7 +104,7 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
             router.push(`/dashboard/clients/${selectedClient.id}`);
         } catch (error) {
             console.error('Failed to save proposal', error);
-            alert('Error al guardar la propuesta. Inténtalo de nuevo.');
+            toast.error('Error al guardar la propuesta. Inténtalo de nuevo.');
         } finally {
             setSaving(false);
         }
@@ -116,7 +117,7 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
             setStatus(newStatus);
         } catch (error) {
             console.error('Failed to update status', error);
-            alert('Error al actualizar el estado.');
+            toast.error('Error al actualizar el estado.');
         }
     };
 
@@ -129,7 +130,7 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
             router.back();
         } catch (error) {
             console.error('Failed to delete proposal', error);
-            alert('Error al eliminar la propuesta.');
+            toast.error('Error al eliminar la propuesta.');
         }
     };
 

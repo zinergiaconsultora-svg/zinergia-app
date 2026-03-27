@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
 import { User, Mail, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { ZinergiaLogo } from '@/components/ui/ZinergiaLogo';
+import { completeInvitationAction } from '@/app/actions/join';
 
 export default function JoinNetworkPage() {
     const params = useParams();
@@ -60,31 +61,13 @@ export default function JoinNetworkPage() {
 
             if (authError) throw authError;
 
-            // 2. Mark invitation as used
-            await supabase
-                .from('network_invitations')
-                .update({ used: true })
-                .eq('id', invitation.id);
-
-            // 3. Update Profile (Role & Parent)
-            // Note: In a real app, this should be handled by a Trigger or a secure RPC
-            // because the user might not have permissions to edit their own role yet.
-            // For this MVP, we assume profiles are created via trigger and we update it.
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .update({
-                    role: invitation.role,
-                    parent_id: invitation.creator_id,
-                    full_name: fullName
-                })
-                .eq('id', authData.user?.id);
-
-            if (profileError) console.error('Error updating profile:', profileError);
+            // 2 & 3. Set role + parent_id + mark invitation used — server-side only
+            await completeInvitationAction(invitation.id, fullName);
 
             router.push('/dashboard');
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Error al registrarse';
-            alert(message);
+            setError(message);
         } finally {
             setIsSubmitting(false);
         }
@@ -106,6 +89,7 @@ export default function JoinNetworkPage() {
                     <h1 className="text-2xl font-bold text-slate-900 mb-2">Enlace no válido</h1>
                     <p className="text-slate-500 mb-6">{error}</p>
                     <button
+                        type="button"
                         onClick={() => router.push('/')}
                         className="w-full py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all"
                     >
@@ -181,6 +165,7 @@ export default function JoinNetworkPage() {
 
                         <div className="pt-2">
                             <button
+                                type="submit"
                                 disabled={isSubmitting}
                                 className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-bold shadow-xl shadow-indigo-100 hover:bg-indigo-700 disabled:opacity-50 transition-all flex items-center justify-center gap-3"
                             >

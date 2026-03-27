@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TariffForm from './TariffForm';
+import { toast } from 'sonner';
 
 // Memoized Offer Card Component to prevent unnecessary re-renders
 interface OfferCardProps {
@@ -220,7 +221,7 @@ export default function TariffManagerView({ canWrite = false }: TariffManagerVie
         } catch (error: unknown) {
             console.error('Error deleting', error);
             const message = error instanceof Error ? error.message : 'Error desconocido';
-            alert(`❌ ERROR: No se pudo eliminar. Detalles: ${message}`);
+            toast.error(`No se pudo eliminar: ${message}`);
         } finally {
             setLoading(false);
         }
@@ -237,7 +238,7 @@ export default function TariffManagerView({ canWrite = false }: TariffManagerVie
             setIsFormOpen(false);
         } catch (error) {
             console.error('Error saving', error);
-            alert('Error al guardar');
+            toast.error('Error al guardar la tarifa');
         }
     };
 
@@ -294,11 +295,11 @@ export default function TariffManagerView({ canWrite = false }: TariffManagerVie
                 await crmService.saveOffer(newOffer);
                 imported++;
             }
-            alert(`✅ Importadas ${imported} tarifas correctamente`);
+            toast.success(`Importadas ${imported} tarifas correctamente`);
             loadOffers();
         } catch (error) {
             console.error('Error importing CSV:', error);
-            alert('❌ Error al importar CSV');
+            toast.error('Error al importar CSV');
         } finally {
             setIsImporting(false);
             if (fileInputRef.current) fileInputRef.current.value = '';

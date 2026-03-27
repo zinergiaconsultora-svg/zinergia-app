@@ -2,8 +2,10 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { crmService } from '@/services/crmService';
+import { simulateSaleAction } from '@/app/actions/demo';
 import { Commission } from '@/types/crm';
 import confetti from 'canvas-confetti';
+import { toast } from 'sonner';
 
 export function useWallet() {
     const [commissions, setCommissions] = useState<Commission[]>([]);
@@ -61,17 +63,17 @@ export function useWallet() {
         if (confirm('¿Simular una venta de 2.500€ de ahorro? Esto generará comisiones y puntos.')) {
             setLoading(true);
             try {
-                await crmService.simulateSale(2500);
+                await simulateSaleAction(2500);
                 await loadData();
                 confetti({
                     particleCount: 150,
                     spread: 70,
                     origin: { y: 0.6 },
-                    colors: ['#ea580c', '#10b981', '#f59e0b'] // Updated to energy orange
+                    colors: ['#ea580c', '#10b981', '#f59e0b']
                 });
             } catch (e) {
                 console.error(e);
-                alert('Error en simulación');
+                toast.error('Error en simulación');
             } finally {
                 setLoading(false);
             }
