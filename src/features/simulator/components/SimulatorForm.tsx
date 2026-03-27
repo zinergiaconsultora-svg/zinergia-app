@@ -19,6 +19,7 @@ import { motion } from 'framer-motion';
 import { InvoiceData } from '@/types/crm';
 import { Card } from '@/components/ui/primitives/Card';
 import { Input } from '@/components/ui/primitives/Input';
+import { DemoModeAlert } from '@/components/ui/DemoModeAlert';
 
 interface SimulatorFormProps {
     data: InvoiceData;
@@ -29,6 +30,7 @@ interface SimulatorFormProps {
     loadingMessage: string;
     powerType: string;
     pdfUrl?: string | null;
+    isMockMode?: boolean;
 }
 
 export const SimulatorForm: React.FC<SimulatorFormProps> = ({
@@ -39,7 +41,8 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     isAnalyzing,
     loadingMessage,
     powerType,
-    pdfUrl
+    pdfUrl,
+    isMockMode = false,
 }) => {
 
 
@@ -67,6 +70,8 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
             exit={{ opacity: 0, y: -30 }}
             className="max-w-5xl mx-auto pb-12"
         >
+            <DemoModeAlert show={isMockMode} />
+
             {/* Header & Navigation */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <motion.button

@@ -3,7 +3,7 @@
 import { InvoiceData } from '@/types/crm';
 import { env } from '@/lib/env';
 
-export async function analyzeDocumentAction(formData: FormData): Promise<InvoiceData> {
+export async function analyzeDocumentAction(formData: FormData): Promise<{ data: InvoiceData; isMock: boolean }> {
     const OCR_WEBHOOK_URL = env.OCR_WEBHOOK_URL;
     const WEBHOOK_API_KEY = env.WEBHOOK_API_KEY;
 
@@ -72,7 +72,7 @@ export async function analyzeDocumentAction(formData: FormData): Promise<Invoice
         }
 
         // Normalized result (matching your existing structure)
-        return {
+        const invoiceData: InvoiceData = {
             client_name: data.client_name || data.CLIENTE_NOMBRE || data.cliente_nombre || data.TITULAR || 'Cliente Desconocido',
             dni_cif: data.dni_cif || data.nif_cif || data.CIF_NIF || data.NIF || '',
             company_name: data.company_name || data.COMERCIALIZADORA || data.compania || data.EMPRESA || '',
@@ -102,28 +102,33 @@ export async function analyzeDocumentAction(formData: FormData): Promise<Invoice
             energy_p6: parseNumber(data.energy_p6 || data.ENERGIA_P6 || data.energia_p6 || data.P6_KWH),
 
             detected_power_type: detectedPowerType
-        } as InvoiceData;
+        };
+
+        return { data: invoiceData, isMock: false };
 
     } catch (error) {
         if (env.NODE_ENV === 'development') {
             console.warn('⚠️ OCR Webhook failed. Using MOCK data for development.', error);
             return {
-                client_name: 'Empresa Mock S.L.',
-                dni_cif: 'B12345678',
-                company_name: 'Comercializadora Mock',
-                cups: 'ES0021000000000000XX',
-                tariff_name: '2.0TD',
-                invoice_number: 'FACT-2024-001',
-                invoice_date: new Date().toISOString().split('T')[0],
-                period_days: 30,
-                supply_address: 'Calle Falsa 123, Madrid',
-                subtotal: 100.00,
-                vat: 21.00,
-                total_amount: 121.00,
-                rights_cost: 0,
-                power_p1: 4.6, power_p2: 4.6, power_p3: 0, power_p4: 0, power_p5: 0, power_p6: 0,
-                energy_p1: 150, energy_p2: 100, energy_p3: 0, energy_p4: 0, energy_p5: 0, energy_p6: 0,
-            } as InvoiceData;
+                data: {
+                    client_name: 'Empresa Mock S.L.',
+                    dni_cif: 'B12345678',
+                    company_name: 'Comercializadora Mock',
+                    cups: 'ES0021000000000000XX',
+                    tariff_name: '2.0TD',
+                    invoice_number: 'FACT-2024-001',
+                    invoice_date: new Date().toISOString().split('T')[0],
+                    period_days: 30,
+                    supply_address: 'Calle Falsa 123, Madrid',
+                    subtotal: 100.00,
+                    vat: 21.00,
+                    total_amount: 121.00,
+                    rights_cost: 0,
+                    power_p1: 4.6, power_p2: 4.6, power_p3: 0, power_p4: 0, power_p5: 0, power_p6: 0,
+                    energy_p1: 150, energy_p2: 100, energy_p3: 0, energy_p4: 0, energy_p5: 0, energy_p6: 0,
+                } as InvoiceData,
+                isMock: true,
+            };
         }
 
         console.error('[OCR] Webhook error:', error);

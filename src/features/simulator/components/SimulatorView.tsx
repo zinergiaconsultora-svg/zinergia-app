@@ -107,8 +107,8 @@ export const SimulatorView = () => {
                                 isAnalyzing={isAnalyzing}
                                 loadingMessage={loadingMessage}
                                 powerType={powerType}
-
                                 pdfUrl={pdfUrl}
+                                isMockMode={isMockMode}
                             />
                             {/* OVERLAY: Mostrando durante la comparación */}
                             <LoadingOverlay
