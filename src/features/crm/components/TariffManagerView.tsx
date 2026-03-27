@@ -202,8 +202,6 @@ export default function TariffManagerView({ canWrite = false }: TariffManagerVie
     const handleDelete = useCallback(async (id: string, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
 
-        console.log('Intentando borrar tarifa:', id);
-
         // Use 2-step confirmation logic
         if (deleteConfirmId !== id) {
             setDeleteConfirmId(id);
