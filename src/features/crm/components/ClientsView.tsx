@@ -39,7 +39,7 @@ const itemVariants = {
 };
 
 export default function ClientsView({ initialData }: ClientsViewProps) {
-    const { clients, loading, refresh } = useClients(initialData);
+    const { clients, loading, loadingMore, hasMore, refresh, loadMore } = useClients(initialData);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const router = useRouter();
@@ -134,6 +134,26 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                         ))
                     )}
                 </motion.div>
+
+                {/* LOAD MORE */}
+                {hasMore && !loading && (
+                    <div className="flex justify-center pt-8">
+                        <Button
+                            onClick={loadMore}
+                            disabled={loadingMore}
+                            variant="secondary"
+                            size="lg"
+                            className="rounded-2xl px-8"
+                        >
+                            {loadingMore ? (
+                                <span className="flex items-center gap-2">
+                                    <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                                    Cargando...
+                                </span>
+                            ) : 'Cargar más clientes'}
+                        </Button>
+                    </div>
+                )}
             </div>
 
             <CreateClientModal
