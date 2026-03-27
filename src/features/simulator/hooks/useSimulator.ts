@@ -186,7 +186,7 @@ export function useSimulator() {
             const { calculateAletheiaSavings } = await import('@/app/actions/simulator');
 
             // Pass the current state.invoiceData. 
-            // TODO: If we added Manual Max Demand inputs to the UI, we should extract them from state.
+            // manualMaxDemand not yet exposed in UI — pass undefined to use OCR-detected values
             const result = await calculateAletheiaSavings(state.invoiceData);
 
             clearInterval(interval);

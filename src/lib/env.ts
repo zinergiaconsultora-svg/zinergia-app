@@ -13,6 +13,9 @@ const envSchema = z.object({
     OCR_WEBHOOK_URL: z.string().url(),
     COMPARISON_WEBHOOK_URL: z.string().url(),
 
+    // Timeouts
+    N8N_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
+
     // Node Environment
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 });
