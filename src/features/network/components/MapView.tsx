@@ -71,7 +71,7 @@ export const MapView: React.FC = () => {
                 <div>
                     <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                         <Navigation size={20} className="text-indigo-600" />
-                        Geo-Inteligencia Nexus
+                        Mapa de Clientes
                     </h2>
                     <p className="text-sm text-slate-500 font-light">Distribución geográfica de clientes y áreas de influencia</p>
                 </div>

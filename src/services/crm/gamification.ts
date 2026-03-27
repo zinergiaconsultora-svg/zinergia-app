@@ -20,7 +20,7 @@ const BADGE_DEFS = [
     { id: 'primera_venta',   title: 'Primera Venta',  icon: '⚡', color: 'bg-yellow-100 text-yellow-600 border-yellow-200' },
     { id: 'club_100k',       title: 'Club 100k',      icon: '💎', color: 'bg-indigo-100 text-indigo-600 border-indigo-200' },
     { id: 'networker',       title: 'Networker',      icon: '🌐', color: 'bg-emerald-100 text-emerald-600 border-emerald-200' },
-    { id: 'master_energia',  title: 'Master Energía', icon: '🔋', color: 'bg-slate-100 text-slate-400 border-slate-200' },
+    { id: 'master_energia',  title: 'Experto Energía', icon: '🔋', color: 'bg-slate-100 text-slate-400 border-slate-200' },
 ];
 
 // ── Service ───────────────────────────────────────────────────────────────────

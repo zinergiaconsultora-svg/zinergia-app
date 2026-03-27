@@ -50,7 +50,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose }) => 
                         className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
                     >
                         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                            <h2 className="text-xl font-bold text-slate-900 text-center">Invitar a la Red &quot;Nexus&quot;</h2>
+                            <h2 className="text-xl font-bold text-slate-900 text-center">Invitar a mi Red</h2>
                             <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors" title="Cerrar">
                                 <X size={20} />
                             </button>
@@ -105,7 +105,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose }) => 
                                         ) : (
                                             <>
                                                 <UserPlus size={20} />
-                                                Generar Enlace Mágico
+                                                Generar Enlace de Invitación
                                             </>
                                         )}
                                     </button>
@@ -119,7 +119,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose }) => 
                                     <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-emerald-100">
                                         <Check size={40} className="stroke-[3]" />
                                     </div>
-                                    <h3 className="text-2xl font-bold text-slate-900 mb-2">¡Enlace Mágico Listo!</h3>
+                                    <h3 className="text-2xl font-bold text-slate-900 mb-2">¡Enlace listo!</h3>
                                     <p className="text-slate-500 mb-8 font-medium">Envía este enlace a <span className="text-slate-900 font-bold">{email}</span></p>
 
                                     <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-200 mb-8 shadow-inner">

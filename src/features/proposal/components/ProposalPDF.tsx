@@ -72,7 +72,7 @@ export const ProposalPDF: React.FC<ProposalPDFProps> = ({
             <div className="break-before-auto">
                 <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
                     <span className="w-8 h-1 bg-emerald-500 rounded-full"></span>
-                    Análisis Técnico (Aletheia)
+                    Análisis Técnico
                 </h3>
 
                 {opportunities.length > 0 ? (
@@ -132,7 +132,7 @@ export const ProposalPDF: React.FC<ProposalPDFProps> = ({
             </div>
 
             <div className="mt-12 pt-8 border-t border-slate-200 text-center text-xs text-slate-400">
-                <p>Generado por Aletheia Engine | Zinergia Consultores</p>
+                <p>Generado por Zinergia Consultores</p>
                 <p>Este documento es una simulación basada en datos históricos. Los ahorros reales pueden variar.</p>
             </div>
         </div>

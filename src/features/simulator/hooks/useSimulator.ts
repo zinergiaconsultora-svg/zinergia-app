@@ -164,10 +164,10 @@ export function useSimulator() {
     const runComparison = useCallback(async () => {
         dispatch({ type: 'START_ANALYSIS' });
         const messages = [
-            'Aletheia: Normalizando datos de consumo...',
-            'Aletheia: Aplicando perfiles de estacionalidad REE...',
-            'Aletheia: Auditoría forense de costes ocultos...',
-            'Aletheia: Simulando escenario contra BBDD local...'
+            'Normalizando datos de consumo...',
+            'Aplicando perfiles de estacionalidad...',
+            'Detectando costes ocultos...',
+            'Calculando las mejores ofertas...'
         ];
 
         let msgIndex = 0;
