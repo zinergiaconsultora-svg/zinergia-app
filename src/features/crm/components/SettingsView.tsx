@@ -23,7 +23,7 @@ import {
 import { DashboardCard } from './DashboardCard';
 import { crmService } from '@/services/crmService';
 import { saveCommissionRule } from '@/app/actions/commissionRules';
-import { saveProfileSettingsAction } from '@/app/actions/profile';
+import { saveProfileSettingsAction, getProfileSettingsAction } from '@/app/actions/profile';
 import { CommissionRule, NetworkUser } from '@/types/crm';
 
 interface SettingsViewProps {
@@ -43,15 +43,20 @@ export default function SettingsView({
     const [saveError, setSaveError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'profile' | 'commercial' | 'network' | 'commissions'>('profile');
 
-    // Mock initial state
     const [settings, setSettings] = useState({
-        companyName: 'Zinergia Central',
-        nif: 'B12345678',
-        address: 'Calle Principal, 1',
+        companyName: '',
+        nif: '',
+        address: '',
         defaultMargin: 2.5,
         defaultVat: 21,
         logoUrl: null as string | null
     });
+
+    useEffect(() => {
+        getProfileSettingsAction()
+            .then(data => setSettings(prev => ({ ...prev, ...data })))
+            .catch(err => console.error('Error cargando configuración:', err));
+    }, []);
 
     // Commission rule form state (initialized from active rule or defaults)
     const [ruleForm, setRuleForm] = useState({

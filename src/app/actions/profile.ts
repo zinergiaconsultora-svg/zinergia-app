@@ -41,3 +41,31 @@ export async function saveProfileSettingsAction(input: ProfileSettingsInput): Pr
 
     if (configError) throw configError
 }
+
+export interface ProfileSettings {
+    companyName: string;
+    nif: string;
+    address: string;
+    defaultMargin: number;
+    defaultVat: number;
+}
+
+export async function getProfileSettingsAction(): Promise<ProfileSettings> {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('No autenticado')
+
+    const { data } = await supabase
+        .from('franchise_config')
+        .select('company_name, nif, address, default_margin, default_vat')
+        .eq('owner_id', user.id)
+        .maybeSingle()
+
+    return {
+        companyName: data?.company_name ?? '',
+        nif: data?.nif ?? '',
+        address: data?.address ?? '',
+        defaultMargin: data?.default_margin ?? 2.5,
+        defaultVat: data?.default_vat ?? 21,
+    }
+}
