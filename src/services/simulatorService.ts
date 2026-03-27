@@ -13,7 +13,7 @@ import { calculateSavingsAction } from '@/app/actions/compare';
 // WEBHOOK CALLS VIA SERVER ACTIONS
 // ============================================================================
 
-export async function analyzeDocumentWithRetry(file: File): Promise<{ data: InvoiceData; isMock: boolean }> {
+export async function analyzeDocumentWithRetry(file: File): Promise<{ jobId: string; isMock: boolean; data?: InvoiceData }> {
     const formData = new FormData();
     formData.append('file', file);
     return await analyzeDocumentAction(formData);

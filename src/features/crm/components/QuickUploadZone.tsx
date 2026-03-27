@@ -15,8 +15,13 @@ export function QuickUploadZone() {
         setIsAnalyzing(true);
         try {
             const result = await analyzeDocumentWithRetry(file);
-            // Pass OCR result to simulator via sessionStorage (session-scoped, no persistence issues)
-            sessionStorage.setItem('pendingInvoiceData', JSON.stringify(result));
+            if (result.isMock && result.data) {
+                // Pass OCR result to simulator via sessionStorage (session-scoped)
+                sessionStorage.setItem('pendingInvoiceData', JSON.stringify({ data: result.data, isMock: true }));
+            } else if (result.jobId) {
+                // Pass OCR async job ID to simulator
+                sessionStorage.setItem('pendingOcrJobId', result.jobId);
+            }
             router.push('/dashboard/simulator');
         } catch (error) {
             console.error('Error analyzing document:', error);

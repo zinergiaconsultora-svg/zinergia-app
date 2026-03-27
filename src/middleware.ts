@@ -56,10 +56,27 @@ export async function middleware(request: NextRequest) {
         if (user && pathname === '/') {
             return NextResponse.redirect(new URL('/dashboard', request.url))
         }
+
+        // Caso C: Rutas de administración protegidas por Rol
+        if (user && pathname.startsWith('/admin')) {
+            // El rol suele guardarse en user_metadata o requiere consulta
+            const role = user.user_metadata?.role;
+            if (role !== 'admin') {
+                // Hacer una consulta a profiles como fallback seguro
+                const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+                if (!profile || profile.role !== 'admin') {
+                    // Intruso detectado, redirigir al dashboard normal
+                    return NextResponse.redirect(new URL('/dashboard', request.url))
+                }
+            }
+        }
     } catch (e) {
-        // Fail-open: si Supabase no responde, dejamos pasar la request.
-        // Las rutas privadas fallarán por su cuenta; las públicas seguirán funcionando.
-        console.error('Middleware: Supabase auth check failed, failing open.', e)
+        console.error('Middleware: Supabase auth check failed.', e)
+        // Fail-closed para rutas admin: si no podemos verificar el rol, bloqueamos
+        if (pathname.startsWith('/admin')) {
+            return NextResponse.redirect(new URL('/dashboard', request.url))
+        }
+        // Fail-open para el resto: las rutas privadas fallarán por su cuenta
     }
 
     return response

@@ -258,3 +258,30 @@ export interface UserPoints {
         avatar_url?: string;
     };
 }
+
+// Fase 3: Motor Financiero
+export type BillingCycleStatus = 'open' | 'closed' | 'voided';
+
+export interface BillingCycle {
+    id: string;
+    franchise_id: string;
+    month_year: string;       // '2026-03'
+    status: BillingCycleStatus;
+    total_commissions: number;
+    total_proposals: number;
+    snapshot_data: Commission[] | null;
+    closed_by: string | null;
+    closed_at: string | null;
+    created_at: string;
+}
+
+export interface WalletBalance {
+    franchise_id: string;
+    balance_available: number;  // Comisiones cleared (listas para cobro)
+    balance_paid: number;       // Comisiones ya pagadas
+    balance_pending: number;    // Comisiones pendientes de aprobación
+    total_earned: number;       // Total histórico
+    proposals_cleared: number;
+    proposals_paid: number;
+    proposals_pending: number;
+}
