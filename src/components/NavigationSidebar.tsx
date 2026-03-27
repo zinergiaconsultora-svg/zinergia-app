@@ -15,7 +15,9 @@ import {
     Wallet,
     Trophy,
     Target,
-    LogOut
+    LogOut,
+    BarChart2,
+    Network
 } from 'lucide-react';
 import { ZinergiaLogo } from './ui/ZinergiaLogo';
 import { motion } from 'framer-motion';
@@ -23,15 +25,15 @@ import { crmService } from '@/services/crmService';
 import { logout } from '@/app/auth/actions';
 
 const navItems = [
-    { name: 'Inicio', href: '/dashboard', icon: Home },
-    { name: 'Mi Red', href: '/dashboard/network', icon: Users },
-    { name: 'Mi Cartera', href: '/dashboard/wallet', icon: Wallet },
-    { name: 'Academy', href: '/dashboard/academy', icon: BookOpen },
-    { name: 'Clientes', href: '/dashboard/clients', icon: Briefcase },
-    { name: 'Propuestas', href: '/dashboard/proposals', icon: PieChart },
-    { name: 'Tarifas', href: '/dashboard/tariffs', icon: Zap },
-    { name: 'Simulador', href: '/dashboard/simulator', icon: Zap },
-    { name: 'Configuración', href: '/dashboard/settings', icon: Settings },
+    { name: 'Inicio',        href: '/dashboard',           icon: Home       },
+    { name: 'Clientes',      href: '/dashboard/clients',   icon: Users      },
+    { name: 'Propuestas',    href: '/dashboard/proposals', icon: PieChart   },
+    { name: 'Simulador',     href: '/dashboard/simulator', icon: Zap        },
+    { name: 'Mi Cartera',    href: '/dashboard/wallet',    icon: Wallet     },
+    { name: 'Mi Red',        href: '/dashboard/network',   icon: Network    },
+    { name: 'Academy',       href: '/dashboard/academy',   icon: BookOpen   },
+    { name: 'Tarifas',       href: '/dashboard/tariffs',   icon: BarChart2  },
+    { name: 'Configuración', href: '/dashboard/settings',  icon: Settings   },
 ] as const;
 
 const DEFAULT_GAMIFICATION = {

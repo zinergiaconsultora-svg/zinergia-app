@@ -62,7 +62,7 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
                 invoice: JSON.parse(storedInvoice)
             });
         } else {
-            router.push('/dashboard/comparator');
+            router.push('/dashboard/simulator');
         }
         setLoading(false);
     }, [router, initialProposal]);
@@ -207,7 +207,7 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
                     result={result}
                     initialNotes={notes}
                     onNotesChange={setNotes}
-                    onReset={() => router.push('/dashboard/comparator')}
+                    onReset={() => router.push('/dashboard/simulator')}
                     onEmail={() => { /* Email already handled in Comparator logic */ }}
                     title={initialProposal ? "Estudio Personalizado" : "Mejor Opción Detectada"}
                 />

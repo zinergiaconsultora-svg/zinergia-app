@@ -25,15 +25,15 @@ import { crmService } from '@/services/crmService';
 import { logout } from '@/app/auth/actions';
 
 const navItems = [
-    { name: 'Inicio', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Red', href: '/dashboard/network', icon: Network },
-    { name: 'Cartera', href: '/dashboard/wallet', icon: Briefcase },
-    { name: 'Academy', href: '/dashboard/academy', icon: GraduationCap },
-    { name: 'Clientes', href: '/dashboard/clients', icon: Contact },
-    { name: 'Simulador', href: '/dashboard/simulator', icon: Sparkles },
-    { name: 'Propuestas', href: '/dashboard/proposals', icon: FileSignature },
-    { name: 'Tarifas', href: '/dashboard/tariffs', icon: Receipt },
-    { name: 'Ajustes', href: '/dashboard/settings', icon: Settings },
+    { name: 'Inicio',      href: '/dashboard',           icon: LayoutDashboard },
+    { name: 'Clientes',    href: '/dashboard/clients',   icon: Contact         },
+    { name: 'Propuestas',  href: '/dashboard/proposals', icon: FileSignature   },
+    { name: 'Simulador',   href: '/dashboard/simulator', icon: Sparkles        },
+    { name: 'Cartera',     href: '/dashboard/wallet',    icon: Briefcase       },
+    { name: 'Red',         href: '/dashboard/network',   icon: Network         },
+    { name: 'Academy',     href: '/dashboard/academy',   icon: GraduationCap   },
+    { name: 'Tarifas',     href: '/dashboard/tariffs',   icon: Receipt         },
+    { name: 'Ajustes',     href: '/dashboard/settings',  icon: Settings        },
 ] as const;
 
 const DEFAULT_GAMIFICATION = {

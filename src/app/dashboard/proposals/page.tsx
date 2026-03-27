@@ -83,7 +83,7 @@ export default function ProposalsPage() {
                     <p className="text-slate-500 font-medium text-sm">Historial de optimizaciones generadas por cliente.</p>
                 </div>
                 <Link
-                    href="/dashboard/comparator"
+                    href="/dashboard/simulator"
                     className="flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 text-white rounded-2xl font-semibold shadow-xl shadow-indigo-500/10 hover:bg-indigo-700 transition-all hover:-translate-y-0.5 active:scale-95 text-sm"
                 >
                     <Plus size={18} />
@@ -242,7 +242,7 @@ export default function ProposalsPage() {
                         Inicia una simulación para ver las mejores ofertas.
                     </p>
                     <Link
-                        href="/dashboard/comparator"
+                        href="/dashboard/simulator"
                         className="inline-flex items-center gap-2.5 px-8 py-4 bg-slate-900 text-white rounded-2xl font-semibold shadow-2xl shadow-slate-900/10 hover:bg-slate-800 transition-all active:scale-95"
                     >
                         Abrir Simulador

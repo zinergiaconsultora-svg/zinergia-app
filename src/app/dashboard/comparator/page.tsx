@@ -1,5 +1,6 @@
-import { ComparatorView } from '@/features/comparator/components/ComparatorView';
+import { redirect } from 'next/navigation';
 
+// Comparator consolidated into Simulator — redirect for any hardcoded/external links
 export default function ComparatorPage() {
-    return <ComparatorView />;
+    redirect('/dashboard/simulator');
 }
