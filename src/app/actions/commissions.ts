@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { requireServerRole } from '@/lib/auth/permissions'
+import { revalidatePath } from 'next/cache'
 import { Commission } from '@/types/crm'
 
 /**
@@ -22,6 +23,7 @@ export async function clearCommissionAction(id: string): Promise<Commission> {
 
     if (error) throw error
     if (!data) throw new Error('Comisión no encontrada o ya procesada')
+    revalidatePath('/dashboard/wallet')
     return data as Commission
 }
 
@@ -43,6 +45,7 @@ export async function payCommissionAction(id: string): Promise<Commission> {
 
     if (error) throw error
     if (!data) throw new Error('Comisión no encontrada o ya pagada')
+    revalidatePath('/dashboard/wallet')
     return data as Commission
 }
 

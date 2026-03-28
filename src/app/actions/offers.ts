@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { requireServerRole } from '@/lib/auth/permissions'
+import { revalidatePath } from 'next/cache'
 import { Offer } from '@/types/crm'
 
 export async function saveOfferAction(offer: Partial<Offer>) {
@@ -17,6 +18,7 @@ export async function saveOfferAction(offer: Partial<Offer>) {
             .select()
             .single()
         if (error) throw error
+        revalidatePath('/dashboard/tariffs')
         return data
     }
 
@@ -26,6 +28,7 @@ export async function saveOfferAction(offer: Partial<Offer>) {
         .select()
         .single()
     if (error) throw error
+    revalidatePath('/dashboard/tariffs')
     return data
 }
 
@@ -35,4 +38,5 @@ export async function deleteOfferAction(id: string) {
     const supabase = await createClient()
     const { error } = await supabase.from('lv_zinergia_tarifas').delete().eq('id', id)
     if (error) throw error
+    revalidatePath('/dashboard/tariffs')
 }

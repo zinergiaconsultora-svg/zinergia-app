@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
 
 interface ProfileSettingsInput {
     companyName: string;
@@ -40,6 +41,7 @@ export async function saveProfileSettingsAction(input: ProfileSettingsInput): Pr
         )
 
     if (configError) throw configError
+    revalidatePath('/dashboard/settings')
 }
 
 export interface ProfileSettings {

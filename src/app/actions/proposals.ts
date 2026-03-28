@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
 import { Proposal } from '@/types/crm'
 import { getActiveCommissionRule } from './commissionRules'
 
@@ -32,6 +33,9 @@ export async function updateProposalStatusAction(
         await processCommissions(supabase, proposal as Proposal)
     }
 
+    revalidatePath('/dashboard/proposals')
+    revalidatePath(`/dashboard/proposals/${id}`)
+    revalidatePath('/dashboard')
     return proposal as Proposal
 }
 
