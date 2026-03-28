@@ -44,16 +44,18 @@ export const dashboardService = {
         const acceptedCount = proposals.filter(p => p.status === 'accepted').length;
         const conversionRate = proposals.length > 0 ? Math.round((acceptedCount / proposals.length) * 100) : 0;
 
-        // Savings trend: last 7 months grouped by month
+        // Savings trend: single O(n) pass grouping proposals already in memory
         const MONTH_LABELS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const trendMap = new Map<string, number>();
+        for (const p of proposals) {
+            const d = new Date(p.created_at);
+            const key = `${d.getFullYear()}-${d.getMonth()}`;
+            trendMap.set(key, (trendMap.get(key) ?? 0) + (p.annual_savings || 0));
+        }
         const savingsTrend = Array.from({ length: 7 }, (_, i) => {
             const d = new Date(now.getFullYear(), now.getMonth() - (6 - i), 1);
-            const monthStart = d.toISOString();
-            const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString();
-            const value = proposals
-                .filter(p => p.created_at >= monthStart && p.created_at < monthEnd)
-                .reduce((sum, p) => sum + (p.annual_savings || 0), 0);
-            return { name: MONTH_LABELS[d.getMonth()], value };
+            const key = `${d.getFullYear()}-${d.getMonth()}`;
+            return { name: MONTH_LABELS[d.getMonth()], value: trendMap.get(key) ?? 0 };
         });
 
         const recentProposals = [...proposals]

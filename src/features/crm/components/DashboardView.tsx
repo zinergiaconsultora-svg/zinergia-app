@@ -20,12 +20,29 @@ import { formatCurrency } from '@/lib/utils/format';
 import { DashboardSkeleton } from '@/components/ui/DashboardSkeleton';
 import { QuickUploadZone } from './QuickUploadZone';
 
-const LeaderboardWidget = dynamic(() => import('@/features/gamification/components/LeaderboardWidget').then(mod => mod.LeaderboardWidget), { loading: () => <div className="h-64 bg-slate-100/50 animate-pulse rounded-2xl" /> });
-const AchievementsWidget = dynamic(() => import('@/features/gamification/components/AchievementsWidget').then(mod => mod.AchievementsWidget));
-const NotificationsPopover = dynamic(() => import('@/features/crm/components/NotificationsPopover').then(mod => mod.NotificationsPopover), { ssr: false });
-const OcrJobsPanel = dynamic(() => import('./OcrJobsPanel'), { ssr: false, loading: () => <div className="h-32 bg-slate-100/50 animate-pulse rounded-2xl" /> });
-const SavingsTrendChart = dynamic(() => import('./DashboardCharts').then(mod => mod.SavingsTrendChart), { loading: () => <div className="h-full w-full bg-slate-100/20 animate-pulse rounded-lg" /> });
-const PipelinePieChart = dynamic(() => import('./DashboardCharts').then(mod => mod.PipelinePieChart), { loading: () => <div className="h-full w-full bg-slate-100/20 animate-pulse rounded-full" /> });
+const LeaderboardWidget = dynamic(() =>
+    import('@/features/gamification/components/LeaderboardWidget').then(m => ({ default: m.LeaderboardWidget })),
+    { loading: () => <div className="h-64 bg-slate-100/50 animate-pulse rounded-2xl" /> }
+);
+const AchievementsWidget = dynamic(() =>
+    import('@/features/gamification/components/AchievementsWidget').then(m => ({ default: m.AchievementsWidget }))
+);
+const NotificationsPopover = dynamic(() =>
+    import('@/features/crm/components/NotificationsPopover').then(m => ({ default: m.NotificationsPopover })),
+    { ssr: false }
+);
+const OcrJobsPanel = dynamic(() => import('./OcrJobsPanel'), {
+    ssr: false,
+    loading: () => <div className="h-32 bg-slate-100/50 animate-pulse rounded-2xl" />,
+});
+const SavingsTrendChart = dynamic(() =>
+    import('./DashboardCharts').then(m => ({ default: m.SavingsTrendChart })),
+    { loading: () => <div className="h-full w-full bg-slate-100/20 animate-pulse rounded-lg" /> }
+);
+const PipelinePieChart = dynamic(() =>
+    import('./DashboardCharts').then(m => ({ default: m.PipelinePieChart })),
+    { loading: () => <div className="h-full w-full bg-slate-100/20 animate-pulse rounded-full" /> }
+);
 
 interface DashboardStats {
     user?: {
@@ -272,6 +289,7 @@ export default function DashboardView() {
                         <div className="snap-start shrink-0 bg-white rounded-2xl border border-[#e5e5ea] px-4 py-3 min-w-[140px] shadow-sm">
                             <p className="text-[11px] text-[#8e8e93] font-medium mb-1">Objetivo {goalProgress}%</p>
                             <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1 mb-1">
+                                {/* width is dynamic — inline style required */}
                                 <div className="h-1.5 bg-energy-500 rounded-full transition-all" style={{ width: `${goalProgress}%` }} />
                             </div>
                             <p className="text-xs text-slate-500">{formatCurrency(MONTHLY_GOAL)}</p>
@@ -406,7 +424,7 @@ function SectionHeader({ title, link }: { title: string, link?: string }) {
                 <span className="w-1 h-1 bg-indigo-400 rounded-full opacity-60"></span>
                 {title}
             </h3>
-            {link && <button className="text-[9px] font-medium text-indigo-400 hover:text-indigo-600 transition-colors uppercase tracking-wider">{link}</button>}
+            {link && <button type="button" className="text-[9px] font-medium text-indigo-400 hover:text-indigo-600 transition-colors uppercase tracking-wider">{link}</button>}
         </div>
     );
 }

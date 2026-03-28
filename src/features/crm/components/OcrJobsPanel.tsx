@@ -47,13 +47,25 @@ export default function OcrJobsPanel() {
 
     useEffect(() => { fetchJobs(); }, [fetchJobs]);
 
-    // Poll para jobs en processing cada 5s
+    // Poll con backoff exponencial: 3s → 6s → 12s → 24s → 30s (cap)
     useEffect(() => {
         const hasProcessing = jobs.some(j => j.status === 'processing');
         if (!hasProcessing) return;
 
-        const interval = setInterval(fetchJobs, 5000);
-        return () => clearInterval(interval);
+        let attempt = 0;
+        let timeoutId: ReturnType<typeof setTimeout>;
+
+        const poll = () => {
+            const delay = Math.min(3000 * Math.pow(2, attempt), 30000);
+            attempt++;
+            timeoutId = setTimeout(async () => {
+                await fetchJobs();
+                // Next poll is scheduled by the effect re-running on jobs state change
+            }, delay);
+        };
+
+        poll();
+        return () => clearTimeout(timeoutId);
     }, [jobs, fetchJobs]);
 
     const handleRetry = useCallback(async (jobId: string) => {
