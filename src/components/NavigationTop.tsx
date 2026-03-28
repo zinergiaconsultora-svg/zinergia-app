@@ -81,13 +81,31 @@ export const NavigationTop = () => {
 
     return (
         <>
-            <header className="fixed top-0 left-0 right-0 z-50 px-4 pt-safe pb-0 md:px-8 pointer-events-none">
+            <header className="fixed top-0 left-0 right-0 z-50 pointer-events-none pt-safe">
             <motion.div
                 style={{ width: progressWidth }}
-                className="fixed top-0 left-0 h-[1px] bg-indigo-500 z-[60] shadow-[0_0_8px_rgba(99,102,241,0.3)]"
+                className="fixed top-0 left-0 h-[2px] bg-energy-500 z-[60]"
             />
 
-            <div className="max-w-[1600px] mx-auto pointer-events-auto">
+            {/* Mobile top bar — iOS style flat white */}
+            <div className="lg:hidden bg-white border-b border-[#e5e5ea] pointer-events-auto flex items-center justify-between px-4 h-12">
+                <Link href="/dashboard" className="active:opacity-70 transition-opacity">
+                    <ZinergiaLogo className="w-24" />
+                </Link>
+                <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-400 active:bg-slate-100 transition-colors"
+                        title="Cerrar Sesión"
+                    >
+                        <LogOut size={18} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Desktop floating nav */}
+            <div className="hidden lg:block max-w-[1600px] mx-auto px-8 pointer-events-auto">
                 <motion.nav
                     style={{
                         opacity: headerOpacity,
@@ -224,92 +242,103 @@ export const NavigationTop = () => {
                 </motion.nav>
             </div>
 
-            {/* Mobile Menu Overlay */}
+            {/* Mobile Bottom Sheet Menu — iOS action sheet style */}
             <AnimatePresence>
                 {isMobileMenuOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20 }}
-                        className="lg:hidden fixed bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] left-4 right-4 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border border-slate-100 dark:border-slate-800 rounded-[2.5rem] shadow-2xl p-5 z-[60] overflow-y-auto max-h-[60vh]"
-                    >
-                        <div className="grid grid-cols-3 gap-2">
-                            {navItems.map((item) => {
-                                const Icon = item.icon;
-                                const isActive = pathname === item.href;
-                                return (
-                                    <Link
-                                        key={item.name}
-                                        href={item.href}
-                                        onClick={() => setIsMobileMenuOpen(false)}
-                                        className={`flex flex-col items-center justify-center gap-2 p-3 rounded-2xl transition-all ${isActive
-                                            ? 'bg-energy-500 text-white shadow-lg shadow-energy-500/20'
-                                            : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 active:bg-slate-100'
+                    <>
+                        {/* Backdrop */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="lg:hidden fixed inset-0 bg-black/30 z-[55]"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        />
+                        {/* Sheet */}
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                            className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#f2f2f7] rounded-t-3xl z-[60] pb-safe overflow-hidden"
+                        >
+                            {/* Handle bar */}
+                            <div className="flex justify-center pt-3 pb-1">
+                                <div className="w-10 h-1 rounded-full bg-[#c7c7cc]" />
+                            </div>
+                            <div className="px-4 pb-4">
+                                <div className="grid grid-cols-3 gap-2 pt-2">
+                                    {navItems.map((item) => {
+                                        const Icon = item.icon;
+                                        const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+                                        return (
+                                            <Link
+                                                key={item.name}
+                                                href={item.href}
+                                                onClick={() => setIsMobileMenuOpen(false)}
+                                                className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${isActive
+                                                    ? 'bg-white text-energy-500 shadow-sm'
+                                                    : 'bg-white text-slate-500 active:bg-slate-50'
+                                                }`}
+                                            >
+                                                <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
+                                                <span className="text-[11px] font-medium">{item.name}</span>
+                                            </Link>
+                                        );
+                                    })}
+                                    {isAdmin && (
+                                        <a
+                                            href="/admin"
+                                            onClick={() => setIsMobileMenuOpen(false)}
+                                            className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${
+                                                pathname.startsWith('/admin')
+                                                    ? 'bg-white text-indigo-600 shadow-sm'
+                                                    : 'bg-white text-slate-500 active:bg-slate-50'
                                             }`}
-                                    >
-                                        <Icon size={22} strokeWidth={1.5} />
-                                        <span className="text-[10px] font-semibold uppercase tracking-wider">{item.name}</span>
-                                    </Link>
-                                );
-                            })}
-
-                            {/* Admin Link - Menú Móvil */}
-                            {isAdmin && (
-                                <a
-                                    href="/admin"
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                    className={`flex flex-col items-center justify-center gap-2 p-3 rounded-2xl transition-all ${
-                                        pathname.startsWith('/admin')
-                                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-                                            : 'bg-indigo-50 dark:bg-indigo-950 text-indigo-600 active:bg-indigo-100'
-                                    }`}
-                                >
-                                    <Shield size={22} strokeWidth={1.5} />
-                                    <span className="text-[10px] font-semibold uppercase tracking-wider">Admin</span>
-                                </a>
-                            )}
-                        </div>
-                    </motion.div>
+                                        >
+                                            <Shield size={22} strokeWidth={1.5} />
+                                            <span className="text-[11px] font-medium">Admin</span>
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
                 )}
             </AnimatePresence>
             </header>
 
-            {/* --- MÓVIL: BOTTOM TAB BAR (Estilo iOS) --- */}
-            <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-3xl border-t border-slate-200/50 dark:border-slate-800/50 pb-safe pt-2 px-2 shadow-[0_-8px_30px_rgba(0,0,0,0.05)]">
-                <div className="flex items-center justify-evenly max-w-md mx-auto relative pt-1 pb-1">
+            {/* --- MÓVIL: BOTTOM TAB BAR iOS PURO --- */}
+            <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#e5e5ea] pb-safe">
+                <div className="flex items-stretch justify-evenly max-w-md mx-auto">
                     {navItems.slice(0, 4).map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-                        
                         return (
                             <Link
                                 key={item.name}
                                 href={item.href}
                                 onClick={() => setIsMobileMenuOpen(false)}
-                                className="flex flex-col items-center justify-center gap-1 min-w-[3.5rem]"
+                                className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors"
                             >
-                                <div className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>
-                                    <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
-                                    {isActive && (
-                                        <motion.div layoutId="mobileTabGlow" className="absolute inset-0 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-xl" />
-                                    )}
-                                </div>
-                                <span className={`text-[10px] font-medium tracking-wide ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
+                                <Icon size={24} strokeWidth={isActive ? 2 : 1.5} className={isActive ? 'text-energy-500' : 'text-[#8e8e93]'} />
+                                <span className={`text-[10px] font-medium ${isActive ? 'text-energy-500' : 'text-[#8e8e93]'}`}>
                                     {item.name}
                                 </span>
                             </Link>
                         );
                     })}
-                    
-                    {/* Botón Menú Expandido */}
+
+                    {/* Botón Más */}
                     <button
+                        type="button"
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        className="flex flex-col items-center justify-center gap-1 min-w-[3.5rem]"
+                        className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors"
                     >
-                        <div className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all ${isMobileMenuOpen ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
-                            {isMobileMenuOpen ? <X size={22} strokeWidth={2} /> : <Menu size={22} strokeWidth={1.5} />}
+                        <div className={`flex items-center justify-center ${isMobileMenuOpen ? 'text-energy-500' : 'text-[#8e8e93]'}`}>
+                            {isMobileMenuOpen ? <X size={24} strokeWidth={2} /> : <Menu size={24} strokeWidth={1.5} />}
                         </div>
-                        <span className={`text-[10px] font-medium tracking-wide ${isMobileMenuOpen ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
+                        <span className={`text-[10px] font-medium ${isMobileMenuOpen ? 'text-energy-500' : 'text-[#8e8e93]'}`}>
                             Menú
                         </span>
                     </button>
