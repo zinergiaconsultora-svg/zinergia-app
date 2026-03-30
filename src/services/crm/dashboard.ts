@@ -33,7 +33,7 @@ export const dashboardService = {
         // Un único round-trip a Postgres via RPC reemplaza el fetch masivo de proposals.
         // Fallback a null si el RPC no existe aún (migración SQL pendiente).
         const [rpcResponse, clientsStatusResponse, recentClientsResponse, profileResponse] = await Promise.all([
-            supabase.rpc('get_dashboard_stats', { p_franchise_id: franchiseId }).catch(() => ({ data: null, error: null })),
+            Promise.resolve(supabase.rpc('get_dashboard_stats', { p_franchise_id: franchiseId })).catch(() => ({ data: null, error: null })),
             supabase.from('clients').select('status').eq('franchise_id', franchiseId),
             supabase.from('clients')
                 .select('id, name, status, created_at, cups, address, city')
