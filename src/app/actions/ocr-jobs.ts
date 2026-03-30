@@ -35,13 +35,15 @@ export async function getOcrJobHistory(limit = 20): Promise<OcrJobRecord[]> {
 }
 
 export async function getOcrJobStatus(jobId: string): Promise<OcrJobRecord | null> {
-    await requireServerRole(['admin', 'franchise', 'agent']);
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
 
     const { data, error } = await supabase
         .from('ocr_jobs')
         .select('id, status, created_at, file_name, extracted_data, error_message, attempts')
         .eq('id', jobId)
+        .eq('agent_id', user.id)
         .single();
 
     if (error) return null;
