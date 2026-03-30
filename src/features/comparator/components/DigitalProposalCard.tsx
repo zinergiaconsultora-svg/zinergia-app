@@ -341,12 +341,12 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
                 <circle cx="70" cy="50" r="4" fill="#10B981"/>
             </svg>`;
 
-            printWindow.document.write(\`<!DOCTYPE html>
+            printWindow.document.write(`<!DOCTYPE html>
 <html><head>
 <meta charset="UTF-8">
-<title>Auditoría Energética - \${documentId}</title>
-\${styles}
-<style>\${printStyles}</style>
+<title>Auditoría Energética - ${documentId}</title>
+${styles}
+<style>${printStyles}</style>
 </head><body>
 <div class="pdf-container">
     
@@ -354,16 +354,16 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
     <div class="pdf-header">
         <div>
             <div class="pdf-logo-wrapper">
-                \${zinergiaLogo}
+                ${zinergiaLogo}
                 <div class="pdf-brand-text">ZINER<span>GIA</span></div>
             </div>
             <div class="pdf-tagline">Estudio Energético Profesional</div>
         </div>
         <div class="pdf-meta">
             <div class="pdf-meta-label">ID Documento</div>
-            <div class="pdf-meta-value">\${documentId}</div>
+            <div class="pdf-meta-value">${documentId}</div>
             <div class="pdf-meta-label">Fecha de Emisión</div>
-            <div class="pdf-meta-value">\${documentDate}</div>
+            <div class="pdf-meta-value">${documentDate}</div>
             <div class="pdf-badge">Validación Oficial</div>
         </div>
     </div>
@@ -371,9 +371,9 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
     <!-- HERO IMPACT -->
     <div class="pdf-hero">
         <div class="pdf-hero-label">Beneficio Anual Proyectado</div>
-        <div class="pdf-hero-amount">\${formatCurrency(result.annual_savings)}</div>
+        <div class="pdf-hero-amount">${formatCurrency(result.annual_savings)}</div>
         <div class="pdf-hero-sub">
-            Reducción neta estimada sobre tu factura actual, basada en el análisis de \${offerValidity} y optimizaciones técnicas aplicadas.
+            Reducción neta estimada sobre tu factura actual, basada en el análisis de ${offerValidity} y optimizaciones técnicas aplicadas.
         </div>
     </div>
 
@@ -381,15 +381,15 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
     <div class="pdf-kpi-grid">
         <div class="pdf-kpi">
             <div class="pdf-kpi-title">Gasto Anual Actual</div>
-            <div class="pdf-kpi-old">\${formatCurrency(result.current_annual_cost)}</div>
+            <div class="pdf-kpi-old">${formatCurrency(result.current_annual_cost)}</div>
         </div>
         <div class="pdf-kpi">
             <div class="pdf-kpi-title">Inversión Optimizada</div>
-            <div class="pdf-kpi-val pdf-kpi-highlight">\${formatCurrency(result.offer_annual_cost)}</div>
+            <div class="pdf-kpi-val pdf-kpi-highlight">${formatCurrency(result.offer_annual_cost)}</div>
         </div>
         <div class="pdf-kpi">
             <div class="pdf-kpi-title">Eficiencia Energética</div>
-            <div class="pdf-kpi-val">+\${Math.round(result.savings_percent)}%</div>
+            <div class="pdf-kpi-val">+${Math.round(result.savings_percent)}%</div>
         </div>
     </div>
 
@@ -401,19 +401,19 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
             <div class="pdf-specs">
                 <div class="pdf-spec-row">
                     <span class="pdf-spec-label">Comercializadora Asignada</span>
-                    <span class="pdf-spec-val">\${result.offer.marketer_name}</span>
+                    <span class="pdf-spec-val">${result.offer.marketer_name}</span>
                 </div>
                 <div class="pdf-spec-row">
                     <span class="pdf-spec-label">Tarifa Seleccionada</span>
-                    <span class="pdf-spec-val">\${result.offer.tariff_name}</span>
+                    <span class="pdf-spec-val">${result.offer.tariff_name}</span>
                 </div>
                 <div class="pdf-spec-row">
                     <span class="pdf-spec-label">Modalidad de Contratos</span>
-                    <span class="pdf-spec-val">\${result.offer.type === 'indexed' ? 'Indexada al Mercado' : 'Precio Fijo Garantizado'}</span>
+                    <span class="pdf-spec-val">${result.offer.type === 'indexed' ? 'Indexada al Mercado' : 'Precio Fijo Garantizado'}</span>
                 </div>
                 <div class="pdf-spec-row">
                     <span class="pdf-spec-label">Compromiso / Permanencia</span>
-                    <span class="pdf-spec-val">\${result.offer.contract_duration || 'Sin Asignar'}</span>
+                    <span class="pdf-spec-val">${result.offer.contract_duration || 'Sin Asignar'}</span>
                 </div>
             </div>
         </div>
@@ -430,17 +430,17 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
                     </tr>
                 </thead>
                 <tbody>
-                    \${['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].map((p, i) => {
+                    ${['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].map((p, i) => {
                     const powerPrice = result.offer.power_price[p as keyof typeof result.offer.power_price];
                     const energyPrice = result.offer.energy_price[p as keyof typeof result.offer.energy_price];
                     if (powerPrice === 0 && energyPrice === 0 && i > 2) return '';
-                    return \`
+                    return `
                             <tr>
-                                <td><strong>\${p.toUpperCase()}</strong></td>
-                                <td>\${powerPrice.toFixed(6)}</td>
-                                <td>\${energyPrice.toFixed(6)}</td>
+                                <td><strong>${p.toUpperCase()}</strong></td>
+                                <td>${powerPrice.toFixed(6)}</td>
+                                <td>${energyPrice.toFixed(6)}</td>
                             </tr>
-                        \`;
+                        `;
                 }).join('')}
                 </tbody>
             </table>
@@ -448,24 +448,24 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
     </div>
 
     <!-- OPTIMIZATION & NOTES -->
-    \${result.optimization_result ? \`
+    ${result.optimization_result ? `
     <div class="pdf-box optim">
         <div class="pdf-box-title" style="color: #059669;">Auditoría de Potencias Aplicada</div>
-        <div style="font-size:10px; color:#065f46;">Ajuste técnico que añade <strong>\${formatCurrency(result.optimization_result.annual_optimization_savings)}</strong> al ahorro anual. Nuevos tramos:</div>
+        <div style="font-size:10px; color:#065f46;">Ajuste técnico que añade <strong>${formatCurrency(result.optimization_result.annual_optimization_savings)}</strong> al ahorro anual. Nuevos tramos:</div>
         <div class="pdf-optim-grid">
-            \${Object.entries(result.optimization_result.optimized_powers).map(([p, val]) => \`
-                <div class="pdf-optim-item">\${p.toUpperCase()}: <strong>\${val}kW</strong></div>
-            \`).join('')}
+            ${Object.entries(result.optimization_result.optimized_powers).map(([p, val]) => `
+                <div class="pdf-optim-item">${p.toUpperCase()}: <strong>${val}kW</strong></div>
+            `).join('')}
         </div>
     </div>
-    \` : ''}
+    ` : ''}
 
-    \${advisorNotes ? \`
+    ${advisorNotes ? `
     <div class="pdf-box">
         <div class="pdf-box-title">Nota del Consultor Energético</div>
-        <div style="font-size: 11px; font-style: italic; color: #475569;">"\${advisorNotes}"</div>
+        <div style="font-size: 11px; font-style: italic; color: #475569;">"${advisorNotes}"</div>
     </div>
-    \` : ''}
+    ` : ''}
 
     <!-- FOOTER -->
     <div class="pdf-footer">
@@ -480,7 +480,7 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
     </div>
 
 </div>
-</body></html>\`);
+</body></html>`);
 
             printWindow.document.close();
 
