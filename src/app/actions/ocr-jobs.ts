@@ -40,7 +40,7 @@ export async function getOcrJobStatus(jobId: string): Promise<OcrJobRecord | nul
 
     const { data, error } = await supabase
         .from('ocr_jobs')
-        .select('id, status, created_at, file_name, file_path, extracted_data, error_message, attempts')
+        .select('id, status, created_at, file_name, extracted_data, error_message, attempts')
         .eq('id', jobId)
         .single();
 
