@@ -9,7 +9,7 @@ export interface OcrJobRecord {
     status: 'processing' | 'completed' | 'failed';
     created_at: string;
     file_name: string | null;
-    file_url: string | null;
+    file_path: string | null;
     extracted_data: Record<string, unknown> | null;
     error_message: string | null;
     attempts: number;
@@ -25,7 +25,7 @@ export async function getOcrJobHistory(limit = 20): Promise<OcrJobRecord[]> {
 
     const { data, error } = await supabase
         .from('ocr_jobs')
-        .select('id, status, created_at, file_name, file_url, extracted_data, error_message, attempts')
+        .select('id, status, created_at, file_name, file_path, extracted_data, error_message, attempts')
         .eq('agent_id', user.id)
         .order('created_at', { ascending: false })
         .limit(limit);
@@ -40,7 +40,7 @@ export async function getOcrJobStatus(jobId: string): Promise<OcrJobRecord | nul
 
     const { data, error } = await supabase
         .from('ocr_jobs')
-        .select('id, status, created_at, file_name, file_url, extracted_data, error_message, attempts')
+        .select('id, status, created_at, file_name, file_path, extracted_data, error_message, attempts')
         .eq('id', jobId)
         .single();
 
@@ -54,7 +54,7 @@ export async function getOcrJobsByClient(clientId: string, limit = 20): Promise<
 
     const { data, error } = await supabase
         .from('ocr_jobs')
-        .select('id, status, created_at, file_name, file_url, extracted_data, error_message, attempts, client_id')
+        .select('id, status, created_at, file_name, file_path, extracted_data, error_message, attempts, client_id')
         .eq('client_id', clientId)
         .eq('status', 'completed')
         .order('created_at', { ascending: false })
@@ -88,7 +88,7 @@ export async function retryOcrJob(jobId: string): Promise<{ success: boolean; me
 
     const { data: job, error } = await supabase
         .from('ocr_jobs')
-        .select('id, status, attempts, file_name, file_url')
+        .select('id, status, attempts, file_name, file_path')
         .eq('id', jobId)
         .single();
 
@@ -99,8 +99,8 @@ export async function retryOcrJob(jobId: string): Promise<{ success: boolean; me
     const OCR_WEBHOOK_URL = env.OCR_WEBHOOK_URL;
     const WEBHOOK_API_KEY = env.WEBHOOK_API_KEY;
 
-    // Si tenemos file_url, descargar y reenviar a N8N
-    if (job.file_url && OCR_WEBHOOK_URL && WEBHOOK_API_KEY) {
+    // Si tenemos file_path, descargar y reenviar a N8N
+    if (job.file_path && OCR_WEBHOOK_URL && WEBHOOK_API_KEY) {
         try {
             // Marcar como processing antes de llamar a N8N
             await supabase
@@ -115,8 +115,8 @@ export async function retryOcrJob(jobId: string): Promise<{ success: boolean; me
             // Regenerar signed URL desde el path de Storage (evita usar URL caducada)
             // Las URLs firmadas de Supabase tienen el path después del bucket: /sign/ocr-invoices/{path}
             const STORAGE_BUCKET = 'ocr-invoices';
-            const pathMatch = job.file_url.match(new RegExp(`/sign/${STORAGE_BUCKET}/([^?]+)`));
-            let fetchUrl = job.file_url;
+            const pathMatch = job.file_path.match(new RegExp(`/sign/${STORAGE_BUCKET}/([^?]+)`));
+            let fetchUrl = job.file_path;
             if (pathMatch?.[1]) {
                 const { data: freshUrl } = await supabase.storage
                     .from(STORAGE_BUCKET)
@@ -180,7 +180,7 @@ export async function retryOcrJob(jobId: string): Promise<{ success: boolean; me
         }
     }
 
-    // Fallback: sin file_url, solo marcar como processing (N8N no recibirá el archivo)
+    // Fallback: sin file_path, solo marcar como processing (N8N no recibirá el archivo)
     const { error: updateError } = await supabase
         .from('ocr_jobs')
         .update({
