@@ -229,13 +229,23 @@ export async function POST(request: Request) {
 
         // 6. Broadcast Realtime directo al cliente — sin RLS, entrega inmediata
         try {
-            const broadcastChannel = supabaseAdmin.channel(`ocr_job_${job_id}`);
-            await broadcastChannel.send({
-                type: 'broadcast',
-                event: 'ocr_result',
-                payload: { status, data: invoiceData, error_message: error ?? null },
+            await new Promise<void>((resolve) => {
+                const broadcastChannel = supabaseAdmin.channel(`ocr_job_${job_id}`);
+                broadcastChannel.subscribe((state) => {
+                    if (state === 'SUBSCRIBED') {
+                        broadcastChannel.send({
+                            type: 'broadcast',
+                            event: 'ocr_result',
+                            payload: { status, data: invoiceData, error_message: error ?? null },
+                        }).then(() => {
+                            supabaseAdmin.removeChannel(broadcastChannel);
+                            resolve();
+                        }).catch(() => resolve());
+                    }
+                });
+                // Timeout safety net
+                setTimeout(() => resolve(), 3000);
             });
-            supabaseAdmin.removeChannel(broadcastChannel);
         } catch (bcErr) {
             console.warn('[OCR Callback] Broadcast failed (non-blocking):', bcErr);
         }
