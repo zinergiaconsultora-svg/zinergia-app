@@ -8,8 +8,17 @@
 --    falla silenciosamente gracias al ON CONFLICT DO NOTHING del lado de la app.
 --    Esta es la única garantía verdaderamente atómica.
 
-ALTER TABLE network_commissions
-  ADD CONSTRAINT IF NOT EXISTS network_commissions_proposal_id_key UNIQUE (proposal_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'network_commissions_proposal_id_key'
+  ) THEN
+    ALTER TABLE network_commissions
+      ADD CONSTRAINT network_commissions_proposal_id_key UNIQUE (proposal_id);
+  END IF;
+END;
+$$;
 
 -- 2. Índice parcial de apoyo para la consulta de verificación previa (opcional,
 --    la restricción UNIQUE ya crea un índice, este es redundante — se omite).
