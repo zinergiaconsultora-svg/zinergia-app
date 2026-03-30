@@ -7,12 +7,14 @@ export async function POST(request: Request) {
     // 1. Autenticar request de N8N
     const apiKey = request.headers.get('x-api-key');
     if (apiKey !== env.WEBHOOK_API_KEY) {
+        console.error('[OCR Callback] Unauthorized: key mismatch. Received:', apiKey?.slice(0, 8) + '...');
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     try {
         const payload = await request.json();
         const { job_id, status, data, error, confidence } = payload;
+        console.log('[OCR Callback] Received:', { job_id, status, hasData: !!data, dataKeys: data ? (Array.isArray(data) ? Object.keys(data[0] || {}) : Object.keys(data)) : [] });
 
         if (!job_id) {
             return NextResponse.json({ error: 'Missing job_id' }, { status: 400 });
@@ -23,9 +25,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: `Invalid status: ${status}` }, { status: 400 });
         }
 
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (!serviceKey) {
+            console.error('[OCR Callback] SUPABASE_SERVICE_ROLE_KEY is not set in environment');
+            return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
+        }
         const supabaseAdmin = createClient(
             env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
+            serviceKey
         );
 
         // 2. Normalizar datos extraídos
