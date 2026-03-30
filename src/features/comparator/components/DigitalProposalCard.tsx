@@ -65,11 +65,11 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
                 return;
             }
 
-            // Enhanced print styles for professional PDF
+            // Minimalist & Powerful Print Styles
             const printStyles = `
                 @page { 
                     size: A4; 
-                    margin: 12mm 15mm; 
+                    margin: 15mm 20mm; 
                 }
                 @media print { 
                     body { 
@@ -77,357 +77,249 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
                     } 
-                    .no-print { display: none !important; }
-                    .print-only { display: block !important; }
                 }
                 * { box-sizing: border-box; }
                 body { 
-                    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+                    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; 
                     background: #fff; 
-                    color: #1e293b;
+                    color: #0f172a;
                     line-height: 1.5;
                     font-size: 11px;
                 }
                 .pdf-container { max-width: 100%; }
+                
+                /* HEADER SECTION */
                 .pdf-header {
                     display: flex;
                     justify-content: space-between;
-                    align-items: flex-start;
-                    padding-bottom: 16px;
-                    border-bottom: 2px solid #1e293b;
-                    margin-bottom: 20px;
+                    align-items: flex-end;
+                    padding-bottom: 24px;
+                    border-bottom: 1px solid #e2e8f0;
+                    margin-bottom: 32px;
                 }
-                .pdf-logo-section { display: flex; align-items: center; gap: 12px; }
-                .pdf-logo {
-                    width: 48px;
-                    height: 48px;
-                    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-                    border-radius: 12px;
+                .pdf-logo-wrapper {
                     display: flex;
                     align-items: center;
-                    justify-content: center;
-                    color: white;
-                    font-size: 24px;
+                    gap: 12px;
                 }
-                .pdf-company-name {
-                    font-size: 28px;
+                .pdf-zinergia-logo {
+                    width: 32px;
+                    height: 32px;
+                    display: block;
+                }
+                .pdf-brand-text {
+                    font-size: 22px;
                     font-weight: 800;
-                    letter-spacing: -0.5px;
-                    color: #1e293b;
-                }
-                .pdf-company-name span { color: #4f46e5; }
-                .pdf-tagline {
-                    font-size: 9px;
-                    font-weight: 600;
-                    text-transform: uppercase;
-                    letter-spacing: 2px;
-                    color: #64748b;
-                }
-                .pdf-doc-info { text-align: right; }
-                .pdf-doc-label {
-                    font-size: 8px;
-                    font-weight: 700;
-                    text-transform: uppercase;
-                    letter-spacing: 1.5px;
-                    color: #94a3b8;
-                    margin-bottom: 2px;
-                }
-                .pdf-doc-value {
-                    font-size: 11px;
-                    font-weight: 700;
-                    font-family: 'Consolas', monospace;
-                    color: #1e293b;
-                }
-                .pdf-badge {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    padding: 6px 12px;
-                    background: #ecfdf5;
-                    color: #059669;
-                    border-radius: 20px;
-                    font-size: 9px;
-                    font-weight: 700;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                    margin-top: 8px;
-                }
-                .pdf-executive-summary {
-                    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-                    color: white;
-                    border-radius: 16px;
-                    padding: 24px;
-                    margin-bottom: 20px;
-                    display: grid;
-                    grid-template-columns: 1fr auto;
-                    gap: 24px;
-                    align-items: center;
-                }
-                .pdf-savings-amount {
-                    font-size: 42px;
-                    font-weight: 900;
                     letter-spacing: -1px;
+                    color: #0f172a;
                     line-height: 1;
                 }
-                .pdf-savings-label {
-                    font-size: 10px;
+                .pdf-brand-text span { font-weight: 300; }
+                .pdf-tagline {
+                    font-size: 8px;
                     font-weight: 600;
                     text-transform: uppercase;
                     letter-spacing: 2px;
-                    color: #a5b4fc;
-                    margin-bottom: 8px;
-                }
-                .pdf-savings-note {
-                    font-size: 10px;
-                    color: #94a3b8;
-                    margin-top: 8px;
-                    max-width: 280px;
-                }
-                .pdf-percent-circle {
-                    width: 80px;
-                    height: 80px;
-                    background: rgba(255,255,255,0.1);
-                    border-radius: 50%;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    border: 3px solid #10b981;
-                }
-                .pdf-percent-value {
-                    font-size: 24px;
-                    font-weight: 900;
-                    color: #10b981;
-                }
-                .pdf-percent-label {
-                    font-size: 8px;
-                    font-weight: 600;
-                    text-transform: uppercase;
                     color: #64748b;
+                    margin-top: 4px;
                 }
-                .pdf-comparison-grid {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr 1fr;
-                    gap: 12px;
-                    margin-top: 16px;
-                    padding-top: 16px;
-                    border-top: 1px solid rgba(255,255,255,0.1);
+                .pdf-meta {
+                    text-align: right;
                 }
-                .pdf-comparison-item { text-align: center; }
-                .pdf-comparison-label {
-                    font-size: 8px;
-                    font-weight: 600;
+                .pdf-meta-label {
+                    font-size: 7px;
+                    font-weight: 700;
                     text-transform: uppercase;
                     letter-spacing: 1px;
-                    color: #64748b;
-                    margin-bottom: 4px;
+                    color: #94a3b8;
+                    margin-bottom: 2px;
                 }
-                .pdf-comparison-value {
-                    font-size: 14px;
-                    font-weight: 700;
+                .pdf-meta-value {
+                    font-size: 11px;
+                    font-weight: 600;
+                    color: #334155;
+                    margin-bottom: 8px;
                 }
-                .pdf-section {
-                    margin-bottom: 16px;
-                    padding: 16px;
-                    background: #f8fafc;
-                    border-radius: 12px;
+                .pdf-badge {
+                    display: inline-block;
+                    padding: 4px 8px;
+                    background: #f1f5f9;
                     border: 1px solid #e2e8f0;
+                    color: #475569;
+                    font-size: 8px;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    border-radius: 4px;
                 }
-                .pdf-section-title {
+
+                /* HERO / IMPACT SECTION */
+                .pdf-hero {
+                    text-align: center;
+                    margin-bottom: 40px;
+                    padding: 40px 0;
+                }
+                .pdf-hero-label {
                     font-size: 10px;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 3px;
+                    color: #10b981;
+                    margin-bottom: 16px;
+                }
+                .pdf-hero-amount {
+                    font-size: 64px;
+                    font-weight: 300;
+                    letter-spacing: -2px;
+                    color: #0f172a;
+                    line-height: 1;
+                    margin-bottom: 8px;
+                }
+                .pdf-hero-sub {
+                    font-size: 12px;
+                    color: #64748b;
+                    font-weight: 400;
+                    max-width: 400px;
+                    margin: 0 auto;
+                }
+
+                /* GRID Kpis */
+                .pdf-kpi-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 24px;
+                    margin-bottom: 40px;
+                    border-top: 1px solid #e2e8f0;
+                    border-bottom: 1px solid #e2e8f0;
+                    padding: 24px 0;
+                }
+                .pdf-kpi { text-align: center; }
+                .pdf-kpi-title {
+                    font-size: 8px;
                     font-weight: 700;
                     text-transform: uppercase;
                     letter-spacing: 1.5px;
-                    color: #64748b;
-                    margin-bottom: 12px;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
+                    color: #94a3b8;
+                    margin-bottom: 8px;
                 }
-                .pdf-section-dot {
-                    width: 6px;
-                    height: 6px;
-                    background: #4f46e5;
-                    border-radius: 50%;
+                .pdf-kpi-val {
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: #0f172a;
                 }
-                .pdf-offer-grid {
+                .pdf-kpi-highlight { color: #10b981; }
+                .pdf-kpi-old { color: #64748b; text-decoration: line-through; font-size: 14px; }
+
+                /* TWO COL LAYOUT */
+                .pdf-cols {
                     display: grid;
                     grid-template-columns: 1fr 1fr;
-                    gap: 16px;
+                    gap: 32px;
+                    margin-bottom: 32px;
                 }
-                .pdf-offer-item {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                }
-                .pdf-offer-icon {
-                    width: 36px;
-                    height: 36px;
-                    border-radius: 8px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 14px;
+                .pdf-section-title {
+                    font-size: 9px;
                     font-weight: 700;
-                    color: white;
-                }
-                .pdf-offer-label {
-                    font-size: 8px;
-                    font-weight: 600;
                     text-transform: uppercase;
-                    color: #94a3b8;
+                    letter-spacing: 2px;
+                    color: #0f172a;
+                    margin-bottom: 16px;
+                    border-bottom: 1px solid #0f172a;
+                    padding-bottom: 8px;
                 }
-                .pdf-offer-value {
-                    font-size: 12px;
+
+                /* OFFER SPECS */
+                .pdf-specs {
+                    background: #f8fafc;
+                    padding: 20px;
+                    border-radius: 8px;
+                }
+                .pdf-spec-row {
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 8px 0;
+                    border-bottom: 1px dashed #e2e8f0;
+                }
+                .pdf-spec-row:last-child { border: none; }
+                .pdf-spec-label {
+                    font-size: 10px;
+                    color: #64748b;
+                    font-weight: 500;
+                }
+                .pdf-spec-val {
+                    font-size: 11px;
+                    color: #0f172a;
                     font-weight: 700;
-                    color: #1e293b;
                 }
-                .pdf-price-table {
+
+                /* TABLES */
+                .pdf-table {
                     width: 100%;
                     border-collapse: collapse;
-                    font-size: 10px;
                 }
-                .pdf-price-table th {
-                    background: #1e293b;
-                    color: white;
-                    padding: 8px 10px;
+                .pdf-table th {
                     text-align: left;
-                    font-weight: 600;
-                    font-size: 9px;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                }
-                .pdf-price-table th:first-child { border-radius: 8px 0 0 0; }
-                .pdf-price-table th:last-child { border-radius: 0 8px 0 0; }
-                .pdf-price-table td {
-                    padding: 8px 10px;
-                    border-bottom: 1px solid #e2e8f0;
-                }
-                .pdf-price-table tr:nth-child(even) td { background: #f8fafc; }
-                .pdf-price-table .highlight { 
-                    color: #059669; 
-                    font-weight: 700; 
-                }
-                .pdf-optimization {
-                    background: #ecfdf5;
-                    border: 1px solid #a7f3d0;
-                    border-radius: 12px;
-                    padding: 16px;
-                    margin-bottom: 16px;
-                }
-                .pdf-optimization-title {
-                    font-size: 10px;
+                    font-size: 8px;
                     font-weight: 700;
                     text-transform: uppercase;
                     letter-spacing: 1px;
-                    color: #059669;
-                    margin-bottom: 12px;
-                }
-                .pdf-optimization-grid {
-                    display: grid;
-                    grid-template-columns: repeat(6, 1fr);
-                    gap: 8px;
-                    text-align: center;
-                }
-                .pdf-optimization-item label {
-                    display: block;
-                    font-size: 8px;
-                    font-weight: 600;
                     color: #64748b;
-                    margin-bottom: 2px;
+                    padding: 8px 0;
+                    border-bottom: 1px solid #cbd5e1;
                 }
-                .pdf-optimization-item span {
-                    font-size: 13px;
-                    font-weight: 800;
-                    color: #1e293b;
+                .pdf-table td {
+                    padding: 10px 0;
+                    font-size: 11px;
+                    border-bottom: 1px solid #f1f5f9;
+                    color: #334155;
                 }
-                .pdf-notes {
-                    background: #fffbeb;
-                    border-left: 4px solid #f59e0b;
-                    padding: 12px 16px;
-                    border-radius: 0 8px 8px 0;
-                    margin-bottom: 16px;
+                .pdf-table td strong { color: #0f172a; }
+
+                /* NOTES & OPTIMIZATION */
+                .pdf-box {
+                    padding: 16px;
+                    border-left: 2px solid #0f172a;
+                    background: #f8fafc;
+                    margin-bottom: 24px;
                 }
-                .pdf-notes-title {
-                    font-size: 10px;
+                .pdf-box.optim {
+                    border-color: #10b981;
+                    background: #ecfdf5;
+                }
+                .pdf-box-title {
+                    font-size: 9px;
                     font-weight: 700;
                     text-transform: uppercase;
-                    color: #92400e;
-                    margin-bottom: 6px;
+                    letter-spacing: 1px;
+                    margin-bottom: 8px;
                 }
-                .pdf-notes-content {
-                    font-size: 11px;
-                    color: #78350f;
-                    font-style: italic;
+                .pdf-optim-grid {
+                    display: flex;
+                    gap: 16px;
+                    margin-top: 12px;
                 }
+                .pdf-optim-item { font-size: 10px; }
+                .pdf-optim-item strong { font-size: 12px; color: #065f46; }
+
+                /* FOOTER */
                 .pdf-footer {
-                    display: grid;
-                    grid-template-columns: 1fr auto 1fr;
-                    gap: 24px;
-                    padding-top: 16px;
-                    border-top: 2px solid #e2e8f0;
-                    margin-top: 20px;
-                    align-items: start;
-                }
-                .pdf-footer-legal {
+                    margin-top: 60px;
+                    padding-top: 24px;
+                    border-top: 1px solid #e2e8f0;
+                    display: flex;
+                    justify-content: space-between;
                     font-size: 8px;
                     color: #94a3b8;
+                }
+                .pdf-disclaimer {
+                    max-width: 60%;
                     line-height: 1.6;
                 }
-                .pdf-footer-qr {
+                .pdf-signature {
+                    width: 150px;
+                    border-top: 1px solid #cbd5e1;
+                    padding-top: 8px;
                     text-align: center;
-                }
-                .pdf-footer-qr-box {
-                    width: 64px;
-                    height: 64px;
-                    padding: 4px;
-                    background: white;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 8px;
-                    margin: 0 auto 6px;
-                }
-                .pdf-footer-qr-label {
-                    font-size: 8px;
-                    color: #64748b;
-                    font-weight: 600;
-                }
-                .pdf-footer-contact {
-                    text-align: right;
-                }
-                .pdf-footer-company {
-                    font-size: 12px;
-                    font-weight: 700;
-                    color: #1e293b;
-                    margin-bottom: 4px;
-                }
-                .pdf-footer-contact-item {
-                    display: flex;
-                    align-items: center;
-                    justify-content: flex-end;
-                    gap: 6px;
-                    font-size: 9px;
-                    color: #64748b;
-                    margin-bottom: 2px;
-                }
-                .pdf-signature-line {
-                    margin-top: 24px;
-                    padding-top: 16px;
-                    border-top: 1px dashed #cbd5e1;
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 48px;
-                }
-                .pdf-signature-box {
-                    text-align: center;
-                }
-                .pdf-signature-line-inner {
-                    border-bottom: 1px solid #1e293b;
-                    height: 40px;
-                    margin-bottom: 4px;
-                }
-                .pdf-signature-label {
-                    font-size: 8px;
-                    color: #64748b;
                     text-transform: uppercase;
                     letter-spacing: 1px;
                 }
@@ -437,207 +329,158 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
             const styles = Array.from(document.styleSheets)
                 .map(sheet => {
                     try {
-                        if (sheet.href) return `<link rel="stylesheet" href="${sheet.href}">`;
-                        return `<style>${Array.from(sheet.cssRules).map(r => r.cssText).join('\n')}</style>`;
-                    } catch { return sheet.href ? `<link rel="stylesheet" href="${sheet.href}">` : ''; }
-                }).join('\n');
+                        if (sheet.href) return \`<link rel="stylesheet" href="\${sheet.href}">\`;
+                        return \`<style>\${Array.from(sheet.cssRules).map(r => r.cssText).join('\\n')}</style>\`;
+                    } catch { return sheet.href ? \`<link rel="stylesheet" href="\${sheet.href}">\` : ''; }
+                }).join('\\n');
 
-            printWindow.document.write(`<!DOCTYPE html>
+            // True minimalist Zinergia SVG
+            const zinergiaLogo = \`<svg class="pdf-zinergia-logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="100" height="100" rx="20" fill="#0F172A"/>
+                <path d="M70 30L30 30L55 50L30 70L70 70" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="70" cy="50" r="4" fill="#10B981"/>
+            </svg>\`;
+
+            printWindow.document.write(\`<!DOCTYPE html>
 <html><head>
 <meta charset="UTF-8">
-<title>Auditoría Energética - ${documentId}</title>
-${styles}
-<style>${printStyles}</style>
+<title>Auditoría Energética - \${documentId}</title>
+\${styles}
+<style>\${printStyles}</style>
 </head><body>
 <div class="pdf-container">
-    <!-- PROFESSIONAL PDF HEADER -->
+    
+    <!-- HEADER -->
     <div class="pdf-header">
-        <div class="pdf-logo-section">
-            <div class="pdf-logo">⚡</div>
-            <div>
-                <div class="pdf-company-name">ZINER<span>GIA</span></div>
-                <div class="pdf-tagline">Consultoría Energética Inteligente</div>
-            </div>
-        </div>
-        <div class="pdf-doc-info">
-            <div class="pdf-doc-label">Documento Nº</div>
-            <div class="pdf-doc-value">${documentId}</div>
-            <div class="pdf-doc-label" style="margin-top:8px">Fecha</div>
-            <div class="pdf-doc-value">${documentDate}</div>
-            <div class="pdf-badge">
-                <span>✓</span> Auditoría Certificada
-            </div>
-        </div>
-    </div>
-
-    <!-- EXECUTIVE SUMMARY -->
-    <div class="pdf-executive-summary">
         <div>
-            <div class="pdf-savings-label">Ahorro Anual Estimado</div>
-            <div class="pdf-savings-amount">${formatCurrency(result.annual_savings)}</div>
-            <div class="pdf-savings-note">
-                Proyección basada en el análisis de consumo real aportado. Incluye optimización de potencia cuando aplica.
+            <div class="pdf-logo-wrapper">
+                \${zinergiaLogo}
+                <div class="pdf-brand-text">ZINER<span>GIA</span></div>
             </div>
-            <div class="pdf-comparison-grid">
-                <div class="pdf-comparison-item">
-                    <div class="pdf-comparison-label">Coste Actual</div>
-                    <div class="pdf-comparison-value" style="color:#f87171">${formatCurrency(result.current_annual_cost)}</div>
-                </div>
-                <div class="pdf-comparison-item">
-                    <div class="pdf-comparison-label">Nuevo Coste</div>
-                    <div class="pdf-comparison-value" style="color:#10b981">${formatCurrency(result.offer_annual_cost)}</div>
-                </div>
-                <div class="pdf-comparison-item">
-                    <div class="pdf-comparison-label">Validez</div>
-                    <div class="pdf-comparison-value" style="color:#a5b4fc">${offerValidity}</div>
-                </div>
-            </div>
+            <div class="pdf-tagline">Estudio Energético Profesional</div>
         </div>
-        <div class="pdf-percent-circle">
-            <div class="pdf-percent-value">${Math.round(result.savings_percent)}%</div>
-            <div class="pdf-percent-label">Ahorro</div>
+        <div class="pdf-meta">
+            <div class="pdf-meta-label">ID Documento</div>
+            <div class="pdf-meta-value">\${documentId}</div>
+            <div class="pdf-meta-label">Fecha de Emisión</div>
+            <div class="pdf-meta-value">\${documentDate}</div>
+            <div class="pdf-badge">Validación Oficial</div>
         </div>
     </div>
 
-    <!-- OFFER DETAILS -->
-    <div class="pdf-section">
-        <div class="pdf-section-title">
-            <span class="pdf-section-dot"></span>
-            Datos de la Oferta
-        </div>
-        <div class="pdf-offer-grid">
-            <div class="pdf-offer-item">
-                <div class="pdf-offer-icon" style="background:${result.offer.logo_color || '#4f46e5'}">
-                    ${result.offer.marketer_name.charAt(0)}
-                </div>
-                <div>
-                    <div class="pdf-offer-label">Comercializadora</div>
-                    <div class="pdf-offer-value">${result.offer.marketer_name}</div>
-                </div>
-            </div>
-            <div class="pdf-offer-item">
-                <div class="pdf-offer-icon" style="background:#64748b">📋</div>
-                <div>
-                    <div class="pdf-offer-label">Tarifa</div>
-                    <div class="pdf-offer-value">${result.offer.tariff_name}</div>
-                </div>
-            </div>
-            <div class="pdf-offer-item">
-                <div class="pdf-offer-icon" style="background:#0ea5e9">📅</div>
-                <div>
-                    <div class="pdf-offer-label">Permanencia</div>
-                    <div class="pdf-offer-value">${result.offer.contract_duration || 'Sin compromiso'}</div>
-                </div>
-            </div>
-            <div class="pdf-offer-item">
-                <div class="pdf-offer-icon" style="background:#8b5cf6">💡</div>
-                <div>
-                    <div class="pdf-offer-label">Tipo</div>
-                    <div class="pdf-offer-value">${result.offer.type === 'indexed' ? 'Indexada' : 'Precio Fijo'}</div>
-                </div>
-            </div>
+    <!-- HERO IMPACT -->
+    <div class="pdf-hero">
+        <div class="pdf-hero-label">Beneficio Anual Proyectado</div>
+        <div class="pdf-hero-amount">\${formatCurrency(result.annual_savings)}</div>
+        <div class="pdf-hero-sub">
+            Reducción neta estimada sobre tu factura actual, basada en el análisis de \${offerValidity} y optimizaciones técnicas aplicadas.
         </div>
     </div>
 
-    <!-- PRICE COMPARISON TABLE -->
-    <div class="pdf-section">
-        <div class="pdf-section-title">
-            <span class="pdf-section-dot"></span>
-            Desglose de Precios
+    <!-- KPIs -->
+    <div class="pdf-kpi-grid">
+        <div class="pdf-kpi">
+            <div class="pdf-kpi-title">Gasto Anual Actual</div>
+            <div class="pdf-kpi-old">\${formatCurrency(result.current_annual_cost)}</div>
         </div>
-        <table class="pdf-price-table">
-            <thead>
-                <tr>
-                    <th>Periodo</th>
-                    <th>Precio Potencia (€/kW/día)</th>
-                    <th>Precio Energía (€/kWh)</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].map((p, i) => {
-                const powerPrice = result.offer.power_price[p as keyof typeof result.offer.power_price];
-                const energyPrice = result.offer.energy_price[p as keyof typeof result.offer.energy_price];
-                if (powerPrice === 0 && energyPrice === 0 && i > 2) return '';
-                return `
-                        <tr>
-                            <td><strong>${p.toUpperCase()}</strong></td>
-                            <td class="highlight">${powerPrice.toFixed(6)}</td>
-                            <td class="highlight">${energyPrice.toFixed(6)}</td>
-                        </tr>
-                    `;
-            }).join('')}
-            </tbody>
-        </table>
+        <div class="pdf-kpi">
+            <div class="pdf-kpi-title">Inversión Optimizada</div>
+            <div class="pdf-kpi-val pdf-kpi-highlight">\${formatCurrency(result.offer_annual_cost)}</div>
+        </div>
+        <div class="pdf-kpi">
+            <div class="pdf-kpi-title">Eficiencia Energética</div>
+            <div class="pdf-kpi-val">+\${Math.round(result.savings_percent)}%</div>
+        </div>
     </div>
 
-    ${result.optimization_result ? `
-    <!-- OPTIMIZATION SECTION -->
-    <div class="pdf-optimization">
-        <div class="pdf-optimization-title">⚡ Optimización de Potencias Aplicada</div>
-        <div class="pdf-optimization-grid">
-            ${Object.entries(result.optimization_result.optimized_powers).map(([p, val]) => `
-                <div class="pdf-optimization-item">
-                    <label>${p.toUpperCase()}</label>
-                    <span>${val} kW</span>
+    <!-- MAIN COLS -->
+    <div class="pdf-cols">
+        <!-- LEFT: Offer Details -->
+        <div>
+            <div class="pdf-section-title">Detalles de la Oferta Estratégica</div>
+            <div class="pdf-specs">
+                <div class="pdf-spec-row">
+                    <span class="pdf-spec-label">Comercializadora Asignada</span>
+                    <span class="pdf-spec-val">\${result.offer.marketer_name}</span>
                 </div>
-            `).join('')}
+                <div class="pdf-spec-row">
+                    <span class="pdf-spec-label">Tarifa Seleccionada</span>
+                    <span class="pdf-spec-val">\${result.offer.tariff_name}</span>
+                </div>
+                <div class="pdf-spec-row">
+                    <span class="pdf-spec-label">Modalidad de Contratos</span>
+                    <span class="pdf-spec-val">\${result.offer.type === 'indexed' ? 'Indexada al Mercado' : 'Precio Fijo Garantizado'}</span>
+                </div>
+                <div class="pdf-spec-row">
+                    <span class="pdf-spec-label">Compromiso / Permanencia</span>
+                    <span class="pdf-spec-val">\${result.offer.contract_duration || 'Sin Asignar'}</span>
+                </div>
+            </div>
         </div>
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #a7f3d0;display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:10px;font-weight:600;color:#065f46">Ahorro Técnico Adicional</span>
-            <span style="font-size:14px;font-weight:800;color:#059669">+${formatCurrency(result.optimization_result.annual_optimization_savings)}</span>
-        </div>
-    </div>
-    ` : ''}
 
-    ${advisorNotes ? `
-    <!-- ADVISOR NOTES -->
-    <div class="pdf-notes">
-        <div class="pdf-notes-title">Observaciones del Auditor</div>
-        <div class="pdf-notes-content">"${advisorNotes}"</div>
+        <!-- RIGHT: Pricing -->
+        <div>
+            <div class="pdf-section-title">Estructura de Precios (Condiciones Base)</div>
+            <table class="pdf-table">
+                <thead>
+                    <tr>
+                        <th>Tramo</th>
+                        <th>Término Potencia (€/kW)</th>
+                        <th>Término Energía (€/kWh)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    \${['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].map((p, i) => {
+                    const powerPrice = result.offer.power_price[p as keyof typeof result.offer.power_price];
+                    const energyPrice = result.offer.energy_price[p as keyof typeof result.offer.energy_price];
+                    if (powerPrice === 0 && energyPrice === 0 && i > 2) return '';
+                    return \`
+                            <tr>
+                                <td><strong>\${p.toUpperCase()}</strong></td>
+                                <td>\${powerPrice.toFixed(6)}</td>
+                                <td>\${energyPrice.toFixed(6)}</td>
+                            </tr>
+                        \`;
+                }).join('')}
+                </tbody>
+            </table>
+        </div>
     </div>
-    ` : ''}
+
+    <!-- OPTIMIZATION & NOTES -->
+    \${result.optimization_result ? \`
+    <div class="pdf-box optim">
+        <div class="pdf-box-title" style="color: #059669;">Auditoría de Potencias Aplicada</div>
+        <div style="font-size:10px; color:#065f46;">Ajuste técnico que añade <strong>\${formatCurrency(result.optimization_result.annual_optimization_savings)}</strong> al ahorro anual. Nuevos tramos:</div>
+        <div class="pdf-optim-grid">
+            \${Object.entries(result.optimization_result.optimized_powers).map(([p, val]) => \`
+                <div class="pdf-optim-item">\${p.toUpperCase()}: <strong>\${val}kW</strong></div>
+            \`).join('')}
+        </div>
+    </div>
+    \` : ''}
+
+    \${advisorNotes ? \`
+    <div class="pdf-box">
+        <div class="pdf-box-title">Nota del Consultor Energético</div>
+        <div style="font-size: 11px; font-style: italic; color: #475569;">"\${advisorNotes}"</div>
+    </div>
+    \` : ''}
 
     <!-- FOOTER -->
     <div class="pdf-footer">
-        <div class="pdf-footer-legal">
-            <strong>Aviso Legal:</strong> Este documento constituye una simulación económica basada en los datos de consumo aportados. 
-            Los precios finales están sujetos a la validación de la comercializadora seleccionada. 
-            Zinergia actúa como intermediario, no como suministrador de energía. 
-            Las variaciones regulatorias (BOE) pueden afectar los precios indicados.
+        <div class="pdf-disclaimer">
+            Confidencial y propietario. Esta simulación proyectada se basa en el consumo real suministrado. 
+            Precios y datos finales están sujetos a la aprobación técnica por parte de la comercializadora. 
+            Zinergia no asume responsabilidad frente a variaciones de peajes y cargos gubernamentales (BOE).
         </div>
-        <div class="pdf-footer-qr">
-            <div class="pdf-footer-qr-box">
-                <img src="data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="white" width="100" height="100"/><text x="50" y="55" text-anchor="middle" font-size="10">QR</text></svg>')}" alt="QR" style="width:100%;height:100%"/>
-            </div>
-            <div class="pdf-footer-qr-label">Verificar documento</div>
-        </div>
-        <div class="pdf-footer-contact">
-            <div class="pdf-footer-company">Zinergia Consultoría</div>
-            <div class="pdf-footer-contact-item">
-                <span>📞</span> 900 123 456
-            </div>
-            <div class="pdf-footer-contact-item">
-                <span>🌐</span> www.zinergia.es
-            </div>
-            <div class="pdf-footer-contact-item">
-                <span>📍</span> España
-            </div>
+        <div class="pdf-signature">
+            Conformidad Cliente
         </div>
     </div>
 
-    <!-- SIGNATURE LINES -->
-    <div class="pdf-signature-line">
-        <div class="pdf-signature-box">
-            <div class="pdf-signature-line-inner"></div>
-            <div class="pdf-signature-label">Firma del Cliente</div>
-        </div>
-        <div class="pdf-signature-box">
-            <div class="pdf-signature-line-inner"></div>
-            <div class="pdf-signature-label">Firma del Asesor</div>
-        </div>
-    </div>
 </div>
-</body></html>`);
+</body></html>\`);
 
             printWindow.document.close();
 
