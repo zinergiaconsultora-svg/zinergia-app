@@ -12,13 +12,15 @@ export class Profiler {
             return { tags: ['UNKNOWN'], sales_argument: 'No data available.' };
         }
 
-        // --- 1. Weekend Warrior / Night Owl (High P6) ---
-        // P6 includes weekends and nights in 2.0TD/3.0TD
-        const p6Ratio = (data.energy_consumption.p6 || 0) / totalEnergy;
+        // --- 1. Weekend Warrior / Night Owl ---
+        // 2.0TD: P3 is the valley period (nights + weekends — P6 doesn't exist)
+        // 3.0TD / 6.1TD: P6 is the cheapest overnight/weekend period
+        const valleyPeriod = data.tariff_type === '2.0TD' ? 'p3' : 'p6';
+        const valleyRatio = (data.energy_consumption[valleyPeriod] || 0) / totalEnergy;
 
-        if (p6Ratio > THRESHOLDS.P6_NIGHT_OWL) {
+        if (valleyRatio > THRESHOLDS.P6_NIGHT_OWL) {
             tags.push('WEEKEND_WARRIOR');
-            salesArguments.push(`El cliente consume el ${(p6Ratio * 100).toFixed(0)}% de su energía en horario barato (P6). Una tarifa Indexada o con precio valle agresivo es ideal.`);
+            salesArguments.push(`El cliente consume el ${(valleyRatio * 100).toFixed(0)}% de su energía en horario barato (${valleyPeriod.toUpperCase()}). Una tarifa Indexada o con precio valle agresivo es ideal.`);
         }
 
         // --- 2. Business Hours (High P1+P2) ---

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Client } from '@/types/crm';
-import { getFranchiseId, getCached, setCache, invalidateCache } from './shared';
+import { getFranchiseId, getCached, setCache, invalidateCache, invalidateCacheByPrefix } from './shared';
 
 export const clientService = {
     async getClients(serverClient?: SupabaseClient, limit = 20, offset = 0) {
@@ -60,6 +60,7 @@ export const clientService = {
         if (error) throw error;
         invalidateCache(`clients_${franchiseId}`);
         invalidateCache(`clients_${franchiseId}_0`);
+        invalidateCacheByPrefix('dashboard_stats_');
         return data as Client;
     },
 
@@ -74,7 +75,7 @@ export const clientService = {
             .single();
 
         if (error) throw error;
-        if (franchiseId) { invalidateCache(`clients_${franchiseId}`); invalidateCache(`clients_${franchiseId}_0`); }
+        if (franchiseId) { invalidateCache(`clients_${franchiseId}`); invalidateCache(`clients_${franchiseId}_0`); invalidateCacheByPrefix('dashboard_stats_'); }
         return data as Client;
     },
 
@@ -83,7 +84,7 @@ export const clientService = {
         const franchiseId = await getFranchiseId(supabase);
         const { error } = await supabase.from('clients').delete().eq('id', id);
         if (error) throw error;
-        if (franchiseId) { invalidateCache(`clients_${franchiseId}`); invalidateCache(`clients_${franchiseId}_0`); }
+        if (franchiseId) { invalidateCache(`clients_${franchiseId}`); invalidateCache(`clients_${franchiseId}_0`); invalidateCacheByPrefix('dashboard_stats_'); }
     },
 
     async getGeolocatedClients() {

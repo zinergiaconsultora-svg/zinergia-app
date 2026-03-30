@@ -1,9 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { getOcrJobHistory, retryOcrJob, type OcrJobRecord } from '@/app/actions/ocr-jobs';
-import { RefreshCw, CheckCircle2, XCircle, Loader2, FileText, RotateCcw } from 'lucide-react';
+import { RefreshCw, CheckCircle2, XCircle, Loader2, FileText, RotateCcw, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
+import { createClient } from '@/lib/supabase/client';
+import { detectAnomalies } from '@/lib/anomalyDetector';
+import { AnomalySummaryBadge, AnomalyPanel } from '@/components/AnomalyPanel';
+import { InvoiceData } from '@/types/crm';
 
 const STATUS_CONFIG = {
     processing: {
@@ -29,10 +34,104 @@ const STATUS_CONFIG = {
     },
 } as const;
 
+// Campos a mostrar en el panel de confianza
+const CONFIDENCE_FIELDS: { key: string; label: string }[] = [
+    { key: 'client_name', label: 'Titular' },
+    { key: 'cups', label: 'CUPS' },
+    { key: 'dni_cif', label: 'DNI/CIF' },
+    { key: 'total_amount', label: 'Total' },
+    { key: 'tariff_name', label: 'Tarifa' },
+    { key: 'power_p1', label: 'Potencia P1' },
+    { key: 'energy_p1', label: 'Energía P1' },
+];
+
+function ConfidenceDot({ score }: { score?: number }) {
+    if (score === undefined) return null;
+    const color = score >= 0.85
+        ? 'bg-emerald-400'
+        : score >= 0.6
+            ? 'bg-amber-400'
+            : 'bg-red-400';
+    return (
+        <span
+            className={`inline-block w-2 h-2 rounded-full ${color} shrink-0`}
+            title={`Confianza: ${Math.round(score * 100)}%`}
+        />
+    );
+}
+
+function JobDetail({ job }: { job: OcrJobRecord }) {
+    const router = useRouter();
+    const data = job.extracted_data;
+    const confidence = data?._confidence as Record<string, number> | null | undefined;
+    const hasLowConfidence = confidence
+        ? Object.values(confidence).some(s => s < 0.85)
+        : false;
+
+    const handleComparar = () => {
+        if (!data) return;
+        const invoicePayload = { ...data };
+        delete invoicePayload._confidence;
+        sessionStorage.setItem('pendingInvoiceData', JSON.stringify({ data: invoicePayload, isMock: false }));
+        router.push('/dashboard/comparator');
+    };
+
+    if (!data) return null;
+
+    // Detectar anomalías sobre los datos extraídos
+    const invoicePayloadForAnomalies = { ...data } as unknown as InvoiceData;
+    const anomalies = detectAnomalies(invoicePayloadForAnomalies);
+
+    return (
+        <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/50 space-y-1.5">
+            {/* Botón comparar */}
+            <button
+                type="button"
+                onClick={handleComparar}
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+            >
+                Comparar tarifas
+                <ArrowRight size={12} />
+            </button>
+
+            {/* Aviso de baja confianza */}
+            {hasLowConfidence && (
+                <p className="text-[10px] text-amber-500 flex items-center gap-1">
+                    <span>⚠</span>
+                    Algunos campos tienen baja confianza — verifica antes de continuar
+                </p>
+            )}
+
+            {/* Panel de anomalías (modo compacto) */}
+            <AnomalyPanel anomalies={anomalies} compact />
+
+            {/* Campos con confidence scores */}
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                {CONFIDENCE_FIELDS.map(({ key, label }) => {
+                    const value = data[key];
+                    const score = confidence?.[key];
+                    if (!value && value !== 0) return null;
+                    const isLow = score !== undefined && score < 0.85;
+                    return (
+                        <div key={key} className="flex items-center gap-1 min-w-0">
+                            {confidence && <ConfidenceDot score={score} />}
+                            <span className="text-[10px] text-slate-400 shrink-0">{label}:</span>
+                            <span className={`text-[10px] truncate font-medium ${isLow ? 'text-amber-500' : 'text-slate-600 dark:text-slate-300'}`}>
+                                {typeof value === 'number' ? value.toLocaleString('es-ES') : String(value)}
+                            </span>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
 export default function OcrJobsPanel() {
     const [jobs, setJobs] = useState<OcrJobRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [retrying, setRetrying] = useState<string | null>(null);
+    const [expanded, setExpanded] = useState<string | null>(null);
 
     const fetchJobs = useCallback(async () => {
         try {
@@ -47,26 +146,41 @@ export default function OcrJobsPanel() {
 
     useEffect(() => { fetchJobs(); }, [fetchJobs]);
 
-    // Poll con backoff exponencial: 3s → 6s → 12s → 24s → 30s (cap)
+    // Realtime: escucha cambios en ocr_jobs — sin polling
     useEffect(() => {
-        const hasProcessing = jobs.some(j => j.status === 'processing');
-        if (!hasProcessing) return;
+        const supabase = createClient();
 
-        let attempt = 0;
-        let timeoutId: ReturnType<typeof setTimeout>;
+        const channel = supabase
+            .channel('ocr_jobs_realtime')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'ocr_jobs' },
+                (payload) => {
+                    if (payload.eventType === 'UPDATE') {
+                        const updated = payload.new as OcrJobRecord;
+                        setJobs(prev =>
+                            prev.map(j => j.id === updated.id ? { ...j, ...updated } : j)
+                        );
+                        if (updated.status === 'completed') {
+                            const clientName = (updated.extracted_data as Record<string, unknown>)?.client_name as string | undefined;
+                            toast.success(`OCR completado${clientName ? `: ${clientName}` : ''}`, {
+                                action: {
+                                    label: 'Ver',
+                                    onClick: () => setExpanded(updated.id),
+                                }
+                            });
+                        } else if (updated.status === 'failed') {
+                            toast.error(`OCR fallido: ${updated.error_message || 'Error desconocido'}`);
+                        }
+                    } else if (payload.eventType === 'INSERT') {
+                        setJobs(prev => [payload.new as OcrJobRecord, ...prev].slice(0, 15));
+                    }
+                }
+            )
+            .subscribe();
 
-        const poll = () => {
-            const delay = Math.min(3000 * Math.pow(2, attempt), 30000);
-            attempt++;
-            timeoutId = setTimeout(async () => {
-                await fetchJobs();
-                // Next poll is scheduled by the effect re-running on jobs state change
-            }, delay);
-        };
-
-        poll();
-        return () => clearTimeout(timeoutId);
-    }, [jobs, fetchJobs]);
+        return () => { supabase.removeChannel(channel); };
+    }, []);
 
     const handleRetry = useCallback(async (jobId: string) => {
         setRetrying(jobId);
@@ -92,7 +206,7 @@ export default function OcrJobsPanel() {
 
     if (loading) {
         return (
-            <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-slate-700/40 p-6">
+            <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-slate-700/40 p-4 sm:p-6">
                 <div className="flex items-center gap-2 mb-4">
                     <FileText size={18} className="text-slate-400" />
                     <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Jobs OCR</h3>
@@ -107,13 +221,15 @@ export default function OcrJobsPanel() {
     }
 
     return (
-        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-slate-700/40 p-6">
+        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-slate-700/40 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                     <FileText size={18} className="text-indigo-500" />
                     <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Historial OCR</h3>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" title="Tiempo real activo" />
                 </div>
                 <button
+                    type="button"
                     onClick={fetchJobs}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                     title="Actualizar"
@@ -125,61 +241,91 @@ export default function OcrJobsPanel() {
             {jobs.length === 0 ? (
                 <p className="text-xs text-slate-400 text-center py-6">No hay jobs de OCR registrados</p>
             ) : (
-                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                <div className="space-y-2 max-h-[500px] overflow-y-auto">
                     {jobs.map(job => {
                         const config = STATUS_CONFIG[job.status];
                         const Icon = config.icon;
                         const clientName = job.extracted_data?.client_name as string | undefined;
+                        const isExpanded = expanded === job.id;
+                        const isCompleted = job.status === 'completed' && job.extracted_data;
+                        const jobAnomalies = isCompleted
+                            ? detectAnomalies(job.extracted_data as unknown as InvoiceData)
+                            : [];
 
                         return (
                             <div
                                 key={job.id}
-                                className={`flex items-center gap-3 p-3 rounded-xl ${config.bg} border border-slate-100 dark:border-slate-700/50`}
+                                className={`p-3 rounded-xl ${config.bg} border border-slate-100 dark:border-slate-700/50 transition-all`}
                             >
-                                <Icon
-                                    size={18}
-                                    className={`${config.color} shrink-0 ${config.animate ? 'animate-spin' : ''}`}
-                                />
+                                <div className="flex items-center gap-3">
+                                    <Icon
+                                        size={18}
+                                        className={`${config.color} shrink-0 ${config.animate ? 'animate-spin' : ''}`}
+                                    />
 
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">
-                                            {job.file_name || 'Sin nombre'}
-                                        </span>
-                                        <span className={`text-[10px] font-medium ${config.color}`}>
-                                            {config.label}
-                                        </span>
-                                    </div>
-                                    <div className="text-[10px] text-slate-400 mt-0.5">
-                                        {formatDate(job.created_at)}
-                                        {clientName && (
-                                            <span className="ml-2 text-emerald-500">→ {clientName}</span>
-                                        )}
-                                        {job.error_message && (
-                                            <span className="ml-2 text-red-400 truncate" title={job.error_message}>
-                                                ⚠ {job.error_message.slice(0, 60)}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">
+                                                {job.file_name || 'Sin nombre'}
                                             </span>
+                                            <span className={`text-[10px] font-medium ${config.color} shrink-0`}>
+                                                {config.label}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                                            <span className="text-[10px] text-slate-400">
+                                                {formatDate(job.created_at)}
+                                                {clientName && clientName !== 'Cliente Desconocido' && (
+                                                    <span className="ml-2 text-emerald-500 font-medium">→ {clientName}</span>
+                                                )}
+                                                {job.error_message && (
+                                                    <span className="ml-2 text-red-400 truncate" title={job.error_message}>
+                                                        ⚠ {job.error_message.slice(0, 60)}
+                                                    </span>
+                                                )}
+                                                {(job.attempts ?? 0) > 1 && (
+                                                    <span className="ml-2 text-amber-400">({job.attempts} intentos)</span>
+                                                )}
+                                            </span>
+                                            {!isExpanded && <AnomalySummaryBadge anomalies={jobAnomalies} />}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        {/* Expandir para ver detalle + confidence */}
+                                        {isCompleted && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setExpanded(isExpanded ? null : job.id)}
+                                                className="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors"
+                                                title={isExpanded ? 'Contraer' : 'Ver detalles'}
+                                            >
+                                                {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                            </button>
                                         )}
-                                        {(job.attempts ?? 0) > 1 && (
-                                            <span className="ml-2 text-amber-400">({job.attempts} intentos)</span>
+
+                                        {/* Retry para jobs fallidos */}
+                                        {job.status === 'failed' && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRetry(job.id)}
+                                                disabled={retrying === job.id}
+                                                className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                                                title="Reintentar"
+                                            >
+                                                {retrying === job.id ? (
+                                                    <Loader2 size={14} className="animate-spin" />
+                                                ) : (
+                                                    <RotateCcw size={14} />
+                                                )}
+                                            </button>
                                         )}
                                     </div>
                                 </div>
 
-                                {/* Retry button for failed jobs */}
-                                {job.status === 'failed' && (
-                                    <button
-                                        onClick={() => handleRetry(job.id)}
-                                        disabled={retrying === job.id}
-                                        className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors shrink-0"
-                                        title="Reintentar"
-                                    >
-                                        {retrying === job.id ? (
-                                            <Loader2 size={14} className="animate-spin" />
-                                        ) : (
-                                            <RotateCcw size={14} />
-                                        )}
-                                    </button>
+                                {/* Panel expandible con datos + botón comparar */}
+                                {isExpanded && isCompleted && (
+                                    <JobDetail job={job} />
                                 )}
                             </div>
                         );

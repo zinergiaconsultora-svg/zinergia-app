@@ -10,10 +10,14 @@ import {
     Check,
     X,
     Building2,
-    Trash2
+    Trash2,
+    Link2,
+    Copy,
+    CheckCheck,
 } from 'lucide-react';
 import { InvoiceData, SavingsResult, Client, Proposal, ProposalStatus } from '@/types/crm';
 import { crmService } from '@/services/crmService';
+import { generatePublicLinkAction } from '@/app/actions/publicProposal';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DigitalProposalCard } from '@/features/comparator/components/DigitalProposalCard';
@@ -28,6 +32,11 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
     const [status, setStatus] = useState<ProposalStatus>(initialProposal?.status || 'draft');
     const [loading, setLoading] = useState(true);
     const [notes, setNotes] = useState(initialProposal?.notes || '');
+
+    // Public link state
+    const [generatingLink, setGeneratingLink] = useState(false);
+    const [publicUrl, setPublicUrl] = useState<string | null>(null);
+    const [copied, setCopied] = useState(false);
 
     // Save Logic State
     const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
@@ -110,6 +119,28 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
         }
     };
 
+    const handleGenerateLink = async () => {
+        if (!initialProposal) return;
+        setGeneratingLink(true);
+        try {
+            const { url } = await generatePublicLinkAction(initialProposal.id);
+            setPublicUrl(url);
+            setStatus('sent');
+        } catch {
+            toast.error('Error al generar el enlace.');
+        } finally {
+            setGeneratingLink(false);
+        }
+    };
+
+    const handleCopyLink = async () => {
+        if (!publicUrl) return;
+        await navigator.clipboard.writeText(publicUrl);
+        setCopied(true);
+        toast.success('Enlace copiado');
+        setTimeout(() => setCopied(false), 2000);
+    };
+
     const handleStatusChange = async (newStatus: ProposalStatus) => {
         if (!initialProposal) return;
         try {
@@ -181,13 +212,27 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
 
                         <div className="flex gap-2">
                             {initialProposal ? (
-                                <button
-                                    onClick={handleDelete}
-                                    className="w-9 h-9 flex items-center justify-center bg-red-50 text-red-500 rounded-lg border border-red-100 hover:bg-red-100 transition-all"
-                                    title="Eliminar Propuesta"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
+                                <>
+                                    {/* Compartir link público */}
+                                    <button
+                                        type="button"
+                                        onClick={handleGenerateLink}
+                                        disabled={generatingLink}
+                                        className="flex items-center gap-1.5 px-3 h-9 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-all text-xs font-semibold disabled:opacity-60"
+                                        title="Generar enlace público"
+                                    >
+                                        {generatingLink ? <div className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" /> : <Link2 size={14} />}
+                                        <span className="hidden sm:inline">Compartir</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleDelete}
+                                        className="w-9 h-9 flex items-center justify-center bg-red-50 text-red-500 rounded-lg border border-red-100 hover:bg-red-100 transition-all"
+                                        title="Eliminar Propuesta"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </>
                             ) : (
                                 <button
                                     onClick={handleOpenSaveModal}
@@ -201,6 +246,72 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
                     </div>
                 </div>
             </header>
+
+            {/* Banner enlace público generado */}
+            <AnimatePresence>
+                {publicUrl && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="bg-indigo-50 border-b border-indigo-100 px-4 py-3 print:hidden"
+                    >
+                        <div className="max-w-4xl mx-auto flex items-center gap-3">
+                            <Link2 size={14} className="text-indigo-500 shrink-0" />
+                            <span className="text-xs text-indigo-700 font-medium flex-1 truncate">{publicUrl}</span>
+                            <button
+                                type="button"
+                                onClick={handleCopyLink}
+                                className="flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 shrink-0 transition-colors"
+                            >
+                                {copied ? <CheckCheck size={13} className="text-emerald-500" /> : <Copy size={13} />}
+                                {copied ? 'Copiado' : 'Copiar'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const text = `Hola, te comparto tu propuesta de ahorro energético de Zinergia: ${publicUrl}`;
+                                    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                                }}
+                                className="flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-800 shrink-0 transition-colors"
+                            >
+                                WhatsApp
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Firma digital — solo visible si la propuesta fue firmada */}
+            {initialProposal?.signature_data && (
+                <div className="max-w-4xl mx-auto px-4 pt-4 print:hidden">
+                    <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex flex-col sm:flex-row gap-4 items-start">
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Check size={14} className="text-emerald-600 shrink-0" />
+                                <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Propuesta firmada digitalmente</span>
+                            </div>
+                            <div className="flex flex-wrap gap-4 text-xs text-slate-500 mt-1">
+                                {initialProposal.signed_name && (
+                                    <span>Firmado por: <span className="font-medium text-slate-700">{initialProposal.signed_name}</span></span>
+                                )}
+                                {initialProposal.signed_at && (
+                                    <span>Fecha: <span className="font-medium text-slate-700">{new Date(initialProposal.signed_at).toLocaleString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></span>
+                                )}
+                            </div>
+                        </div>
+                        {/* Imagen de la firma */}
+                        <div className="bg-white border border-emerald-100 rounded-xl p-2 shrink-0">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={initialProposal.signature_data}
+                                alt="Firma del cliente"
+                                className="h-14 w-auto max-w-[160px] object-contain"
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="max-w-4xl mx-auto pt-4 px-4">
                 <DigitalProposalCard
@@ -236,6 +347,7 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
                                     <p className="text-sm text-slate-500">Asigna este estudio a un cliente de tu cartera.</p>
                                 </div>
                                 <button
+                                    type="button"
                                     onClick={() => setIsSaveModalOpen(false)}
                                     className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors"
                                     title="Cerrar"
@@ -297,12 +409,14 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
 
                             <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex gap-3">
                                 <button
+                                    type="button"
                                     onClick={() => setIsSaveModalOpen(false)}
                                     className="flex-1 py-3.5 bg-white border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-colors"
                                 >
                                     Cancelar
                                 </button>
                                 <button
+                                    type="button"
                                     onClick={handleSave}
                                     disabled={!selectedClient || saving}
                                     className="flex-[2] py-3.5 bg-slate-900 text-white font-bold rounded-xl shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"

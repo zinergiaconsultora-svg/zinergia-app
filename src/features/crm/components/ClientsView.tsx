@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Search, ChevronRight, User, LayoutGrid, Columns3 } from 'lucide-react';
+import { getClientScoresAction, type ClientScore } from '@/app/actions/clientScores';
 import { motion } from 'framer-motion';
 import { useClients } from '../hooks/useClients';
 import ClientCard from './ClientCard';
@@ -62,6 +63,14 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
     const [statusFilter, setStatusFilter] = useState<ClientStatus | 'all'>('all');
     const [sortBy, setSortBy] = useState<SortOption>('created_at');
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [scores, setScores] = useState<Map<string, ClientScore>>(new Map());
+
+    useEffect(() => {
+        if (clients.length === 0) return;
+        getClientScoresAction(clients.map(c => c.id))
+            .then(list => setScores(new Map(list.map(s => [s.clientId, s]))))
+            .catch(() => { /* non-fatal */ });
+    }, [clients]);
     const router = useRouter();
 
     const filteredClients = useMemo(() => {
@@ -277,6 +286,24 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                                             <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                         )}
                                     </button>
+                                    {/* Priority Score Badge */}
+                                    {(() => {
+                                        const s = scores.get(client.id);
+                                        if (!s || s.score < 20) return null;
+                                        const color = s.score >= 60
+                                            ? 'bg-red-500 ring-red-200'
+                                            : s.score >= 35
+                                                ? 'bg-amber-400 ring-amber-200'
+                                                : 'bg-blue-400 ring-blue-200';
+                                        return (
+                                            <div
+                                                title={s.reasons.join(' · ')}
+                                                className={`absolute top-4 right-4 z-20 w-7 h-7 rounded-full ${color} ring-2 flex items-center justify-center text-white text-[10px] font-bold shadow-sm`}
+                                            >
+                                                {s.score}
+                                            </div>
+                                        );
+                                    })()}
                                     <ClientCard client={client} />
                                 </motion.div>
                             ))

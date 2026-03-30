@@ -39,8 +39,10 @@ export const proposalService = {
         const supabase = createClient();
         const franchiseId = await getFranchiseId(supabase);
         if (!franchiseId) throw new Error('Auth required');
+        const { data: { user } } = await supabase.auth.getUser();
+        const ownerId = user?.id;
 
-        // 1. Resolve client — prefer explicit id, then deduplicate by CUPS, then create
+        // 1. Resolve client — explicit id → deduplicate by CUPS → deduplicate by DNI/CIF → create
         let clientId = invoiceData.client_id;
         if (!clientId && invoiceData.cups) {
             const { data: existing } = await supabase
@@ -51,12 +53,22 @@ export const proposalService = {
                 .maybeSingle();
             clientId = existing?.id;
         }
+        if (!clientId && invoiceData.dni_cif) {
+            const { data: existing } = await supabase
+                .from('clients')
+                .select('id')
+                .eq('franchise_id', franchiseId)
+                .eq('dni_cif', invoiceData.dni_cif)
+                .maybeSingle();
+            clientId = existing?.id;
+        }
         if (!clientId) {
             const { data: newClient, error: clientError } = await supabase
                 .from('clients')
                 .insert({
                     name: clientName || invoiceData.client_name || invoiceData.company_name || 'Nuevo Cliente',
                     franchise_id: franchiseId,
+                    owner_id: ownerId,
                     status: 'new',
                     cups: invoiceData.cups,
                     dni_cif: invoiceData.dni_cif,
@@ -72,6 +84,7 @@ export const proposalService = {
         const proposal: Partial<Proposal> = {
             client_id: clientId,
             franchise_id: franchiseId,
+            agent_id: ownerId,
             status: 'draft',
             offer_snapshot: bestResult.offer,
             calculation_data: invoiceData,
@@ -120,9 +133,10 @@ export const proposalService = {
             return data as Proposal;
         }
 
+        const { data: { user } } = await supabase.auth.getUser();
         const { data, error } = await supabase
             .from('proposals')
-            .insert({ ...proposal, franchise_id: franchiseId })
+            .insert({ ...proposal, franchise_id: franchiseId, agent_id: user?.id })
             .select()
             .single();
         if (error) throw error;

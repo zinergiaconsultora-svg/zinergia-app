@@ -4,15 +4,25 @@ import { analyzeDocumentWithRetry as analyzeDocument, validateFile } from '@/ser
 import { crmService } from '@/services/crmService';
 import { OptimizationRecommendation, AuditOpportunity } from '@/lib/aletheia/types';
 import { createClient } from '@/lib/supabase/client';
+import { markOcrJobFailed } from '@/app/actions/ocr-jobs';
 
 type Step = 1 | 2 | 3;
 
 // Tipo para los rows de ocr_jobs recibidos via Realtime
+// IMPORTANTE: el campo en DB es `extracted_data`, no `invoice_data`
 interface OcrJobRow {
     id: string;
     status: 'processing' | 'completed' | 'failed';
-    invoice_data: InvoiceData | null;
+    extracted_data: Record<string, unknown> | null;
     error_message: string | null;
+}
+
+// Extrae InvoiceData de extracted_data eliminando el campo interno _confidence
+function extractInvoiceData(raw: Record<string, unknown> | null): InvoiceData | null {
+    if (!raw) return null;
+    const { _confidence: _c, ...rest } = raw;
+    void _c;
+    return rest as unknown as InvoiceData;
 }
 
 interface SimulatorState {
@@ -109,6 +119,27 @@ const OCR_REALTIME_TIMEOUT_MS = 90_000;
 export function useSimulator() {
     const [state, dispatch] = useReducer(simulatorReducer, initialState);
     const activeChannelRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null);
+    const activeSupabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
+
+    // Cleanup Realtime channel if component unmounts while OCR is in flight
+    useEffect(() => {
+        return () => {
+            if (activeChannelRef.current && activeSupabaseRef.current) {
+                activeSupabaseRef.current.removeChannel(activeChannelRef.current);
+                activeChannelRef.current = null;
+                activeSupabaseRef.current = null;
+            }
+        };
+    }, []);
+
+    // Revoke blob URL when PDF changes or component unmounts to prevent memory leaks
+    useEffect(() => {
+        const url = state.pdfUrl;
+        if (!url) return;
+        return () => {
+            URL.revokeObjectURL(url);
+        };
+    }, [state.pdfUrl]);
 
     // Pick up pre-analyzed invoice from QuickUploadZone (dashboard shortcut)
     useEffect(() => {
@@ -144,7 +175,7 @@ export function useSimulator() {
                         const updatedJob = payload.new;
                         clearTimeout(timeoutId);
                         if (updatedJob.status === 'completed') {
-                            dispatch({ type: 'SET_INVOICE_DATA', payload: updatedJob.invoice_data as InvoiceData });
+                            dispatch({ type: 'SET_INVOICE_DATA', payload: extractInvoiceData(updatedJob.extracted_data) as InvoiceData });
                             supabase.removeChannel(channel);
                         } else if (updatedJob.status === 'failed') {
                             dispatch({ type: 'SET_ERROR', payload: updatedJob.error_message || 'Error en procesamiento OCR' });
@@ -154,10 +185,11 @@ export function useSimulator() {
                 )
                 .subscribe();
 
-            // Safety net: si N8N no responde en 90s, abortar
+            // Safety net: si N8N no responde en 90s, marcar como fallido en DB y abortar
             const timeoutId = setTimeout(() => {
                 dispatch({ type: 'SET_ERROR', payload: 'El servidor tardó demasiado en procesar el documento. Inténtalo de nuevo.' });
                 supabase.removeChannel(channel);
+                markOcrJobFailed(jobId, 'Timeout: N8N no respondió en 90 segundos').catch(() => {});
             }, OCR_REALTIME_TIMEOUT_MS);
 
             return () => {
@@ -207,26 +239,31 @@ export function useSimulator() {
                         const updatedJob = payload.new;
                         clearTimeout(timeoutId);
                         if (updatedJob.status === 'completed') {
-                            dispatch({ type: 'SET_INVOICE_DATA', payload: updatedJob.invoice_data as InvoiceData });
+                            dispatch({ type: 'SET_INVOICE_DATA', payload: extractInvoiceData(updatedJob.extracted_data) as InvoiceData });
                             supabase.removeChannel(channel);
                             activeChannelRef.current = null;
+                            activeSupabaseRef.current = null;
                         } else if (updatedJob.status === 'failed') {
                             dispatch({ type: 'SET_ERROR', payload: updatedJob.error_message || 'Error en análisis OCR' });
                             supabase.removeChannel(channel);
                             activeChannelRef.current = null;
+                            activeSupabaseRef.current = null;
                         }
                     }
                 )
                 .subscribe();
 
-            // Guardar referencia para cleanup al desmontar
+            // Guardar referencias para cleanup al desmontar
             activeChannelRef.current = channel;
+            activeSupabaseRef.current = supabase;
 
-            // Safety net: si N8N no responde en 90s, abortar
+            // Safety net: si N8N no responde en 90s, marcar como fallido en DB y abortar
             const timeoutId = setTimeout(() => {
                 dispatch({ type: 'SET_ERROR', payload: 'El servidor tardó demasiado en procesar el documento. Inténtalo de nuevo.' });
                 supabase.removeChannel(channel);
                 activeChannelRef.current = null;
+                activeSupabaseRef.current = null;
+                markOcrJobFailed(result.jobId!, 'Timeout: N8N no respondió en 90 segundos').catch(() => {});
             }, OCR_REALTIME_TIMEOUT_MS);
 
         } catch (error) {

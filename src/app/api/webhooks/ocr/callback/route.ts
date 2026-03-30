@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { env } from '@/lib/env';
+import { sendPushToUser } from '@/lib/push/sendPush';
 
 export async function POST(request: Request) {
-    // 1. Authenticate N8N Request
+    // 1. Autenticar request de N8N
     const apiKey = request.headers.get('x-api-key');
     if (apiKey !== env.WEBHOOK_API_KEY) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -11,50 +12,52 @@ export async function POST(request: Request) {
 
     try {
         const payload = await request.json();
-        const { job_id, status, data, error } = payload;
+        const { job_id, status, data, error, confidence } = payload;
 
         if (!job_id) {
             return NextResponse.json({ error: 'Missing job_id' }, { status: 400 });
         }
 
-        // Validar que el status sea un valor permitido por la constraint de la DB
         const VALID_STATUSES = ['completed', 'failed'] as const;
         if (!status || !VALID_STATUSES.includes(status)) {
-            return NextResponse.json({ error: `Invalid status: ${status}. Must be one of: ${VALID_STATUSES.join(', ')}` }, { status: 400 });
+            return NextResponse.json({ error: `Invalid status: ${status}` }, { status: 400 });
         }
 
-        // Initialize Supabase Admin Client to bypass RLS for this backend operation
         const supabaseAdmin = createClient(
             env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.SUPABASE_SERVICE_ROLE_KEY!
         );
 
-        // Normalize data if success
-        let invoiceData = null;
+        // 2. Normalizar datos extraídos
+        let invoiceData: Record<string, unknown> | null = null;
         if (status === 'completed' && data) {
             const rawData = Array.isArray(data) ? data[0]?.output || data[0] : data?.output || data;
-            
+
             const parseNumber = (value: unknown) => {
                 if (value === undefined || value === null || value === '') return 0;
                 const strValue = String(value).trim().replace(/\s/g, '');
                 if (strValue.includes('.') && strValue.includes(',')) {
                     return parseFloat(strValue.replace(/\./g, '').replace(',', '.'));
                 }
-                if (strValue.includes(',')) {
-                    return parseFloat(strValue.replace(',', '.'));
-                }
+                if (strValue.includes(',')) return parseFloat(strValue.replace(',', '.'));
                 return parseFloat(strValue) || 0;
             };
 
             const rawTariff = (rawData.tariff_name || rawData.TARIFA || rawData.tarifa || rawData.ACCESO || '').toUpperCase();
-            
+
             let detectedPowerType = '2.0';
             if (rawTariff.includes('3.1') || rawTariff.includes('6.1') || rawTariff.includes('6.2')) {
                 detectedPowerType = '3.1';
             } else if (rawTariff.includes('3.0') || rawTariff.includes('3.0TD')) {
                 detectedPowerType = '3.0';
-            } else if (rawTariff.includes('2.0') || rawTariff.includes('2.1') || rawTariff.includes('2.0TD')) {
-                detectedPowerType = '2.0';
+            }
+
+            // Confidence scores por campo (si N8N los envía, si no se asume 1.0)
+            const confidenceScores: Record<string, number> = {};
+            if (confidence && typeof confidence === 'object') {
+                for (const [field, score] of Object.entries(confidence)) {
+                    confidenceScores[field] = typeof score === 'number' ? score : 1.0;
+                }
             }
 
             invoiceData = {
@@ -63,37 +66,149 @@ export async function POST(request: Request) {
                 company_name: rawData.company_name || rawData.COMERCIALIZADORA || rawData.compania || rawData.EMPRESA || '',
                 cups: rawData.cups || rawData.CUPS || rawData.cups_suministro || '',
                 tariff_name: rawTariff || '2.0TD',
-                invoice_number: rawData.invoice_number || rawData.NUMERO_FACTURA || rawData.numero_factura || rawData.N_FACTURA || '',
-                invoice_date: rawData.invoice_date || rawData.FECHA_FACTURA || rawData.fecha_factura || rawData.FECHA_EMISION || '',
+                invoice_number: rawData.invoice_number || rawData.NUMERO_FACTURA || rawData.numero_factura || '',
+                invoice_date: rawData.invoice_date || rawData.FECHA_FACTURA || rawData.fecha_factura || '',
                 period_days: parseNumber(rawData.period_days || rawData.periodo_facturacion || rawData.DIAS_FACTURACION || 30),
                 supply_address: rawData.supply_address || rawData.direccion_suministro || rawData.DIRECCION || '',
                 subtotal: parseNumber(rawData.subtotal || rawData.SUBTOTAL),
                 vat: parseNumber(rawData.iva || rawData.IVA),
                 total_amount: parseNumber(rawData.importe_total || rawData.total || rawData.TOTAL_FACTURA),
                 rights_cost: parseNumber(rawData.derechos_enganche || rawData.DERECHOS),
+                power_p1: parseNumber(rawData.power_p1 || rawData.POTENCIA_P1 || rawData.potencia_p1),
+                power_p2: parseNumber(rawData.power_p2 || rawData.POTENCIA_P2 || rawData.potencia_p2),
+                power_p3: parseNumber(rawData.power_p3 || rawData.POTENCIA_P3 || rawData.potencia_p3),
+                power_p4: parseNumber(rawData.power_p4 || rawData.POTENCIA_P4 || rawData.potencia_p4),
+                power_p5: parseNumber(rawData.power_p5 || rawData.POTENCIA_P5 || rawData.potencia_p5),
+                power_p6: parseNumber(rawData.power_p6 || rawData.POTENCIA_P6 || rawData.potencia_p6),
+                energy_p1: parseNumber(rawData.energy_p1 || rawData.ENERGIA_P1 || rawData.energia_p1),
+                energy_p2: parseNumber(rawData.energy_p2 || rawData.ENERGIA_P2 || rawData.energia_p2),
+                energy_p3: parseNumber(rawData.energy_p3 || rawData.ENERGIA_P3 || rawData.energia_p3),
+                energy_p4: parseNumber(rawData.energy_p4 || rawData.ENERGIA_P4 || rawData.energia_p4),
+                energy_p5: parseNumber(rawData.energy_p5 || rawData.ENERGIA_P5 || rawData.energia_p5),
+                energy_p6: parseNumber(rawData.energy_p6 || rawData.ENERGIA_P6 || rawData.energia_p6),
+                detected_power_type: detectedPowerType,
 
-                power_p1: parseNumber(rawData.power_p1 || rawData.POTENCIA_P1 || rawData.potencia_p1 || rawData.P1_KW),
-                power_p2: parseNumber(rawData.power_p2 || rawData.POTENCIA_P2 || rawData.potencia_p2 || rawData.P2_KW),
-                power_p3: parseNumber(rawData.power_p3 || rawData.POTENCIA_P3 || rawData.potencia_p3 || rawData.P3_KW),
-                power_p4: parseNumber(rawData.power_p4 || rawData.POTENCIA_P4 || rawData.potencia_p4 || rawData.P4_KW),
-                power_p5: parseNumber(rawData.power_p5 || rawData.POTENCIA_P5 || rawData.potencia_p5 || rawData.P5_KW),
-                power_p6: parseNumber(rawData.power_p6 || rawData.POTENCIA_P6 || rawData.potencia_p6 || rawData.P6_KW),
+                // Precios actuales de energía (si N8N los extrae de la factura)
+                current_energy_price_p1: parseNumber(rawData.current_energy_price_p1 || rawData.precio_energia_p1 || rawData.PRECIO_P1 || 0) || undefined,
+                current_energy_price_p2: parseNumber(rawData.current_energy_price_p2 || rawData.precio_energia_p2 || 0) || undefined,
+                current_energy_price_p3: parseNumber(rawData.current_energy_price_p3 || rawData.precio_energia_p3 || 0) || undefined,
 
-                energy_p1: parseNumber(rawData.energy_p1 || rawData.ENERGIA_P1 || rawData.energia_p1 || rawData.P1_KWH),
-                energy_p2: parseNumber(rawData.energy_p2 || rawData.ENERGIA_P2 || rawData.energia_p2 || rawData.P2_KWH),
-                energy_p3: parseNumber(rawData.energy_p3 || rawData.ENERGIA_P3 || rawData.energia_p3 || rawData.P3_KWH),
-                energy_p4: parseNumber(rawData.energy_p4 || rawData.ENERGIA_P4 || rawData.energia_p4 || rawData.P4_KWH),
-                energy_p5: parseNumber(rawData.energy_p5 || rawData.ENERGIA_P5 || rawData.energia_p5 || rawData.P5_KWH),
-                energy_p6: parseNumber(rawData.energy_p6 || rawData.ENERGIA_P6 || rawData.energia_p6 || rawData.P6_KWH),
+                // Datos forenses — penalización reactiva, tipo acceso tarifa, etc.
+                forensic_details: (() => {
+                    const rd = rawData as Record<string, unknown>;
+                    const reactive = rd.energia_reactiva || rd.ENERGIA_REACTIVA || rd.energy_reactive;
+                    const reactiveKvarh = reactive ? parseNumber(reactive) : 0;
+                    const hasReactivePenalty = !!(rd.penalizacion_reactiva || rd.reactive_penalty || reactiveKvarh > 0);
+                    const tariffAccess = (rd.acceso_tarifa || rd.tariff_access || rawTariff || '') as string;
+                    if (!hasReactivePenalty && reactiveKvarh === 0 && !tariffAccess) return undefined;
+                    return {
+                        energy_reactive: reactiveKvarh > 0 ? reactiveKvarh : undefined,
+                        reactive_penalty: hasReactivePenalty,
+                        tariff_access: tariffAccess || undefined,
+                    };
+                })(),
 
-                detected_power_type: detectedPowerType
+                // Confidence scores embebidos — usados en la UI para resaltar campos dudosos
+                // NOTA: extractInvoiceData() en useSimulator los elimina antes de pasar al motor de cálculo
+                _confidence: Object.keys(confidenceScores).length > 0 ? confidenceScores : null,
             };
         }
 
-        // Update Job Status
+        // 3. Recuperar job para obtener agent_id y franchise_id
+        const { data: job } = await supabaseAdmin
+            .from('ocr_jobs')
+            .select('id, agent_id, franchise_id, file_name')
+            .eq('id', job_id)
+            .single();
+
+        // 4. Auto-crear/actualizar cliente desde los datos extraídos
+        let clientId: string | null = null;
+        if (status === 'completed' && invoiceData && job?.agent_id && job?.franchise_id) {
+            try {
+                const clientName = invoiceData.client_name as string;
+                const cups = invoiceData.cups as string;
+                const dniCif = invoiceData.dni_cif as string;
+
+                // Buscar cliente existente por CUPS (más único) o por DNI/CIF
+                let existingClient = null;
+                if (cups) {
+                    const { data } = await supabaseAdmin
+                        .from('clients')
+                        .select('id')
+                        .eq('franchise_id', job.franchise_id)
+                        .eq('cups', cups)
+                        .maybeSingle();
+                    existingClient = data;
+                }
+                if (!existingClient && dniCif) {
+                    const { data } = await supabaseAdmin
+                        .from('clients')
+                        .select('id')
+                        .eq('franchise_id', job.franchise_id)
+                        .eq('dni_cif', dniCif)
+                        .maybeSingle();
+                    existingClient = data;
+                }
+
+                if (existingClient) {
+                    // Actualizar datos del cliente existente
+                    await supabaseAdmin
+                        .from('clients')
+                        .update({
+                            cups: cups || undefined,
+                            current_supplier: (invoiceData.company_name as string) || undefined,
+                            tariff_type: (invoiceData.tariff_name as string) || undefined,
+                            address: (invoiceData.supply_address as string) || undefined,
+                            contracted_power: {
+                                p1: invoiceData.power_p1, p2: invoiceData.power_p2,
+                                p3: invoiceData.power_p3, p4: invoiceData.power_p4,
+                                p5: invoiceData.power_p5, p6: invoiceData.power_p6,
+                            },
+                            average_monthly_bill: invoiceData.total_amount
+                                ? Math.round((invoiceData.total_amount as number) / ((invoiceData.period_days as number || 30) / 30))
+                                : undefined,
+                        })
+                        .eq('id', existingClient.id);
+                    clientId = existingClient.id;
+                } else if (clientName && clientName !== 'Cliente Desconocido') {
+                    // Crear nuevo cliente
+                    const { data: newClient } = await supabaseAdmin
+                        .from('clients')
+                        .insert({
+                            franchise_id: job.franchise_id,
+                            owner_id: job.agent_id,
+                            name: clientName,
+                            dni_cif: dniCif || null,
+                            cups: cups || null,
+                            address: (invoiceData.supply_address as string) || null,
+                            current_supplier: (invoiceData.company_name as string) || null,
+                            tariff_type: (invoiceData.tariff_name as string) || null,
+                            contracted_power: {
+                                p1: invoiceData.power_p1, p2: invoiceData.power_p2,
+                                p3: invoiceData.power_p3, p4: invoiceData.power_p4,
+                                p5: invoiceData.power_p5, p6: invoiceData.power_p6,
+                            },
+                            average_monthly_bill: invoiceData.total_amount
+                                ? Math.round((invoiceData.total_amount as number) / ((invoiceData.period_days as number || 30) / 30))
+                                : null,
+                            type: dniCif?.length === 9 && dniCif[0]?.match(/[A-Z]/) ? 'company' : 'residential',
+                            status: 'new',
+                        })
+                        .select('id')
+                        .single();
+                    clientId = newClient?.id ?? null;
+                }
+            } catch (clientErr) {
+                // No bloquear el flujo si falla la creación del cliente
+                console.warn('[OCR Callback] Auto-client creation failed (non-blocking):', clientErr);
+            }
+        }
+
+        // 5. Actualizar job en la DB (campo correcto: extracted_data)
         const updatePayload: Record<string, unknown> = { status };
-        if (invoiceData) updatePayload.invoice_data = invoiceData;
+        if (invoiceData) updatePayload.extracted_data = invoiceData;
         if (error) updatePayload.error_message = error;
+        if (clientId) updatePayload.client_id = clientId;
 
         const { error: dbError } = await supabaseAdmin
             .from('ocr_jobs')
@@ -105,7 +220,30 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
         }
 
-        return NextResponse.json({ success: true, message: 'Job updated successfully' });
+        // 6. Web Push al agente — no bloquea la respuesta
+        if (job?.agent_id) {
+            const clientName = invoiceData?.client_name as string | undefined;
+            const pushPayload = status === 'completed'
+                ? {
+                    title: 'Factura procesada',
+                    body: clientName && clientName !== 'Cliente Desconocido'
+                        ? `${clientName} lista para comparar`
+                        : `${job.file_name || 'Factura'} procesada correctamente`,
+                    url: '/dashboard',
+                    icon: '/icon-192.png',
+                }
+                : {
+                    title: 'Error al procesar factura',
+                    body: `${job.file_name || 'Factura'}: ${error || 'Error desconocido'}`,
+                    url: '/dashboard',
+                    icon: '/icon-192.png',
+                };
+
+            // Fire-and-forget — no await para no bloquear la respuesta a N8N
+            sendPushToUser(job.agent_id, pushPayload).catch(() => {});
+        }
+
+        return NextResponse.json({ success: true, client_id: clientId });
 
     } catch (error) {
         console.error('[OCR Callback] Parsing Error:', error);

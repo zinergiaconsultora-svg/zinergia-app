@@ -69,7 +69,11 @@ async function processCommissions(
         const rule = await getActiveCommissionRule()
         const pot = (proposal.annual_savings || 0) * rule.commission_rate
 
-        await supabase.from('network_commissions').insert({
+        // Upsert con ignoreDuplicates: si dos requests concurrentes llegan al mismo tiempo,
+        // el UNIQUE constraint en proposal_id garantiza que solo uno insertará. El otro
+        // fallará silenciosamente. El JS check de arriba es un early-exit barato, no la
+        // garantía real.
+        await supabase.from('network_commissions').upsert({
             proposal_id: proposal.id,
             agent_id: user.id,
             franchise_id: profile.franchise_id,
@@ -78,7 +82,7 @@ async function processCommissions(
             franchise_profit: pot * rule.franchise_share,
             hq_royalty: pot * rule.hq_share,
             status: 'pending',
-        })
+        }, { onConflict: 'proposal_id', ignoreDuplicates: true })
 
         // Award gamification points (upsert to handle first-time users)
         const { data: current } = await supabase

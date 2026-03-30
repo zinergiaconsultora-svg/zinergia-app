@@ -3,10 +3,31 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { crmService } from '@/services/crmService';
 import { Proposal } from '@/types/crm';
-import { PieChart, Plus, Clock, Users, TrendingUp } from 'lucide-react';
+import { PieChart, Plus, Clock, Users, TrendingUp, AlertTriangle, Bell } from 'lucide-react';
 import Link from 'next/link';
 
 const PAGE_SIZE = 20;
+
+function getPendingDays(proposal: Proposal): number | null {
+    if (proposal.status !== 'sent') return null;
+    const updated = new Date(proposal.updated_at || proposal.created_at).getTime();
+    return Math.floor((Date.now() - updated) / (1000 * 60 * 60 * 24));
+}
+
+function FollowUpBadge({ days }: { days: number }) {
+    if (days < 3) return null;
+    const urgent = days >= 7;
+    return (
+        <span className={`flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md border uppercase tracking-wider ${
+            urgent
+                ? 'bg-red-50 text-red-600 border-red-200'
+                : 'bg-amber-50 text-amber-600 border-amber-200'
+        }`}>
+            {urgent ? <AlertTriangle size={9} /> : <Bell size={9} />}
+            {urgent ? `${days}d sin respuesta` : `${days}d enviada`}
+        </span>
+    );
+}
 
 interface AuditGroup {
     client_id: string;
@@ -42,6 +63,15 @@ export default function ProposalsPage() {
         await fetchProposals(offset, true);
         setIsLoadingMore(false);
     };
+
+    // Propuestas enviadas con más de 3 días sin respuesta
+    const pendingFollowUps = useMemo(() =>
+        proposals.filter(p => {
+            const days = getPendingDays(p);
+            return days !== null && days >= 3;
+        }).length,
+        [proposals]
+    );
 
     // Memoize grouped proposals calculation - Optimized to O(n log n)
     const groupedProposals = useMemo(() => {
@@ -79,7 +109,15 @@ export default function ProposalsPage() {
         <div className="space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-1">Auditorías & Propuestas</h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-1">Auditorías & Propuestas</h1>
+                        {pendingFollowUps > 0 && (
+                            <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-bold text-amber-700">
+                                <Bell size={11} />
+                                {pendingFollowUps} seguimiento{pendingFollowUps > 1 ? 's' : ''} pendiente{pendingFollowUps > 1 ? 's' : ''}
+                            </span>
+                        )}
+                    </div>
                     <p className="text-slate-500 font-medium text-sm">Historial de optimizaciones generadas por cliente.</p>
                 </div>
                 <Link
@@ -142,6 +180,7 @@ export default function ProposalsPage() {
                                         {group.items.map((p: Proposal, idx: number) => {
                                             const roiHigh = p.savings_percent > 30;
                                             const hasOpp = p.aletheia_summary?.opportunities && p.aletheia_summary.opportunities.length > 0;
+                                            const pendingDays = getPendingDays(p);
 
                                             return (
                                                 <Link
@@ -151,11 +190,12 @@ export default function ProposalsPage() {
                                                 >
                                                     <div className="relative z-10 flex items-center justify-between">
                                                         <div className="min-w-0 flex-1 pr-4">
-                                                            <div className="flex items-center gap-2 mb-1">
+                                                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                                                                 <span className={`text-[8px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${idx === 0 ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
                                                                     {idx === 0 ? 'Opción A' : 'Opción B'}
                                                                 </span>
                                                                 <span className="text-xs font-semibold text-slate-800 truncate">{p.offer_snapshot.marketer_name}</span>
+                                                                {pendingDays !== null && <FollowUpBadge days={pendingDays} />}
                                                             </div>
 
                                                             {/* Tariff & Tech Info */}

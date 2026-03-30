@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CreateClientModal from './CreateClientModal';
+import InvoiceHistoryPanel from './InvoiceHistoryPanel';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Proposal } from '@/types/crm';
@@ -291,6 +292,9 @@ export default function ClientDetailsView({ clientId }: ClientDetailsViewProps) 
                             </div>
                         ))}
                     </div>
+
+                    {/* Invoice History Section */}
+                    <InvoiceHistoryPanel clientId={clientId} />
 
                     {/* Proposals History Section */}
                     <div className="space-y-4">

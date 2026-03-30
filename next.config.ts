@@ -6,10 +6,19 @@ const nextConfig: NextConfig = {
   compress: true,
 
   experimental: {
-    optimizePackageImports: ['lucide-react', 'framer-motion'],
+    optimizePackageImports: [
+      'lucide-react',
+      'framer-motion',
+      'recharts',
+      '@supabase/supabase-js',
+      '@supabase/ssr',
+      'sonner',
+    ],
   },
   reactCompiler: true,
-  turbopack: {},
+  turbopack: {
+    resolveExtensions: ['.tsx', '.ts', '.jsx', '.js'],
+  },
 
   typescript: {
     ignoreBuildErrors: false,
