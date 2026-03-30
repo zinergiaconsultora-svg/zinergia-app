@@ -27,7 +27,7 @@ const OcrJobsPanel = dynamic(() => import('./OcrJobsPanel'), {
     ssr: false,
     loading: () => <div className="h-32 bg-slate-100/50 animate-pulse rounded-2xl" />,
 });
-const SmartAlertsStrip = dynamic(() => import('./SmartAlertsStrip'), { ssr: false });
+
 const SavingsTrendChart = dynamic(() =>
     import('./DashboardCharts').then(m => ({ default: m.SavingsTrendChart })),
     { loading: () => <div className="h-full w-full bg-slate-100/20 animate-pulse rounded-lg" /> }
@@ -216,7 +216,19 @@ export default function DashboardView() {
                     </div>
                 </motion.div>
 
-                {/* 0b. HERO UPLOAD — desktop only with glass effect */}
+                {/* 1. DESKTOP HEADER ROW */}
+                <motion.div variants={item} className="hidden lg:flex items-center justify-between shrink-0 mb-2">
+                    <div className="flex items-baseline gap-2">
+                        <h1 className="text-xl font-semibold text-slate-800 dark:text-white tracking-tight">
+                            Hola, <span className="text-indigo-600 dark:text-indigo-400">{firstName}.</span>
+                        </h1>
+                        <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">
+                            Tu rendimiento hoy está al 100%.
+                        </span>
+                    </div>
+                </motion.div>
+
+                {/* 2. HERO UPLOAD — desktop only with glass effect */}
                 <motion.div variants={item} className="hidden lg:block relative w-full group">
                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-emerald-500/10 to-teal-500/10 blur-3xl opacity-50 rounded-[3rem]" />
                     <div className="relative glass-premium rounded-[2.5rem] border border-white/20 shadow-2xl overflow-hidden p-8 lg:p-12 flex flex-col lg:flex-row items-center gap-10">
@@ -233,47 +245,9 @@ export default function DashboardView() {
                     </div>
                 </motion.div>
 
-                {/* 0c. MOBILE UPLOAD — iOS card style */}
-                <motion.div variants={item} className="lg:hidden mx-4 mt-3">
+                {/* 3. MOBILE UPLOAD — iOS card style */}
+                <motion.div variants={item} className="lg:hidden mx-4 mt-3 mb-2">
                     <QuickUploadZone />
-                </motion.div>
-
-                {/* 0d. SMART ALERTS STRIP */}
-                <motion.div variants={item} className="mx-4 lg:mx-0">
-                    <SmartAlertsStrip />
-                </motion.div>
-
-                {/* 1. DESKTOP HEADER ROW */}
-                <motion.div variants={item} className="hidden lg:flex items-center justify-between shrink-0 h-10">
-                    <div className="flex items-baseline gap-2">
-                        <h1 className="text-xl font-semibold text-slate-800 dark:text-white tracking-tight">
-                            Hola, <span className="text-indigo-600 dark:text-indigo-400">{firstName}.</span>
-                        </h1>
-                        <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">
-                            Tu rendimiento hoy está al 100%.
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <div className="relative">
-                            <button type="button" className="p-2 text-slate-400 hover:text-indigo-600 transition-colors relative" onClick={() => setIsNotifOpen(!isNotifOpen)}>
-                                <Bell size={18} />
-                                {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-rose-500 rounded-full ring-1 ring-white"></span>}
-                            </button>
-                            {isNotifOpen && (
-                                <NotificationsPopover
-                                    isOpen={isNotifOpen}
-                                    onClose={() => setIsNotifOpen(false)}
-                                    notifications={notifications}
-                                    onMarkAsRead={handleMarkAsRead}
-                                    onMarkAllAsRead={handleMarkAllAsRead}
-                                    onDismiss={handleDismiss}
-                                />
-                            )}
-                        </div>
-                        <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs ring-2 ring-indigo-100">
-                            {firstName[0]}
-                        </div>
-                    </div>
                 </motion.div>
 
                 {/* 2. KPIs — iOS grouped list en móvil, grid en desktop */}
@@ -305,71 +279,67 @@ export default function DashboardView() {
                     </div>
                 </motion.div>
 
-                {/* 3. MAIN BENTO GRID (Fills remaining height) */}
-                <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-
-                    {/* LEFT COLUMN (Charts) */}
-                    <div className="lg:col-span-8 flex flex-col gap-4">
-                        {/* Top: Trend Chart */}
-                        <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-3 flex flex-col group hover:bg-white/80 transition-colors">
+                {/* 3. MAIN BENTO GRID (Balanced Layout without gaps) */}
+                <motion.div variants={item} className="flex flex-col gap-4">
+                    
+                    {/* ROW 1: Charts (Trend 2/3 + Pipeline 1/3) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        {/* Trend Chart (col-span-2) */}
+                        <div className="lg:col-span-2 bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-4 flex flex-col group hover:bg-white/80 transition-colors">
                             <SectionHeader title="Tendencia de Ahorro" link="Ver Reporte" />
-                            <div className="mt-1 h-[200px] md:h-[240px]">
+                            <div className="mt-2 h-[220px]">
                                 <SavingsTrendChart data={stats.savingsTrend ?? []} />
                             </div>
                         </div>
 
-                        {/* Bottom: Split (Pipeline + Activity) */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Pipeline */}
-                            <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-3 flex flex-col hover:bg-white/80 transition-colors">
-                                <SectionHeader title="Distribución" />
-                                <div className="flex-1 relative min-h-0">
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <div className="h-full w-full max-h-[140px]">
-                                            <PipelinePieChart active={activeDeals} won={wonDeals} lost={lostDeals} />
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex justify-between border-t border-slate-100 pt-2 mt-1">
-                                    <div className="text-center">
-                                        <div className="text-[9px] uppercase text-slate-400 font-bold">Conv.</div>
-                                        <div className="text-xs font-bold text-emerald-600">{stats.financials.conversion_rate}%</div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="text-[9px] uppercase text-slate-400 font-bold">Total</div>
-                                        <div className="text-xs font-bold text-slate-700">{stats.recentProposals.length}</div>
-                                    </div>
+                        {/* Pipeline Chart (col-span-1) */}
+                        <div className="lg:col-span-1 bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-4 flex flex-col hover:bg-white/80 transition-colors">
+                            <SectionHeader title="Distribución de Pipeline" />
+                            <div className="flex-1 relative min-h-[160px] flex items-center justify-center mt-2">
+                                <div className="h-full w-full max-h-[160px]">
+                                    <PipelinePieChart active={activeDeals} won={wonDeals} lost={lostDeals} />
                                 </div>
                             </div>
-
-                            {/* Recent Activity (Compact List) */}
-                            <div className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border border-white/80 dark:border-white/10 shadow-lg hover:shadow-xl hover:-translate-y-1 p-3 flex flex-col transition-all duration-300 overflow-hidden">
-                                <SectionHeader title="Actividad Reciente" />
-                                <div className="flex-1 overflow-y-auto mt-2 space-y-2 pr-1 custom-scrollbar">
-                                    {stats.recentProposals.slice(0, 5).map((proposal) => (
-                                        <div key={proposal.id} onClick={() => router.push(`/dashboard/proposals/${proposal.id}`)} className="flex items-center justify-between p-2 rounded-lg bg-white/50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500/50 hover:shadow-md hover:bg-white cursor-pointer group transition-all duration-300">
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <div className={`w-1.5 h-1.5 rounded-full ${proposal.status === 'accepted' ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}></div>
-                                                <div className="min-w-0">
-                                                    <div className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400">{proposal.client_name}</div>
-                                                    <div className="text-[9px] text-slate-400">{formatCurrency(proposal.annual_savings)}</div>
-                                                </div>
-                                            </div>
-                                            <ArrowUpRight size={12} className="text-slate-300 dark:text-slate-600 group-hover:text-indigo-500" />
-                                        </div>
-                                    ))}
+                            <div className="flex justify-between border-t border-slate-100 pt-3 mt-2">
+                                <div className="text-center">
+                                    <div className="text-[10px] uppercase text-slate-400 font-bold tracking-wider">Conversión</div>
+                                    <div className="text-sm font-bold text-emerald-600">{stats.financials.conversion_rate}%</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-[10px] uppercase text-slate-400 font-bold tracking-wider">Total Propuestas</div>
+                                    <div className="text-sm font-bold text-slate-700">{stats.recentProposals.length}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* RIGHT COLUMN */}
-                    <div className="lg:col-span-4 flex flex-col gap-4">
-                        {/* OCR Jobs History */}
-                        <div className="flex-[2] min-h-0">
+                    {/* ROW 2: Lists (Recent Activity 1/2 + OCR Jobs 1/2) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[400px]">
+                        {/* Recent Activity */}
+                        <div className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border border-white/80 dark:border-white/10 shadow-lg hover:shadow-xl hover:-translate-y-1 p-4 flex flex-col transition-all duration-300 overflow-hidden h-full">
+                            <SectionHeader title="Actividad Reciente" />
+                            <div className="flex-1 overflow-y-auto mt-3 space-y-2 pr-2 custom-scrollbar">
+                                {stats.recentProposals.map((proposal) => (
+                                    <div key={proposal.id} onClick={() => router.push(`/dashboard/proposals/${proposal.id}`)} className="flex items-center justify-between p-3 rounded-xl bg-white/50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500/50 hover:shadow-md hover:bg-white cursor-pointer group transition-all duration-300">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className={`w-2 h-2 rounded-full ${proposal.status === 'accepted' ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}></div>
+                                            <div className="min-w-0">
+                                                <div className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400">{proposal.client_name}</div>
+                                                <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{formatCurrency(proposal.annual_savings)}</div>
+                                            </div>
+                                        </div>
+                                        <ArrowUpRight size={14} className="text-slate-300 dark:text-slate-600 group-hover:text-indigo-500" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* OCR Jobs History Wrapper */}
+                        <div className="h-full flex flex-col [&>div]:h-full [&>div]:flex [&>div]:flex-col [&>div>div:last-child]:flex-1 [&>div>div:last-child]:overflow-auto">
                             <OcrJobsPanel />
                         </div>
                     </div>
+
                 </motion.div>
 
             </motion.div>
