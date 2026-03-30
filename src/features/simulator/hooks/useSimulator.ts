@@ -218,8 +218,8 @@ export function useSimulator() {
 
             const result = await analyzeDocument(file);
 
-            if (result.isMock && result.data) {
-                dispatch({ type: 'SET_MOCK_MODE', payload: true });
+            if (result.data) {
+                dispatch({ type: 'SET_MOCK_MODE', payload: !!result.isMock });
                 dispatch({ type: 'SET_INVOICE_DATA', payload: result.data });
                 return;
             }
