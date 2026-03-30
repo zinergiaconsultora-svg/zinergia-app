@@ -231,26 +231,34 @@ export function useSimulator() {
             dispatch({ type: 'SET_LOADING_MESSAGE', payload: 'Procesando documento con IA...' });
             
             const supabase = createClient();
-            const channel = supabase.channel(`local_job_${result.jobId}`)
-                .on(
-                    'postgres_changes',
-                    { event: 'UPDATE', schema: 'public', table: 'ocr_jobs', filter: `id=eq.${result.jobId}` },
-                    (payload: { new: OcrJobRow }) => {
-                        const updatedJob = payload.new;
+
+            // Mecanismo principal: Broadcast directo del callback (sin RLS)
+            const channel = supabase.channel(`ocr_job_${result.jobId}`)
+                .on('broadcast', { event: 'ocr_result' }, (payload) => {
+                    if (resolved) return;
+                    const { status: jobStatus, data: jobData, error_message } = payload.payload as {
+                        status: string;
+                        data: Record<string, unknown> | null;
+                        error_message: string | null;
+                    };
+                    if (jobStatus === 'completed' && jobData) {
+                        resolved = true;
+                        clearInterval(pollInterval);
                         clearTimeout(timeoutId);
-                        if (updatedJob.status === 'completed') {
-                            dispatch({ type: 'SET_INVOICE_DATA', payload: extractInvoiceData(updatedJob.extracted_data) as InvoiceData });
-                            supabase.removeChannel(channel);
-                            activeChannelRef.current = null;
-                            activeSupabaseRef.current = null;
-                        } else if (updatedJob.status === 'failed') {
-                            dispatch({ type: 'SET_ERROR', payload: updatedJob.error_message || 'Error en análisis OCR' });
-                            supabase.removeChannel(channel);
-                            activeChannelRef.current = null;
-                            activeSupabaseRef.current = null;
-                        }
+                        dispatch({ type: 'SET_INVOICE_DATA', payload: extractInvoiceData(jobData) as InvoiceData });
+                        supabase.removeChannel(channel);
+                        activeChannelRef.current = null;
+                        activeSupabaseRef.current = null;
+                    } else if (jobStatus === 'failed') {
+                        resolved = true;
+                        clearInterval(pollInterval);
+                        clearTimeout(timeoutId);
+                        dispatch({ type: 'SET_ERROR', payload: error_message || 'Error en análisis OCR' });
+                        supabase.removeChannel(channel);
+                        activeChannelRef.current = null;
+                        activeSupabaseRef.current = null;
                     }
-                )
+                })
                 .subscribe();
 
             // Guardar referencias para cleanup al desmontar

@@ -227,7 +227,20 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
         }
 
-        // 6. Web Push al agente — no bloquea la respuesta
+        // 6. Broadcast Realtime directo al cliente — sin RLS, entrega inmediata
+        try {
+            const broadcastChannel = supabaseAdmin.channel(`ocr_job_${job_id}`);
+            await broadcastChannel.send({
+                type: 'broadcast',
+                event: 'ocr_result',
+                payload: { status, data: invoiceData, error_message: error ?? null },
+            });
+            supabaseAdmin.removeChannel(broadcastChannel);
+        } catch (bcErr) {
+            console.warn('[OCR Callback] Broadcast failed (non-blocking):', bcErr);
+        }
+
+        // 7. Web Push al agente — no bloquea la respuesta
         if (job?.agent_id) {
             const clientName = invoiceData?.client_name as string | undefined;
             const pushPayload = status === 'completed'
