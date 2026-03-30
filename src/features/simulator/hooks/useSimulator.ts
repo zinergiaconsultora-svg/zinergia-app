@@ -4,7 +4,7 @@ import { analyzeDocumentWithRetry as analyzeDocument, validateFile } from '@/ser
 import { crmService } from '@/services/crmService';
 import { OptimizationRecommendation, AuditOpportunity } from '@/lib/aletheia/types';
 import { createClient } from '@/lib/supabase/client';
-import { markOcrJobFailed } from '@/app/actions/ocr-jobs';
+import { markOcrJobFailed, getOcrJobStatus } from '@/app/actions/ocr-jobs';
 
 type Step = 1 | 2 | 3;
 
@@ -257,8 +257,37 @@ export function useSimulator() {
             activeChannelRef.current = channel;
             activeSupabaseRef.current = supabase;
 
+            // Polling fallback: si Realtime no dispara (RLS, race condition), consulta cada 3s
+            let resolved = false;
+            const pollInterval = setInterval(async () => {
+                if (resolved) return;
+                try {
+                    const job = await getOcrJobStatus(result.jobId!);
+                    if (!job || resolved) return;
+                    if (job.status === 'completed') {
+                        resolved = true;
+                        clearInterval(pollInterval);
+                        clearTimeout(timeoutId);
+                        dispatch({ type: 'SET_INVOICE_DATA', payload: extractInvoiceData(job.extracted_data) as InvoiceData });
+                        supabase.removeChannel(channel);
+                        activeChannelRef.current = null;
+                        activeSupabaseRef.current = null;
+                    } else if (job.status === 'failed') {
+                        resolved = true;
+                        clearInterval(pollInterval);
+                        clearTimeout(timeoutId);
+                        dispatch({ type: 'SET_ERROR', payload: job.error_message || 'Error en análisis OCR' });
+                        supabase.removeChannel(channel);
+                        activeChannelRef.current = null;
+                        activeSupabaseRef.current = null;
+                    }
+                } catch { /* polling es best-effort */ }
+            }, 3000);
+
             // Safety net: si N8N no responde en 90s, marcar como fallido en DB y abortar
             const timeoutId = setTimeout(() => {
+                resolved = true;
+                clearInterval(pollInterval);
                 dispatch({ type: 'SET_ERROR', payload: 'El servidor tardó demasiado en procesar el documento. Inténtalo de nuevo.' });
                 supabase.removeChannel(channel);
                 activeChannelRef.current = null;
