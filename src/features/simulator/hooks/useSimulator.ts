@@ -4,7 +4,7 @@ import { analyzeDocumentWithRetry as analyzeDocument, validateFile } from '@/ser
 import { crmService } from '@/services/crmService';
 import { OptimizationRecommendation, AuditOpportunity } from '@/lib/aletheia/types';
 import { createClient } from '@/lib/supabase/client';
-import { markOcrJobFailed } from '@/app/actions/ocr-jobs';
+import { markOcrJobFailed, getOcrJobStatus } from '@/app/actions/ocr-jobs';
 
 type Step = 1 | 2 | 3;
 
@@ -257,16 +257,12 @@ export function useSimulator() {
             activeChannelRef.current = channel;
             activeSupabaseRef.current = supabase;
 
-            // Polling fallback: consulta directa al cliente Supabase cada 3s
+            // Polling fallback: server action (bypasses RLS issues with browser client)
             let resolved = false;
             const pollInterval = setInterval(async () => {
                 if (resolved) return;
                 try {
-                    const { data: job } = await supabase
-                        .from('ocr_jobs')
-                        .select('id, status, extracted_data, error_message')
-                        .eq('id', result.jobId)
-                        .single();
+                    const job = await getOcrJobStatus(result.jobId!);
                     if (!job || resolved) return;
                     if (job.status === 'completed') {
                         resolved = true;
@@ -280,7 +276,7 @@ export function useSimulator() {
                         resolved = true;
                         clearInterval(pollInterval);
                         clearTimeout(timeoutId);
-                        dispatch({ type: 'SET_ERROR', payload: (job.error_message as string) || 'Error en análisis OCR' });
+                        dispatch({ type: 'SET_ERROR', payload: job.error_message || 'Error en análisis OCR' });
                         supabase.removeChannel(channel);
                         activeChannelRef.current = null;
                         activeSupabaseRef.current = null;
