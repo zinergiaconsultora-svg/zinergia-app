@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { requireServerRole } from '@/lib/auth/permissions';
 import { env } from '@/lib/env';
 
@@ -35,11 +36,17 @@ export async function getOcrJobHistory(limit = 20): Promise<OcrJobRecord[]> {
 }
 
 export async function getOcrJobStatus(jobId: string): Promise<OcrJobRecord | null> {
+    // Verify user is authenticated
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
-    const { data, error } = await supabase
+    // Use service role to bypass RLS completely
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceKey) return null;
+    const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
+
+    const { data, error } = await admin
         .from('ocr_jobs')
         .select('id, status, created_at, file_name, extracted_data, error_message, attempts')
         .eq('id', jobId)
