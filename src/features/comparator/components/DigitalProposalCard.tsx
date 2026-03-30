@@ -329,17 +329,17 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
             const styles = Array.from(document.styleSheets)
                 .map(sheet => {
                     try {
-                        if (sheet.href) return \`<link rel="stylesheet" href="\${sheet.href}">\`;
-                        return \`<style>\${Array.from(sheet.cssRules).map(r => r.cssText).join('\\n')}</style>\`;
-                    } catch { return sheet.href ? \`<link rel="stylesheet" href="\${sheet.href}">\` : ''; }
+                        if (sheet.href) return `<link rel="stylesheet" href="\${sheet.href}">`;
+                        return `<style>\${Array.from(sheet.cssRules).map(r => r.cssText).join('\\n')}</style>`;
+                    } catch { return sheet.href ? `<link rel="stylesheet" href="\${sheet.href}">` : ''; }
                 }).join('\\n');
 
             // True minimalist Zinergia SVG
-            const zinergiaLogo = \`<svg class="pdf-zinergia-logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            const zinergiaLogo = `<svg class="pdf-zinergia-logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect width="100" height="100" rx="20" fill="#0F172A"/>
                 <path d="M70 30L30 30L55 50L30 70L70 70" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
                 <circle cx="70" cy="50" r="4" fill="#10B981"/>
-            </svg>\`;
+            </svg>`;
 
             printWindow.document.write(\`<!DOCTYPE html>
 <html><head>
