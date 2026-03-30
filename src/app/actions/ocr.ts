@@ -135,7 +135,7 @@ export async function analyzeDocumentAction(formData: FormData): Promise<{ jobId
                 franchise_id: franchiseId,
                 status: 'processing',
                 file_name: file.name,
-                file_url: fileUrl,
+                file_path: fileUrl,
                 attempts: 1,
             })
             .select('id')
