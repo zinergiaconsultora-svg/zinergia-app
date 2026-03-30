@@ -1,15 +1,9 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { SavingsResult } from '../../../types/crm';
 import { toast } from 'sonner';
-import { Download, Mail, ShieldCheck, Zap, Loader2, FileText, TrendingDown, Lightbulb } from 'lucide-react';
-import dynamic from 'next/dynamic';
+import { Download, Mail, Zap, Loader2, FileText, Lightbulb } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/format';
 
-// Dynamic import for QR code to reduce bundle size
-const QRCodeSVG = dynamic(
-    () => import('qrcode.react').then((mod) => mod.QRCodeSVG),
-    { ssr: false, loading: () => <div className="w-20 h-20 bg-slate-100 rounded-2xl animate-pulse" /> }
-);
 
 interface DigitalProposalCardProps {
     result: SavingsResult;
@@ -23,7 +17,6 @@ interface DigitalProposalCardProps {
 
 export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
     result,
-    onReset,
     onEmail,
     title = "Recomendación Principal",
     isSecondary = false,
@@ -662,165 +655,142 @@ ${styles}
     };
 
     return (
-        <div className="max-w-4xl mx-auto font-sans">
+        <div className="w-full font-sans">
             <div ref={cardRef}>
-                {/* --- DIGITAL CONTRACT CARD (Screen View) --- */}
-                <div className="relative mb-4 group transition-all duration-300 hover:translate-y-[-2px]">
-                    {/* Glassmorphism Container */}
-                    <div className="absolute inset-0 bg-white/60 backdrop-blur-xl rounded-[2rem] border border-white/40 shadow-xl shadow-slate-200/50"></div>
-
-                    <div className="relative z-10 p-1">
-                        {/* Header - Minimalist */}
-                        <div className="p-6 pb-2 md:flex md:justify-between md:items-start">
-                            <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${isSecondary ? 'bg-white text-slate-400' : 'bg-slate-900 text-white'}`}>
-                                    <Zap size={20} className={isSecondary ? 'opacity-50' : ''} />
+                <div className="relative mb-4 group transition-all duration-200 hover:-translate-y-1">
+                    {/* Minimalist Container */}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-full overflow-hidden">
+                        
+                        {/* Header Minimalist */}
+                        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm ${isSecondary ? 'bg-white text-slate-400 border border-slate-200' : 'bg-slate-900 text-white'}`}>
+                                    <Zap size={14} className={isSecondary ? 'opacity-50' : ''} />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-medium tracking-tight text-slate-900">
-                                        Zinergia <span className="opacity-40 font-light">Propuesta</span>
+                                    <h2 className="text-sm font-semibold tracking-tight text-slate-900">
+                                        Zinergia <span className="font-normal text-slate-500">Propuesta</span>
                                     </h2>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <div className={`w-1.5 h-1.5 rounded-full ${isSecondary ? 'bg-amber-400' : 'bg-emerald-500 animate-pulse'}`}></div>
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{title}</p>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                        <div className={`w-1.5 h-1.5 rounded-full ${isSecondary ? 'bg-amber-400' : 'bg-emerald-500'}`}></div>
+                                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{title}</p>
                                     </div>
                                 </div>
                             </div>
-
-                            <div className="mt-4 md:mt-0 flex gap-2">
-                                <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                                    {documentDate}
-                                </span>
-                            </div>
+                            <span className="text-[10px] font-medium text-slate-400 bg-white border border-slate-200 px-2 py-1 rounded-md">
+                                {documentDate}
+                            </span>
                         </div>
 
-                        {/* Main Content */}
-                        <div className="p-2 sm:p-3 grid grid-cols-1 lg:grid-cols-12 gap-3">
-                            {/* LEFT: Financial Core */}
-                            <div className="lg:col-span-8">
-                                {/* Savings Card - Dark Premium */}
-                                <div className="h-full relative overflow-hidden bg-slate-900 text-white rounded-[1.75rem] p-6 shadow-2xl shadow-slate-900/20 flex flex-col justify-between group-hover:shadow-slate-900/30 transition-shadow">
-                                    {/* Abstract shapes */}
-                                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
-                                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl -ml-20 -mb-20"></div>
-
-                                    <div>
-                                        <p className="text-indigo-300 text-[10px] font-bold uppercase tracking-[0.2em] mb-2">Ahorro Estimado</p>
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-5xl md:text-6xl font-light tracking-tighter">
-                                                {formatCurrency(result.annual_savings).replace('€', '')}
-                                            </span>
-                                            <span className="text-2xl text-slate-400 font-light">€</span>
-                                        </div>
-                                        <p className="text-slate-400 text-sm mt-2 font-light max-w-xs">
-                                            Reducción anual proyectada basada en tu consumo real.
-                                        </p>
+                        {/* Main Body */}
+                        <div className="p-4 flex-1 flex flex-col gap-4">
+                            
+                            {/* Savings Block - Clean and Focus */}
+                            <div className="text-center md:text-left flex flex-col md:flex-row md:justify-between md:items-end gap-2">
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-1">Ahorro Estimado</p>
+                                    <div className="flex justify-center md:justify-start items-baseline gap-1">
+                                        <span className="text-4xl font-light tracking-tight text-slate-900">
+                                            {formatCurrency(result.annual_savings).replace('€', '')}
+                                        </span>
+                                        <span className="text-xl text-slate-500 font-light">€</span>
                                     </div>
+                                    <p className="text-xs text-slate-500 mt-1">Beneficio anual proyectado.</p>
+                                </div>
 
-                                    {/* Stats Grid */}
-                                    <div className="grid grid-cols-3 gap-8 mt-8 pt-8 border-t border-white/5">
-                                        <div>
-                                            <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Actual</div>
-                                            <div className="text-lg font-medium text-slate-300">{formatCurrency(result.current_annual_cost)}</div>
+                                {/* Offer Details Inline */}
+                                <div className="flex-shrink-0 text-left bg-slate-50 rounded-xl p-3 border border-slate-100 mt-2 md:mt-0 min-w-[160px]">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className={`w-6 h-6 ${result.offer.logo_color || 'bg-slate-800'} rounded-md flex items-center justify-center text-white text-[10px] font-bold shadow-sm`}>
+                                            {result.offer.marketer_name.charAt(0)}
                                         </div>
-                                        <div>
-                                            <div className="text-[9px] font-bold text-emerald-500/80 uppercase tracking-widest mb-1">Nuevo</div>
-                                            <div className="text-lg font-medium text-white">{formatCurrency(result.offer_annual_cost)}</div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-none">Comercializadora</p>
+                                            <p className="text-xs font-semibold text-slate-900 truncate">{result.offer.marketer_name}</p>
                                         </div>
-                                        <div>
-                                            <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Eficiencia</div>
-                                            <div className="text-lg font-medium text-emerald-400">+{Math.round(result.savings_percent)}%</div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 bg-white border border-slate-200 rounded-md flex items-center justify-center text-slate-400">
+                                            <FileText size={12} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-none">Tarifa</p>
+                                            <p className="text-xs font-medium text-slate-700 truncate">{result.offer.tariff_name}</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* RIGHT: Details & Actions */}
-                            <div className="lg:col-span-4 flex flex-col gap-2">
-                                {/* Offer Details */}
-                                <div className="bg-white/50 rounded-3xl p-5 border border-white/60">
-                                    <div className="space-y-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-10 h-10 ${result.offer.logo_color || 'bg-slate-800'} rounded-xl flex items-center justify-center text-white font-bold shadow-sm`}>
-                                                {result.offer.marketer_name.charAt(0)}
-                                            </div>
-                                            <div>
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Comercializadora</p>
-                                                <p className="text-sm font-semibold text-slate-900">{result.offer.marketer_name}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-400 border border-slate-100">
-                                                <FileText size={18} />
-                                            </div>
-                                            <div>
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Tarifa</p>
-                                                <p className="text-sm font-semibold text-slate-900 line-clamp-1">{result.offer.tariff_name}</p>
-                                            </div>
-                                        </div>
-                                    </div>
+                            {/* Stats Grid Minimal */}
+                            <div className="grid grid-cols-3 gap-2 py-2 border-y border-slate-100">
+                                <div className="text-center md:text-left">
+                                    <div className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Coste Actual</div>
+                                    <div className="text-sm font-medium text-slate-700">{formatCurrency(result.current_annual_cost)}</div>
                                 </div>
+                                <div className="text-center md:text-left">
+                                    <div className="text-[10px] uppercase font-semibold border-b-2 border-emerald-400 inline-block text-slate-600 tracking-wider">Nuevo Coste</div>
+                                    <div className="text-sm font-semibold text-emerald-700">{formatCurrency(result.offer_annual_cost)}</div>
+                                </div>
+                                <div className="text-center md:text-left">
+                                    <div className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Mejora</div>
+                                    <div className="text-sm font-medium text-emerald-500">+{Math.round(result.savings_percent)}%</div>
+                                </div>
+                            </div>
 
-                                {/* Actions */}
-                                <div className="flex-1 bg-slate-50/50 rounded-3xl p-2 border border-white/60 flex flex-col justify-end gap-2">
-                                    <button
-                                        onClick={handleWhatsAppShare}
-                                        className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-medium text-sm transition-all shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center justify-center gap-2 group/btn"
-                                    >
-                                        <span>Compartir</span>
-                                        <svg className="w-4 h-4 opacity-80 group-hover/btn:translate-x-0.5 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.316 1.592 5.43 0 9.856-4.426 9.858-9.855.002-5.43-4.425-9.851-9.857-9.851-5.43 0-9.854 4.427-9.856 9.856-.001 2.189.633 4.068 1.842 5.756l-1.103 4.028 4.1-.1.076.01.076-.01z" /></svg>
-                                    </button>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={onEmail}
-                                            className="flex-1 py-3 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-2xl font-medium text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
-                                        >
-                                            <Mail size={16} className="text-slate-400" />
-                                            <span>Email</span>
-                                        </button>
-                                        <button
-                                            onClick={handleDownloadPdf}
-                                            disabled={isGeneratingPdf}
-                                            className="flex-1 py-3 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-2xl font-medium text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
-                                        >
-                                            {isGeneratingPdf ? <Loader2 size={16} className="animate-spin text-indigo-500" /> : <Download size={16} className="text-slate-400" />}
-                                            <span>PDF</span>
-                                        </button>
+                            {/* Optimization Minimal Strip */}
+                            {result.optimization_result && (
+                                <div className="px-3 py-2 bg-emerald-50/50 rounded-lg border border-emerald-100/50 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                                        <span className="text-[10px] font-medium text-emerald-700 uppercase tracking-widest">Ahorro técnico incluido</span>
                                     </div>
+                                    <span className="text-[11px] font-bold text-emerald-600">
+                                        +{formatCurrency(result.optimization_result.annual_optimization_savings)} extra
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Advisor Notes - Compact */}
+                            <div className="mt-2">
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-2.5 flex items-start pt-2 pointer-events-none">
+                                        <Lightbulb size={12} className="text-amber-500/70" />
+                                    </div>
+                                    <textarea
+                                        className="w-full pl-8 pr-3 py-2 bg-amber-50/20 border border-amber-100/40 rounded-lg text-xs text-slate-700 placeholder-slate-400 focus:ring-1 focus:ring-amber-200/50 focus:border-amber-300 transition-all resize-none min-h-[44px]"
+                                        placeholder="Nota visible para el cliente (opcional)..."
+                                        value={advisorNotes}
+                                        onChange={(e) => setAdvisorNotes(e.target.value)}
+                                    />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Optimization Strip */}
-                        {result.optimization_result && (
-                            <div className="mx-2 mb-2 p-3 bg-emerald-50/50 rounded-2xl border border-emerald-100/50 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                                    <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Potencia Optimizada Incluida</span>
-                                </div>
-                                <span className="text-xs font-bold text-emerald-600">
-                                    +{formatCurrency(result.optimization_result.annual_optimization_savings)} extra
-                                </span>
-                            </div>
-                        )}
-
-                        {/* Advisor Notes Section */}
-                        <div className="mx-2 mb-2">
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-start pt-3 pointer-events-none">
-                                    <svg className="w-4 h-4 text-amber-500/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                    </svg>
-                                </div>
-                                <textarea
-                                    className="w-full pl-10 pr-4 py-3 bg-amber-50/30 border border-amber-100/50 rounded-xl text-xs text-amber-900 placeholder-amber-400/70 focus:ring-2 focus:ring-amber-200/50 focus:border-amber-200/50 transition-all resize-none min-h-[60px]"
-                                    placeholder="Añadir notas del asesor para el cliente..."
-                                    value={advisorNotes}
-                                    onChange={(e) => setAdvisorNotes(e.target.value)}
-                                />
-                                <div className="absolute bottom-2 right-3 text-[9px] font-bold text-amber-400/60 uppercase tracking-widest pointer-events-none">
-                                    Notas Privadas
-                                </div>
+                        {/* Actions Footer */}
+                        <div className="p-3 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row gap-2">
+                            <button
+                                onClick={handleWhatsAppShare}
+                                className="flex-1 min-w-0 py-2 px-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
+                            >
+                                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.316 1.592 5.43 0 9.856-4.426 9.858-9.855.002-5.43-4.425-9.851-9.857-9.851-5.43 0-9.854 4.427-9.856 9.856-.001 2.189.633 4.068 1.842 5.756l-1.103 4.028 4.1-.1.076.01.076-.01z" /></svg>
+                                <span>WhatsApp</span>
+                            </button>
+                            <div className="flex flex-1 gap-2">
+                                <button
+                                    onClick={onEmail}
+                                    className="flex-1 py-2 px-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl font-medium text-xs transition-colors flex items-center justify-center gap-1.5 active:scale-95 shadow-sm"
+                                >
+                                    <Mail size={14} className="text-slate-400" />
+                                    <span>Enviar</span>
+                                </button>
+                                <button
+                                    onClick={handleDownloadPdf}
+                                    disabled={isGeneratingPdf}
+                                    className="flex-1 py-2 px-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl font-medium text-xs transition-colors flex items-center justify-center gap-1.5 active:scale-95 shadow-sm"
+                                >
+                                    {isGeneratingPdf ? <Loader2 size={14} className="animate-spin text-indigo-500" /> : <Download size={14} className="text-slate-400" />}
+                                    <span>PDF</span>
+                                </button>
                             </div>
                         </div>
 
@@ -830,3 +800,4 @@ ${styles}
         </div>
     );
 };
+
