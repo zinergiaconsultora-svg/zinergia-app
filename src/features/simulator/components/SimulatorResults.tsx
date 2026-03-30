@@ -11,6 +11,8 @@ import { toast } from 'sonner';
 import { DigitalProposalCard } from '@/features/comparator/components/DigitalProposalCard';
 import { SavingsResult, Proposal } from '@/types/crm';
 import { OptimizationRecommendation, AuditOpportunity } from '@/lib/aletheia/types';
+import { detectAnomalies } from '@/lib/anomalyDetector';
+import { AnomalyPanel } from '@/components/AnomalyPanel';
 import { OpportunityCard } from './Results/OpportunityCard';
 import { ProposalPDF } from '@/features/proposal/components/ProposalPDF';
 import html2canvas from 'html2canvas';
@@ -217,6 +219,21 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
             >
                 {/* Demo Mode Alert */}
                 <DemoModeAlert show={isMockMode} />
+
+                {/* Anomalías detectadas en la factura */}
+                {invoiceData && (() => {
+                    const anomalies = detectAnomalies(invoiceData);
+                    return anomalies.length > 0 ? (
+                        <motion.div
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4 }}
+                            className="mb-6"
+                        >
+                            <AnomalyPanel anomalies={anomalies} />
+                        </motion.div>
+                    ) : null;
+                })()}
 
                 {/* Header mejorado */}
                 <motion.div

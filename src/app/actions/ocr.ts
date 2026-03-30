@@ -8,9 +8,12 @@ const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 2000;
 const FETCH_TIMEOUT_MS = 30_000;
 
+// Tipos y tamaño permitidos — rechazar antes del webhook
+const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
 /**
  * Envía una solicitud con retry + backoff exponencial.
- * Retorna la Response si status es OK; lanza si agota intentos.
  */
 async function fetchWithRetry(
     url: string,
@@ -32,7 +35,7 @@ async function fetchWithRetry(
 
             if (response.ok) return response;
 
-            // Server errors (5xx) son retriables; client errors (4xx) no
+            // Client errors (4xx) no son retriables
             if (response.status >= 400 && response.status < 500) {
                 throw new Error(`Error del servidor OCR: ${response.status} ${response.statusText}`);
             }
@@ -41,13 +44,11 @@ async function fetchWithRetry(
         } catch (err) {
             lastError = err instanceof Error ? err : new Error(String(err));
 
-            // AbortError = timeout
             if (lastError.name === 'AbortError') {
                 lastError = new Error(`Timeout: el servidor OCR no respondió en ${FETCH_TIMEOUT_MS / 1000}s`);
             }
         }
 
-        // Backoff exponencial solo si quedan intentos
         if (attempt < retries - 1) {
             const delay = BASE_DELAY_MS * Math.pow(2, attempt);
             console.warn(`[OCR] Intento ${attempt + 1} fallido. Reintentando en ${delay}ms...`);
@@ -56,6 +57,39 @@ async function fetchWithRetry(
     }
 
     throw lastError ?? new Error('Fallo después de múltiples reintentos');
+}
+
+/**
+ * Sube el archivo a Supabase Storage y devuelve la URL firmada (válida 7 días).
+ * El path usa userId como prefijo para cumplir con las RLS del bucket.
+ */
+async function uploadToStorage(
+    supabase: Awaited<ReturnType<typeof createClient>>,
+    file: File,
+    userId: string
+): Promise<string | null> {
+    try {
+        const ext = file.name.split('.').pop() ?? 'bin';
+        const path = `${userId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+
+        const { error } = await supabase.storage
+            .from('ocr-invoices')
+            .upload(path, file, { contentType: file.type, upsert: false });
+
+        if (error) {
+            console.warn('[OCR] Storage upload failed (non-blocking):', error.message);
+            return null;
+        }
+
+        const { data } = await supabase.storage
+            .from('ocr-invoices')
+            .createSignedUrl(path, 60 * 60 * 24 * 7); // 7 días
+
+        return data?.signedUrl ?? null;
+    } catch (e) {
+        console.warn('[OCR] Storage upload exception (non-blocking):', e);
+        return null;
+    }
 }
 
 export async function analyzeDocumentAction(formData: FormData): Promise<{ jobId: string; isMock: boolean; data?: InvoiceData }> {
@@ -67,52 +101,63 @@ export async function analyzeDocumentAction(formData: FormData): Promise<{ jobId
     }
 
     const file = formData.get('file') as File;
-    if (!file) {
-        throw new Error('No se ha proporcionado archivo');
+    if (!file) throw new Error('No se ha proporcionado archivo');
+
+    // Validación temprana: tipo y tamaño
+    if (!ALLOWED_TYPES.includes(file.type)) {
+        throw new Error(`Formato no soportado: ${file.type}. Usa PDF, JPG, PNG o WEBP.`);
+    }
+    if (file.size > MAX_FILE_SIZE) {
+        throw new Error(`El archivo supera el límite de 10 MB (${(file.size / 1024 / 1024).toFixed(1)} MB).`);
     }
 
     try {
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
-        if (!user) {
-            throw new Error('No estás autenticado');
-        }
+        if (!user) throw new Error('No estás autenticado');
 
-        // 1. Obtener la franquicia del usuario
-        const { data: profile } = await supabase.from('profiles').select('franchise_id').eq('id', user.id).single();
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('franchise_id')
+            .eq('id', user.id)
+            .single();
         const franchiseId = profile?.franchise_id;
 
-        // 2. Crear el Job en la DB
-        const { data: job, error: jobError } = await supabase.from('ocr_jobs').insert({
-            agent_id: user.id,
-            franchise_id: franchiseId,
-            status: 'processing',
-            file_name: file.name,
-            attempts: 1,
-        }).select('id').single();
+        // Subir a Storage para habilitar retry real (no bloquea el flujo principal)
+        const fileUrl = await uploadToStorage(supabase, file, user.id);
+
+        // Crear el Job en la DB
+        const { data: job, error: jobError } = await supabase
+            .from('ocr_jobs')
+            .insert({
+                agent_id: user.id,
+                franchise_id: franchiseId,
+                status: 'processing',
+                file_name: file.name,
+                file_url: fileUrl,
+                attempts: 1,
+            })
+            .select('id')
+            .single();
 
         if (jobError || !job) {
             throw new Error('Fallo al crear el trabajo de OCR en la base de datos');
         }
 
-        // 3. Añadir el jobId al FormData para N8N
         formData.append('job_id', job.id);
 
-        // 4. Enviar con retry + backoff
         const response = await fetchWithRetry(OCR_WEBHOOK_URL, {
             method: 'POST',
             headers: { 'x-api-key': WEBHOOK_API_KEY },
             body: formData,
         });
 
-        // 5. Validar que la respuesta es JSON válido (si N8N no está en "Respond Immediately")
         const contentType = response.headers.get('content-type') ?? '';
         if (contentType.includes('application/json')) {
             const body = await response.json();
-            // Sanity check: N8N a veces devuelve string instead of object
             if (typeof body === 'string') {
-                console.warn('[OCR] N8N devolvió string en lugar de JSON. Registrando advertencia.');
+                console.warn('[OCR] N8N devolvió string en lugar de JSON.');
                 await supabase.from('ocr_jobs').update({
                     status: 'processing',
                     error_message: 'Respuesta N8N en formato inesperado (string), el job puede seguir procesando'

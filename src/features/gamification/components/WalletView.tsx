@@ -284,7 +284,7 @@ export default function WalletView({ canManage = false, allCommissions: initialA
                     {showAdmin && (
                         <>
                             {/* Filter tabs */}
-                            <div className="px-6 pb-3 flex gap-2 border-b border-slate-100">
+                            <div className="px-6 pb-3 flex gap-2 border-b border-slate-100 overflow-x-auto no-scrollbar whitespace-nowrap">
                                 {(['pending', 'cleared', 'paid', 'all'] as const).map(f => (
                                     <button
                                         type="button"
@@ -328,7 +328,7 @@ export default function WalletView({ canManage = false, allCommissions: initialA
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3 shrink-0">
+                                        <div className="flex flex-wrap items-center justify-end gap-3 shrink-0 mt-2 sm:mt-0">
                                             <div className="text-right">
                                                 <p className="text-sm font-bold text-slate-900">
                                                     Agente: {formatCurrency(comm.agent_commission)}

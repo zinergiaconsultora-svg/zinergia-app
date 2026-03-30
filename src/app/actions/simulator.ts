@@ -60,8 +60,11 @@ export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: a
         // We'll map it to Aletheia's InvoiceData expectation
 
         // Construct raw object for Normalizer
+        // NOTE: Normalizer uses Spanish field names; map CRM English fields explicitly
         const rawInput = {
             ...ocrData,
+            // Bridge CRM InvoiceData field names → Normalizer Spanish field names
+            periodo_facturacion: ocrData.period_days,
             // If manual Max Demand is provided, override it
             max_demand_p1: manualMaxDemand?.p1 || ocrData.max_demand_p1,
             max_demand_p2: manualMaxDemand?.p2 || ocrData.max_demand_p2,

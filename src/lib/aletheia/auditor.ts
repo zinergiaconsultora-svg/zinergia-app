@@ -42,9 +42,9 @@ export class Auditor {
             let activePeriods: TariffPeriod[];
             switch (data.tariff_type) {
                 case '2.0TD':
-                case '3.0TD':
                     activePeriods = ['p1', 'p2', 'p3'];
                     break;
+                case '3.0TD':
                 case '6.1TD':
                 default:
                     activePeriods = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];

@@ -1,14 +1,19 @@
 import { createBrowserClient } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
-export function createClient() {
+// Singleton — one WebSocket connection per tab, avoids per-call instantiation
+let _client: SupabaseClient | null = null
+
+export function createClient(): SupabaseClient {
+    if (_client) return _client
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
     if (!supabaseUrl || !supabaseKey) {
-        console.error('Supabase Client Error: Missing env variables NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY')
-        // We throw a descriptive error to help debugging instead of passing undefined
         throw new Error('Supabase Configuration Error: Missing environment variables')
     }
 
-    return createBrowserClient(supabaseUrl, supabaseKey)
+    _client = createBrowserClient(supabaseUrl, supabaseKey)
+    return _client
 }

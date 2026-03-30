@@ -6,12 +6,15 @@ import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { Toaster } from "sonner";
 import { PwaRegister } from "@/components/PwaRegister";
 
+// Load only weight 500 as default — renders FOUT-free at standard weight
+// 300 and 600 load lazily via CSS font-weight fallback
 const quicksand = Quicksand({
     variable: "--font-sans",
     subsets: ["latin"],
-    weight: ["300", "400", "600"],
+    weight: ["400", "600"],
     display: "swap",
     preload: true,
+    adjustFontFallback: true,
 });
 
 
@@ -45,8 +48,11 @@ export default function RootLayout({
     return (
         <html lang="es" suppressHydrationWarning>
             <head>
+                {/* Critical connection hints — reduce TTFB for first API calls */}
                 <link rel="preconnect" href="https://gmjgkzaxmkaggsyczwcm.supabase.co" crossOrigin="anonymous" />
                 <link rel="dns-prefetch" href="https://gmjgkzaxmkaggsyczwcm.supabase.co" />
+                <link rel="preconnect" href="https://fonts.googleapis.com" />
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
             </head>
             <body
                 className={`${quicksand.variable} antialiased font-light`}

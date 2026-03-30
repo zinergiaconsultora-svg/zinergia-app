@@ -25,7 +25,7 @@ export class AletheiaEngine {
                 activePeriods = ['p1', 'p2', 'p3'];
                 break;
             case '3.0TD':
-                activePeriods = ['p1', 'p2', 'p3'];
+                activePeriods = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];
                 break;
             case '6.1TD':
             default:
@@ -66,9 +66,7 @@ export class AletheiaEngine {
             // *Optimization Idea*: If Auditor detected Power Opportunity, we could run a second simulation with optimized power *
             activePeriods.forEach(p => {
                 const powerKw = invoice.contracted_power[p] || 0;
-                // Normalize tariff price to DAILY
-                const priceDaily = Normalizer.normalizeToDaily(tariff.power_price[p] || 0, 'daily'); // Assuming DB stores daily or we handle it
-                annualPowerCost += (powerKw * priceDaily * 365);
+                annualPowerCost += (powerKw * (tariff.power_price[p] || 0) * 365);
             });
 
             // Energy Cost: Sum(Projected_kWh * Price_kWh)
@@ -97,7 +95,7 @@ export class AletheiaEngine {
                 score -= 50; // Arbitrary penalty points for permanence
             }
             // Tags Boost
-            if (profile.tags.includes('NIGHT_OWL') && tariff.type === 'indexed') {
+            if (profile.tags.includes('WEEKEND_WARRIOR') && tariff.type === 'indexed') {
                 score += 20; // Boost indexed for night owls
             }
 

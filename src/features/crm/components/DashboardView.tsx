@@ -12,7 +12,8 @@ import {
     ArrowRight,
     Bell,
     GraduationCap,
-    ArrowUpRight
+    ArrowUpRight,
+    BarChart2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
@@ -35,6 +36,7 @@ const OcrJobsPanel = dynamic(() => import('./OcrJobsPanel'), {
     ssr: false,
     loading: () => <div className="h-32 bg-slate-100/50 animate-pulse rounded-2xl" />,
 });
+const SmartAlertsStrip = dynamic(() => import('./SmartAlertsStrip'), { ssr: false });
 const SavingsTrendChart = dynamic(() =>
     import('./DashboardCharts').then(m => ({ default: m.SavingsTrendChart })),
     { loading: () => <div className="h-full w-full bg-slate-100/20 animate-pulse rounded-lg" /> }
@@ -245,6 +247,11 @@ export default function DashboardView() {
                     <QuickUploadZone />
                 </motion.div>
 
+                {/* 0d. SMART ALERTS STRIP */}
+                <motion.div variants={item} className="mx-4 lg:mx-0">
+                    <SmartAlertsStrip />
+                </motion.div>
+
                 {/* 1. DESKTOP HEADER ROW */}
                 <motion.div variants={item} className="hidden lg:flex items-center justify-between shrink-0 h-10">
                     <div className="flex items-baseline gap-2">
@@ -401,6 +408,22 @@ export default function DashboardView() {
                             <div className="overflow-y-auto max-h-48 p-3 pt-2 custom-scrollbar">
                                 <AchievementsWidget />
                             </div>
+                        </div>
+
+                        {/* Forecast Card */}
+                        <div
+                            onClick={() => router.push('/dashboard/forecast')}
+                            className="cursor-pointer group bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl p-4 flex items-center justify-between shadow-lg shadow-indigo-200 hover:shadow-indigo-300 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                        >
+                            <div>
+                                <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest mb-0.5">Ingresos</p>
+                                <p className="text-base font-bold text-white flex items-center gap-2">
+                                    Forecast
+                                    <ArrowRight size={14} className="opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all" />
+                                </p>
+                                <p className="text-[10px] text-indigo-300 mt-0.5">Pipeline · proyección · comisiones</p>
+                            </div>
+                            <BarChart2 size={28} className="text-indigo-300/60 group-hover:text-indigo-100 transition-colors" />
                         </div>
 
                         {/* OCR Jobs History */}

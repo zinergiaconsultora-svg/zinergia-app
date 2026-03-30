@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useOptimistic } from 'react';
 import { Client, ClientStatus } from '@/types/crm';
 import { updateClientStatus } from '@/app/actions/crm';
 
@@ -20,17 +20,22 @@ const COLUMNS: { status: ClientStatus; label: string; color: string; emoji: stri
 export default function PipelineView({ clients, onStatusChange }: Props) {
     const [draggingId, setDraggingId] = useState<string | null>(null);
     const [dragOverColumn, setDragOverColumn] = useState<ClientStatus | null>(null);
-    const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+    const [optimisticClients, applyOptimisticMove] = useOptimistic(
+        clients,
+        (state, { id, newStatus }: { id: string; newStatus: ClientStatus }) =>
+            state.map(c => c.id === id ? { ...c, status: newStatus } : c)
+    );
 
     const grouped = useMemo(() => {
         const map = new Map<ClientStatus, Client[]>();
         COLUMNS.forEach(c => map.set(c.status, []));
-        clients.forEach(client => {
+        optimisticClients.forEach(client => {
             const list = map.get(client.status);
             if (list) list.push(client);
         });
         return map;
-    }, [clients]);
+    }, [optimisticClients]);
 
     const handleDragStart = useCallback((e: React.DragEvent, clientId: string) => {
         e.dataTransfer.setData('text/plain', clientId);
@@ -62,16 +67,15 @@ export default function PipelineView({ clients, onStatusChange }: Props) {
         const client = clients.find(c => c.id === clientId);
         if (!client || client.status === newStatus) return;
 
-        setUpdatingId(clientId);
+        applyOptimisticMove({ id: clientId, newStatus }); // instantáneo — revierte si falla
         try {
             await updateClientStatus(clientId, newStatus);
-            onStatusChange();
+            onStatusChange(); // refresco real en segundo plano
         } catch (err) {
             console.error('Error moviendo cliente:', err);
-        } finally {
-            setUpdatingId(null);
+            // useOptimistic revierte automáticamente al estado original
         }
-    }, [clients, onStatusChange]);
+    }, [clients, onStatusChange, applyOptimisticMove]);
 
     return (
         <div className="flex gap-3 overflow-x-auto pb-4 min-h-[500px]">
@@ -111,8 +115,7 @@ export default function PipelineView({ clients, onStatusChange }: Props) {
                                     onDragStart={(e) => handleDragStart(e, client.id)}
                                     onDragEnd={handleDragEnd}
                                     className={`bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-xl p-3 shadow-md border border-white dark:border-slate-600 cursor-grab active:cursor-grabbing hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${
-                                        draggingId === client.id ? 'opacity-40 scale-95 ring-2 ring-indigo-500/30' : ''
-                                    } ${updatingId === client.id ? 'animate-pulse' : ''}`}
+                                        draggingId === client.id ? 'opacity-40 scale-95 ring-2 ring-indigo-500/30' : ''}`}
                                 >
                                     <div className="text-sm font-medium text-slate-800 dark:text-white truncate">
                                         {client.name}

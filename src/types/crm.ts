@@ -151,6 +151,7 @@ export interface Proposal {
     client_id: string;
     franchise_id?: string;
     created_at: string;
+    updated_at?: string;
     status: ProposalStatus;
     offer_snapshot: Offer; // Full copy of offer at time of generation
     calculation_data: InvoiceData;
@@ -168,6 +169,14 @@ export interface Proposal {
     clients?: {
         name: string;
     };
+    // Firma digital
+    signature_data?: string | null;
+    signed_name?: string | null;
+    signed_at?: string | null;
+    public_token?: string | null;
+    public_expires_at?: string | null;
+    public_accepted_at?: string | null;
+
     aletheia_summary?: {
         client_profile: {
             tags: string[];
@@ -179,7 +188,7 @@ export interface Proposal {
             annual_savings: number;
             priority: string;
         }[];
-        recommendations: any[]; // Full list of recommendations
+        recommendations: unknown[];
     };
 }
 

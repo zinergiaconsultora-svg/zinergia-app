@@ -4,6 +4,13 @@ import { SupabaseClient } from '@supabase/supabase-js';
 const cache = new Map<string, { data: unknown; timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+// franchiseId per userId — avoids 2 sequential DB round-trips on every service call
+const _franchiseIdCache = new Map<string, string | null>();
+
+export function invalidateFranchiseIdCache() {
+    _franchiseIdCache.clear();
+}
+
 export function getCached<T>(key: string): T | null {
     const cached = cache.get(key);
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
@@ -20,10 +27,18 @@ export function invalidateCache(key: string): void {
     cache.delete(key);
 }
 
+export function invalidateCacheByPrefix(prefix: string): void {
+    for (const key of cache.keys()) {
+        if (key.startsWith(prefix)) cache.delete(key);
+    }
+}
+
 export async function getFranchiseId(supabase: SupabaseClient) {
-    // Sequential: confirm user identity before fetching profile (defense-in-depth over RLS)
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
+
+    // Hit cache first — avoids a profiles query on every service call
+    if (_franchiseIdCache.has(user.id)) return _franchiseIdCache.get(user.id) ?? null;
 
     const { data: profile } = await supabase
         .from('profiles')
@@ -33,9 +48,11 @@ export async function getFranchiseId(supabase: SupabaseClient) {
 
     if (!profile) {
         const newProfile = await ensureProfile(supabase, user.id, user.email || 'User');
+        _franchiseIdCache.set(user.id, newProfile.franchise_id);
         return newProfile.franchise_id;
     }
 
+    _franchiseIdCache.set(user.id, profile.franchise_id);
     return profile.franchise_id;
 }
 

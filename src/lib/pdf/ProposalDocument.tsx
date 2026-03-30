@@ -2,13 +2,14 @@ import React from 'react';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import { Proposal } from '@/types/crm';
 
-// ─── Brand Tokens ────────────────────────────────────────────────────────────
+// ─── Minimalist Brand Tokens ────────────────────────────────────────────────
 const BRAND_BLUE   = '#1b2641';
 const BRAND_ORANGE = '#ff5722';
 const EMERALD      = '#059669';
 const SLATE_50     = '#f8fafc';
 const SLATE_100    = '#f1f5f9';
 const SLATE_200    = '#e2e8f0';
+const SLATE_400    = '#94a3b8';
 const SLATE_500    = '#64748b';
 const SLATE_700    = '#334155';
 const SLATE_900    = '#0f172a';
@@ -24,27 +25,28 @@ const s = StyleSheet.create({
         color: SLATE_700,
     },
 
-    // ── Header strip
+    // ── Header minimalist
     headerStrip: {
-        backgroundColor: BRAND_BLUE,
         paddingHorizontal: 40,
-        paddingTop: 28,
-        paddingBottom: 24,
+        paddingTop: 40,
+        paddingBottom: 20,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-end',
+        borderBottomWidth: 1,
+        borderBottomColor: SLATE_200,
     },
     logoText: {
-        fontSize: 22,
+        fontSize: 24,
         fontFamily: 'Helvetica-Bold',
-        color: WHITE,
-        letterSpacing: 1,
+        color: BRAND_BLUE,
+        letterSpacing: 2,
     },
     logoSub: {
         fontSize: 8,
         color: BRAND_ORANGE,
-        letterSpacing: 2,
-        marginTop: 2,
+        letterSpacing: 3,
+        marginTop: 4,
         textTransform: 'uppercase',
     },
     headerMeta: {
@@ -52,413 +54,297 @@ const s = StyleSheet.create({
     },
     headerMetaText: {
         fontSize: 9,
-        color: '#94a3b8',
+        color: SLATE_500,
         lineHeight: 1.6,
     },
     headerMetaHighlight: {
         fontSize: 9,
-        color: WHITE,
+        color: BRAND_BLUE,
         fontFamily: 'Helvetica-Bold',
-    },
-
-    // ── Orange accent bar
-    accentBar: {
-        height: 3,
-        backgroundColor: BRAND_ORANGE,
     },
 
     // ── Body padding
     body: {
         paddingHorizontal: 40,
-        paddingTop: 28,
+        paddingTop: 40,
         paddingBottom: 60,
         flexGrow: 1,
     },
 
-    // ── Hero savings block
+    // ── Hero minimalist block
     heroBlock: {
-        flexDirection: 'row',
-        backgroundColor: SLATE_900,
-        borderRadius: 12,
-        padding: 28,
-        marginBottom: 24,
-        alignItems: 'center',
-    },
-    heroLeft: {
-        flex: 1,
+        marginBottom: 40,
+        alignItems: 'flex-start',
     },
     heroLabel: {
-        fontSize: 8,
-        color: '#94a3b8',
+        fontSize: 10,
+        color: SLATE_500,
         letterSpacing: 2,
         textTransform: 'uppercase',
-        marginBottom: 6,
+        marginBottom: 10,
     },
     heroAmount: {
-        fontSize: 42,
+        fontSize: 56,
         fontFamily: 'Helvetica-Bold',
         color: BRAND_ORANGE,
         lineHeight: 1,
-        marginBottom: 4,
+        marginBottom: 8,
     },
     heroSub: {
-        fontSize: 11,
-        color: '#34d399',
-        fontFamily: 'Helvetica-Bold',
+        fontSize: 14,
+        color: SLATE_400,
+        fontFamily: 'Helvetica',
     },
-    heroDivider: {
-        width: 1,
-        backgroundColor: '#334155',
-        marginHorizontal: 28,
-        alignSelf: 'stretch',
-    },
-    heroRight: {
-        flex: 1,
-        alignItems: 'flex-end',
-    },
-    heroClientLabel: {
-        fontSize: 8,
-        color: '#94a3b8',
-        letterSpacing: 2,
-        textTransform: 'uppercase',
-        marginBottom: 4,
-    },
-    heroClientName: {
-        fontSize: 16,
-        fontFamily: 'Helvetica-Bold',
-        color: WHITE,
-        marginBottom: 8,
-        textAlign: 'right',
-    },
-    heroBadge: {
-        backgroundColor: '#1e3a5f',
-        borderRadius: 6,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-    },
-    heroBadgeText: {
-        fontSize: 9,
-        color: '#7dd3fc',
-        fontFamily: 'Helvetica-Bold',
-    },
-
+    
     // ── Section title
     sectionTitle: {
-        fontSize: 13,
+        fontSize: 14,
         fontFamily: 'Helvetica-Bold',
         color: BRAND_BLUE,
-        marginBottom: 12,
-        marginTop: 4,
-        letterSpacing: 0.3,
+        marginBottom: 16,
+        marginTop: 10,
+        letterSpacing: 0.5,
     },
 
     // ── Intro paragraph
     introText: {
-        fontSize: 10.5,
+        fontSize: 11,
         color: SLATE_700,
-        lineHeight: 1.65,
-        marginBottom: 20,
+        lineHeight: 1.8,
+        marginBottom: 30,
     },
     introHighlight: {
         fontFamily: 'Helvetica-Bold',
         color: BRAND_BLUE,
     },
 
-    // ── Comparison row
+    // ── Comparison row (Side by Side minimalist)
     comparisonRow: {
         flexDirection: 'row',
-        gap: 12,
-        marginBottom: 24,
-    },
-    comparisonCardBefore: {
-        flex: 1,
-        backgroundColor: SLATE_50,
-        borderRadius: 10,
-        padding: 16,
-        borderWidth: 1,
+        gap: 30,
+        marginBottom: 40,
+        borderTopWidth: 1,
+        borderBottomWidth: 1,
         borderColor: SLATE_200,
+        paddingVertical: 20,
     },
-    comparisonCardAfter: {
+    comparisonCard: {
         flex: 1,
-        backgroundColor: '#f0fdf4',
-        borderRadius: 10,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: '#bbf7d0',
     },
     comparisonLabel: {
-        fontSize: 8,
+        fontSize: 9,
         color: SLATE_500,
         letterSpacing: 1.5,
         textTransform: 'uppercase',
-        marginBottom: 6,
+        marginBottom: 10,
     },
     comparisonAmount: {
-        fontSize: 22,
+        fontSize: 28,
         fontFamily: 'Helvetica-Bold',
         color: SLATE_900,
-        marginBottom: 3,
+        marginBottom: 4,
     },
     comparisonAmountGreen: {
-        fontSize: 22,
+        fontSize: 28,
         fontFamily: 'Helvetica-Bold',
         color: EMERALD,
-        marginBottom: 3,
+        marginBottom: 4,
     },
     comparisonSub: {
-        fontSize: 9,
+        fontSize: 10,
         color: SLATE_500,
     },
-    comparisonSubGreen: {
-        fontSize: 9,
-        color: '#15803d',
-        fontFamily: 'Helvetica-Bold',
-    },
 
-    // ── Savings arrow badge
-    savingsArrow: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 4,
-    },
-    savingsArrowText: {
-        fontSize: 18,
-        color: BRAND_ORANGE,
-    },
-    savingsBadge: {
-        backgroundColor: BRAND_ORANGE,
-        borderRadius: 8,
-        paddingHorizontal: 8,
-        paddingVertical: 5,
-        marginTop: 4,
-    },
-    savingsBadgeText: {
-        fontSize: 9,
-        color: WHITE,
-        fontFamily: 'Helvetica-Bold',
-        textAlign: 'center',
-    },
-
-    // ── Offer detail row
-    offerBox: {
-        backgroundColor: SLATE_50,
-        borderRadius: 10,
-        padding: 16,
-        marginBottom: 24,
-        borderWidth: 1,
-        borderColor: SLATE_200,
+    // ── Offer detail layout (No boxes, just lines)
+    offerTable: {
+        marginBottom: 40,
+        borderTopWidth: 1,
+        borderColor: SLATE_900,
     },
     offerRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 5,
+        paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: SLATE_100,
-    },
-    offerRowLast: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: 5,
+        borderBottomColor: SLATE_200,
     },
     offerKey: {
-        fontSize: 10,
+        fontSize: 11,
         color: SLATE_500,
     },
     offerVal: {
-        fontSize: 10,
-        fontFamily: 'Helvetica-Bold',
-        color: SLATE_700,
-    },
-
-    // ── Opportunity cards
-    oppCard: {
-        borderLeftWidth: 3,
-        borderLeftColor: BRAND_ORANGE,
-        backgroundColor: '#fff7f5',
-        borderRadius: 6,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        marginBottom: 8,
-    },
-    oppTitle: {
-        fontSize: 10,
+        fontSize: 11,
         fontFamily: 'Helvetica-Bold',
         color: BRAND_BLUE,
-        marginBottom: 3,
+    },
+    offerValGreen: {
+        fontSize: 11,
+        fontFamily: 'Helvetica-Bold',
+        color: EMERALD,
+    },
+    offerValOrange: {
+        fontSize: 11,
+        fontFamily: 'Helvetica-Bold',
+        color: BRAND_ORANGE,
+    },
+
+    // ── Opportunity cards (Minimalist)
+    oppCard: {
+        borderLeftWidth: 2,
+        borderLeftColor: BRAND_ORANGE,
+        paddingLeft: 16,
+        paddingVertical: 4,
+        marginBottom: 16,
+    },
+    oppTitle: {
+        fontSize: 11,
+        fontFamily: 'Helvetica-Bold',
+        color: BRAND_BLUE,
+        marginBottom: 4,
     },
     oppDesc: {
-        fontSize: 9.5,
-        color: SLATE_700,
-        lineHeight: 1.5,
+        fontSize: 10,
+        color: SLATE_500,
+        lineHeight: 1.6,
     },
     oppSavings: {
-        fontSize: 9,
+        fontSize: 10,
         color: BRAND_ORANGE,
         fontFamily: 'Helvetica-Bold',
-        marginTop: 4,
+        marginTop: 6,
     },
 
-    // ── Sales argument quote
+    // ── Sales argument quote (Minimalist Blockquote)
     quoteBox: {
-        backgroundColor: '#eff6ff',
-        borderRadius: 8,
-        padding: 14,
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: '#bfdbfe',
+        borderLeftWidth: 2,
+        borderLeftColor: BRAND_BLUE,
+        paddingLeft: 20,
+        marginBottom: 30,
+        marginTop: 10,
     },
     quoteText: {
-        fontSize: 10.5,
-        color: '#1e3a5f',
+        fontSize: 12,
+        color: SLATE_700,
         fontStyle: 'italic',
-        lineHeight: 1.65,
+        lineHeight: 1.8,
     },
     quoteAuthor: {
-        fontSize: 8.5,
-        color: '#3b82f6',
+        fontSize: 9,
+        color: SLATE_400,
         fontFamily: 'Helvetica-Bold',
-        marginTop: 6,
+        marginTop: 10,
         textTransform: 'uppercase',
-        letterSpacing: 1,
+        letterSpacing: 1.5,
     },
 
-    // ── 5-year projection table
+    // ── 5-year projection table (Clean grid)
     tableHeader: {
         flexDirection: 'row',
-        backgroundColor: BRAND_BLUE,
-        borderRadius: 6,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        marginBottom: 2,
+        borderBottomWidth: 2,
+        borderBottomColor: BRAND_BLUE,
+        paddingVertical: 10,
+        marginBottom: 4,
     },
     tableHeaderCell: {
         flex: 1,
-        fontSize: 8,
-        color: WHITE,
+        fontSize: 9,
+        color: BRAND_BLUE,
         fontFamily: 'Helvetica-Bold',
         textTransform: 'uppercase',
         letterSpacing: 1,
     },
     tableRow: {
         flexDirection: 'row',
-        paddingHorizontal: 12,
-        paddingVertical: 7,
-        borderBottomWidth: 1,
-        borderBottomColor: SLATE_100,
-    },
-    tableRowAlt: {
-        flexDirection: 'row',
-        paddingHorizontal: 12,
-        paddingVertical: 7,
-        backgroundColor: SLATE_50,
+        paddingVertical: 10,
         borderBottomWidth: 1,
         borderBottomColor: SLATE_100,
     },
     tableCell: {
         flex: 1,
-        fontSize: 9.5,
+        fontSize: 10,
         color: SLATE_700,
     },
     tableCellBold: {
         flex: 1,
-        fontSize: 9.5,
+        fontSize: 10,
         fontFamily: 'Helvetica-Bold',
         color: EMERALD,
     },
 
-    // ── Trust pillars
+    // ── Trust pillars (Minimalist lists)
     trustRow: {
         flexDirection: 'row',
-        gap: 10,
-        marginBottom: 24,
+        gap: 20,
+        marginTop: 10,
+        marginBottom: 30,
     },
     trustCard: {
         flex: 1,
-        backgroundColor: SLATE_50,
-        borderRadius: 8,
-        padding: 14,
-        borderTopWidth: 2,
-        borderTopColor: BRAND_ORANGE,
     },
     trustTitle: {
-        fontSize: 9.5,
+        fontSize: 10,
         fontFamily: 'Helvetica-Bold',
         color: BRAND_BLUE,
-        marginBottom: 4,
+        marginBottom: 6,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
     trustBody: {
-        fontSize: 9,
+        fontSize: 9.5,
         color: SLATE_500,
-        lineHeight: 1.55,
+        lineHeight: 1.6,
     },
 
-    // ── CTA box
+    // ── CTA minimalist signature line
     ctaBox: {
-        backgroundColor: BRAND_BLUE,
-        borderRadius: 12,
-        padding: 20,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 24,
-    },
-    ctaLeft: {
-        flex: 1,
+        marginTop: 20,
+        paddingTop: 30,
+        borderTopWidth: 1,
+        borderColor: SLATE_200,
     },
     ctaTitle: {
-        fontSize: 13,
+        fontSize: 16,
         fontFamily: 'Helvetica-Bold',
-        color: WHITE,
-        marginBottom: 4,
+        color: BRAND_BLUE,
+        marginBottom: 8,
     },
     ctaBody: {
-        fontSize: 9.5,
-        color: '#94a3b8',
-        lineHeight: 1.5,
-    },
-    ctaBadge: {
-        backgroundColor: BRAND_ORANGE,
-        borderRadius: 8,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        marginLeft: 20,
-    },
-    ctaBadgeText: {
         fontSize: 10,
-        color: WHITE,
-        fontFamily: 'Helvetica-Bold',
-        textAlign: 'center',
+        color: SLATE_500,
+        lineHeight: 1.6,
+        maxWidth: 400,
     },
 
     // ── Footer
     footer: {
         position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: BRAND_BLUE,
-        paddingHorizontal: 40,
-        paddingVertical: 12,
+        bottom: 30,
+        left: 40,
+        right: 40,
+        borderTopWidth: 1,
+        borderTopColor: SLATE_200,
+        paddingTop: 12,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-start',
     },
     footerBrand: {
-        fontSize: 9,
-        color: '#94a3b8',
+        fontSize: 8,
+        color: SLATE_400,
+        letterSpacing: 1,
+        textTransform: 'uppercase',
     },
     footerDisclaimer: {
         fontSize: 8,
-        color: '#475569',
-        textAlign: 'right',
-        maxWidth: 320,
+        color: SLATE_400,
+        maxWidth: 300,
         lineHeight: 1.4,
     },
     pageNumber: {
         fontSize: 8,
-        color: '#475569',
+        color: SLATE_400,
+        fontFamily: 'Helvetica-Bold',
     },
 });
 
@@ -516,112 +402,73 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
                         <Text style={s.headerMetaHighlight}>{clientName}</Text>
                         <Text style={s.headerMetaText}>{dateStr}</Text>
                         <Text style={s.headerMetaText}>Ref. {refId}</Text>
-                        <Text style={s.headerMetaText}>Propuesta de Eficiencia Energética</Text>
                     </View>
                 </View>
-                <View style={s.accentBar} />
 
                 {/* Body */}
                 <View style={s.body}>
 
-                    {/* Hero savings */}
+                    {/* Hero savings (Minimalist) */}
                     <View style={s.heroBlock}>
-                        <View style={s.heroLeft}>
-                            <Text style={s.heroLabel}>Ahorro Anual Garantizado</Text>
-                            <Text style={s.heroAmount}>{euro(savings)}</Text>
-                            <Text style={s.heroSub}>↓ {pct(savingsPct)} menos en tu factura</Text>
-                        </View>
-                        <View style={s.heroDivider} />
-                        <View style={s.heroRight}>
-                            <Text style={s.heroClientLabel}>Propuesta para</Text>
-                            <Text style={s.heroClientName}>{clientName}</Text>
-                            <View style={s.heroBadge}>
-                                <Text style={s.heroBadgeText}>{marketer} · {tariff}</Text>
-                            </View>
-                        </View>
+                        <Text style={s.heroLabel}>Ahorro Potencial Estimado</Text>
+                        <Text style={s.heroAmount}>{euro(savings)}</Text>
+                        <Text style={s.heroSub}>Lo que equivale a un {pct(savingsPct)} menos en tu factura anual actual.</Text>
                     </View>
 
                     {/* Intro */}
-                    <Text style={s.sectionTitle}>El coste real de no actuar</Text>
                     <Text style={s.introText}>
-                        Tras analizar tu factura eléctrica, hemos detectado que{' '}
-                        <Text style={s.introHighlight}>
-                            estás pagando {euro(currentCost)} al año cuando podrías pagar {euro(newCost)}.
-                        </Text>
-                        {' '}Eso son {euro(savings)} que se podrían quedar en tu empresa cada año. En cinco años,
-                        ese exceso representa más de {euro(savings * 5)} — capital que puedes reinvertir
-                        en hacer crecer tu negocio.
+                        Tras analizar minuciosamente tus hábitos de consumo y la estructura de tu tarifa actual,{' '}
+                        hemos detectado que <Text style={s.introHighlight}>estás pagando {euro(currentCost)} al año cuando podrías pagar {euro(newCost)}.</Text>
+                        {' '}Esa diferencia representa capital inmovilizado que tu empresa podría reasignar a áreas estratégicas.
                     </Text>
 
                     {/* Comparison before / after */}
                     <View style={s.comparisonRow}>
-                        <View style={s.comparisonCardBefore}>
-                            <Text style={s.comparisonLabel}>Situación actual</Text>
+                        <View style={s.comparisonCard}>
+                            <Text style={s.comparisonLabel}>Situación actual (Anual)</Text>
                             <Text style={s.comparisonAmount}>{euro(currentCost)}</Text>
-                            <Text style={s.comparisonSub}>coste anual estimado</Text>
-                            <Text style={{ fontSize: 9, color: '#ef4444', marginTop: 6 }}>
-                                ✕ Tarifa sin optimizar
-                            </Text>
+                            <Text style={s.comparisonSub}>Coste proyectado sin optimizar</Text>
                         </View>
 
-                        <View style={s.savingsArrow}>
-                            <Text style={s.savingsArrowText}>→</Text>
-                            <View style={s.savingsBadge}>
-                                <Text style={s.savingsBadgeText}>Ahorro{'\n'}{euro(savings)}</Text>
-                            </View>
-                        </View>
-
-                        <View style={s.comparisonCardAfter}>
-                            <Text style={s.comparisonLabel}>Con Zinergia</Text>
+                        <View style={s.comparisonCard}>
+                            <Text style={s.comparisonLabel}>Con Zinergia (Anual)</Text>
                             <Text style={s.comparisonAmountGreen}>{euro(newCost)}</Text>
-                            <Text style={s.comparisonSubGreen}>coste anual optimizado</Text>
-                            <Text style={{ fontSize: 9, color: EMERALD, marginTop: 6 }}>
-                                ✓ {marketer} — {tariff}
-                            </Text>
+                            <Text style={s.comparisonSub}>Coste proyectado optimizado</Text>
                         </View>
                     </View>
 
                     {/* Offer detail */}
-                    <Text style={s.sectionTitle}>Oferta seleccionada</Text>
-                    <View style={s.offerBox}>
+                    <Text style={s.sectionTitle}>Desglose de la Solución</Text>
+                    <View style={s.offerTable}>
                         <View style={s.offerRow}>
-                            <Text style={s.offerKey}>Comercializadora</Text>
-                            <Text style={s.offerVal}>{marketer}</Text>
-                        </View>
-                        <View style={s.offerRow}>
-                            <Text style={s.offerKey}>Tarifa de acceso</Text>
-                            <Text style={s.offerVal}>{tariff}</Text>
+                            <Text style={s.offerKey}>Tarifa Propuesta</Text>
+                            <Text style={s.offerVal}>{marketer} — {tariff}</Text>
                         </View>
                         <View style={s.offerRow}>
-                            <Text style={s.offerKey}>Precio energía P1</Text>
-                            <Text style={s.offerVal}>{proposal.offer_snapshot.energy_price.p1.toFixed(4)} €/kWh</Text>
+                            <Text style={s.offerKey}>Precio Referencia (Energía P1)</Text>
+                            <Text style={s.offerVal}>{proposal.offer_snapshot.energy_price?.p1?.toFixed(4) || 'N/A'} €/kWh</Text>
                         </View>
                         <View style={s.offerRow}>
-                            <Text style={s.offerKey}>Coste anual estimado</Text>
-                            <Text style={[s.offerVal, { color: EMERALD }]}>{euro(newCost)}</Text>
+                            <Text style={s.offerKey}>Coste Anual Estimado</Text>
+                            <Text style={s.offerValGreen}>{euro(newCost)}</Text>
                         </View>
-                        <View style={s.offerRowLast}>
-                            <Text style={s.offerKey}>Ahorro vs. situación actual</Text>
-                            <Text style={[s.offerVal, { color: BRAND_ORANGE }]}>{euro(savings)} ({pct(savingsPct)})</Text>
+                        <View style={s.offerRow}>
+                            <Text style={s.offerKey}>Ahorro Económico Directo</Text>
+                            <Text style={s.offerValOrange}>{euro(savings)} ({pct(savingsPct)})</Text>
                         </View>
-                    </View>
-
-                    {optSavings > 0 && (
-                        <>
-                            <View style={s.offerBox}>
-                                <View style={s.offerRowLast}>
-                                    <Text style={s.offerKey}>+ Optimización de potencias contratadas</Text>
-                                    <Text style={[s.offerVal, { color: BRAND_ORANGE }]}>+{euro(optSavings)}/año adicionales</Text>
-                                </View>
+                        {optSavings > 0 && (
+                            <View style={s.offerRow}>
+                                <Text style={s.offerKey}>Ahorro por Ajuste de Potencias</Text>
+                                <Text style={s.offerValOrange}>+{euro(optSavings)} / año</Text>
                             </View>
-                        </>
-                    )}
+                        )}
+                    </View>
 
                 </View>
 
                 {/* Footer p1 */}
                 <View style={s.footer} fixed>
-                    <Text style={s.footerBrand}>ZINERGIA · Consultora Energética Independiente</Text>
+                    <Text style={s.footerBrand}>ZINERGIA · Documento Analítico Confidencial</Text>
                     <Text style={s.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
                 </View>
 
@@ -638,21 +485,19 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
                         <Text style={s.logoSub}>Consultora Energética</Text>
                     </View>
                     <View style={s.headerMeta}>
-                        <Text style={s.headerMetaHighlight}>Análisis Detallado · {clientName}</Text>
+                        <Text style={s.headerMetaHighlight}>Proyección Estratégica</Text>
                         <Text style={s.headerMetaText}>Ref. {refId}</Text>
                     </View>
                 </View>
-                <View style={s.accentBar} />
 
                 <View style={s.body}>
 
                     {/* Sales argument */}
                     {salesArg && (
                         <>
-                            <Text style={s.sectionTitle}>Diagnóstico energético</Text>
                             <View style={s.quoteBox}>
                                 <Text style={s.quoteText}>"{salesArg}"</Text>
-                                <Text style={s.quoteAuthor}>— Análisis Aletheia · Motor de IA de Zinergia</Text>
+                                <Text style={s.quoteAuthor}>Auditoría Inteligente Aletheia</Text>
                             </View>
                         </>
                     )}
@@ -660,29 +505,28 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
                     {/* Opportunities */}
                     {opps.length > 0 && (
                         <>
-                            <Text style={s.sectionTitle}>Oportunidades de ahorro detectadas</Text>
+                            <Text style={s.sectionTitle}>Anomalías y Oportunidades Técnicas</Text>
                             {opps.map((opp, i) => (
                                 <View key={i} style={s.oppCard}>
                                     <Text style={s.oppTitle}>{opp.type}</Text>
                                     <Text style={s.oppDesc}>{opp.description}</Text>
-                                    <Text style={s.oppSavings}>Ahorro potencial: +{euro(opp.annual_savings)}/año</Text>
+                                    <Text style={s.oppSavings}>Impacto a favor: +{euro(opp.annual_savings)} anuales</Text>
                                 </View>
                             ))}
+                            <View style={{ marginBottom: 30 }} />
                         </>
                     )}
 
                     {/* 5-year projection */}
-                    <Text style={[s.sectionTitle, { marginTop: opps.length > 0 ? 16 : 0 }]}>
-                        Proyección de ahorro a 5 años
-                    </Text>
+                    <Text style={s.sectionTitle}>Horizonte Financiero a 5 Años</Text>
                     <View style={s.tableHeader}>
-                        <Text style={s.tableHeaderCell}>Año</Text>
-                        <Text style={s.tableHeaderCell}>Coste optimizado</Text>
-                        <Text style={s.tableHeaderCell}>Ahorro anual</Text>
-                        <Text style={s.tableHeaderCell}>Ahorro acumulado</Text>
+                        <Text style={s.tableHeaderCell}>Línea de Tiempo</Text>
+                        <Text style={s.tableHeaderCell}>Coste Optimizado</Text>
+                        <Text style={s.tableHeaderCell}>Retorno Anual</Text>
+                        <Text style={s.tableHeaderCell}>Retorno Acumulado</Text>
                     </View>
-                    {projection.map((row, i) => (
-                        <View key={row.year} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+                    {projection.map((row) => (
+                        <View key={row.year} style={s.tableRow}>
                             <Text style={s.tableCell}>Año {row.year}</Text>
                             <Text style={s.tableCell}>{euro(newCost)}</Text>
                             <Text style={s.tableCell}>{euro(row.annualSaving)}</Text>
@@ -691,43 +535,30 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
                     ))}
 
                     {/* Trust pillars */}
-                    <Text style={[s.sectionTitle, { marginTop: 24 }]}>Por qué confiar en Zinergia</Text>
-                    <View style={s.trustRow}>
-                        <View style={s.trustCard}>
-                            <Text style={s.trustTitle}>Independencia total</Text>
-                            <Text style={s.trustBody}>
-                                No somos distribuidores de ninguna comercializadora.
-                                Analizamos el mercado completo y seleccionamos la mejor opción real para cada cliente.
-                            </Text>
-                        </View>
-                        <View style={s.trustCard}>
-                            <Text style={s.trustTitle}>Metodología Aletheia</Text>
-                            <Text style={s.trustBody}>
-                                Nuestro motor de IA cruza tu consumo real con más de 200 tarifas activas
-                                en el mercado para garantizar el ahorro óptimo.
-                            </Text>
-                        </View>
-                        <View style={s.trustCard}>
-                            <Text style={s.trustTitle}>Sin coste para ti</Text>
-                            <Text style={s.trustBody}>
-                                El servicio de Zinergia es gratuito para el cliente. Nos financiamos
-                                a través de las comercializadoras, sin incrementar tu coste final.
-                            </Text>
+                    <View style={{ marginTop: 40 }}>
+                        <Text style={s.sectionTitle}>Nuestra Propuesta de Valor</Text>
+                        <View style={s.trustRow}>
+                            <View style={s.trustCard}>
+                                <Text style={s.trustTitle}>Independencia</Text>
+                                <Text style={s.trustBody}>Sin afiliaciones exclusivas. El mercado dicta la mejor opción objetiva para tu negocio.</Text>
+                            </View>
+                            <View style={s.trustCard}>
+                                <Text style={s.trustTitle}>Auditoría Continua</Text>
+                                <Text style={s.trustBody}>Nuestro algoritmo monitoriza constantemente el mercado frente a tu perfil de consumo.</Text>
+                            </View>
+                            <View style={s.trustCard}>
+                                <Text style={s.trustTitle}>Costo Cero</Text>
+                                <Text style={s.trustBody}>Nos financiamos íntegramente a través de la red de comercializadoras mayoristas.</Text>
+                            </View>
                         </View>
                     </View>
 
                     {/* CTA */}
                     <View style={s.ctaBox}>
-                        <View style={s.ctaLeft}>
-                            <Text style={s.ctaTitle}>¿Listo para empezar a ahorrar?</Text>
-                            <Text style={s.ctaBody}>
-                                Esta propuesta tiene validez de 30 días. El proceso de cambio es
-                                completamente gestionado por Zinergia — sin interrupciones en tu suministro.
-                            </Text>
-                        </View>
-                        <View style={s.ctaBadge}>
-                            <Text style={s.ctaBadgeText}>Activar{'\n'}propuesta</Text>
-                        </View>
+                        <Text style={s.ctaTitle}>Siguiente Paso</Text>
+                        <Text style={s.ctaBody}>
+                            Esta propuesta es vinculante con el mercado por 30 días. Tu agente asignado iniciará el cambio de contrato en 24 horas tras la firma digital, sin originar interrupciones en el suministro ni costes ocultos.
+                        </Text>
                     </View>
 
                 </View>
@@ -735,8 +566,7 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
                 {/* Footer p2 */}
                 <View style={s.footer} fixed>
                     <Text style={s.footerDisclaimer}>
-                        Propuesta basada en análisis de consumo histórico. Los ahorros indicados son estimaciones
-                        sujetas a variaciones de mercado. No constituye oferta vinculante.
+                        Estimación fundamentada en métricas de consumo histórico provistas. Sujeto a variaciones técnicas regulatorias o de tarifa indexada según perfil horario de la CUR.
                     </Text>
                     <Text style={s.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
                 </View>

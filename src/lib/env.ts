@@ -16,6 +16,11 @@ const envSchema = z.object({
     // Timeouts
     N8N_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
 
+    // Web Push VAPID
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().min(1).optional(),
+    VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+    VAPID_SUBJECT: z.string().min(1).optional(),
+
     // Node Environment
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 });
