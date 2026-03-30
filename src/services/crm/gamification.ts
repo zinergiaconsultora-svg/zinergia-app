@@ -30,30 +30,33 @@ export const gamificationService = {
     async getLeaderboard() {
         const supabase = createClient();
 
-        const { data, error } = await supabase
+        // Dos queries explícitas — no depende del nombre de la FK en PostgREST
+        const { data: pointsData, error } = await supabase
             .from('user_points')
-            .select(`
-                user_id,
-                points,
-                last_updated,
-                profiles ( full_name, role, avatar_url )
-            `)
+            .select('user_id, points, last_updated')
             .order('points', { ascending: false })
             .limit(10);
 
-        if (error || !data) return [];
+        if (error || !pointsData?.length) return [];
 
+        const userIds = pointsData.map(r => r.user_id);
+        const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, full_name, role, avatar_url')
+            .in('id', userIds);
+
+        const profileMap = new Map((profilesData ?? []).map(p => [p.id, p]));
         const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
 
-        return data.map(row => {
-            const profile = (row.profiles as { full_name?: string; role?: string; avatar_url?: string } | null) ?? {};
+        return pointsData.map(row => {
+            const profile = profileMap.get(row.user_id) ?? {};
             return {
                 id: row.user_id,
-                name: profile.full_name ?? 'Agente',
-                role: profile.role ?? 'agent',
+                name: (profile as { full_name?: string }).full_name ?? 'Agente',
+                role: (profile as { role?: string }).role ?? 'agent',
                 points: row.points ?? 0,
                 trend: ((row.last_updated ?? '') >= sevenDaysAgo ? 'up' : 'stable') as 'up' | 'down' | 'stable',
-                avatar_url: profile.avatar_url ?? '',
+                avatar_url: (profile as { avatar_url?: string }).avatar_url ?? '',
                 badges: [] as string[],
             };
         });
