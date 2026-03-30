@@ -6,9 +6,6 @@ self.addEventListener('activate', (event) => {
     event.waitUntil(self.clients.claim());
 });
 
-self.addEventListener('fetch', () => {
-    // Interceptador pasivo mínimo necesario por Chrome/Safari para requerimiento de A2HS.
-});
 
 // Web Push: mostrar notificación cuando llega un push del servidor
 self.addEventListener('push', (event) => {

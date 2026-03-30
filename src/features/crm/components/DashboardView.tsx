@@ -9,11 +9,8 @@ import {
     TrendingUp,
     Target,
     Layers,
-    ArrowRight,
     Bell,
-    GraduationCap,
-    ArrowUpRight,
-    BarChart2
+    ArrowUpRight
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
@@ -21,13 +18,7 @@ import { formatCurrency } from '@/lib/utils/format';
 import { DashboardSkeleton } from '@/components/ui/DashboardSkeleton';
 import { QuickUploadZone } from './QuickUploadZone';
 
-const LeaderboardWidget = dynamic(() =>
-    import('@/features/gamification/components/LeaderboardWidget').then(m => ({ default: m.LeaderboardWidget })),
-    { loading: () => <div className="h-64 bg-slate-100/50 animate-pulse rounded-2xl" /> }
-);
-const AchievementsWidget = dynamic(() =>
-    import('@/features/gamification/components/AchievementsWidget').then(m => ({ default: m.AchievementsWidget }))
-);
+
 const NotificationsPopover = dynamic(() =>
     import('@/features/crm/components/NotificationsPopover').then(m => ({ default: m.NotificationsPopover })),
     { ssr: false }
@@ -305,28 +296,12 @@ export default function DashboardView() {
                             <p className="text-[11px] text-[#8e8e93] font-medium mb-1">Pipeline activo</p>
                             <p className="text-lg font-bold text-slate-900">{formatCurrency(stats.financials.pipeline)}</p>
                         </div>
-                        <div onClick={() => router.push('/dashboard/academy')} className="snap-start shrink-0 bg-indigo-600 rounded-2xl px-4 py-3 min-w-[140px] cursor-pointer active:opacity-90 transition-opacity flex items-center gap-2">
-                            <GraduationCap size={20} className="text-white/70 shrink-0" />
-                            <div>
-                                <p className="text-[11px] text-indigo-200 font-medium mb-0.5">Academia</p>
-                                <p className="text-base font-bold text-white flex items-center gap-1">Ver <ArrowRight size={12} /></p>
-                            </div>
-                        </div>
                     </div>
                     {/* Desktop: original grid */}
-                    <div className="hidden lg:grid grid-cols-4 gap-4">
+                    <div className="hidden lg:grid grid-cols-3 gap-4">
                         <GlassKpiCard label="Ahorro Detectado" value={formatCurrency(stats.financials.total_detected)} icon={TrendingUp} delay={0.1} />
                         <GlassKpiCard label="Objetivo Mensual" value={`${goalProgress}%`} subValue={formatCurrency(MONTHLY_GOAL)} icon={Target} progress={goalProgress} delay={0.2} />
                         <GlassKpiCard label="Pipeline Activo" value={formatCurrency(stats.financials.pipeline)} icon={Layers} delay={0.3} />
-                        <div onClick={() => router.push('/dashboard/academy')} className="cursor-pointer group flex items-center justify-between px-5 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl text-white shadow-lg shadow-indigo-200 transition-all hover:shadow-indigo-300 hover:scale-[1.02] active:scale-[0.98]">
-                            <div>
-                                <div className="text-[10px] font-medium text-indigo-200 uppercase tracking-wider mb-0.5">Academia</div>
-                                <div className="text-xl font-bold flex items-center gap-2">
-                                    Academy <ArrowRight size={14} className="opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all" />
-                                </div>
-                            </div>
-                            <GraduationCap size={24} className="text-indigo-200/50 group-hover:text-indigo-100 transition-colors" />
-                        </div>
                     </div>
                 </motion.div>
 
@@ -388,44 +363,8 @@ export default function DashboardView() {
                         </div>
                     </div>
 
-                    {/* RIGHT COLUMN (Gamification) */}
+                    {/* RIGHT COLUMN */}
                     <div className="lg:col-span-4 flex flex-col gap-4">
-                        {/* Leaderboard */}
-                        <div className="bg-white/70 backdrop-blur-xl rounded-2xl border border-white/80 shadow-lg p-0 overflow-hidden flex flex-col">
-                            <div className="p-3 pb-0">
-                                <SectionHeader title="Top Performers" />
-                            </div>
-                            <div className="overflow-y-auto max-h-64 p-3 pt-2 custom-scrollbar">
-                                <LeaderboardWidget />
-                            </div>
-                        </div>
-
-                        {/* Achievements */}
-                        <div className="bg-white/70 backdrop-blur-xl rounded-2xl border border-white/80 shadow-lg p-0 overflow-hidden flex flex-col">
-                            <div className="p-3 pb-0">
-                                <SectionHeader title="Logros" />
-                            </div>
-                            <div className="overflow-y-auto max-h-48 p-3 pt-2 custom-scrollbar">
-                                <AchievementsWidget />
-                            </div>
-                        </div>
-
-                        {/* Forecast Card */}
-                        <div
-                            onClick={() => router.push('/dashboard/forecast')}
-                            className="cursor-pointer group bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl p-4 flex items-center justify-between shadow-lg shadow-indigo-200 hover:shadow-indigo-300 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                        >
-                            <div>
-                                <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest mb-0.5">Ingresos</p>
-                                <p className="text-base font-bold text-white flex items-center gap-2">
-                                    Forecast
-                                    <ArrowRight size={14} className="opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all" />
-                                </p>
-                                <p className="text-[10px] text-indigo-300 mt-0.5">Pipeline · proyección · comisiones</p>
-                            </div>
-                            <BarChart2 size={28} className="text-indigo-300/60 group-hover:text-indigo-100 transition-colors" />
-                        </div>
-
                         {/* OCR Jobs History */}
                         <div className="flex-[2] min-h-0">
                             <OcrJobsPanel />
