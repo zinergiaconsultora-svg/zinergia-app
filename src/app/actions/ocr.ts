@@ -155,16 +155,32 @@ export async function analyzeDocumentAction(formData: FormData): Promise<{ jobId
 
         const contentType = response.headers.get('content-type') ?? '';
         if (contentType.includes('application/json')) {
-            const body = await response.json();
-            if (typeof body === 'string') {
-                console.warn('[OCR] N8N devolvió string en lugar de JSON.');
-                await supabase.from('ocr_jobs').update({
-                    status: 'processing',
-                    error_message: 'Respuesta N8N en formato inesperado (string), el job puede seguir procesando'
-                }).eq('id', job.id);
+            try {
+                const body = await response.json();
+                // N8N puede devolver los datos directamente en la respuesta (modo síncrono)
+                const rawData = Array.isArray(body)
+                    ? (body[0]?.output || body[0])
+                    : (body?.output || body?.data || body);
+
+                const hasMeaningfulData = rawData &&
+                    typeof rawData === 'object' &&
+                    !Array.isArray(rawData) &&
+                    (rawData.client_name || rawData.CLIENTE_NOMBRE || rawData.TITULAR ||
+                     rawData.cups || rawData.CUPS || rawData.importe_total || rawData.total);
+
+                if (hasMeaningfulData) {
+                    // N8N procesó el PDF y devolvió datos sincrónicamente — actualizar job y devolver datos
+                    await supabase.from('ocr_jobs')
+                        .update({ status: 'completed', extracted_data: rawData })
+                        .eq('id', job.id);
+                    return { jobId: job.id, isMock: false, data: rawData as InvoiceData };
+                }
+            } catch {
+                // No se pudo parsear — continuar con flujo asíncrono normal
             }
         }
 
+        // Flujo asíncrono: N8N procesará y llamará al callback
         return { jobId: job.id, isMock: false };
 
     } catch (error) {
