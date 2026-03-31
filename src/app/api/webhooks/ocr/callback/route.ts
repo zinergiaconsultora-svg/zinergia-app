@@ -51,6 +51,17 @@ export async function POST(request: Request) {
                 return parseFloat(strValue) || 0;
             };
 
+            console.log('[OCR Callback] rawData keys:', Object.keys(rawData));
+            console.log('[OCR Callback] total candidates:', {
+                importe_total: rawData.importe_total,
+                IMPORTE_TOTAL: rawData.IMPORTE_TOTAL,
+                total: rawData.total,
+                TOTAL: rawData.TOTAL,
+                TOTAL_FACTURA: rawData.TOTAL_FACTURA,
+                importe: rawData.importe,
+                IMPORTE: rawData.IMPORTE,
+            });
+
             const rawTariff = (rawData.tariff_name || rawData.TARIFA || rawData.tarifa || rawData.ACCESO || '').toUpperCase();
 
             let detectedPowerType = '2.0';
@@ -85,7 +96,7 @@ export async function POST(request: Request) {
                 supply_address: rawData.supply_address || rawData.DIRECCION_SUMINISTRO || rawData.direccion_suministro || rawData.DIRECCION || '',
                 subtotal: parseNumber(rawData.subtotal || rawData.SUBTOTAL),
                 vat: parseNumber(rawData.iva || rawData.IVA),
-                total_amount: parseNumber(rawData.importe_total || rawData.total || rawData.TOTAL_FACTURA),
+                total_amount: parseNumber(rawData.importe_total || rawData.IMPORTE_TOTAL || rawData.total || rawData.TOTAL || rawData.TOTAL_FACTURA || rawData.importe || rawData.IMPORTE),
                 rights_cost: parseNumber(rawData.derechos_enganche || rawData.DERECHOS),
                 power_p1: parseNumber(rawData.power_p1 || rawData.POTENCIA_P1 || rawData.potencia_p1),
                 power_p2: parseNumber(rawData.power_p2 || rawData.POTENCIA_P2 || rawData.potencia_p2),
@@ -204,7 +215,7 @@ export async function POST(request: Request) {
                             average_monthly_bill: invoiceData.total_amount
                                 ? Math.round((invoiceData.total_amount as number) / ((invoiceData.period_days as number || 30) / 30))
                                 : null,
-                            type: rawCif ? 'company' : 'residential',
+                            type: dniCif ? 'company' : 'residential',
                             status: 'new',
                         })
                         .select('id')
