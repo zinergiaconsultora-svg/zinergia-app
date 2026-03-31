@@ -412,7 +412,8 @@ export function useSimulator() {
                             }
                         }
                     } catch (persistError) {
-                        console.error('[Simulator] Failed to persist proposals:', persistError);
+                        const err = persistError as { message?: string; code?: string; details?: string; hint?: string };
+                        console.error('[Simulator] Failed to persist proposals:', err?.message, '| code:', err?.code, '| details:', err?.details, '| hint:', err?.hint);
                     }
                 }
 
