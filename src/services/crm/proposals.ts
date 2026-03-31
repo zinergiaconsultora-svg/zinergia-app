@@ -69,8 +69,11 @@ export const proposalService = {
                     name: clientName || invoiceData.client_name || invoiceData.company_name || 'Nuevo Cliente',
                     franchise_id: franchiseId,
                     owner_id: ownerId,
+                    type: 'residential',
                     status: 'new',
                     cups: invoiceData.cups || null,
+                    dni_cif: invoiceData.dni_cif || null,
+                    address: invoiceData.supply_address || null,
                 })
                 .select('id')
                 .single();
