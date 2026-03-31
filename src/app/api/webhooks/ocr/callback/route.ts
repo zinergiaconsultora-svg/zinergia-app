@@ -6,7 +6,11 @@ import { sendPushToUser } from '@/lib/push/sendPush';
 export async function POST(request: Request) {
     // 1. Autenticar request de N8N
     const apiKey = request.headers.get('x-api-key');
+    const authHeader = request.headers.get('authorization');
+    console.log('[OCR Callback] Received. x-api-key present:', !!apiKey, '| authorization present:', !!authHeader, '| key match:', apiKey === env.WEBHOOK_API_KEY);
+
     if (apiKey !== env.WEBHOOK_API_KEY) {
+        console.warn('[OCR Callback] Auth failed. Received x-api-key:', apiKey?.slice(0, 8) ?? 'null');
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

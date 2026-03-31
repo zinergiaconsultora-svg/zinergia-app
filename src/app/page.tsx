@@ -64,18 +64,18 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <div className="absolute bottom-12 z-10 text-[10px] text-slate-400 font-mono tracking-widest uppercase opacity-60 mix-blend-plus-lighter">
+        <div className="absolute bottom-12 z-10 text-[10.5px] text-slate-400 font-mono tracking-[0.2em] uppercase opacity-90 mix-blend-plus-lighter">
           Zinergia Power Operations v1.0
         </div>
       </div>
 
       {/* RIGHT SIDE: Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-slate-50/50 relative">
-        {/* Subtle background decorative shapes */}
-        <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 w-96 h-96 bg-indigo-50 rounded-full blur-3xl opacity-50 mix-blend-multiply pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 w-72 h-72 bg-blue-50 rounded-full blur-3xl opacity-50 mix-blend-multiply pointer-events-none"></div>
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-slate-50 relative">
+        {/* Decorative dynamic blobs to enhance Glassmorphism popping */}
+        <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 w-[500px] h-[500px] bg-indigo-300/30 rounded-full blur-[80px] opacity-70 mix-blend-multiply pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 w-[400px] h-[400px] bg-sky-300/30 rounded-full blur-[80px] opacity-70 mix-blend-multiply pointer-events-none"></div>
 
-        <div className="w-full max-w-[420px] backdrop-blur-2xl bg-white/70 border border-white p-8 sm:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative z-10 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-500">
+        <div className="w-full max-w-[420px] backdrop-blur-[60px] bg-white/60 border border-white/80 p-8 sm:p-10 rounded-3xl shadow-[0_8px_40px_rgba(0,0,0,0.06)] relative z-10 hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)] transition-all duration-500">
           
           {/* Logo - Prominent in the white side */}
           <div className="flex justify-center mb-10">
@@ -122,8 +122,8 @@ export default function LandingPage() {
                   className="py-6"
                   aria-invalid={error ? 'true' : 'false'}
                 />
-                <div className="flex justify-end">
-                  <a href="#" className="text-[11px] font-bold uppercase tracking-widest text-indigo-500 hover:text-indigo-600 transition-colors">
+                <div className="flex justify-end pt-1">
+                  <a href="#" className="text-xs font-bold uppercase tracking-widest text-indigo-500 hover:text-indigo-700 transition-colors">
                     ¿Olvidaste tu contraseña?
                   </a>
                 </div>

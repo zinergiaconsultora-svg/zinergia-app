@@ -70,9 +70,7 @@ export const proposalService = {
                     franchise_id: franchiseId,
                     owner_id: ownerId,
                     status: 'new',
-                    cups: invoiceData.cups,
-                    dni_cif: invoiceData.dni_cif,
-                    address: invoiceData.supply_address,
+                    cups: invoiceData.cups || null,
                 })
                 .select('id')
                 .single();
