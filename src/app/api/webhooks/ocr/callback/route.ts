@@ -68,16 +68,21 @@ export async function POST(request: Request) {
                 }
             }
 
+            // N8N puede enviar CIF y DNI por separado — combinar en dni_cif priorizando CIF para empresas
+            const rawCif = (rawData.CIF || rawData.cif || rawData.CIF_NIF || rawData.nif_cif || '') as string;
+            const rawDni = (rawData.DNI || rawData.dni || rawData.NIF || rawData.nif || '') as string;
+            const resolvedDniCif = (rawData.dni_cif as string) || rawCif || rawDni || '';
+
             invoiceData = {
                 client_name: rawData.client_name || rawData.CLIENTE_NOMBRE || rawData.cliente_nombre || rawData.TITULAR || 'Cliente Desconocido',
-                dni_cif: rawData.dni_cif || rawData.nif_cif || rawData.CIF_NIF || rawData.NIF || '',
-                company_name: rawData.company_name || rawData.COMERCIALIZADORA || rawData.compania || rawData.EMPRESA || '',
+                dni_cif: resolvedDniCif,
+                company_name: rawData.company_name || rawData.COMPANIA || rawData.COMERCIALIZADORA || rawData.compania || rawData.EMPRESA || '',
                 cups: rawData.cups || rawData.CUPS || rawData.cups_suministro || '',
                 tariff_name: rawTariff || '2.0TD',
                 invoice_number: rawData.invoice_number || rawData.NUMERO_FACTURA || rawData.numero_factura || '',
                 invoice_date: rawData.invoice_date || rawData.FECHA_FACTURA || rawData.fecha_factura || '',
                 period_days: parseNumber(rawData.period_days || rawData.periodo_facturacion || rawData.DIAS_FACTURACION || 30),
-                supply_address: rawData.supply_address || rawData.direccion_suministro || rawData.DIRECCION || '',
+                supply_address: rawData.supply_address || rawData.DIRECCION_SUMINISTRO || rawData.direccion_suministro || rawData.DIRECCION || '',
                 subtotal: parseNumber(rawData.subtotal || rawData.SUBTOTAL),
                 vat: parseNumber(rawData.iva || rawData.IVA),
                 total_amount: parseNumber(rawData.importe_total || rawData.total || rawData.TOTAL_FACTURA),
@@ -97,9 +102,9 @@ export async function POST(request: Request) {
                 detected_power_type: detectedPowerType,
 
                 // Precios actuales de energía (si N8N los extrae de la factura)
-                current_energy_price_p1: parseNumber(rawData.current_energy_price_p1 || rawData.precio_energia_p1 || rawData.PRECIO_P1 || 0) || undefined,
-                current_energy_price_p2: parseNumber(rawData.current_energy_price_p2 || rawData.precio_energia_p2 || 0) || undefined,
-                current_energy_price_p3: parseNumber(rawData.current_energy_price_p3 || rawData.precio_energia_p3 || 0) || undefined,
+                current_energy_price_p1: parseNumber(rawData.current_energy_price_p1 || rawData.precio_energia_p1 || rawData.PRECIO_ENERGIA_P1 || 0) || undefined,
+                current_energy_price_p2: parseNumber(rawData.current_energy_price_p2 || rawData.precio_energia_p2 || rawData.PRECIO_ENERGIA_P2 || 0) || undefined,
+                current_energy_price_p3: parseNumber(rawData.current_energy_price_p3 || rawData.precio_energia_p3 || rawData.PRECIO_ENERGIA_P3 || 0) || undefined,
 
                 // Datos forenses — penalización reactiva, tipo acceso tarifa, etc.
                 forensic_details: (() => {
@@ -199,7 +204,7 @@ export async function POST(request: Request) {
                             average_monthly_bill: invoiceData.total_amount
                                 ? Math.round((invoiceData.total_amount as number) / ((invoiceData.period_days as number || 30) / 30))
                                 : null,
-                            type: dniCif?.length === 9 && dniCif[0]?.match(/[A-Z]/) ? 'company' : 'residential',
+                            type: rawCif ? 'company' : 'residential',
                             status: 'new',
                         })
                         .select('id')
