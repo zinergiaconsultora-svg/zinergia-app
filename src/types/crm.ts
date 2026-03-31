@@ -150,6 +150,7 @@ export interface Proposal {
     id: string;
     client_id: string;
     franchise_id?: string;
+    agent_id?: string;
     created_at: string;
     updated_at?: string;
     status: ProposalStatus;

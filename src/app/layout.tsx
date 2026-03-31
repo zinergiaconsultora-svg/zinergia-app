@@ -56,7 +56,9 @@ export default function RootLayout({
             </head>
             <body
                 className={`${quicksand.variable} antialiased font-light`}
+                suppressHydrationWarning
             >
+                <div className="bg-noise" aria-hidden="true" />
                 <ThemeProvider>
                     <PwaRegister />
                     <GlobalErrorBoundary>

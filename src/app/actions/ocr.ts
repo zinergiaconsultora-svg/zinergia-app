@@ -157,27 +157,49 @@ export async function analyzeDocumentAction(formData: FormData): Promise<{ jobId
         if (contentType.includes('application/json')) {
             try {
                 const body = await response.json();
-                // N8N puede devolver los datos directamente en la respuesta (modo síncrono)
-                const rawData = Array.isArray(body)
-                    ? (body[0]?.output || body[0])
-                    : (body?.output || body?.data || body);
+                console.log('[OCR] N8N raw response body:', JSON.stringify(body).slice(0, 500));
 
-                const hasMeaningfulData = rawData &&
-                    typeof rawData === 'object' &&
-                    !Array.isArray(rawData) &&
-                    (rawData.client_name || rawData.CLIENTE_NOMBRE || rawData.TITULAR ||
-                     rawData.cups || rawData.CUPS || rawData.importe_total || rawData.total);
+                // N8N puede devolver los datos directamente en la respuesta (modo síncrono).
+                // Intentamos extraer datos de distintas estructuras que N8N puede devolver.
+                const candidates = Array.isArray(body)
+                    ? [body[0]?.output, body[0]?.data, body[0]?.json, body[0]]
+                    : [body?.output, body?.data, body?.json, body?.result, body];
+
+                let rawData: Record<string, unknown> | null = null;
+                for (const candidate of candidates) {
+                    if (
+                        candidate &&
+                        typeof candidate === 'object' &&
+                        !Array.isArray(candidate) &&
+                        Object.keys(candidate).length > 2
+                    ) {
+                        rawData = candidate as Record<string, unknown>;
+                        break;
+                    }
+                }
+
+                console.log('[OCR] rawData extracted:', rawData ? Object.keys(rawData).join(', ') : 'null');
+
+                const hasMeaningfulData = rawData && (
+                    rawData.client_name || rawData.CLIENTE_NOMBRE || rawData.TITULAR ||
+                    rawData.cups || rawData.CUPS || rawData.importe_total || rawData.total ||
+                    rawData.power_p1 || rawData.POTENCIA_P1 || rawData.energia_p1 || rawData.ENERGIA_P1
+                );
 
                 if (hasMeaningfulData) {
-                    // N8N procesó el PDF y devolvió datos sincrónicamente — actualizar job y devolver datos
+                    console.log('[OCR] Sync response detected — updating job and returning data');
                     await supabase.from('ocr_jobs')
                         .update({ status: 'completed', extracted_data: rawData })
                         .eq('id', job.id);
-                    return { jobId: job.id, isMock: false, data: rawData as InvoiceData };
+                    return { jobId: job.id, isMock: false, data: rawData as unknown as InvoiceData };
                 }
-            } catch {
-                // No se pudo parsear — continuar con flujo asíncrono normal
+
+                console.log('[OCR] No meaningful data in sync response — falling to async callback flow');
+            } catch (parseErr) {
+                console.warn('[OCR] Failed to parse N8N response JSON:', parseErr);
             }
+        } else {
+            console.log('[OCR] N8N response content-type:', contentType, '— not JSON, falling to async');
         }
 
         // Flujo asíncrono: N8N procesará y llamará al callback

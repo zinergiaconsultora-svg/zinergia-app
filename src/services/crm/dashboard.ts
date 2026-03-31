@@ -36,7 +36,7 @@ export const dashboardService = {
             Promise.resolve(supabase.rpc('get_dashboard_stats', { p_franchise_id: franchiseId })).catch(() => ({ data: null, error: null })),
             supabase.from('clients').select('status').eq('franchise_id', franchiseId),
             supabase.from('clients')
-                .select('id, name, status, created_at, cups, address, city')
+                .select('id, name, status, created_at, cups, address')
                 .eq('franchise_id', franchiseId)
                 .order('created_at', { ascending: false })
                 .limit(5),

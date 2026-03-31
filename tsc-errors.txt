@@ -1,0 +1,3 @@
+src/app/actions/ocr.ts(194,66): error TS2352: Conversion of type 'Record<string, unknown> | null' to type 'InvoiceData' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'Record<string, unknown>' is missing the following properties from type 'InvoiceData': period_days, power_p1, power_p2, power_p3, and 9 more.
+src/services/crm/proposals.ts(88,13): error TS2353: Object literal may only specify known properties, and 'agent_id' does not exist in type 'Partial<Proposal>'.
