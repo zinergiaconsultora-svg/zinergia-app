@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, ChevronRight, User, LayoutGrid, Columns3 } from 'lucide-react';
+import { Plus, Search, ChevronRight, User, LayoutGrid, Columns3, TrendingUp, Users, Target, Activity } from 'lucide-react';
 import { getClientScoresAction, type ClientScore } from '@/app/actions/clientScores';
 import { motion } from 'framer-motion';
 import { useClients } from '../hooks/useClients';
@@ -59,7 +59,7 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
     const { clients, loading, loadingMore, hasMore, refresh, loadMore } = useClients(initialData);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [viewMode, setViewMode] = useState<ViewMode>('list');
+    const [viewMode, setViewMode] = useState<ViewMode>('pipeline');
     const [statusFilter, setStatusFilter] = useState<ClientStatus | 'all'>('all');
     const [sortBy, setSortBy] = useState<SortOption>('created_at');
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -72,6 +72,18 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
             .catch(() => { /* non-fatal */ });
     }, [clients]);
     const router = useRouter();
+
+    const kpis = useMemo(() => {
+        const total = clients.length;
+        const nuevos = clients.filter(c => c.status === 'new').length;
+        const pipelineValue = clients
+            .filter(c => c.status === 'in_process')
+            .reduce((sum, c) => sum + (c.average_monthly_bill || 0), 0);
+        const won = clients.filter(c => c.status === 'won').length;
+        const lost = clients.filter(c => c.status === 'lost').length;
+        const conversion = (won + lost) > 0 ? Math.round((won / (won + lost)) * 100) : 0;
+        return { total, nuevos, pipelineValue, conversion };
+    }, [clients]);
 
     const filteredClients = useMemo(() => {
         let result = clients.filter(c =>
@@ -159,11 +171,45 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                     </div>
                 </div>
 
+                {/* CRM INSIGHTS CARDS */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl p-5 shadow-sm hover:shadow-floating transition-all">
+                        <div className="flex items-center gap-3 mb-2 text-slate-500">
+                            <Users size={16} className="text-indigo-500" />
+                            <span className="text-xs font-semibold uppercase tracking-wider">Total Clientes</span>
+                        </div>
+                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{kpis.total}</div>
+                    </div>
+                    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl p-5 shadow-sm hover:shadow-floating transition-all">
+                        <div className="flex items-center gap-3 mb-2 text-slate-500">
+                            <Activity size={16} className="text-emerald-500" />
+                            <span className="text-xs font-semibold uppercase tracking-wider">Nuevos Leads</span>
+                        </div>
+                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{kpis.nuevos}</div>
+                    </div>
+                    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl p-5 shadow-sm hover:shadow-floating transition-all">
+                        <div className="flex items-center gap-3 mb-2 text-slate-500">
+                            <TrendingUp size={16} className="text-violet-500" />
+                            <span className="text-xs font-semibold uppercase tracking-wider">Valor Pipeline</span>
+                        </div>
+                        <div className="text-3xl font-bold text-slate-900 dark:text-white">
+                            {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(kpis.pipelineValue)}<span className="text-lg text-slate-400 font-medium ml-1">/mes</span>
+                        </div>
+                    </div>
+                    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl p-5 shadow-sm hover:shadow-floating transition-all">
+                        <div className="flex items-center gap-3 mb-2 text-slate-500">
+                            <Target size={16} className="text-amber-500" />
+                            <span className="text-xs font-semibold uppercase tracking-wider">Tasa Conversión</span>
+                        </div>
+                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{kpis.conversion}%</div>
+                    </div>
+                </div>
+
                 {/* TOOLBAR: Filters + View Toggle + Sort */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                     {/* Status Filters */}
                     <div className="flex flex-wrap gap-2">
-                        {STATUS_FILTERS.map(f => (
+                        {viewMode === 'list' && STATUS_FILTERS.map(f => (
                             <button
                                 key={f.value}
                                 onClick={() => setStatusFilter(f.value)}
