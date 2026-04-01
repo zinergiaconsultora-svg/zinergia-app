@@ -7,7 +7,7 @@ import {
     Users,
     Coins,
     FileCheck,
-    TrendingUp,
+    ChevronDown,
     Zap,
     Receipt,
     BadgePercent,
@@ -135,7 +135,7 @@ export default function AdminDashboard({ stats, franchises, unassignedAgents }: 
                         value={stats.commissionsPaid.toString()}
                         subValue="Liquidaciones abonadas"
                         icon={FileCheck}
-                        href="/dashboard/tariffs#commissions"
+                        href="/dashboard/tariffs?tab=commissions"
                         delay={0.3}
                     />
                     <GlassKpiCard
@@ -143,7 +143,7 @@ export default function AdminDashboard({ stats, franchises, unassignedAgents }: 
                         value={formatCurrency(stats.totalCommissionValue)}
                         subValue={`${stats.commissionsPending} pendientes`}
                         icon={Coins}
-                        href="/dashboard/tariffs#commissions"
+                        href="/dashboard/tariffs?tab=commissions"
                         delay={0.4}
                     />
                 </motion.div>
@@ -164,7 +164,7 @@ export default function AdminDashboard({ stats, franchises, unassignedAgents }: 
                             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Configura precios P1-P6 y fija las reglas comerciales base para luz y gas.</p>
                         </Link>
 
-                        <Link href="/dashboard/tariffs#commissions" className="flex-1 group rounded-2xl bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl border border-white/80 dark:border-white/10 shadow-lg p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-center">
+                        <Link href="/dashboard/tariffs?tab=commissions" className="flex-1 group rounded-2xl bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl border border-white/80 dark:border-white/10 shadow-lg p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-center">
                             <div className="flex items-center justify-between mb-4">
                                 <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center border border-emerald-100 dark:border-emerald-500/20">
                                     <BadgePercent className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
@@ -191,6 +191,7 @@ export default function AdminDashboard({ stats, franchises, unassignedAgents }: 
                 {/* Franchise List Section */}
                 <motion.div variants={item} className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border border-white/80 dark:border-white/10 shadow-lg overflow-hidden my-4 hover:shadow-xl transition-all">
                     <button
+                        type="button"
                         onClick={() => setShowFranchises(!showFranchises)}
                         className="w-full flex items-center justify-between p-6 text-left hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors"
                     >
@@ -198,7 +199,7 @@ export default function AdminDashboard({ stats, franchises, unassignedAgents }: 
                             <Zap className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
                             <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Gestión de Arquitectura Comercial</h2>
                         </div>
-                        <TrendingUp className={`w-4 h-4 text-slate-400 transition-transform ${showFranchises ? 'rotate-180' : ''}`} />
+                        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showFranchises ? 'rotate-180' : ''}`} />
                     </button>
 
                     {showFranchises && (

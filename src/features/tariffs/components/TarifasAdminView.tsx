@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useMemo } from 'react'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { toast } from 'sonner'
 import {
     Zap, Flame, BadgePercent, Plus, Edit3, Trash2, ToggleLeft, ToggleRight,
@@ -806,7 +807,18 @@ function CommissionsTab({ rows, collaboratorPct: initPct, isAdmin, onUpdate, onP
 // ─── Main View ────────────────────────────────────────────────────────────────
 
 export default function TarifasAdminView({ initialElectricity, initialGas, initialCommissions, initialCollaboratorPct, isAdmin }: Props) {
-    const [tab, setTab] = useState<Tab>('electricity')
+    const searchParams = useSearchParams()
+    const router = useRouter()
+    const pathname = usePathname()
+
+    const rawTab = searchParams.get('tab')
+    const tab: Tab = rawTab === 'gas' || rawTab === 'commissions' ? rawTab : 'electricity'
+    const setTab = (t: Tab) => {
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('tab', t)
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    }
+
     const [electricity, setElectricity] = useState(initialElectricity)
     const [gas, setGas] = useState(initialGas)
     const [commissions, setCommissions] = useState(initialCommissions)

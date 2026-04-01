@@ -22,6 +22,7 @@ export interface FranchiseWithAgents {
     is_active: boolean;
     created_at: string;
     agent_count: number;
+    agents: { id: string; full_name: string | null; email: string }[];
 }
 
 export interface AgentProfile {
@@ -74,20 +75,26 @@ export async function getAllFranchises(): Promise<FranchiseWithAgents[]> {
     // Contar agentes por franquicia
     const { data: agents } = await supabase
         .from('profiles')
-        .select('franchise_id')
+        .select('id, full_name, email, franchise_id')
         .in('role', ['agent', 'franchise']);
 
-    const agentCounts = new Map<string, number>();
+    const agentsByFranchise = new Map<string, { id: string; full_name: string | null; email: string }[]>();
     (agents ?? []).forEach(a => {
         if (a.franchise_id) {
-            agentCounts.set(a.franchise_id, (agentCounts.get(a.franchise_id) ?? 0) + 1);
+            const list = agentsByFranchise.get(a.franchise_id) ?? [];
+            list.push({ id: a.id, full_name: a.full_name, email: a.email });
+            agentsByFranchise.set(a.franchise_id, list);
         }
     });
 
-    return (franchises ?? []).map(f => ({
-        ...f,
-        agent_count: agentCounts.get(f.id) ?? 0,
-    }));
+    return (franchises ?? []).map(f => {
+        const franchiseAgents = agentsByFranchise.get(f.id) ?? [];
+        return {
+            ...f,
+            agent_count: franchiseAgents.length,
+            agents: franchiseAgents,
+        };
+    });
 }
 
 export async function getUnassignedAgents(): Promise<AgentProfile[]> {
