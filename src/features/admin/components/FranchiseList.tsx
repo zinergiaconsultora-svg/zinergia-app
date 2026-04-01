@@ -7,7 +7,6 @@ import {
     ToggleLeft,
     ToggleRight,
     UserPlus,
-    UserMinus,
     ChevronDown,
     Loader2,
     AlertCircle,
@@ -16,7 +15,6 @@ import type { FranchiseWithAgents, AgentProfile } from '@/app/actions/admin';
 import {
     toggleFranchiseActive,
     assignAgentToFranchise,
-    removeAgentFromFranchise,
 } from '@/app/actions/admin';
 import { useRouter } from 'next/navigation';
 
@@ -57,23 +55,11 @@ export default function FranchiseList({ franchises, unassignedAgents }: Franchis
         });
     }
 
-    function handleRemove(agentId: string) {
-        setError(null);
-        startTransition(async () => {
-            try {
-                await removeAgentFromFranchise(agentId);
-                router.refresh();
-            } catch (e) {
-                setError(e instanceof Error ? e.message : 'Error desconocido');
-            }
-        });
-    }
-
     if (franchises.length === 0) {
         return (
             <div className="text-center py-12">
-                <Building2 className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-                <p className="text-sm text-slate-400">No hay franquicias registradas aún.</p>
+                <Building2 className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto mb-3" />
+                <p className="text-sm text-slate-500 dark:text-slate-400">No hay franquicias registradas aún.</p>
             </div>
         );
     }
@@ -90,7 +76,7 @@ export default function FranchiseList({ franchises, unassignedAgents }: Franchis
             {franchises.map((franchise) => (
                 <div
                     key={franchise.id}
-                    className="rounded-xl border border-slate-700/50 bg-slate-800/30 overflow-hidden transition-all hover:border-slate-600/50"
+                    className="rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/30 overflow-hidden transition-all hover:border-slate-300 dark:hover:border-slate-600/50 shadow-sm dark:shadow-none"
                 >
                     {/* Franchise Row */}
                     <div className="flex items-center justify-between p-4">
@@ -103,7 +89,7 @@ export default function FranchiseList({ franchises, unassignedAgents }: Franchis
                                 {franchise.name.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
-                                <p className="text-sm font-semibold text-white truncate">
+                                <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">
                                     {franchise.name}
                                 </p>
                                 <p className="text-[11px] text-slate-500 font-mono">{franchise.slug}</p>
@@ -144,9 +130,9 @@ export default function FranchiseList({ franchises, unassignedAgents }: Franchis
 
                     {/* Expanded Detail */}
                     {expandedId === franchise.id && (
-                        <div className="px-4 pb-4 pt-1 border-t border-slate-700/30 space-y-3">
+                        <div className="px-4 pb-4 pt-1 border-t border-slate-100 dark:border-slate-700/30 space-y-3 mt-1">
                             <div className="flex items-center justify-between">
-                                <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Agentes asignados</p>
+                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wider">Agentes asignados</p>
                                 <button
                                     onClick={() => setAssigningTo(assigningTo === franchise.id ? null : franchise.id)}
                                     className="flex items-center gap-1.5 text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
@@ -158,17 +144,17 @@ export default function FranchiseList({ franchises, unassignedAgents }: Franchis
 
                             {/* Assign Agent Dropdown */}
                             {assigningTo === franchise.id && unassignedAgents.length > 0 && (
-                                <div className="rounded-lg bg-slate-900/80 border border-indigo-500/20 p-3 space-y-2">
-                                    <p className="text-[11px] text-slate-400 mb-2">Agentes sin franquicia:</p>
+                                <div className="rounded-lg bg-slate-50 dark:bg-slate-900/80 border border-indigo-200 dark:border-indigo-500/20 p-3 space-y-2">
+                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">Agentes sin franquicia:</p>
                                     {unassignedAgents.map(agent => (
                                         <button
                                             key={agent.id}
                                             onClick={() => handleAssign(agent.id, franchise.id)}
                                             disabled={isPending}
-                                            className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-indigo-500/10 transition-colors text-left disabled:opacity-50"
+                                            className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors text-left disabled:opacity-50"
                                         >
                                             <div>
-                                                <p className="text-xs font-medium text-white">{agent.full_name ?? 'Sin nombre'}</p>
+                                                <p className="text-xs font-medium text-slate-800 dark:text-white">{agent.full_name ?? 'Sin nombre'}</p>
                                                 <p className="text-[10px] text-slate-500">{agent.email}</p>
                                             </div>
                                             {isPending ? (
