@@ -29,6 +29,7 @@ export default function JoinNetworkPage() {
                 .select('id, email, role, creator_id')
                 .eq('code', code)
                 .eq('used', false)
+                .gt('expires_at', new Date().toISOString())
                 .single();
 
             if (error || !data) {
@@ -49,7 +50,7 @@ export default function JoinNetworkPage() {
 
         try {
             // 1. Auth Sign Up
-            const { data: authData, error: authError } = await supabase.auth.signUp({
+            const { error: authError } = await supabase.auth.signUp({
                 email: invitation.email,
                 password,
                 options: {

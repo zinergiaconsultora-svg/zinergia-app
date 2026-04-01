@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Shield, Check, Copy, UserPlus, Target } from 'lucide-react';
-import { crmService } from '@/services/crmService';
+import { X, Mail, Shield, Check, Copy, UserPlus, Target, Send } from 'lucide-react';
+import { createInvitationAction } from '@/app/actions/network';
 import { toast } from 'sonner';
 
 interface InviteModalProps {
@@ -15,17 +15,23 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose }) => 
     const [isGenerating, setIsGenerating] = useState(false);
     const [inviteLink, setInviteLink] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+    const [emailWasSent, setEmailWasSent] = useState(false);
 
     const handleInvite = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsGenerating(true);
         try {
-            const invitation = await crmService.createInvitation(email, role);
-            const link = `${window.location.origin}/join/${invitation.code}`;
-            setInviteLink(link);
+            const result = await createInvitationAction(email, role);
+            setInviteLink(result.inviteUrl);
+            setEmailWasSent(result.emailSent);
+            if (result.emailSent) {
+                toast.success(`Invitación enviada por email a ${email}`);
+            } else {
+                toast.info('Enlace generado. El email no pudo enviarse — compártelo manualmente.');
+            }
         } catch (err) {
             console.error(err);
-            toast.error('Error al generar la invitación');
+            toast.error(err instanceof Error ? err.message : 'Error al generar la invitación');
         } finally {
             setIsGenerating(false);
         }
@@ -51,7 +57,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose }) => 
                     >
                         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                             <h2 className="text-xl font-bold text-slate-900 text-center">Invitar a mi Red</h2>
-                            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors" title="Cerrar">
+                            <button onClick={() => { setInviteLink(null); setEmail(''); setRole('agent'); setCopied(false); setEmailWasSent(false); onClose(); }} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors" title="Cerrar">
                                 <X size={20} />
                             </button>
                         </div>
@@ -120,7 +126,12 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose }) => 
                                         <Check size={40} className="stroke-[3]" />
                                     </div>
                                     <h3 className="text-2xl font-bold text-slate-900 mb-2">¡Enlace listo!</h3>
-                                    <p className="text-slate-500 mb-8 font-medium">Envía este enlace a <span className="text-slate-900 font-bold">{email}</span></p>
+                                    <p className="text-slate-500 mb-2 font-medium">Envía este enlace a <span className="text-slate-900 font-bold">{email}</span></p>
+                                    {emailWasSent ? (
+                                        <p className="text-emerald-600 text-xs font-semibold flex items-center justify-center gap-1 mb-6"><Send size={12} /> Email de invitación enviado automáticamente</p>
+                                    ) : (
+                                        <p className="text-amber-600 text-xs font-semibold flex items-center justify-center gap-1 mb-6"><Copy size={12} /> Copia el enlace y compártelo manualmente</p>
+                                    )}
 
                                     <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-200 mb-8 shadow-inner">
                                         <div className="flex-1 truncate pl-3 text-sm text-slate-600 font-medium font-mono">
@@ -136,7 +147,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose }) => 
                                     </div>
 
                                     <button
-                                        onClick={onClose}
+                                        onClick={() => { setInviteLink(null); setEmail(''); setRole('agent'); setCopied(false); setEmailWasSent(false); onClose(); }}
                                         className="w-full py-4 font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-widest text-xs"
                                     >
                                         Cerrar panel
