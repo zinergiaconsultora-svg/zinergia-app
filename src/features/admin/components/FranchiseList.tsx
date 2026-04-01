@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import {
     Building2,
     Users,
@@ -171,13 +171,25 @@ export default function FranchiseList({ franchises, unassignedAgents }: Franchis
                                 <p className="text-xs text-slate-500 italic">Todos los agentes ya tienen franquicia asignada.</p>
                             )}
 
-                            {/* Placeholder for agents in this franchise */}
-                            {franchise.agent_count === 0 ? (
+                            {/* Agent list */}
+                            {franchise.agents.length === 0 ? (
                                 <p className="text-xs text-slate-500 italic py-2">Sin agentes asignados.</p>
                             ) : (
-                                <p className="text-xs text-slate-400 py-2">
-                                    {franchise.agent_count} agente{franchise.agent_count !== 1 ? 's' : ''} vinculado{franchise.agent_count !== 1 ? 's' : ''}.
-                                </p>
+                                <div className="space-y-1 mt-1">
+                                    {franchise.agents.map(agent => (
+                                        <div key={agent.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/30">
+                                            <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center shrink-0">
+                                                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
+                                                    {(agent.full_name ?? agent.email).charAt(0).toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-medium text-slate-800 dark:text-slate-100 truncate">{agent.full_name ?? 'Sin nombre'}</p>
+                                                <p className="text-[10px] text-slate-400 truncate">{agent.email}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
                         </div>
                     )}
