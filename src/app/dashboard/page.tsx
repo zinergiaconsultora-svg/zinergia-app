@@ -1,6 +1,9 @@
-import DashboardView from '@/features/crm/components/DashboardView';
+import { redirect } from 'next/navigation'
+import { getUserRole } from '@/lib/auth/permissions'
+import DashboardView from '@/features/crm/components/DashboardView'
 
-// Shell page — all data fetching is client-side in DashboardView
-export default function DashboardPage() {
-    return <DashboardView />;
+export default async function DashboardPage() {
+    const role = await getUserRole()
+    if (role === 'admin') redirect('/admin')
+    return <DashboardView />
 }

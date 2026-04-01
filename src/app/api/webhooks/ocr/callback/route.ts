@@ -51,17 +51,6 @@ export async function POST(request: Request) {
                 return parseFloat(strValue) || 0;
             };
 
-            console.log('[OCR Callback] rawData keys:', Object.keys(rawData));
-            console.log('[OCR Callback] total candidates:', {
-                importe_total: rawData.importe_total,
-                IMPORTE_TOTAL: rawData.IMPORTE_TOTAL,
-                total: rawData.total,
-                TOTAL: rawData.TOTAL,
-                TOTAL_FACTURA: rawData.TOTAL_FACTURA,
-                importe: rawData.importe,
-                IMPORTE: rawData.IMPORTE,
-            });
-
             const rawTariff = (rawData.tariff_name || rawData.TARIFA || rawData.tarifa || rawData.ACCESO || '').toUpperCase();
 
             let detectedPowerType = '2.0';

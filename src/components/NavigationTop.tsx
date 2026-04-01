@@ -34,7 +34,6 @@ const navItems = [
     { name: 'Cartera',     href: '/dashboard/wallet',    icon: Briefcase       },
     { name: 'Red',         href: '/dashboard/network',   icon: Network         },
     { name: 'Academy',     href: '/dashboard/academy',   icon: GraduationCap   },
-    { name: 'Tarifas',     href: '/dashboard/tariffs',   icon: Receipt         },
     { name: 'Ajustes',     href: '/dashboard/settings',  icon: Settings        },
 ] as const;
 
@@ -57,12 +56,12 @@ export const NavigationTop = () => {
             if (mounted && data) setGamification(data);
         }).catch(() => { });
 
-        // Check admin role for conditional nav link
         const supabase = createClient();
         supabase.auth.getUser().then(({ data: { user } }) => {
             if (!user || !mounted) return;
             supabase.from('profiles').select('role').eq('id', user.id).maybeSingle().then(({ data: profile }) => {
-                if (mounted && profile?.role === 'admin') setIsAdmin(true);
+                if (!mounted) return;
+                if (profile?.role === 'admin') setIsAdmin(true);
             });
         });
 
@@ -123,79 +122,38 @@ export const NavigationTop = () => {
 
                         {/* Desktop Navigation Items */}
                         <div className="hidden lg:flex items-center gap-1">
-                            {navItems.map((item) => {
-                                const Icon = item.icon;
-                                const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-
-                                return (
-                                    <div
-                                        key={item.name}
-                                        className="relative group"
-                                        onMouseEnter={() => setHoveredItem(item.name)}
-                                        onMouseLeave={() => setHoveredItem(null)}
+                            {/* Admin: nav simplificado — solo Tarifas y Admin Panel */}
+                            {isAdmin ? (
+                                <>
+                                    <NavIconLink href="/dashboard/tariffs" label="Tarifas" icon={Receipt} pathname={pathname} hoveredItem={hoveredItem} setHoveredItem={setHoveredItem} />
+                                    <a
+                                        href="/admin"
+                                        className={`relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300 ${
+                                            pathname.startsWith('/admin')
+                                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                                                : 'text-indigo-400 hover:bg-indigo-50/50 hover:text-indigo-600'
+                                        }`}
+                                        title="Admin Panel"
                                     >
-                                        <motion.div
-                                            whileHover={{ scale: 1.1, rotate: 2 }}
-                                            whileTap={{ scale: 0.9 }}
-                                            transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                                        >
-                                            <Link
-                                                href={item.href}
-                                                className={`relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300 ${isActive
-                                                    ? 'bg-energy-500 text-white shadow-lg shadow-energy-500/20'
-                                                    : 'text-slate-500 hover:bg-slate-100/50 hover:text-slate-900'
-                                                    }`}
-                                            >
-                                                <Icon size={22} strokeWidth={1.5} />
-                                                {isActive && (
-                                                    <motion.div
-                                                        layoutId="navGlow"
-                                                        className="absolute inset-0 bg-energy-500/20 blur-2xl rounded-full"
-                                                    />
-                                                )}
-                                            </Link>
-                                        </motion.div>
-
-                                        {/* Hover Tooltip - PREMIUM DOCK STYLE */}
-                                        <AnimatePresence>
-                                            {hoveredItem === item.name && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                                                    className="absolute top-full left-1/2 -translate-x-1/2 mt-3 px-2.5 py-1 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-[0.2em] rounded-md pointer-events-none whitespace-nowrap z-50 shadow-xl border border-white/10"
-                                                >
-                                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 w-2 h-2 bg-slate-900 rotate-45 border-l border-t border-white/10" />
-                                                    {item.name}
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
-                                );
-                            })}
-
-                            {/* Admin Link - Solo visible para admins */}
-                            {isAdmin && (
-                                <a
-                                    href="/admin"
-                                    className={`relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300 ${
-                                        pathname.startsWith('/admin')
-                                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                                            : 'text-indigo-400 hover:bg-indigo-50/50 hover:text-indigo-600'
-                                    }`}
-                                    title="Admin Panel"
-                                >
-                                    <Shield size={22} strokeWidth={1.5} />
-                                </a>
+                                        <Shield size={22} strokeWidth={1.5} />
+                                    </a>
+                                </>
+                            ) : (
+                                <>
+                                    {/* Comercial: todos los navItems + Tarifas */}
+                                    {navItems.map((item) => (
+                                        <NavIconLink key={item.name} href={item.href} label={item.name} icon={item.icon} pathname={pathname} hoveredItem={hoveredItem} setHoveredItem={setHoveredItem} />
+                                    ))}
+                                    <NavIconLink href="/dashboard/tariffs" label="Tarifas" icon={Receipt} pathname={pathname} hoveredItem={hoveredItem} setHoveredItem={setHoveredItem} />
+                                </>
                             )}
                         </div>
                     </div>
 
                     {/* Right Section: Stats & Profile */}
                     <div className="flex items-center gap-3">
-                        {/* Gamification Mini-Widget */}
-                        <div className="hidden md:flex items-center gap-2 bg-slate-50/50 border border-slate-100/50 px-2 py-1.5 rounded-2xl relative overflow-hidden group/shimmer">
+                        {/* Gamification Mini-Widget — solo para comerciales */}
+                        <div className={`${isAdmin ? 'hidden' : 'hidden md:flex'} items-center gap-2 bg-slate-50/50 border border-slate-100/50 px-2 py-1.5 rounded-2xl relative overflow-hidden group/shimmer`}>
                             <motion.div
                                 className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full"
                                 animate={{ x: ["-100%", "100%"] }}
@@ -224,6 +182,7 @@ export const NavigationTop = () => {
 
                         {/* Logout Button */}
                         <button
+                            type="button"
                             onClick={handleLogout}
                             className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50/50 transition-all active:scale-90"
                             title="Cerrar Sesión"
@@ -233,6 +192,7 @@ export const NavigationTop = () => {
 
                         {/* Mobile Menu Toggle (Oculto en Nuevo Diseño TabBar) */}
                         <button
+                            type="button"
                             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                             className="hidden w-9 h-9 items-center justify-center rounded-xl bg-slate-900 text-white shadow-md active:scale-95"
                         >
@@ -268,37 +228,40 @@ export const NavigationTop = () => {
                             </div>
                             <div className="px-4 pb-4">
                                 <div className="grid grid-cols-3 gap-2 pt-2">
-                                    {navItems.map((item) => {
-                                        const Icon = item.icon;
-                                        const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-                                        return (
-                                            <Link
-                                                key={item.name}
-                                                href={item.href}
-                                                onClick={() => setIsMobileMenuOpen(false)}
-                                                className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${isActive
-                                                    ? 'bg-white text-energy-500 shadow-sm'
-                                                    : 'bg-white text-slate-500 active:bg-slate-50'
-                                                }`}
-                                            >
-                                                <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
-                                                <span className="text-[11px] font-medium">{item.name}</span>
+                                    {isAdmin ? (
+                                        /* Admin: solo sus herramientas */
+                                        <>
+                                            <a href="/admin" onClick={() => setIsMobileMenuOpen(false)} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/admin') ? 'bg-white text-indigo-600 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
+                                                <Shield size={22} strokeWidth={1.5} />
+                                                <span className="text-[11px] font-medium">Admin</span>
+                                            </a>
+                                            <Link href="/dashboard/tariffs" onClick={() => setIsMobileMenuOpen(false)} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/dashboard/tariffs') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
+                                                <Receipt size={22} strokeWidth={1.5} />
+                                                <span className="text-[11px] font-medium">Tarifas</span>
                                             </Link>
-                                        );
-                                    })}
-                                    {isAdmin && (
-                                        <a
-                                            href="/admin"
-                                            onClick={() => setIsMobileMenuOpen(false)}
-                                            className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${
-                                                pathname.startsWith('/admin')
-                                                    ? 'bg-white text-indigo-600 shadow-sm'
-                                                    : 'bg-white text-slate-500 active:bg-slate-50'
-                                            }`}
-                                        >
-                                            <Shield size={22} strokeWidth={1.5} />
-                                            <span className="text-[11px] font-medium">Admin</span>
-                                        </a>
+                                            <Link href="/dashboard/settings" onClick={() => setIsMobileMenuOpen(false)} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/dashboard/settings') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
+                                                <Settings size={22} strokeWidth={1.5} />
+                                                <span className="text-[11px] font-medium">Ajustes</span>
+                                            </Link>
+                                        </>
+                                    ) : (
+                                        /* Comercial: todos los items + Tarifas */
+                                        <>
+                                            {navItems.map((item) => {
+                                                const Icon = item.icon;
+                                                const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+                                                return (
+                                                    <Link key={item.name} href={item.href} onClick={() => setIsMobileMenuOpen(false)} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${isActive ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
+                                                        <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
+                                                        <span className="text-[11px] font-medium">{item.name}</span>
+                                                    </Link>
+                                                );
+                                            })}
+                                            <Link href="/dashboard/tariffs" onClick={() => setIsMobileMenuOpen(false)} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/dashboard/tariffs') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
+                                                <Receipt size={22} strokeWidth={1.5} />
+                                                <span className="text-[11px] font-medium">Tarifas</span>
+                                            </Link>
+                                        </>
                                     )}
                                 </div>
                             </div>
@@ -311,7 +274,25 @@ export const NavigationTop = () => {
             {/* --- MÓVIL: BOTTOM TAB BAR iOS PURO --- */}
             <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#e5e5ea] pb-safe">
                 <div className="flex items-stretch justify-evenly max-w-md mx-auto">
-                    {navItems.slice(0, 4).map((item) => {
+                    {isAdmin ? (
+                        /* Admin: tabs simplificados */
+                        <>
+                            <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)} className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors">
+                                <Shield size={24} strokeWidth={pathname.startsWith('/admin') ? 2 : 1.5} className={pathname.startsWith('/admin') ? 'text-indigo-600' : 'text-[#8e8e93]'} />
+                                <span className={`text-[10px] font-medium ${pathname.startsWith('/admin') ? 'text-indigo-600' : 'text-[#8e8e93]'}`}>Admin</span>
+                            </Link>
+                            <Link href="/dashboard/tariffs" onClick={() => setIsMobileMenuOpen(false)} className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors">
+                                <Receipt size={24} strokeWidth={pathname.startsWith('/dashboard/tariffs') ? 2 : 1.5} className={pathname.startsWith('/dashboard/tariffs') ? 'text-energy-500' : 'text-[#8e8e93]'} />
+                                <span className={`text-[10px] font-medium ${pathname.startsWith('/dashboard/tariffs') ? 'text-energy-500' : 'text-[#8e8e93]'}`}>Tarifas</span>
+                            </Link>
+                            <Link href="/dashboard/settings" onClick={() => setIsMobileMenuOpen(false)} className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors">
+                                <Settings size={24} strokeWidth={pathname.startsWith('/dashboard/settings') ? 2 : 1.5} className={pathname.startsWith('/dashboard/settings') ? 'text-energy-500' : 'text-[#8e8e93]'} />
+                                <span className={`text-[10px] font-medium ${pathname.startsWith('/dashboard/settings') ? 'text-energy-500' : 'text-[#8e8e93]'}`}>Ajustes</span>
+                            </Link>
+                        </>
+                    ) : (
+                        /* Comercial: tabs habituales */
+                        navItems.slice(0, 4).map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
                         return (
@@ -327,10 +308,11 @@ export const NavigationTop = () => {
                                 </span>
                             </Link>
                         );
-                    })}
+                    })
+                    )}
 
-                    {/* Botón Más */}
-                    <button
+                    {/* Botón Más — solo para comerciales */}
+                    {!isAdmin && <button
                         type="button"
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                         className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors"
@@ -341,9 +323,43 @@ export const NavigationTop = () => {
                         <span className={`text-[10px] font-medium ${isMobileMenuOpen ? 'text-energy-500' : 'text-[#8e8e93]'}`}>
                             Menú
                         </span>
-                    </button>
+                    </button>}
                 </div>
             </nav>
         </>
     );
 };
+
+// ─── Helper: icono de navegación desktop con tooltip ─────────────────────────
+function NavIconLink({ href, label, icon: Icon, pathname, hoveredItem, setHoveredItem }: {
+    href: string
+    label: string
+    icon: React.ElementType
+    pathname: string
+    hoveredItem: string | null
+    setHoveredItem: (v: string | null) => void
+}) {
+    const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
+    return (
+        <div className="relative group" onMouseEnter={() => setHoveredItem(label)} onMouseLeave={() => setHoveredItem(null)}>
+            <motion.div whileHover={{ scale: 1.1, rotate: 2 }} whileTap={{ scale: 0.9 }} transition={{ type: 'spring', stiffness: 400, damping: 17 }}>
+                <Link href={href} className={`relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300 ${isActive ? 'bg-energy-500 text-white shadow-lg shadow-energy-500/20' : 'text-slate-500 hover:bg-slate-100/50 hover:text-slate-900'}`}>
+                    <Icon size={22} strokeWidth={1.5} />
+                    {isActive && <motion.div layoutId="navGlow" className="absolute inset-0 bg-energy-500/20 blur-2xl rounded-full" />}
+                </Link>
+            </motion.div>
+            <AnimatePresence>
+                {hoveredItem === label && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                        className="absolute top-full left-1/2 -translate-x-1/2 mt-3 px-2.5 py-1 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-[0.2em] rounded-md pointer-events-none whitespace-nowrap z-50 shadow-xl border border-white/10"
+                    >
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 w-2 h-2 bg-slate-900 rotate-45 border-l border-t border-white/10" />
+                        {label}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}

@@ -10,8 +10,10 @@ import {
     Target,
     Layers,
     Bell,
-    ArrowUpRight
+    ArrowUpRight,
+    Zap
 } from 'lucide-react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { formatCurrency } from '@/lib/utils/format';
@@ -270,12 +272,31 @@ export default function DashboardView() {
                             <p className="text-[11px] text-[#8e8e93] font-medium mb-1">Pipeline activo</p>
                             <p className="text-lg font-bold text-slate-900">{formatCurrency(stats.financials.pipeline)}</p>
                         </div>
+                        <Link href="/dashboard/tariffs" className="snap-start shrink-0 bg-indigo-50 rounded-2xl border border-indigo-100 px-4 py-3 min-w-[140px] shadow-sm flex items-center gap-2 active:bg-indigo-100 transition-colors">
+                            <Zap size={16} className="text-indigo-500 shrink-0" />
+                            <div>
+                                <p className="text-[11px] text-indigo-600 font-semibold">Ver Tarifas</p>
+                                <p className="text-[10px] text-indigo-400">Precios y comisiones</p>
+                            </div>
+                        </Link>
                     </div>
                     {/* Desktop: original grid */}
-                    <div className="hidden lg:grid grid-cols-3 gap-4">
+                    <div className="hidden lg:grid grid-cols-4 gap-4">
                         <GlassKpiCard label="Ahorro Detectado" value={formatCurrency(stats.financials.total_detected)} icon={TrendingUp} delay={0.1} />
                         <GlassKpiCard label="Objetivo Mensual" value={`${goalProgress}%`} subValue={formatCurrency(MONTHLY_GOAL)} icon={Target} progress={goalProgress} delay={0.2} />
                         <GlassKpiCard label="Pipeline Activo" value={formatCurrency(stats.financials.pipeline)} icon={Layers} delay={0.3} />
+                        <Link href="/dashboard/tariffs">
+                            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 }} className="flex flex-col justify-between p-3 bg-indigo-50/80 backdrop-blur-xl rounded-2xl border border-indigo-100 shadow-lg hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full">
+                                <div className="flex items-center justify-between text-indigo-400 mb-1">
+                                    <span className="text-[9px] font-medium uppercase tracking-widest opacity-80">Tarifas</span>
+                                    <Zap size={13} strokeWidth={1.5} className="opacity-70" />
+                                </div>
+                                <div>
+                                    <div className="text-sm font-semibold text-indigo-700 leading-tight">Ver precios</div>
+                                    <div className="text-[9px] text-indigo-400 font-normal mt-0.5">y comisiones →</div>
+                                </div>
+                            </motion.div>
+                        </Link>
                     </div>
                 </motion.div>
 

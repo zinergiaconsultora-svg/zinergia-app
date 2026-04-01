@@ -12,10 +12,21 @@ const N8N_TIMEOUT_MS = Number(env.N8N_TIMEOUT_MS) || 10_000;
 
 async function runAletheiaFallback(invoice: InvoiceData) {
     const supabase = await createClient();
-    const { data: rows, error } = await supabase
+
+    // Derivar tipo_cliente desde el tipo de acceso de la factura
+    // 3.0TD / 3.1TD / 6.1TD → exclusivo PYME; 2.0TD → incluir ambos
+    const powerType = invoice.detected_power_type ?? '2.0';
+    const isPymeOnly = powerType === '3.0' || powerType === '3.1';
+
+    let query = supabase
         .from('lv_zinergia_tarifas')
         .select('id, company, tariff_name, logo_color, offer_type, fixed_fee, contract_duration, power_price_p1, power_price_p2, power_price_p3, energy_price_p1, energy_price_p2, energy_price_p3')
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('supply_type', 'electricity');
+
+    if (isPymeOnly) query = query.eq('tipo_cliente', 'PYME');
+
+    const { data: rows, error } = await query;
 
     if (error || !rows || rows.length === 0) {
         throw new Error('Aletheia fallback: no active tariffs in DB');
