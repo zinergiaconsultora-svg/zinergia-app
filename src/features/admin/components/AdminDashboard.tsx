@@ -9,7 +9,10 @@ import {
     TrendingUp,
     Shield,
     Activity,
-    Zap
+    Zap,
+    Receipt,
+    ArrowRight,
+    BadgePercent
 } from 'lucide-react';
 import type { AdminStats, FranchiseWithAgents, AgentProfile } from '@/app/actions/admin';
 import FranchiseList from './FranchiseList';
@@ -94,6 +97,30 @@ export default function AdminDashboard({ stats, franchises, unassignedAgents }: 
                     <h1 className="text-2xl font-black text-white">Panel de Control</h1>
                     <p className="text-sm text-slate-400">Vista global del sistema Zinergia</p>
                 </div>
+            </div>
+
+            {/* Acciones rápidas admin */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <a href="/dashboard/tariffs" className="group flex items-center gap-4 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 p-5 hover:bg-indigo-600/20 hover:border-indigo-500/40 transition-all">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0">
+                        <Receipt className="w-5 h-5 text-indigo-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-white">Gestión de Tarifas</p>
+                        <p className="text-xs text-slate-400">Editar precios, añadir productos y configurar comisiones</p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-indigo-400 group-hover:translate-x-1 transition-transform shrink-0" />
+                </a>
+                <a href="/dashboard/tariffs#commissions" className="group flex items-center gap-4 rounded-2xl bg-violet-600/10 border border-violet-500/20 p-5 hover:bg-violet-600/20 hover:border-violet-500/40 transition-all">
+                    <div className="w-10 h-10 rounded-xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center shrink-0">
+                        <BadgePercent className="w-5 h-5 text-violet-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-white">% Comisión Colaboradores</p>
+                        <p className="text-xs text-slate-400">Ajustar el porcentaje que reciben los comerciales</p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-violet-400 group-hover:translate-x-1 transition-transform shrink-0" />
+                </a>
             </div>
 
             {/* KPI Grid */}

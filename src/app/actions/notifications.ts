@@ -110,6 +110,43 @@ export async function getNotificationsAction(): Promise<AppNotification[]> {
         }
     }
 
+    // 4. Tariff or commission updates in the last 7 days — only for non-admin agents
+    if (profile?.role !== 'admin') {
+        const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000).toISOString()
+
+        const [{ data: updatedTariffs }, { data: updatedCommissions }] = await Promise.all([
+            supabase
+                .from('lv_zinergia_tarifas')
+                .select('updated_at')
+                .gte('updated_at', sevenDaysAgo)
+                .eq('is_active', true)
+                .order('updated_at', { ascending: false })
+                .limit(1),
+            supabase
+                .from('tariff_commissions')
+                .select('updated_at')
+                .gte('updated_at', sevenDaysAgo)
+                .eq('is_active', true)
+                .order('updated_at', { ascending: false })
+                .limit(1),
+        ])
+
+        const latestTariff = updatedTariffs?.[0]?.updated_at
+        const latestComm = updatedCommissions?.[0]?.updated_at
+        const latestUpdate = [latestTariff, latestComm].filter(Boolean).sort().reverse()[0]
+
+        if (latestUpdate) {
+            notifications.push({
+                id: 'tariff_update',
+                type: 'info',
+                title: 'Tarifas actualizadas',
+                message: 'El administrador ha actualizado las tarifas o comisiones disponibles. Revisa los nuevos precios.',
+                created_at: latestUpdate,
+                read: false,
+            })
+        }
+    }
+
     // Sort newest first, deduplicate by id
     return notifications
         .filter((n, i, arr) => arr.findIndex(x => x.id === n.id) === i)
