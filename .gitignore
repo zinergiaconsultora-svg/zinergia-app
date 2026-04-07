@@ -55,3 +55,6 @@ docs
 resources
 
 nul
+
+.vercel
+.env*.local

@@ -18,11 +18,32 @@ export async function updateProposalStatusAction(
 ): Promise<Proposal> {
     const supabase = await createClient()
 
-    // 1. Update status
-    const { data: proposal, error } = await supabase
+    // Verificar autenticación y ownership antes de actualizar
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('No autenticado')
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, franchise_id')
+        .eq('id', user.id)
+        .single()
+
+    if (!profile) throw new Error('Perfil no encontrado')
+
+    // 1. Update status — filtrar por agent_id excepto para admin/franchise
+    const query = supabase
         .from('proposals')
         .update({ status })
         .eq('id', id)
+
+    // Agentes solo pueden modificar sus propias propuestas
+    if (profile.role === 'agent') {
+        query.eq('agent_id', user.id)
+    } else if (profile.role === 'franchise') {
+        query.eq('franchise_id', profile.franchise_id)
+    }
+
+    const { data: proposal, error } = await query
         .select('id, client_id, franchise_id, created_at, status, offer_snapshot, calculation_data, current_annual_cost, offer_annual_cost, annual_savings, savings_percent, notes, optimization_result, aletheia_summary')
         .single()
 

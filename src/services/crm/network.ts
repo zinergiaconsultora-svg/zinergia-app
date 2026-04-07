@@ -9,17 +9,23 @@ export const networkService = {
 
         const { data: rawProfiles, error } = await supabase
             .from('profiles')
-            .select(`
-                id, full_name, role, parent_id, avatar_url,
-                franchise_config ( company_name, royalty_percent )
-            `);
+            .select('id, full_name, role, parent_id, avatar_url');
 
         if (error) throw error;
 
         const profiles = rawProfiles || [];
-
-        // Scope to owners in this tree — avoids fetching all accessible rows
         const profileIds = profiles.map(p => p.id);
+
+        // Fetch franchise configs separately to avoid implicit join issues
+        const { data: franchiseConfigs } = profileIds.length
+            ? await supabase.from('franchise_config').select('franchise_id, company_name, royalty_percent').in('franchise_id', profileIds)
+            : { data: [] };
+
+        const configMap: Record<string, { company_name?: string; royalty_percent?: number }> = {};
+        (franchiseConfigs || []).forEach(fc => {
+            configMap[fc.franchise_id] = { company_name: fc.company_name ?? undefined, royalty_percent: fc.royalty_percent ?? undefined };
+        });
+
         const { data: allClients } = profileIds.length
             ? await supabase.from('clients').select('owner_id, status').in('owner_id', profileIds)
             : { data: [] };
@@ -43,7 +49,7 @@ export const networkService = {
             role: p.role as UserRole,
             parent_id: p.parent_id,
             avatar_url: p.avatar_url,
-            franchise_config: Array.isArray(p.franchise_config) ? p.franchise_config[0] : p.franchise_config,
+            franchise_config: configMap[p.id] ?? null,
             children: [],
             stats: {
                 active_clients: clientCounts[p.id] || 0,
