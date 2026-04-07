@@ -79,6 +79,28 @@ export async function createInvitationAction(
     return { code, inviteUrl, emailSent }
 }
 
+// ─── Update User ─────────────────────────────────────────────────────
+
+/**
+ * Updates basic profile info for a network user.
+ * Only admin and franchise roles can update other users' profiles.
+ */
+export async function updateNetworkUserAction(
+    userId: string,
+    updates: { full_name?: string; email?: string }
+): Promise<void> {
+    await requireServerRole(['admin', 'franchise'])
+
+    const supabase = await createClient()
+
+    const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', userId)
+
+    if (error) throw new Error(`Error al actualizar el perfil: ${error.message}`)
+}
+
 // ─── Email Template ───────────────────────────────────────────────────
 
 const ROLE_LABELS: Record<string, string> = {
