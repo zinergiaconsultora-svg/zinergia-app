@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     Zap,
     ChevronLeft,
@@ -13,9 +13,11 @@ import {
     Activity,
     Info,
     AlertCircle,
-    CheckCircle2
+    CheckCircle2,
+    ShieldCheck,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 import { InvoiceData } from '@/types/crm';
 import { Card } from '@/components/ui/primitives/Card';
 import { Input } from '@/components/ui/primitives/Input';
@@ -31,6 +33,11 @@ interface SimulatorFormProps {
     powerType: string;
     pdfUrl?: string | null;
     isMockMode?: boolean;
+    // Fase 2: corrección humana
+    originalData?: InvoiceData | null;
+    ocrJobId?: string | null;
+    ocrDataConfirmed?: boolean;
+    onConfirmOcrData?: () => Promise<{ correctedFieldsCount: number }>;
 }
 
 export const SimulatorForm: React.FC<SimulatorFormProps> = ({
@@ -43,8 +50,36 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     powerType,
     pdfUrl,
     isMockMode = false,
+    originalData: _originalData,
+    ocrJobId,
+    ocrDataConfirmed = false,
+    onConfirmOcrData,
 }) => {
+    const [isConfirming, setIsConfirming] = useState(false);
 
+    const handleConfirm = async () => {
+        if (!onConfirmOcrData || isConfirming) return;
+        setIsConfirming(true);
+        try {
+            const { correctedFieldsCount } = await onConfirmOcrData();
+            if (correctedFieldsCount > 0) {
+                toast.success(`${correctedFieldsCount} campo${correctedFieldsCount > 1 ? 's' : ''} corregido${correctedFieldsCount > 1 ? 's' : ''} guardados para mejorar el OCR`);
+            } else {
+                toast.success('Datos validados sin cambios. ¡Gracias!');
+            }
+        } catch {
+            toast.error('Error al guardar la confirmación');
+        } finally {
+            setIsConfirming(false);
+        }
+    };
+
+    // Returns true if the field has low confidence (< 0.7) from OCR
+    const isLowConfidence = (field: string): boolean => {
+        const conf = (data as unknown as Record<string, unknown>)._confidence as Record<string, number> | undefined;
+        if (!conf || conf[field] === undefined) return false;
+        return conf[field] < 0.7;
+    };
 
     // Toggle for PDF View
     const [showPdf, setShowPdf] = React.useState(true);
@@ -94,6 +129,35 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                         >
                             {showPdf ? 'Ocultar PDF' : 'Ver PDF Original'}
                         </motion.button>
+                    )}
+
+                    {/* Confirm OCR data button — only shown when job exists and not yet confirmed */}
+                    {ocrJobId && onConfirmOcrData && (
+                        ocrDataConfirmed ? (
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
+                                <ShieldCheck size={14} />
+                                Datos confirmados
+                            </div>
+                        ) : (
+                            <motion.button
+                                whileHover={{ scale: 1.03 }}
+                                whileTap={{ scale: 0.97 }}
+                                onClick={handleConfirm}
+                                disabled={isConfirming}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-emerald-700 transition-colors disabled:opacity-60"
+                            >
+                                {isConfirming ? (
+                                    <motion.div
+                                        animate={{ rotate: 360 }}
+                                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                        className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full"
+                                    />
+                                ) : (
+                                    <ShieldCheck size={14} />
+                                )}
+                                Confirmar datos
+                            </motion.button>
+                        )
                     )}
 
                     <div className="text-right">
@@ -169,7 +233,10 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                 value={data.client_name}
                                 onChange={(e) => onUpdate('client_name', e.target.value)}
                                 placeholder="Nombre completo"
-                                warning={data.client_name && data.client_name.length < 5 ? 'Nombre muy corto (¿OCR incompleto?)' : undefined}
+                                warning={
+                                    isLowConfidence('client_name') ? 'Confianza baja — revisa este dato' :
+                                    (data.client_name && data.client_name.length < 5 ? 'Nombre muy corto (¿OCR incompleto?)' : undefined)
+                                }
                             />
                             <Input
                                 label="CIF / DNI"
@@ -177,7 +244,10 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                 value={data.dni_cif}
                                 onChange={(e) => onUpdate('dni_cif', e.target.value)}
                                 placeholder="Identificación"
-                                warning={data.dni_cif && !/^[0-9A-Z]{9}$/.test(data.dni_cif) ? 'Formato inusual' : undefined}
+                                warning={
+                                    isLowConfidence('dni_cif') ? 'Confianza baja — revisa este dato' :
+                                    (data.dni_cif && !/^[0-9A-Z]{9}$/.test(data.dni_cif) ? 'Formato inusual' : undefined)
+                                }
                             />
                             <Input
                                 label="Comercializadora Actual"
@@ -185,13 +255,17 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                 value={data.company_name}
                                 onChange={(e) => onUpdate('company_name', e.target.value)}
                                 placeholder="Ej: Endesa, Iberdrola..."
+                                warning={isLowConfidence('company_name') ? 'Confianza baja — revisa este dato' : undefined}
                             />
                             <Input
                                 label="Nº de Factura"
                                 icon={<Hash size={16} />}
                                 value={data.invoice_number}
                                 onChange={(e) => onUpdate('invoice_number', e.target.value)}
-                                warning={!data.invoice_number ? 'Dato no encontrado en el PDF' : undefined}
+                                warning={
+                                    isLowConfidence('invoice_number') ? 'Confianza baja — revisa este dato' :
+                                    (!data.invoice_number ? 'Dato no encontrado en el PDF' : undefined)
+                                }
                             />
                         </Card>
                     </div>
@@ -209,7 +283,10 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                     icon={<Activity size={16} />}
                                     value={data.cups}
                                     error={!isCupsValid && data.cups ? 'Longitud de CUPS sospechosa' : undefined}
-                                    warning={isCupsValid && !data.cups?.startsWith('ES') ? 'CUPS debe empezar por ES' : undefined}
+                                    warning={
+                                        isLowConfidence('cups') ? 'Confianza baja — revisa este dato' :
+                                        (isCupsValid && !data.cups?.startsWith('ES') ? 'CUPS debe empezar por ES' : undefined)
+                                    }
                                     onChange={(e) => onUpdate('cups', e.target.value.toUpperCase())}
                                     className="font-mono"
                                 />
@@ -219,7 +296,10 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                 icon={<MapPin size={16} />}
                                 value={data.supply_address}
                                 onChange={(e) => onUpdate('supply_address', e.target.value)}
-                                warning={data.supply_address && data.supply_address.length < 10 ? 'Dirección incompleta' : undefined}
+                                warning={
+                                    isLowConfidence('supply_address') ? 'Confianza baja — revisa este dato' :
+                                    (data.supply_address && data.supply_address.length < 10 ? 'Dirección incompleta' : undefined)
+                                }
                             />
                             <div className="grid grid-cols-2 gap-4">
                                 <Input
