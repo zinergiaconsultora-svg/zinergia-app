@@ -52,6 +52,18 @@ export async function getFranchiseId(supabase: SupabaseClient) {
         return newProfile.franchise_id;
     }
 
+    // Admin users may have franchise_id = null — fall back to HQ franchise
+    if (!profile.franchise_id) {
+        const { data: hq } = await supabase
+            .from('franchises')
+            .select('id')
+            .eq('slug', 'hq')
+            .maybeSingle();
+        const fallbackId = hq?.id ?? null;
+        _franchiseIdCache.set(user.id, fallbackId);
+        return fallbackId;
+    }
+
     _franchiseIdCache.set(user.id, profile.franchise_id);
     return profile.franchise_id;
 }

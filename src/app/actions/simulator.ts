@@ -16,7 +16,8 @@ export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: a
         const { data: tariffData, error } = await supabase
             .from('lv_zinergia_tarifas')
             .select('id, company, tariff_name, logo_color, offer_type, fixed_fee, power_price_p1, power_price_p2, power_price_p3, power_price_p4, power_price_p5, power_price_p6, energy_price_p1, energy_price_p2, energy_price_p3, energy_price_p4, energy_price_p5, energy_price_p6')
-            .eq('is_active', true);
+            .eq('is_active', true)
+            .eq('supply_type', 'electricity');
 
         if (error) {
             console.error('Aletheia: Error fetching tariffs', error);
