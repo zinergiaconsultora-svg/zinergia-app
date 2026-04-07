@@ -33,7 +33,7 @@ export const gamificationService = {
         // Dos queries explícitas — no depende del nombre de la FK en PostgREST
         const { data: pointsData, error } = await supabase
             .from('user_points')
-            .select('user_id, points, last_updated')
+            .select('user_id, points, updated_at')
             .order('points', { ascending: false })
             .limit(10);
 
@@ -55,7 +55,7 @@ export const gamificationService = {
                 name: (profile as { full_name?: string }).full_name ?? 'Agente',
                 role: (profile as { role?: string }).role ?? 'agent',
                 points: row.points ?? 0,
-                trend: ((row.last_updated ?? '') >= sevenDaysAgo ? 'up' : 'stable') as 'up' | 'down' | 'stable',
+                trend: ((row.updated_at ?? '') >= sevenDaysAgo ? 'up' : 'stable') as 'up' | 'down' | 'stable',
                 avatar_url: (profile as { avatar_url?: string }).avatar_url ?? '',
                 badges: [] as string[],
             };
@@ -123,7 +123,7 @@ export const gamificationService = {
             await supabase.from('user_points').upsert({
                 user_id: user.id,
                 points: (current?.points || 0) + 50,
-                last_updated: new Date().toISOString()
+                updated_at: new Date().toISOString()
             });
         } catch (err) {
             console.error('Gamification Processing Error:', err);
