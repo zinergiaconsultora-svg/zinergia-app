@@ -9,7 +9,7 @@ export const networkService = {
 
         const { data: rawProfiles, error } = await supabase
             .from('profiles')
-            .select('id, full_name, role, parent_id');
+            .select('id, full_name, role, parent_id, email, phone');
 
         if (error) throw error;
 
@@ -44,7 +44,7 @@ export const networkService = {
 
         const nodes: NetworkUser[] = profiles.map(p => ({
             id: p.id,
-            email: '',
+            email: p.email || '',
             full_name: p.full_name || 'Usuario',
             role: p.role as UserRole,
             parent_id: p.parent_id,
