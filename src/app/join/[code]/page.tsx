@@ -22,13 +22,19 @@ export default function JoinNetworkPage() {
 
     useEffect(() => {
         async function validateCode() {
-            const data = await validateInvitationCode(code);
-            if (!data) {
-                setError('El código de invitación no es válido o ya ha sido utilizado.');
-            } else {
-                setInvitation(data);
+            try {
+                const data = await validateInvitationCode(code);
+                if (!data) {
+                    setError('El código de invitación no es válido o ya ha sido utilizado.');
+                } else {
+                    setInvitation(data);
+                }
+            } catch (err) {
+                console.error('validateInvitationCode error:', err);
+                setError('Error al validar el código. Inténtalo de nuevo.');
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         }
         if (code) validateCode();
     }, [code]);
