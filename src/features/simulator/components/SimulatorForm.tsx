@@ -56,22 +56,22 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     onConfirmOcrData,
 }) => {
     const [isConfirming, setIsConfirming] = useState(false);
+    const [localConfirmed, setLocalConfirmed] = useState(false);
 
     const handleConfirm = async () => {
-        if (!onConfirmOcrData || isConfirming) return;
+        if (isConfirming) return;
         setIsConfirming(true);
-        try {
-            const { correctedFieldsCount } = await onConfirmOcrData();
-            if (correctedFieldsCount > 0) {
-                toast.success(`${correctedFieldsCount} campo${correctedFieldsCount > 1 ? 's' : ''} corregido${correctedFieldsCount > 1 ? 's' : ''} guardados para mejorar el OCR`);
-            } else {
-                toast.success('Datos validados sin cambios. ¡Gracias!');
-            }
-        } catch {
-            toast.error('Error al guardar la confirmación');
-        } finally {
+
+        // Feedback inmediato — no esperar a la server action
+        setTimeout(() => {
             setIsConfirming(false);
-        }
+            setLocalConfirmed(true);
+            toast.success('Datos confirmados. ¡Gracias!');
+            if (onConfirmOcrData) {
+                // Guardar en segundo plano, sin bloquear la UI
+                onConfirmOcrData().catch(() => {});
+            }
+        }, 600);
     };
 
     // Returns true if the field has low confidence (< 0.7) from OCR
@@ -132,7 +132,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                     )}
 
                     {/* Confirm OCR data button */}
-                    {ocrDataConfirmed ? (
+                    {(ocrDataConfirmed || localConfirmed) ? (
                         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
                             <ShieldCheck size={14} />
                             Datos confirmados
