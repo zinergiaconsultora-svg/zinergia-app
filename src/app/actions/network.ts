@@ -140,6 +140,26 @@ export async function deactivateProfileAction(userId: string): Promise<void> {
     if (error) throw new Error(`Error al desactivar el perfil: ${error.message}`)
 }
 
+/**
+ * Reactivates a previously deactivated user by restoring their role.
+ * Only admin can reactivate.
+ */
+export async function reactivateProfileAction(
+    userId: string,
+    role: 'agent' | 'franchise'
+): Promise<void> {
+    await requireServerRole(['admin'])
+
+    const supabase = await createClient()
+
+    const { error } = await supabase
+        .from('profiles')
+        .update({ role })
+        .eq('id', userId)
+
+    if (error) throw new Error(`Error al reactivar el perfil: ${error.message}`)
+}
+
 // ─── Email Template ───────────────────────────────────────────────────
 
 const ROLE_LABELS: Record<string, string> = {

@@ -4,12 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Building2, User, ChevronDown, Users, TrendingUp,
     Mail, Eye, ShieldCheck, Pencil, X, Save,
-    UserPlus, Phone, MapPin, Trash2, UserX, AlertTriangle
+    UserPlus, Phone, MapPin, Trash2, UserX, AlertTriangle, RefreshCw
 } from 'lucide-react';
 import { NetworkUser } from '@/types/crm';
 import { formatCurrency } from '@/lib/utils/format';
 import { toast } from 'sonner';
-import { updateNetworkUserAction, deleteProfileAction, deactivateProfileAction } from '@/app/actions/network';
+import { updateNetworkUserAction, deleteProfileAction, deactivateProfileAction, reactivateProfileAction } from '@/app/actions/network';
 
 interface NetworkTreeProps {
     data: NetworkUser[];
@@ -98,6 +98,26 @@ const ROLE_CONFIG: Record<string, {
     },
 };
 
+const DEACTIVATED_CONFIG = {
+    label: 'Desactivado',
+    icon: <UserX size={18} strokeWidth={1.8} />,
+    cardBg: 'bg-slate-50',
+    cardBorder: 'border-slate-200',
+    avatarBg: 'bg-slate-100',
+    avatarText: 'text-slate-400',
+    badgeBg: 'bg-slate-100 border-slate-200',
+    badgeText: 'text-slate-400',
+    nameCls: 'text-slate-400',
+    subCls: 'text-slate-300',
+    statLabelCls: 'text-slate-300',
+    statValueCls: 'text-slate-400',
+    dividerCls: 'border-slate-100',
+    actionBg: 'bg-slate-50',
+    actionHover: 'hover:bg-slate-100',
+    actionText: 'text-slate-300 hover:text-slate-500',
+    chevronCls: 'text-slate-300 hover:bg-slate-100',
+};
+
 const DEFAULT_ROLE = ROLE_CONFIG.agent;
 
 // ─── Edit Modal ───────────────────────────────────────────────────────────────
@@ -114,7 +134,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ node, onClose, onSaved })
     const [saving, setSaving] = useState(false);
     const [confirm, setConfirm] = useState<'delete' | 'deactivate' | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
-    const cfg = ROLE_CONFIG[node.role] ?? DEFAULT_ROLE;
+    const [reactivateRole, setReactivateRole] = useState<'agent' | 'franchise'>('agent');
+    const isDeactivated = !node.role;
+    const cfg = isDeactivated ? DEACTIVATED_CONFIG : (ROLE_CONFIG[node.role] ?? DEFAULT_ROLE);
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -160,6 +182,20 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ node, onClose, onSaved })
         } finally {
             setActionLoading(false);
             setConfirm(null);
+        }
+    };
+
+    const handleReactivate = async () => {
+        setActionLoading(true);
+        try {
+            await reactivateProfileAction(node.id, reactivateRole);
+            toast.success(`${node.full_name} reactivado como ${reactivateRole === 'agent' ? 'Colaborador' : 'Franquicia'}`);
+            onClose();
+            window.location.reload();
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Error al reactivar');
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -269,17 +305,48 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ node, onClose, onSaved })
                         </button>
                     </div>
 
+                    {/* Reactivate section (only for deactivated users) */}
+                    {isDeactivated && (
+                        <div className="pt-2 border-t border-slate-100">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-500 mb-3">Reactivar cuenta</p>
+                            <div className="flex gap-2 items-center mb-3">
+                                <select
+                                    aria-label="Rol al reactivar"
+                                    value={reactivateRole}
+                                    onChange={e => setReactivateRole(e.target.value as 'agent' | 'franchise')}
+                                    className="flex-1 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                                >
+                                    <option value="agent">Colaborador Comercial</option>
+                                    <option value="franchise">Franquicia</option>
+                                </select>
+                                <button
+                                    type="button"
+                                    disabled={actionLoading}
+                                    onClick={handleReactivate}
+                                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 transition-all"
+                                >
+                                    {actionLoading
+                                        ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        : <><RefreshCw size={13} /> Reactivar</>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Danger zone */}
                     <div className="pt-2 border-t border-slate-100">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3">Zona de peligro</p>
                         <div className="flex gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setConfirm('deactivate')}
-                                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-100 transition-colors"
-                            >
-                                <UserX size={14} /> Desactivar
-                            </button>
+                            {!isDeactivated && (
+                                <button
+                                    type="button"
+                                    onClick={() => setConfirm('deactivate')}
+                                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-100 transition-colors"
+                                >
+                                    <UserX size={14} /> Desactivar
+                                </button>
+                            )}
                             <button
                                 type="button"
                                 onClick={() => setConfirm('delete')}
@@ -303,7 +370,8 @@ const TreeNode: React.FC<{ node: NetworkUser; depth: number; isLast?: boolean; s
         const [editingNode, setEditingNode] = useState<NetworkUser | null>(null);
         const [nodeData, setNodeData] = useState<NetworkUser>(node);
         const hasChildren = (nodeData.children?.length ?? 0) > 0;
-        const cfg = ROLE_CONFIG[nodeData.role] ?? DEFAULT_ROLE;
+        const isDeactivated = !nodeData.role;
+        const cfg = isDeactivated ? DEACTIVATED_CONFIG : (ROLE_CONFIG[nodeData.role] ?? DEFAULT_ROLE);
         const initials = nodeData.full_name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() ?? '?';
 
         const hasExpandedRef = React.useRef(false);
@@ -343,6 +411,7 @@ const TreeNode: React.FC<{ node: NetworkUser; depth: number; isLast?: boolean; s
                     `}>
                         {/* Role accent strip */}
                         <div className={`w-1 rounded-l-2xl shrink-0 ${
+                            isDeactivated ? 'bg-slate-200' :
                             nodeData.role === 'franchise' ? 'bg-indigo-400' :
                             nodeData.role === 'admin' ? 'bg-slate-300' : 'bg-emerald-400'
                         }`} />
