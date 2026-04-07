@@ -9,7 +9,7 @@ export const networkService = {
 
         const { data: rawProfiles, error } = await supabase
             .from('profiles')
-            .select('id, full_name, role, parent_id, avatar_url');
+            .select('id, full_name, role, parent_id');
 
         if (error) throw error;
 
@@ -48,7 +48,7 @@ export const networkService = {
             full_name: p.full_name || 'Usuario',
             role: p.role as UserRole,
             parent_id: p.parent_id,
-            avatar_url: p.avatar_url,
+            avatar_url: undefined,
             franchise_config: configMap[p.id] ?? null,
             children: [],
             stats: {
