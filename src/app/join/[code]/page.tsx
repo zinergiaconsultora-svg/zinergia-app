@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { User, Lock, CheckCircle2, AlertCircle, Mail, ArrowRight, Loader2 } from 'lucide-react';
 import { ZinergiaLogo } from '@/components/ui/ZinergiaLogo';
-import { completeInvitationAction, validateInvitationCode } from '@/app/actions/join';
+import { registerWithInvitationAction, validateInvitationCode } from '@/app/actions/join';
 
 const ROLE_LABEL: Record<string, string> = {
     agent: 'Colaborador Comercial',
@@ -57,42 +57,17 @@ export default function JoinNetworkPage() {
         setIsSubmitting(true);
 
         try {
+            // 1. Create user + complete invitation server-side (no confirmation email)
+            await registerWithInvitationAction(invitation.id, invitation.email, fullName, password);
+
+            // 2. Sign in client-side now that the user exists and is confirmed
             const { createClient } = await import('@/lib/supabase/client');
             const supabase = createClient();
-
-            // 1. Sign up
-            const { error: authError } = await supabase.auth.signUp({
-                email: invitation.email,
-                password,
-                options: { data: { full_name: fullName } },
-            });
-
-            if (authError) {
-                if (authError.message.toLowerCase().includes('rate limit') || authError.message.toLowerCase().includes('email rate')) {
-                    throw new Error('Demasiados intentos. Por favor espera unos minutos e inténtalo de nuevo.');
-                }
-                // User might already exist in auth — try signing in directly
-                if (authError.message.toLowerCase().includes('already registered') || authError.message.toLowerCase().includes('user already')) {
-                    // fall through to sign in
-                } else {
-                    throw authError;
-                }
-            }
-
-            // 2. Sign in immediately so the server action can read the session
             const { error: signInError } = await supabase.auth.signInWithPassword({
                 email: invitation.email,
                 password,
             });
-            if (signInError) {
-                if (signInError.message.toLowerCase().includes('not confirmed') || signInError.message.toLowerCase().includes('email not confirmed')) {
-                    throw new Error('Debes confirmar tu email antes de acceder. Revisa tu bandeja de entrada.');
-                }
-                throw signInError;
-            }
-
-            // 3. Complete invitation server-side (sets role, parent, marks used)
-            await completeInvitationAction(invitation.id, fullName);
+            if (signInError) throw signInError;
 
             router.push('/dashboard');
         } catch (err: unknown) {
