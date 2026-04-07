@@ -23,13 +23,12 @@ import {
 
 interface LeaderboardEntry {
     id?: string;
+    name: string;
+    role: string;
     points: number;
     badges: string[];
-    profiles: {
-        full_name: string;
-        role: string;
-        avatar_url?: string;
-    } | null;
+    trend: 'up' | 'down' | 'stable';
+    avatar_url: string;
 }
 
 const REFERENCE_AMOUNT = 1000;
@@ -139,7 +138,7 @@ export const NetworkIntelligence: React.FC = () => {
                         {leaderboard.length > 0 ? (
                             <>
                                 <h3 className="text-2xl font-bold mb-4 italic">
-                                    &quot;{leaderboard[0].profiles?.full_name ?? 'El top agente'} lidera la red con {leaderboard[0].points} puntos.&quot;
+                                    &quot;{leaderboard[0].name ?? 'El top agente'} lidera la red con {leaderboard[0].points} puntos.&quot;
                                 </h3>
                                 <p className="text-slate-400 font-light max-w-lg mb-8">
                                     {leaderboard.length} agente{leaderboard.length !== 1 ? 's' : ''} activo{leaderboard.length !== 1 ? 's' : ''} en el ranking.
@@ -193,8 +192,8 @@ export const NetworkIntelligence: React.FC = () => {
                                         {idx + 1}
                                     </div>
                                     <div>
-                                        <p className="font-bold text-slate-900 text-sm leading-none mb-1">{entry.profiles?.full_name || 'Agente Anónimo'}</p>
-                                        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{entry.profiles?.role || 'Agente'}</p>
+                                        <p className="font-bold text-slate-900 text-sm leading-none mb-1">{entry.name || 'Agente Anónimo'}</p>
+                                        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{entry.role || 'Agente'}</p>
                                     </div>
                                 </div>
                                 <div className="text-right">

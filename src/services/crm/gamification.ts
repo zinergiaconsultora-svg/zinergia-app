@@ -42,7 +42,7 @@ export const gamificationService = {
         const userIds = pointsData.map(r => r.user_id);
         const { data: profilesData } = await supabase
             .from('profiles')
-            .select('id, full_name, role, avatar_url')
+            .select('id, full_name, role')
             .in('id', userIds);
 
         const profileMap = new Map((profilesData ?? []).map(p => [p.id, p]));
@@ -56,7 +56,7 @@ export const gamificationService = {
                 role: (profile as { role?: string }).role ?? 'agent',
                 points: row.points ?? 0,
                 trend: ((row.updated_at ?? '') >= sevenDaysAgo ? 'up' : 'stable') as 'up' | 'down' | 'stable',
-                avatar_url: (profile as { avatar_url?: string }).avatar_url ?? '',
+                avatar_url: '',
                 badges: [] as string[],
             };
         });
