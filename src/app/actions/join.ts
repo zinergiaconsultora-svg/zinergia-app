@@ -3,6 +3,27 @@
 import { createClient } from '@/lib/supabase/server'
 
 /**
+ * Validates an invitation code publicly (no auth required).
+ * Uses service-level access to bypass RLS for public join links.
+ */
+export async function validateInvitationCode(
+    code: string
+): Promise<{ id: string; email: string; role: string; creator_id: string } | null> {
+    const supabase = await createClient()
+
+    const { data, error } = await supabase
+        .from('network_invitations')
+        .select('id, email, role, creator_id')
+        .eq('code', code)
+        .eq('used', false)
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle()
+
+    if (error || !data) return null
+    return data
+}
+
+/**
  * Completes the invitation signup flow server-side.
  * 
  * Validates the invitation is still valid and unexpired for the authenticated
