@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { requireServerRole } from '@/lib/auth/permissions'
 import { resend } from '@/lib/resend'
 
@@ -99,6 +100,44 @@ export async function updateNetworkUserAction(
         .eq('id', userId)
 
     if (error) throw new Error(`Error al actualizar el perfil: ${error.message}`)
+}
+
+// ─── Delete / Deactivate User ────────────────────────────────────────
+
+/**
+ * Permanently deletes a user's auth account and profile.
+ * Only admin can delete. Cannot delete yourself.
+ */
+export async function deleteProfileAction(userId: string): Promise<void> {
+    await requireServerRole(['admin'])
+
+    const supabase = await createClient()
+    const { data: { user: me } } = await supabase.auth.getUser()
+    if (me?.id === userId) throw new Error('No puedes eliminar tu propia cuenta')
+
+    // Use service role to delete the auth user (cascades to profile via FK)
+    const service = createServiceClient()
+    const { error } = await service.auth.admin.deleteUser(userId)
+    if (error) throw new Error(`Error al eliminar el usuario: ${error.message}`)
+}
+
+/**
+ * Deactivates a user by removing their role (keeps data intact).
+ * Only admin can deactivate.
+ */
+export async function deactivateProfileAction(userId: string): Promise<void> {
+    await requireServerRole(['admin'])
+
+    const supabase = await createClient()
+    const { data: { user: me } } = await supabase.auth.getUser()
+    if (me?.id === userId) throw new Error('No puedes desactivar tu propia cuenta')
+
+    const { error } = await supabase
+        .from('profiles')
+        .update({ role: null })
+        .eq('id', userId)
+
+    if (error) throw new Error(`Error al desactivar el perfil: ${error.message}`)
 }
 
 // ─── Email Template ───────────────────────────────────────────────────
