@@ -6,7 +6,7 @@ import { MapView } from './MapView';
 import { NetworkIntelligence } from './NetworkIntelligence';
 import { crmService } from '@/services/crmService';
 import { NetworkUser } from '@/types/crm';
-import { UserPlus, RefreshCw, Layers, Map as MapIcon, GitBranch, BrainCircuit, Search } from 'lucide-react';
+import { UserPlus, RefreshCw, Layers, Map as MapIcon, GitBranch, BrainCircuit, Search, Building2, Users } from 'lucide-react';
 
 export const ManageNetworkView: React.FC = () => {
     const [hierarchy, setHierarchy] = useState<NetworkUser[]>([]);
