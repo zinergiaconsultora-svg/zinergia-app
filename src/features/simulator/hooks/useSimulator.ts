@@ -114,7 +114,8 @@ function simulatorReducer(state: SimulatorState, action: SimulatorAction): Simul
     }
 }
 
-const OCR_REALTIME_TIMEOUT_MS = 90_000;
+const OCR_REALTIME_TIMEOUT_MS = 300_000; // 5 minutos — N8N puede tardar si estaba inactivo
+const OCR_SLOW_WARNING_MS = 60_000;    // Aviso al usuario al minuto
 
 export function useSimulator() {
     const [state, dispatch] = useReducer(simulatorReducer, initialState);
@@ -185,14 +186,21 @@ export function useSimulator() {
                 )
                 .subscribe();
 
-            // Safety net: si N8N no responde en 90s, marcar como fallido en DB y abortar
+            // Aviso "tardando más de lo normal" al minuto
+            const slowWarningIdPending = setTimeout(() => {
+                dispatch({ type: 'SET_LOADING_MESSAGE', payload: 'Tardando más de lo habitual... N8N puede estar arrancando. Por favor espera.' });
+            }, OCR_SLOW_WARNING_MS);
+
+            // Safety net: si N8N no responde en 5 min, marcar como fallido en DB y abortar
             const timeoutId = setTimeout(() => {
-                dispatch({ type: 'SET_ERROR', payload: 'El servidor tardó demasiado en procesar el documento. Inténtalo de nuevo.' });
+                clearTimeout(slowWarningIdPending);
+                dispatch({ type: 'SET_ERROR', payload: 'El servidor no respondió en 5 minutos. Comprueba el flujo de N8N e inténtalo de nuevo.' });
                 supabase.removeChannel(channel);
-                markOcrJobFailed(jobId, 'Timeout: N8N no respondió en 90 segundos').catch(() => {});
+                markOcrJobFailed(jobId, 'Timeout: N8N no respondió en 5 minutos').catch(() => {});
             }, OCR_REALTIME_TIMEOUT_MS);
 
             return () => {
+                clearTimeout(slowWarningIdPending);
                 clearTimeout(timeoutId);
                 supabase.removeChannel(channel);
             };
@@ -229,7 +237,7 @@ export function useSimulator() {
             }
 
             dispatch({ type: 'SET_LOADING_MESSAGE', payload: 'Procesando documento con IA...' });
-            
+
             const supabase = createClient();
 
             // Mecanismo principal: Broadcast directo del callback (sin RLS)
@@ -244,6 +252,7 @@ export function useSimulator() {
                     if (jobStatus === 'completed' && jobData) {
                         resolved = true;
                         clearInterval(pollInterval);
+                        clearTimeout(slowWarningId);
                         clearTimeout(timeoutId);
                         dispatch({ type: 'SET_INVOICE_DATA', payload: extractInvoiceData(jobData) as InvoiceData });
                         supabase.removeChannel(channel);
@@ -252,6 +261,7 @@ export function useSimulator() {
                     } else if (jobStatus === 'failed') {
                         resolved = true;
                         clearInterval(pollInterval);
+                        clearTimeout(slowWarningId);
                         clearTimeout(timeoutId);
                         dispatch({ type: 'SET_ERROR', payload: error_message || 'Error en análisis OCR' });
                         supabase.removeChannel(channel);
@@ -275,6 +285,7 @@ export function useSimulator() {
                     if (job.status === 'completed') {
                         resolved = true;
                         clearInterval(pollInterval);
+                        clearTimeout(slowWarningId);
                         clearTimeout(timeoutId);
                         dispatch({ type: 'SET_INVOICE_DATA', payload: extractInvoiceData(job.extracted_data as Record<string, unknown>) as InvoiceData });
                         supabase.removeChannel(channel);
@@ -283,6 +294,7 @@ export function useSimulator() {
                     } else if (job.status === 'failed') {
                         resolved = true;
                         clearInterval(pollInterval);
+                        clearTimeout(slowWarningId);
                         clearTimeout(timeoutId);
                         dispatch({ type: 'SET_ERROR', payload: job.error_message || 'Error en análisis OCR' });
                         supabase.removeChannel(channel);
@@ -290,17 +302,25 @@ export function useSimulator() {
                         activeSupabaseRef.current = null;
                     }
                 } catch { /* polling es best-effort */ }
-            }, 3000);
+            }, 4000);
 
-            // Safety net: si N8N no responde en 90s, marcar como fallido en DB y abortar
+            // Aviso "tardando más de lo normal" al minuto
+            const slowWarningId = setTimeout(() => {
+                if (!resolved) {
+                    dispatch({ type: 'SET_LOADING_MESSAGE', payload: 'Tardando más de lo habitual... N8N puede estar arrancando. Por favor espera.' });
+                }
+            }, OCR_SLOW_WARNING_MS);
+
+            // Safety net: si N8N no responde en 5 min, marcar como fallido
             const timeoutId = setTimeout(() => {
                 resolved = true;
                 clearInterval(pollInterval);
-                dispatch({ type: 'SET_ERROR', payload: 'El servidor tardó demasiado en procesar el documento. Inténtalo de nuevo.' });
+                clearTimeout(slowWarningId);
+                dispatch({ type: 'SET_ERROR', payload: 'El servidor no respondió en 5 minutos. Comprueba el flujo de N8N e inténtalo de nuevo.' });
                 supabase.removeChannel(channel);
                 activeChannelRef.current = null;
                 activeSupabaseRef.current = null;
-                markOcrJobFailed(result.jobId!, 'Timeout: N8N no respondió en 90 segundos').catch(() => {});
+                markOcrJobFailed(result.jobId!, 'Timeout: N8N no respondió en 5 minutos').catch(() => {});
             }, OCR_REALTIME_TIMEOUT_MS);
 
         } catch (error) {
