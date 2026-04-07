@@ -2,6 +2,7 @@
     "framework": "nextjs",
     "buildCommand": "npm run build",
     "installCommand": "npm install",
+    "alias": ["zinergia.vercel.app"],
     "crons": [
         {
             "path": "/api/cron/proposal-followup",
