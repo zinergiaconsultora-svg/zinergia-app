@@ -131,8 +131,8 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                         </motion.button>
                     )}
 
-                    {/* Confirm OCR data button — only shown when job exists and not yet confirmed */}
-                    {ocrJobId && onConfirmOcrData && (
+                    {/* Confirm OCR data button — shown for all real (non-mock) OCR results */}
+                    {!isMockMode && onConfirmOcrData && (
                         ocrDataConfirmed ? (
                             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
                                 <ShieldCheck size={14} />
