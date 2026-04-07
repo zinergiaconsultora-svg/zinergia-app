@@ -38,13 +38,19 @@ export const ManageNetworkView: React.FC = () => {
         loadData();
     }, []);
 
-    // Memoize stats calculation to prevent recalculation on every render
-    const stats = useMemo(() => ({
-        totalAgents: hierarchy.reduce((acc: number, curr: NetworkUser) => acc + (curr.children?.length || 0) + 1, 0),
-        activeFranchises: hierarchy.filter((n: NetworkUser) => n.role === 'franchise').length,
-        totalVolumen: netStats.totalVolumen,
-        monthlyGrowth: netStats.monthlyGrowth
-    }), [hierarchy, netStats]);
+    // Flatten all nodes recursively for accurate counts
+    const flattenNodes = (nodes: NetworkUser[]): NetworkUser[] =>
+        nodes.flatMap(n => [n, ...flattenNodes(n.children || [])]);
+
+    const stats = useMemo(() => {
+        const all = flattenNodes(hierarchy);
+        return {
+            totalAgents: all.filter(n => n.role === 'agent').length,
+            activeFranchises: all.filter(n => n.role === 'franchise').length,
+            totalVolumen: netStats.totalVolumen,
+            monthlyGrowth: netStats.monthlyGrowth,
+        };
+    }, [hierarchy, netStats]);
 
     return (
         <div className="p-6 md:p-8 max-w-7xl mx-auto font-sans">
