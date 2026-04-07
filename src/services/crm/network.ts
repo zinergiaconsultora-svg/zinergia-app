@@ -128,22 +128,25 @@ export const networkService = {
         const supabase = createClient();
         const { data: commissions, error } = await supabase
             .from('network_commissions')
-            .select('total_revenue, created_at');
+            .select('agent_commission, franchise_commission, created_at');
 
         if (error) throw error;
 
-        const totalVolumen = commissions.reduce((sum, c) => sum + (c.total_revenue || 0), 0);
+        const total = (c: { agent_commission: number; franchise_commission: number }) =>
+            (c.agent_commission || 0) + (c.franchise_commission || 0);
+
+        const totalVolumen = commissions.reduce((sum, c) => sum + total(c), 0);
 
         const now = new Date();
         const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
         const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
 
         const thisMonthVol = commissions
-            .filter(c => c.created_at >= startOfThisMonth)
-            .reduce((sum, c) => sum + (c.total_revenue || 0), 0);
+            .filter(c => c.created_at && c.created_at >= startOfThisMonth)
+            .reduce((sum, c) => sum + total(c), 0);
         const lastMonthVol = commissions
-            .filter(c => c.created_at >= startOfLastMonth && c.created_at < startOfThisMonth)
-            .reduce((sum, c) => sum + (c.total_revenue || 0), 0);
+            .filter(c => c.created_at && c.created_at >= startOfLastMonth && c.created_at < startOfThisMonth)
+            .reduce((sum, c) => sum + total(c), 0);
 
         return {
             totalVolumen,
