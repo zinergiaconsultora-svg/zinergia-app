@@ -3,6 +3,24 @@ import { createClient } from '@supabase/supabase-js';
 import { env } from '@/lib/env';
 import { sendPushToUser } from '@/lib/push/sendPush';
 
+function normalizeCompanyName(raw: string): string {
+    return raw
+        .toUpperCase()
+        .replace(/\bS\.?A\.?\b|\bS\.?L\.?\b|\bS\.?A\.?U\.?\b/g, '')
+        .replace(/ENERGIA|ENERGÍA|ENERGY/g, '')
+        .replace(/[^A-ZÁÉÍÓÚÑ0-9]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/^NATURGY.*/, 'NATURGY')
+        .replace(/^ENDESA.*/, 'ENDESA')
+        .replace(/^IBERDROLA.*/, 'IBERDROLA')
+        .replace(/^REPSOL.*/, 'REPSOL')
+        .replace(/^EDP.*/, 'EDP')
+        .replace(/^HOLALUZ.*/, 'HOLALUZ')
+        .replace(/^OCTOPUS.*/, 'OCTOPUS')
+        .replace(/^PODO.*/, 'PODO');
+}
+
 export async function POST(request: Request) {
     // 1. Autenticar request de N8N
     const apiKey = request.headers.get('x-api-key');
@@ -231,6 +249,55 @@ export async function POST(request: Request) {
         if (dbError) {
             console.error('[OCR Callback] DB Update Error:', dbError);
             return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
+        }
+
+        // 5b. Guardar ejemplo de entrenamiento para few-shot memory (Fase 1)
+        // Solo para extracciones completadas con nombre de empresa identificable
+        if (status === 'completed' && invoiceData) {
+            const rawCompanyName = invoiceData.company_name as string | undefined;
+            if (rawCompanyName && rawCompanyName !== '') {
+                try {
+                    const companyNormalized = normalizeCompanyName(rawCompanyName);
+
+                    // Hash ligero para evitar duplicar la misma factura
+                    const fileHash = [
+                        job?.agent_id ?? 'anon',
+                        job?.file_name ?? 'unknown',
+                        new Date().toISOString().slice(0, 10), // día
+                    ].join('|');
+
+                    // Calcular confianza media si N8N la envió
+                    let confidenceAvg: number | null = null;
+                    const confData = invoiceData._confidence as Record<string, number> | null;
+                    if (confData && typeof confData === 'object') {
+                        const scores = Object.values(confData).filter(v => typeof v === 'number');
+                        if (scores.length > 0) {
+                            confidenceAvg = scores.reduce((a, b) => a + b, 0) / scores.length;
+                        }
+                    }
+
+                    // raw_text_sample: N8N puede enviarlo en el payload como `text_sample`
+                    const rawTextSample = (payload.text_sample as string | undefined)?.slice(0, 1500) ?? null;
+
+                    await supabaseAdmin
+                        .from('ocr_training_examples')
+                        .upsert({
+                            company_name: companyNormalized,
+                            file_hash: fileHash,
+                            raw_text_sample: rawTextSample,
+                            raw_fields: data ?? null,          // campos brutos de N8N antes de normalizar
+                            extracted_fields: invoiceData,
+                            is_validated: false,
+                            confidence_avg: confidenceAvg,
+                            n8n_model: (payload.model as string | undefined) ?? null,
+                            ocr_job_id: job_id,
+                            franchise_id: job?.franchise_id ?? null,
+                        }, { onConflict: 'file_hash', ignoreDuplicates: true });
+                } catch (trainingErr) {
+                    // No bloquear el flujo si falla el guardado del ejemplo
+                    console.warn('[OCR Callback] Training example save failed (non-blocking):', trainingErr);
+                }
+            }
         }
 
         // 6. Broadcast Realtime directo al cliente — sin RLS, entrega inmediata
