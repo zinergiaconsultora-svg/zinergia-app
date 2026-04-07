@@ -2,11 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
 import { User, Mail, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { ZinergiaLogo } from '@/components/ui/ZinergiaLogo';
-import { completeInvitationAction } from '@/app/actions/join';
+import { completeInvitationAction, validateInvitationCode } from '@/app/actions/join';
 
 export default function JoinNetworkPage() {
     const params = useParams();
@@ -23,16 +22,8 @@ export default function JoinNetworkPage() {
 
     useEffect(() => {
         async function validateCode() {
-            const supabase = createClient();
-            const { data, error } = await supabase
-                .from('network_invitations')
-                .select('id, email, role, creator_id')
-                .eq('code', code)
-                .eq('used', false)
-                .gt('expires_at', new Date().toISOString())
-                .single();
-
-            if (error || !data) {
+            const data = await validateInvitationCode(code);
+            if (!data) {
                 setError('El código de invitación no es válido o ya ha sido utilizado.');
             } else {
                 setInvitation(data);
@@ -46,18 +37,15 @@ export default function JoinNetworkPage() {
         e.preventDefault();
         if (!invitation) return;
         setIsSubmitting(true);
-        const supabase = createClient();
 
         try {
-            // 1. Auth Sign Up
+            // 1. Auth Sign Up via Supabase JS (client-side, public anon key is fine here)
+            const { createClient } = await import('@/lib/supabase/client');
+            const supabase = createClient();
             const { error: authError } = await supabase.auth.signUp({
                 email: invitation.email,
                 password,
-                options: {
-                    data: {
-                        full_name: fullName,
-                    }
-                }
+                options: { data: { full_name: fullName } }
             });
 
             if (authError) throw authError;
