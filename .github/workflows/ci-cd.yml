@@ -35,11 +35,33 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
-  # Job 2: Build Application
+  # Job 2: Unit Tests
+  test:
+    runs-on: ubuntu-latest
+    name: Unit Tests
+    needs: lint-and-type
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+  # Job 3: Build Application
   build:
     runs-on: ubuntu-latest
     name: Build Application
-    needs: lint-and-type
+    needs: [lint-and-type, test]
     
     steps:
       - name: Checkout code

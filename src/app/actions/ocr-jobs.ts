@@ -61,6 +61,34 @@ export async function getOcrJobsByClient(clientId: string, limit = 20): Promise<
     await requireServerRole(['admin', 'franchise', 'agent']);
     const supabase = await createClient();
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('No autenticado');
+
+    // Verificar que el cliente pertenece al usuario antes de devolver sus facturas
+    const { data: client } = await supabase
+        .from('clients')
+        .select('id, owner_id, franchise_id')
+        .eq('id', clientId)
+        .single();
+
+    if (!client) throw new Error('Cliente no encontrado');
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, franchise_id')
+        .eq('id', user.id)
+        .single();
+
+    if (!profile) throw new Error('Perfil no encontrado');
+
+    const isAdmin = profile.role === 'admin';
+    const isFranchiseOwner = profile.role === 'franchise' && client.franchise_id === profile.franchise_id;
+    const isOwner = client.owner_id === user.id;
+
+    if (!isAdmin && !isFranchiseOwner && !isOwner) {
+        throw new Error('No autorizado para ver las facturas de este cliente');
+    }
+
     const { data, error } = await supabase
         .from('ocr_jobs')
         .select('id, status, created_at, file_name, file_path, extracted_data, error_message, attempts, client_id')

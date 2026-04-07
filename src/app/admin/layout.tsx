@@ -42,6 +42,12 @@ export default async function AdminLayout({
                         >
                             🎓 Academy
                         </a>
+                        <a
+                            href="/dashboard/network"
+                            className="px-3 py-1.5 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/60 transition-all"
+                        >
+                            🌐 Red
+                        </a>
                     </nav>
                 </div>
                 <div className="flex items-center gap-3">

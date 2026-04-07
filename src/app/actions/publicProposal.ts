@@ -45,7 +45,8 @@ export async function generatePublicLinkAction(proposalId: string): Promise<{ to
             public_expires_at: expiresAt,
             status: 'sent', // Al generar el link, la propuesta pasa a enviada
         })
-        .eq('id', proposalId);
+        .eq('id', proposalId)
+        .eq('agent_id', user.id);
 
     if (error) throw new Error(`Error generando link: ${error.message}`);
 

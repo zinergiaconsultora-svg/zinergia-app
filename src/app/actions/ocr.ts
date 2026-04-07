@@ -3,6 +3,36 @@
 import { env } from '@/lib/env';
 import { createClient } from '@/lib/supabase/server';
 import { InvoiceData } from '@/types/crm';
+import { z } from 'zod';
+
+// Schema de validación para datos crudos del webhook N8N
+// Usa coerce para manejar strings numéricos (formato europeo ya normalizado por N8N)
+const rawInvoiceSchema = z.object({
+    period_days: z.coerce.number().nonnegative().optional(),
+    power_p1: z.coerce.number().nonnegative().optional(),
+    power_p2: z.coerce.number().nonnegative().optional(),
+    power_p3: z.coerce.number().nonnegative().optional(),
+    power_p4: z.coerce.number().nonnegative().optional(),
+    power_p5: z.coerce.number().nonnegative().optional(),
+    power_p6: z.coerce.number().nonnegative().optional(),
+    energy_p1: z.coerce.number().nonnegative().optional(),
+    energy_p2: z.coerce.number().nonnegative().optional(),
+    energy_p3: z.coerce.number().nonnegative().optional(),
+    energy_p4: z.coerce.number().nonnegative().optional(),
+    energy_p5: z.coerce.number().nonnegative().optional(),
+    energy_p6: z.coerce.number().nonnegative().optional(),
+}).passthrough(); // Permite campos adicionales del webhook
+
+function parseRawInvoiceData(rawData: Record<string, unknown>): Record<string, unknown> {
+    const result = rawInvoiceSchema.safeParse(rawData);
+    if (!result.success) {
+        // Log solo el error de validación, no los datos (pueden contener PII)
+        console.warn('[OCR] Raw data validation warnings:', result.error.issues.map(i => i.path.join('.')));
+    }
+    // Devuelve los datos parseados si son válidos, o los originales si no
+    // El normalizer downstream maneja datos incompletos con coerciones propias
+    return result.success ? result.data : rawData;
+}
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 2000;
@@ -157,7 +187,6 @@ export async function analyzeDocumentAction(formData: FormData): Promise<{ jobId
         if (contentType.includes('application/json')) {
             try {
                 const body = await response.json();
-                console.log('[OCR] N8N raw response body:', JSON.stringify(body).slice(0, 500));
 
                 // N8N puede devolver los datos directamente en la respuesta (modo síncrono).
                 // Intentamos extraer datos de distintas estructuras que N8N puede devolver.
@@ -178,28 +207,22 @@ export async function analyzeDocumentAction(formData: FormData): Promise<{ jobId
                     }
                 }
 
-                console.log('[OCR] rawData extracted:', rawData ? Object.keys(rawData).join(', ') : 'null');
-
                 const hasMeaningfulData = rawData && (
                     rawData.client_name || rawData.CLIENTE_NOMBRE || rawData.TITULAR ||
                     rawData.cups || rawData.CUPS || rawData.importe_total || rawData.total ||
                     rawData.power_p1 || rawData.POTENCIA_P1 || rawData.energia_p1 || rawData.ENERGIA_P1
                 );
 
-                if (hasMeaningfulData) {
-                    console.log('[OCR] Sync response detected — updating job and returning data');
+                if (hasMeaningfulData && rawData) {
+                    const validatedData = parseRawInvoiceData(rawData);
                     await supabase.from('ocr_jobs')
-                        .update({ status: 'completed', extracted_data: rawData })
+                        .update({ status: 'completed', extracted_data: validatedData })
                         .eq('id', job.id);
-                    return { jobId: job.id, isMock: false, data: rawData as unknown as InvoiceData };
+                    return { jobId: job.id, isMock: false, data: validatedData as unknown as InvoiceData };
                 }
-
-                console.log('[OCR] No meaningful data in sync response — falling to async callback flow');
-            } catch (parseErr) {
-                console.warn('[OCR] Failed to parse N8N response JSON:', parseErr);
+            } catch {
+                // JSON parse failed — caer al flujo asíncrono
             }
-        } else {
-            console.log('[OCR] N8N response content-type:', contentType, '— not JSON, falling to async');
         }
 
         // Flujo asíncrono: N8N procesará y llamará al callback

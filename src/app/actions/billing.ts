@@ -183,6 +183,20 @@ export async function voidBillingCycle(cycleId: string): Promise<BillingCycle> {
 export async function getWalletBalance(franchiseId: string): Promise<WalletBalance> {
     const supabase = await createClient()
 
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('No autenticado')
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, franchise_id')
+        .eq('id', user.id)
+        .single()
+
+    if (!profile) throw new Error('Perfil no encontrado')
+    if (profile.role !== 'admin' && profile.franchise_id !== franchiseId) {
+        throw new Error('No autorizado')
+    }
+
     const { data, error } = await supabase
         .from('franchise_wallet')
         .select('*')
@@ -213,6 +227,20 @@ export async function getWalletBalance(franchiseId: string): Promise<WalletBalan
  */
 export async function getBillingHistory(franchiseId: string): Promise<BillingCycle[]> {
     const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('No autenticado')
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, franchise_id')
+        .eq('id', user.id)
+        .single()
+
+    if (!profile) throw new Error('Perfil no encontrado')
+    if (profile.role !== 'admin' && profile.franchise_id !== franchiseId) {
+        throw new Error('No autorizado')
+    }
 
     const { data, error } = await supabase
         .from('billing_cycles')

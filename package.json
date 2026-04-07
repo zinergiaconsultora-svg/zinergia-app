@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "supabase:verify": "node scripts/verify-supabase.js",
     "supabase:check": "node scripts/check-setup.js"
   },
