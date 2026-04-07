@@ -13,6 +13,7 @@ export const ManageNetworkView: React.FC = () => {
     const [netStats, setNetStats] = useState({ totalVolumen: 0, monthlyGrowth: 0 });
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [roleFilter, setRoleFilter] = useState<'all' | 'franchise' | 'agent'>('all');
     const [error, setError] = useState<string | null>(null);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'tree' | 'map' | 'intel'>('tree');
@@ -146,13 +147,21 @@ export const ManageNetworkView: React.FC = () => {
                                         />
                                     </div>
 
-                                    <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 hidden lg:flex">
-                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                                    <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider hidden lg:flex">
+                                        <button
+                                            type="button"
+                                            onClick={() => setRoleFilter(roleFilter === 'franchise' ? 'all' : 'franchise')}
+                                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${roleFilter === 'franchise' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-50 text-indigo-600 border-indigo-100 hover:bg-indigo-100'}`}
+                                        >
                                             Franquicia
-                                        </div>
-                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-500 rounded-full border border-slate-200">
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setRoleFilter(roleFilter === 'agent' ? 'all' : 'agent')}
+                                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${roleFilter === 'agent' ? 'bg-slate-700 text-white border-slate-700' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
+                                        >
                                             Colaborador
-                                        </div>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -170,6 +179,7 @@ export const ManageNetworkView: React.FC = () => {
                                     <NetworkTree
                                         data={hierarchy}
                                         searchTerm={searchTerm}
+                                        roleFilter={roleFilter}
                                         onInvite={() => setIsInviteModalOpen(true)}
                                     />
                                     {hierarchy.length === 0 && (

@@ -1,14 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, User, Target, ChevronDown, Users, TrendingUp, BadgeEuro, Mail, Eye } from 'lucide-react';
+import { Building2, User, Target, ChevronDown, Users, TrendingUp, BadgeEuro, Mail, Eye, ShieldCheck } from 'lucide-react';
 import { NetworkUser } from '@/types/crm';
 import { formatCurrency } from '@/lib/utils/format';
+import { toast } from 'sonner';
 
 interface NetworkTreeProps {
     data: NetworkUser[];
     searchTerm?: string;
+    roleFilter?: 'all' | 'franchise' | 'agent';
     onInvite: () => void;
+}
+
+const ROLE_LABEL: Record<string, string> = {
+    franchise: 'Franquicia',
+    agent: 'Agente',
+    admin: 'Admin',
+}
+
+const ROLE_ICON: Record<string, React.ReactNode> = {
+    franchise: <Building2 size={20} strokeWidth={1.5} />,
+    admin: <ShieldCheck size={20} strokeWidth={1.5} />,
+    agent: <User size={20} strokeWidth={1.5} />,
 }
 
 const TreeNode: React.FC<{ node: NetworkUser, depth: number, isLast?: boolean, searchTerm?: string, forceExpand?: boolean }> =
@@ -70,7 +84,7 @@ const TreeNode: React.FC<{ node: NetworkUser, depth: number, isLast?: boolean, s
                                 {node.avatar_url ? (
                                     <Image src={node.avatar_url} alt={node.full_name} fill className="object-cover" sizes="48px" loading="lazy" />
                                 ) : (
-                                    node.role === 'franchise' ? <Building2 size={20} strokeWidth={1.5} /> : <User size={20} strokeWidth={1.5} />
+                                    ROLE_ICON[node.role] ?? <User size={20} strokeWidth={1.5} />
                                 )}
                             </div>
 
@@ -87,12 +101,12 @@ const TreeNode: React.FC<{ node: NetworkUser, depth: number, isLast?: boolean, s
                                     </h4>
                                     <span className={`
                                     px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-widest border shadow-sm
-                                    ${node.role === 'franchise'
+                                    ${node.role === 'franchise' || node.role === 'admin'
                                             ? 'bg-white/10 border-white/10 text-indigo-100'
                                             : 'bg-indigo-50 border-indigo-100 text-indigo-600'
                                         }
                                 `}>
-                                        {node.role === 'franchise' ? 'Franquicia' : 'Agente'}
+                                        {ROLE_LABEL[node.role] ?? node.role}
                                     </span>
                                 </div>
 
@@ -132,10 +146,10 @@ const TreeNode: React.FC<{ node: NetworkUser, depth: number, isLast?: boolean, s
                                 ${node.role === 'franchise' ? 'border-white/10' : 'border-slate-200/50'}
                                 opacity-100 sm:opacity-0 sm:group-hover:opacity-100
                             `}>
-                                <button className={`p-2 rounded-full transition-colors ${node.role === 'franchise' ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-white hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 shadow-sm border border-slate-100'}`} title="Ver Perfil">
+                                <button type="button" onClick={() => window.location.href = `/dashboard/profile/${node.id}`} className={`p-2 rounded-full transition-colors ${node.role === 'franchise' ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-white hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 shadow-sm border border-slate-100'}`} title="Ver Perfil">
                                     <Eye size={16} />
                                 </button>
-                                <button className={`p-2 rounded-full transition-colors ${node.role === 'franchise' ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-white hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 shadow-sm border border-slate-100'}`} title="Enviar Mensaje">
+                                <button type="button" onClick={() => { if (node.email) { navigator.clipboard.writeText(node.email); toast.success('Email copiado'); } else { toast.info('Sin email registrado'); } }} className={`p-2 rounded-full transition-colors ${node.role === 'franchise' ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-white hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 shadow-sm border border-slate-100'}`} title="Copiar email">
                                     <Mail size={16} />
                                 </button>
                             </div>
@@ -211,7 +225,9 @@ const FilteredTreeNode: React.FC<FilteredTreeNodeProps> = (props) => {
     return <TreeNode {...props} depth={props.depth || 0} forceExpand={!!forceExpand} />;
 };
 
-export const NetworkTree: React.FC<NetworkTreeProps> = ({ data, searchTerm, onInvite }) => {
+export const NetworkTree: React.FC<NetworkTreeProps> = ({ data, searchTerm, roleFilter = 'all', onInvite }) => {
+    const filtered = roleFilter === 'all' ? data : data.filter(n => n.role === roleFilter || (n.children || []).some(c => c.role === roleFilter));
+
     if (!data.length) {
         return (
             <div className="bg-white/60 backdrop-blur-md rounded-[2rem] p-16 text-center border border-slate-200/50 shadow-sm flex flex-col items-center">
@@ -223,6 +239,7 @@ export const NetworkTree: React.FC<NetworkTreeProps> = ({ data, searchTerm, onIn
                     Aún no tienes colaboradores o franquicias bajo tu jerarquía. ¡Es el momento de empezar a construir tu imperio!
                 </p>
                 <button
+                    type="button"
                     onClick={onInvite}
                     className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20"
                 >
@@ -235,7 +252,7 @@ export const NetworkTree: React.FC<NetworkTreeProps> = ({ data, searchTerm, onIn
     return (
         <div className="py-2">
             <div className="max-w-5xl mx-auto">
-                {data.map(rootNode => (
+                {filtered.map(rootNode => (
                     <FilteredTreeNode
                         key={rootNode.id}
                         node={rootNode}
