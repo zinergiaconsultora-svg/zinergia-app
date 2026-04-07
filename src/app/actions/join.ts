@@ -13,14 +13,17 @@ export async function validateInvitationCode(
 
     const { data, error } = await supabase
         .from('network_invitations')
-        .select('id, email, role, creator_id')
+        .select('id, email, role, creator_id, expires_at')
         .eq('code', code)
         .eq('used', false)
-        .gt('expires_at', new Date().toISOString())
         .maybeSingle()
 
     if (error || !data) return null
-    return data
+
+    // Check expiry only if expires_at is set (null = no expiry)
+    if (data.expires_at && new Date(data.expires_at) < new Date()) return null
+
+    return { id: data.id, email: data.email, role: data.role, creator_id: data.creator_id }
 }
 
 /**
