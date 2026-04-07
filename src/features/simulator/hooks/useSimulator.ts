@@ -39,6 +39,11 @@ interface SimulatorState {
     clientProfile?: { tags: string[]; sales_argument: string; };
     pdfUrl: string | null;
     savedProposalId: string | null;
+
+    // Fase 2: corrección humana en el loop
+    ocrJobId: string | null;
+    originalInvoiceData: InvoiceData | null; // datos tal como los extrajo el OCR (sin editar)
+    ocrDataConfirmed: boolean;               // true cuando el agente ha pulsado "Confirmar datos"
 }
 
 type SimulatorAction =
@@ -54,6 +59,8 @@ type SimulatorAction =
     | { type: 'SET_CLIENT_PROFILE'; payload: { tags: string[]; sales_argument: string; } }
     | { type: 'SET_PDF_URL'; payload: string | null }
     | { type: 'SET_SAVED_PROPOSAL_ID'; payload: string }
+    | { type: 'SET_OCR_JOB_ID'; payload: string }
+    | { type: 'SET_OCR_DATA_CONFIRMED' }
     | { type: 'RESET' }
     | { type: 'GO_BACK_TO_STEP1' };
 
@@ -76,6 +83,9 @@ const initialState: SimulatorState = {
     clientProfile: undefined,
     pdfUrl: null,
     savedProposalId: null,
+    ocrJobId: null,
+    originalInvoiceData: null,
+    ocrDataConfirmed: false,
 };
 
 function simulatorReducer(state: SimulatorState, action: SimulatorAction): SimulatorState {
@@ -83,7 +93,19 @@ function simulatorReducer(state: SimulatorState, action: SimulatorAction): Simul
         case 'START_ANALYSIS':
             return { ...state, isAnalyzing: true, uploadError: null, isMockMode: false };
         case 'SET_INVOICE_DATA':
-            return { ...state, invoiceData: action.payload, step: 2, isAnalyzing: false };
+            return {
+                ...state,
+                invoiceData: action.payload,
+                // Guardar snapshot original solo la primera vez (al llegar del OCR)
+                originalInvoiceData: state.originalInvoiceData ?? action.payload,
+                ocrDataConfirmed: false,
+                step: 2,
+                isAnalyzing: false,
+            };
+        case 'SET_OCR_JOB_ID':
+            return { ...state, ocrJobId: action.payload };
+        case 'SET_OCR_DATA_CONFIRMED':
+            return { ...state, ocrDataConfirmed: true };
         case 'SET_ERROR':
             return { ...state, uploadError: action.payload, isAnalyzing: false };
         case 'SET_RESULTS':
@@ -228,6 +250,10 @@ export function useSimulator() {
 
             if (result.data) {
                 dispatch({ type: 'SET_MOCK_MODE', payload: !!result.isMock });
+                // Guardar jobId incluso en modo síncrono para habilitar "Confirmar datos"
+                if (result.jobId && !result.isMock) {
+                    dispatch({ type: 'SET_OCR_JOB_ID', payload: result.jobId });
+                }
                 dispatch({ type: 'SET_INVOICE_DATA', payload: result.data });
                 return;
             }
@@ -237,6 +263,7 @@ export function useSimulator() {
             }
 
             dispatch({ type: 'SET_LOADING_MESSAGE', payload: 'Procesando documento con IA...' });
+            dispatch({ type: 'SET_OCR_JOB_ID', payload: result.jobId! });
 
             const supabase = createClient();
 
@@ -456,6 +483,24 @@ export function useSimulator() {
         dispatch({ type: 'SET_STEP', payload: step });
     }, []);
 
+    // Fase 2: confirmar datos OCR y guardar correcciones en el sistema de memoria
+    const confirmOcrData = useCallback(async (): Promise<{ correctedFieldsCount: number }> => {
+        if (!state.ocrJobId || state.isMockMode) {
+            dispatch({ type: 'SET_OCR_DATA_CONFIRMED' });
+            return { correctedFieldsCount: 0 };
+        }
+        try {
+            const { confirmOcrExtractionAction } = await import('@/app/actions/ocr-confirm');
+            const result = await confirmOcrExtractionAction(state.ocrJobId, state.invoiceData);
+            dispatch({ type: 'SET_OCR_DATA_CONFIRMED' });
+            return { correctedFieldsCount: result.correctedFieldsCount };
+        } catch {
+            // No bloquear el flujo si falla la confirmación
+            dispatch({ type: 'SET_OCR_DATA_CONFIRMED' });
+            return { correctedFieldsCount: 0 };
+        }
+    }, [state.ocrJobId, state.invoiceData, state.isMockMode]);
+
     return {
         ...state,
         setStep,
@@ -466,5 +511,6 @@ export function useSimulator() {
         runComparison,
         reset: handleReset,
         goBackToStep1,
+        confirmOcrData,
     };
 }
