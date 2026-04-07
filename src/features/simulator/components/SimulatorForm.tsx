@@ -131,33 +131,31 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                         </motion.button>
                     )}
 
-                    {/* Confirm OCR data button — shown for all real (non-mock) OCR results */}
-                    {!isMockMode && onConfirmOcrData && (
-                        ocrDataConfirmed ? (
-                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
+                    {/* Confirm OCR data button */}
+                    {ocrDataConfirmed ? (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
+                            <ShieldCheck size={14} />
+                            Datos confirmados
+                        </div>
+                    ) : (
+                        <motion.button
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
+                            onClick={handleConfirm}
+                            disabled={isConfirming}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-emerald-700 transition-colors disabled:opacity-60"
+                        >
+                            {isConfirming ? (
+                                <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                    className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full"
+                                />
+                            ) : (
                                 <ShieldCheck size={14} />
-                                Datos confirmados
-                            </div>
-                        ) : (
-                            <motion.button
-                                whileHover={{ scale: 1.03 }}
-                                whileTap={{ scale: 0.97 }}
-                                onClick={handleConfirm}
-                                disabled={isConfirming}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-emerald-700 transition-colors disabled:opacity-60"
-                            >
-                                {isConfirming ? (
-                                    <motion.div
-                                        animate={{ rotate: 360 }}
-                                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                                        className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full"
-                                    />
-                                ) : (
-                                    <ShieldCheck size={14} />
-                                )}
-                                Confirmar datos
-                            </motion.button>
-                        )
+                            )}
+                            Confirmar datos
+                        </motion.button>
                     )}
 
                     <div className="text-right">
