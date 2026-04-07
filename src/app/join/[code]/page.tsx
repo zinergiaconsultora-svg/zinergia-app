@@ -66,14 +66,30 @@ export default function JoinNetworkPage() {
                 password,
                 options: { data: { full_name: fullName } },
             });
-            if (authError) throw authError;
+
+            if (authError) {
+                if (authError.message.toLowerCase().includes('rate limit') || authError.message.toLowerCase().includes('email rate')) {
+                    throw new Error('Demasiados intentos. Por favor espera unos minutos e inténtalo de nuevo.');
+                }
+                // User might already exist in auth — try signing in directly
+                if (authError.message.toLowerCase().includes('already registered') || authError.message.toLowerCase().includes('user already')) {
+                    // fall through to sign in
+                } else {
+                    throw authError;
+                }
+            }
 
             // 2. Sign in immediately so the server action can read the session
             const { error: signInError } = await supabase.auth.signInWithPassword({
                 email: invitation.email,
                 password,
             });
-            if (signInError) throw signInError;
+            if (signInError) {
+                if (signInError.message.toLowerCase().includes('not confirmed') || signInError.message.toLowerCase().includes('email not confirmed')) {
+                    throw new Error('Debes confirmar tu email antes de acceder. Revisa tu bandeja de entrada.');
+                }
+                throw signInError;
+            }
 
             // 3. Complete invitation server-side (sets role, parent, marks used)
             await completeInvitationAction(invitation.id, fullName);
@@ -141,8 +157,9 @@ export default function JoinNetworkPage() {
             >
                 {/* Logo */}
                 <div className="text-center mb-8">
-                    <ZinergiaLogo className="h-9 mx-auto mb-6" />
-                    <h1 className="text-2xl font-bold text-slate-900 mb-1">Bienvenido a Zinergia</h1>
+                    <div className="w-40 mx-auto mb-5">
+                        <ZinergiaLogo />
+                    </div>
                     <p className="text-sm text-slate-500">Completa tu registro para acceder a la plataforma</p>
                 </div>
 
