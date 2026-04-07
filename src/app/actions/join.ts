@@ -1,15 +1,17 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 /**
  * Validates an invitation code publicly (no auth required).
- * Uses service-level access to bypass RLS for public join links.
+ * Uses service role to bypass RLS — safe because we only return
+ * non-sensitive fields needed to render the join form.
  */
 export async function validateInvitationCode(
     code: string
 ): Promise<{ id: string; email: string; role: string; creator_id: string } | null> {
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const { data, error } = await supabase
         .from('network_invitations')
