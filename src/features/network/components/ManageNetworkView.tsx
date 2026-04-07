@@ -129,65 +129,79 @@ export const ManageNetworkView: React.FC = () => {
 
                 <div className="min-h-[500px]">
                     {activeTab === 'tree' ? (
-                        <div className="bg-white/50 backdrop-blur-sm border border-slate-200/50 rounded-[2.5rem] p-8">
-                            <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
-                                <h2 className="text-xl font-bold text-slate-900">Organigrama de Red</h2>
+                        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 md:p-8">
+                            {/* Toolbar */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                                <div>
+                                    <h2 className="text-lg font-bold text-slate-900">Organigrama de Red</h2>
+                                    <p className="text-xs text-slate-400 mt-0.5">Estructura jerárquica de tu equipo</p>
+                                </div>
 
-                                <div className="flex items-center gap-4 w-full md:w-auto">
-                                    <div className="relative group flex-1 md:flex-none">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <Search size={16} className="text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                                        </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {/* Search */}
+                                    <div className="relative">
+                                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                         <input
                                             type="text"
-                                            placeholder="Buscar agente..."
+                                            placeholder="Buscar por nombre o email..."
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
-                                            className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all w-full md:w-64"
+                                            className="pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none transition-all w-56"
                                         />
                                     </div>
 
-                                    <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider hidden lg:flex">
+                                    {/* Role filters */}
+                                    <div className="flex items-center gap-1.5">
                                         <button
                                             type="button"
                                             onClick={() => setRoleFilter(roleFilter === 'franchise' ? 'all' : 'franchise')}
-                                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${roleFilter === 'franchise' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-50 text-indigo-600 border-indigo-100 hover:bg-indigo-100'}`}
+                                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border ${roleFilter === 'franchise'
+                                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-200'
+                                                : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-indigo-200 hover:text-indigo-600'
+                                            }`}
                                         >
-                                            Franquicia
+                                            <Building2 size={13} /> Franquicia
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setRoleFilter(roleFilter === 'agent' ? 'all' : 'agent')}
-                                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${roleFilter === 'agent' ? 'bg-slate-700 text-white border-slate-700' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
+                                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border ${roleFilter === 'agent'
+                                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-200'
+                                                : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-emerald-200 hover:text-emerald-600'
+                                            }`}
                                         >
-                                            Colaborador
+                                            <Users size={13} /> Colaborador
                                         </button>
                                     </div>
                                 </div>
                             </div>
 
+                            {/* Divider */}
+                            <div className="h-px bg-slate-100 mb-6" />
+
                             {isLoading ? (
-                                <div className="flex items-center justify-center p-20">
-                                    <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                                    <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                                    <p className="text-sm text-slate-400">Cargando red...</p>
                                 </div>
                             ) : error ? (
-                                <div className="text-red-500 text-center py-12 bg-red-50 rounded-3xl border border-red-100">
-                                    {error}
+                                <div className="flex flex-col items-center justify-center py-16 text-center">
+                                    <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mb-4">
+                                        <Search size={20} className="text-red-400" />
+                                    </div>
+                                    <p className="text-sm font-semibold text-red-500 mb-1">Error al cargar</p>
+                                    <p className="text-xs text-slate-400 max-w-xs">{error}</p>
+                                    <button type="button" onClick={loadData} className="mt-4 px-4 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors">
+                                        Reintentar
+                                    </button>
                                 </div>
                             ) : (
-                                <div className="flex flex-col gap-6">
-                                    <NetworkTree
-                                        data={hierarchy}
-                                        searchTerm={searchTerm}
-                                        roleFilter={roleFilter}
-                                        onInvite={() => setIsInviteModalOpen(true)}
-                                    />
-                                    {hierarchy.length === 0 && (
-                                        <div className="text-center py-12 text-slate-400 font-light italic">
-                                            No hay niveles registrados en tu red todavía. Empieza invitando a alguien.
-                                        </div>
-                                    )}
-                                </div>
+                                <NetworkTree
+                                    data={hierarchy}
+                                    searchTerm={searchTerm}
+                                    roleFilter={roleFilter}
+                                    onInvite={() => setIsInviteModalOpen(true)}
+                                />
                             )}
                         </div>
                     ) : activeTab === 'map' ? (
