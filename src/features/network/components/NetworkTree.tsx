@@ -4,12 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Building2, User, ChevronDown, Users, TrendingUp,
     Mail, Eye, ShieldCheck, Pencil, X, Save,
-    UserPlus, Phone, MapPin
+    UserPlus, Phone, MapPin, Trash2, UserX, AlertTriangle
 } from 'lucide-react';
 import { NetworkUser } from '@/types/crm';
 import { formatCurrency } from '@/lib/utils/format';
 import { toast } from 'sonner';
-import { updateNetworkUserAction } from '@/app/actions/network';
+import { updateNetworkUserAction, deleteProfileAction, deactivateProfileAction } from '@/app/actions/network';
 
 interface NetworkTreeProps {
     data: NetworkUser[];
@@ -112,6 +112,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ node, onClose, onSaved })
     const [fullName, setFullName] = useState(node.full_name);
     const [email, setEmail] = useState(node.email);
     const [saving, setSaving] = useState(false);
+    const [confirm, setConfirm] = useState<'delete' | 'deactivate' | null>(null);
+    const [actionLoading, setActionLoading] = useState(false);
     const cfg = ROLE_CONFIG[node.role] ?? DEFAULT_ROLE;
 
     const handleSave = async (e: React.FormEvent) => {
@@ -126,6 +128,38 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ node, onClose, onSaved })
             toast.error(err instanceof Error ? err.message : 'Error al guardar');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        setActionLoading(true);
+        try {
+            await deleteProfileAction(node.id);
+            toast.success(`${node.full_name} eliminado permanentemente`);
+            onSaved({ full_name: '[eliminado]' });
+            onClose();
+            // Reload the page to refresh the tree
+            window.location.reload();
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Error al eliminar');
+        } finally {
+            setActionLoading(false);
+            setConfirm(null);
+        }
+    };
+
+    const handleDeactivate = async () => {
+        setActionLoading(true);
+        try {
+            await deactivateProfileAction(node.id);
+            toast.success(`${node.full_name} desactivado`);
+            onClose();
+            window.location.reload();
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Error al desactivar');
+        } finally {
+            setActionLoading(false);
+            setConfirm(null);
         }
     };
 
@@ -154,7 +188,48 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ node, onClose, onSaved })
                     </button>
                 </div>
 
-                <div className="h-px bg-slate-100 mx-6" />
+                <div className="h-px bg-slate-100" />
+
+                {/* Confirm overlay */}
+                <AnimatePresence>
+                    {confirm && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            className={`mx-6 mt-5 p-4 rounded-2xl border ${confirm === 'delete' ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100'}`}
+                        >
+                            <div className="flex items-start gap-3 mb-4">
+                                <AlertTriangle size={18} className={confirm === 'delete' ? 'text-red-500 shrink-0 mt-0.5' : 'text-amber-500 shrink-0 mt-0.5'} />
+                                <div>
+                                    <p className={`text-sm font-bold mb-1 ${confirm === 'delete' ? 'text-red-700' : 'text-amber-700'}`}>
+                                        {confirm === 'delete' ? '¿Eliminar permanentemente?' : '¿Desactivar cuenta?'}
+                                    </p>
+                                    <p className={`text-xs leading-relaxed ${confirm === 'delete' ? 'text-red-600' : 'text-amber-600'}`}>
+                                        {confirm === 'delete'
+                                            ? `Se eliminará la cuenta de ${node.full_name} y todos sus datos. Esta acción no se puede deshacer.`
+                                            : `${node.full_name} perderá acceso a la plataforma pero sus datos se conservarán.`
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <button type="button" onClick={() => setConfirm(null)}
+                                    className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+                                    Cancelar
+                                </button>
+                                <button type="button" disabled={actionLoading}
+                                    onClick={confirm === 'delete' ? handleDelete : handleDeactivate}
+                                    className={`flex-1 py-2.5 rounded-xl text-xs font-bold text-white transition-all flex items-center justify-center gap-1.5 disabled:opacity-60 ${confirm === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'}`}>
+                                    {actionLoading
+                                        ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        : confirm === 'delete' ? 'Eliminar' : 'Desactivar'
+                                    }
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 <form onSubmit={handleSave} className="p-6 space-y-4">
                     <div>
@@ -192,6 +267,27 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ node, onClose, onSaved })
                                 : <><Save size={15} /> Guardar</>
                             }
                         </button>
+                    </div>
+
+                    {/* Danger zone */}
+                    <div className="pt-2 border-t border-slate-100">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3">Zona de peligro</p>
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setConfirm('deactivate')}
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-100 transition-colors"
+                            >
+                                <UserX size={14} /> Desactivar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setConfirm('delete')}
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 transition-colors"
+                            >
+                                <Trash2 size={14} /> Eliminar
+                            </button>
+                        </div>
                     </div>
                 </form>
             </motion.div>
