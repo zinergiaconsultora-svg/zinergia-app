@@ -105,6 +105,82 @@ export async function getOcrJobsByClient(clientId: string, limit = 20): Promise<
  * Comprueba si ya existe una factura completada con el mismo CUPS y el mismo mes/año.
  * Devuelve los datos básicos del job previo, o null si no hay duplicado.
  */
+export interface PreviousInvoiceComparison {
+    invoiceDate: string | null;
+    totalEnergyKwh: number;
+    totalAmountEur: number | null;
+    energyByPeriod: Record<string, number>;
+}
+
+/**
+ * Busca la factura anterior más reciente del mismo CUPS (excluyendo la fecha actual)
+ * y devuelve sus datos de consumo para mostrar el delta al usuario.
+ */
+export async function getPreviousInvoiceData(
+    cups: string,
+    currentInvoiceDate: string,
+): Promise<PreviousInvoiceComparison | null> {
+    if (!cups || cups.length < 18) return null;
+
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data, error } = await supabase
+        .from('ocr_jobs')
+        .select('extracted_data, created_at')
+        .eq('agent_id', user.id)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+    if (error || !data) return null;
+
+    // Extraer mes/año de la fecha actual para excluir el mismo período
+    const isoMatch = currentInvoiceDate?.match(/(\d{4})-(\d{2})/);
+    const dmyMatch = currentInvoiceDate?.match(/\d{2}\/(\d{2})\/(\d{4})/);
+    const myMatch  = currentInvoiceDate?.match(/(\d{2})\/(\d{4})/);
+    let currentYM: string | null = null;
+    if (isoMatch)      currentYM = `${isoMatch[1]}-${isoMatch[2]}`;
+    else if (dmyMatch) currentYM = `${dmyMatch[2]}-${dmyMatch[1]}`;
+    else if (myMatch)  currentYM = `${myMatch[2]}-${myMatch[1]}`;
+
+    for (const job of data) {
+        const ext = job.extracted_data as Record<string, unknown> | null;
+        if (!ext) continue;
+        const jobCups = String(ext.cups ?? '').trim().toUpperCase();
+        if (jobCups !== cups.trim().toUpperCase()) continue;
+
+        // Excluir el mismo mes/año (misma factura que ya estamos analizando)
+        const jDate = String(ext.invoice_date ?? '');
+        const jIso = jDate.match(/(\d{4})-(\d{2})/);
+        const jDmy = jDate.match(/\d{2}\/(\d{2})\/(\d{4})/);
+        const jMy  = jDate.match(/(\d{2})\/(\d{4})/);
+        let jobYM: string | null = null;
+        if (jIso)      jobYM = `${jIso[1]}-${jIso[2]}`;
+        else if (jDmy) jobYM = `${jDmy[2]}-${jDmy[1]}`;
+        else if (jMy)  jobYM = `${jMy[2]}-${jMy[1]}`;
+        if (currentYM && jobYM === currentYM) continue;
+
+        const energyByPeriod: Record<string, number> = {};
+        let totalEnergy = 0;
+        for (let p = 1; p <= 6; p++) {
+            const v = Number(ext[`energy_p${p}`] ?? 0);
+            if (v > 0) { energyByPeriod[`p${p}`] = v; totalEnergy += v; }
+        }
+        if (totalEnergy === 0) continue;
+
+        return {
+            invoiceDate: ext.invoice_date ? String(ext.invoice_date) : null,
+            totalEnergyKwh: totalEnergy,
+            totalAmountEur: ext.total_amount ? Number(ext.total_amount) : null,
+            energyByPeriod,
+        };
+    }
+
+    return null;
+}
+
 export async function checkDuplicateInvoice(
     cups: string,
     invoiceDate: string,

@@ -94,6 +94,26 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         setSuggestions({});
     };
 
+    // Comparativa con factura anterior del mismo CUPS
+    const [prevInvoice, setPrevInvoice] = useState<{ totalEnergyKwh: number; totalAmountEur: number | null; invoiceDate: string | null } | null>(null);
+    useEffect(() => {
+        if (!data.cups || !data.invoice_date || isMockMode) return;
+        setPrevInvoice(null);
+        let cancelled = false;
+        import('@/app/actions/ocr-jobs').then(({ getPreviousInvoiceData }) => {
+            getPreviousInvoiceData(data.cups!, data.invoice_date!).then(result => {
+                if (!cancelled) setPrevInvoice(result);
+            }).catch(() => {});
+        });
+        return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [data.cups, data.invoice_date, isMockMode]);
+
+    // Energía total actual
+    const totalEnergyNow = useMemo(() =>
+        [1, 2, 3, 4, 5, 6].reduce((sum, p) => sum + ((data[`energy_p${p}` as keyof InvoiceData] as number) || 0), 0),
+    [data]);
+
     // Detección de factura duplicada (mismo CUPS + mismo mes)
     const [duplicateInfo, setDuplicateInfo] = useState<{ createdAt: string; invoiceNumber: string | null } | null>(null);
     useEffect(() => {
@@ -318,6 +338,40 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                     </div>
                 </div>
             </div>
+
+            {/* Banner: comparativa con factura anterior */}
+            {prevInvoice && totalEnergyNow > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-4 flex items-center gap-3 bg-indigo-50 border border-indigo-200 rounded-2xl px-4 py-3"
+                >
+                    <Activity size={16} className="text-indigo-500 flex-shrink-0" />
+                    <div className="flex-1 text-sm text-indigo-800">
+                        <span className="font-bold">Comparativa con factura anterior</span>
+                        {prevInvoice.invoiceDate && (
+                            <span className="text-indigo-600 font-medium"> ({prevInvoice.invoiceDate})</span>
+                        )}
+                        {' — '}
+                        {(() => {
+                            const delta = totalEnergyNow - prevInvoice.totalEnergyKwh;
+                            const pct = prevInvoice.totalEnergyKwh > 0
+                                ? Math.round((delta / prevInvoice.totalEnergyKwh) * 100)
+                                : 0;
+                            const up = delta > 0;
+                            return (
+                                <span className={`font-bold ${up ? 'text-red-600' : 'text-emerald-600'}`}>
+                                    {up ? '▲' : '▼'} {Math.abs(pct)}% consumo ({up ? '+' : ''}{Math.round(delta)} kWh)
+                                </span>
+                            );
+                        })()}
+                        <span className="text-indigo-500 ml-2 text-xs">
+                            Anterior: {Math.round(prevInvoice.totalEnergyKwh)} kWh
+                            {prevInvoice.totalAmountEur !== null && ` · ${prevInvoice.totalAmountEur.toFixed(2)} €`}
+                        </span>
+                    </div>
+                </motion.div>
+            )}
 
             {/* Banner: correcciones automáticas disponibles */}
             {!suggestionsApplied && Object.keys(suggestions).length > 0 && (
