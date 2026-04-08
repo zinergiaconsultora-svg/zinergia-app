@@ -86,6 +86,87 @@ export async function confirmOcrExtractionAction(
     };
 }
 
+// ── Analytics de precisión OCR ────────────────────────────────────────────────
+
+export interface OcrCompanyStats {
+    company_name: string;
+    total_examples: number;
+    validated_count: number;
+    correction_rate: number;   // 0-1: porcentaje de validaciones que tenían correcciones
+    avg_confidence: number;    // 0-1: confianza media del OCR para esta empresa
+    most_corrected_field: string | null;
+}
+
+/**
+ * Devuelve estadísticas de precisión OCR agrupadas por comercializadora.
+ * Solo accesible para admin.
+ */
+export async function getOcrAccuracyStats(): Promise<OcrCompanyStats[]> {
+    const { requireServerRole } = await import('@/lib/auth/permissions');
+    await requireServerRole(['admin']);
+
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceKey) return [];
+    const { createClient: createSupabase } = await import('@supabase/supabase-js');
+    const admin = createSupabase(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
+
+    const { data, error } = await admin
+        .from('ocr_training_examples')
+        .select('company_name, is_validated, corrected_fields, extracted_fields')
+        .not('company_name', 'is', null)
+        .limit(500);
+
+    if (error || !data) return [];
+
+    const grouped: Record<string, {
+        total: number;
+        validated: number;
+        withCorrections: number;
+        confidenceSum: number;
+        confidenceCount: number;
+        fieldCorrections: Record<string, number>;
+    }> = {};
+
+    for (const row of data) {
+        const co = String(row.company_name ?? '').trim();
+        if (!co) continue;
+        if (!grouped[co]) grouped[co] = { total: 0, validated: 0, withCorrections: 0, confidenceSum: 0, confidenceCount: 0, fieldCorrections: {} };
+        const g = grouped[co];
+        g.total++;
+        if (row.is_validated) g.validated++;
+        if (row.corrected_fields && Object.keys(row.corrected_fields as object).length > 0) {
+            g.withCorrections++;
+            for (const field of Object.keys(row.corrected_fields as object)) {
+                g.fieldCorrections[field] = (g.fieldCorrections[field] ?? 0) + 1;
+            }
+        }
+        // Extraer confianza media del extracted_fields._confidence si existe
+        const conf = (row.extracted_fields as Record<string, unknown> | null)?._confidence as Record<string, number> | undefined;
+        if (conf) {
+            const vals = Object.values(conf).filter((v): v is number => typeof v === 'number');
+            if (vals.length > 0) {
+                g.confidenceSum += vals.reduce((a, b) => a + b, 0) / vals.length;
+                g.confidenceCount++;
+            }
+        }
+    }
+
+    return Object.entries(grouped)
+        .map(([company_name, g]) => {
+            const mostCorrectedField = Object.entries(g.fieldCorrections)
+                .sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+            return {
+                company_name,
+                total_examples: g.total,
+                validated_count: g.validated,
+                correction_rate: g.validated > 0 ? g.withCorrections / g.validated : 0,
+                avg_confidence: g.confidenceCount > 0 ? g.confidenceSum / g.confidenceCount : 0,
+                most_corrected_field: mostCorrectedField,
+            };
+        })
+        .sort((a, b) => b.total_examples - a.total_examples);
+}
+
 // ── Sugerencias automáticas ───────────────────────────────────────────────────
 
 /**

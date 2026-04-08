@@ -12,13 +12,19 @@ import {
     Receipt,
     BadgePercent,
     Layers,
-    ArrowUpRight
+    ArrowUpRight,
+    BrainCircuit,
 } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import type { AdminStats, FranchiseWithAgents, AgentProfile } from '@/app/actions/admin';
 import FranchiseList from './FranchiseList';
 import { formatCurrency } from '@/lib/utils/format';
+
+const OcrAccuracyPanel = dynamic(() => import('./OcrAccuracyPanel'), {
+    ssr: false,
+    loading: () => <div className="h-32 bg-slate-100/50 dark:bg-slate-800/30 animate-pulse rounded-xl" />,
+});
 
 const OcrJobsPanel = dynamic(() => import('@/features/crm/components/OcrJobsPanel'), {
     ssr: false,
@@ -186,6 +192,12 @@ export default function AdminDashboard({ stats, franchises, unassignedAgents }: 
                         </div>
                     </div>
 
+                </motion.div>
+
+                {/* OCR Accuracy Analytics */}
+                <motion.div variants={item} className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border border-white/80 dark:border-white/10 shadow-lg p-6 hover:shadow-xl transition-all">
+                    <SectionHeader title="Precisión OCR por Comercializadora" icon={BrainCircuit} />
+                    <OcrAccuracyPanel />
                 </motion.div>
 
                 {/* Franchise List Section */}
