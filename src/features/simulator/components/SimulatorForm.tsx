@@ -63,6 +63,37 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     const [localConfirmed, setLocalConfirmed] = useState(false);
     const pdfViewerRef = useRef<PdfViewerHandle>(null);
 
+    // Correcciones automáticas por patrón
+    const [suggestions, setSuggestions] = useState<Record<string, unknown>>({});
+    const [suggestionsApplied, setSuggestionsApplied] = useState(false);
+    useEffect(() => {
+        if (!data.company_name || isMockMode) return;
+        setSuggestions({});
+        setSuggestionsApplied(false);
+        let cancelled = false;
+        import('@/app/actions/ocr-confirm').then(({ getSuggestedCorrections }) => {
+            getSuggestedCorrections(data.company_name!).then(result => {
+                if (!cancelled && Object.keys(result).length > 0) setSuggestions(result);
+            }).catch(() => {});
+        });
+        return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [data.company_name, isMockMode]);
+
+    const applySuggestions = () => {
+        const merged = { ...data } as Record<string, unknown>;
+        for (const [field, value] of Object.entries(suggestions)) {
+            merged[field] = value;
+        }
+        onUpdate('company_name', merged.company_name as string); // trigger UPDATE_INVOICE_FIELDS via full update
+        // Apply each field
+        for (const [field, value] of Object.entries(suggestions)) {
+            onUpdate(field as keyof InvoiceData, value as InvoiceData[keyof InvoiceData]);
+        }
+        setSuggestionsApplied(true);
+        setSuggestions({});
+    };
+
     // Detección de factura duplicada (mismo CUPS + mismo mes)
     const [duplicateInfo, setDuplicateInfo] = useState<{ createdAt: string; invoiceNumber: string | null } | null>(null);
     useEffect(() => {
@@ -287,6 +318,29 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                     </div>
                 </div>
             </div>
+
+            {/* Banner: correcciones automáticas disponibles */}
+            {!suggestionsApplied && Object.keys(suggestions).length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-4 flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3"
+                >
+                    <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
+                    <p className="text-sm text-emerald-800 font-medium flex-1">
+                        <span className="font-bold">Correcciones aprendidas disponibles</span> — basadas en {Object.keys(suggestions).length} campo{Object.keys(suggestions).length > 1 ? 's' : ''} corregido{Object.keys(suggestions).length > 1 ? 's' : ''} frecuentemente para {data.company_name}.
+                    </p>
+                    <motion.button
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                        type="button"
+                        onClick={applySuggestions}
+                        className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors"
+                    >
+                        Aplicar
+                    </motion.button>
+                </motion.div>
+            )}
 
             {/* Banner: factura duplicada detectada */}
             {duplicateInfo && (

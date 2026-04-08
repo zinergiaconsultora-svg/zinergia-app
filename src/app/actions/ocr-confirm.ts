@@ -86,6 +86,68 @@ export async function confirmOcrExtractionAction(
     };
 }
 
+// ── Sugerencias automáticas ───────────────────────────────────────────────────
+
+/**
+ * Para una empresa dada, analiza los ejemplos de entrenamiento validados y
+ * devuelve los campos que el agente ha corregido al mismo valor ≥ minCount veces.
+ * Útil para pre-aplicar correcciones recurrentes antes de que el agente tenga que hacerlo.
+ */
+export async function getSuggestedCorrections(
+    companyName: string,
+    minCount = 3,
+): Promise<Record<string, unknown>> {
+    if (!companyName) return {};
+
+    const normalized = normalizeCompanyName(companyName);
+    if (!normalized) return {};
+
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceKey) return {};
+    const { createClient: createSupabase } = await import('@supabase/supabase-js');
+    const admin = createSupabase(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
+
+    const { data, error } = await admin
+        .from('ocr_training_examples')
+        .select('corrected_fields')
+        .eq('company_name', normalized)
+        .eq('is_validated', true)
+        .not('corrected_fields', 'is', null)
+        .limit(100);
+
+    if (error || !data || data.length === 0) return {};
+
+    // Contar cuántas veces aparece cada valor corregido por campo
+    const counts: Record<string, Map<string, number>> = {};
+
+    for (const row of data) {
+        const fields = row.corrected_fields as Record<string, unknown> | null;
+        if (!fields) continue;
+        for (const [field, value] of Object.entries(fields)) {
+            if (SKIP_FIELDS.has(field)) continue;
+            if (value === null || value === undefined || value === '') continue;
+            const key = String(value);
+            if (!counts[field]) counts[field] = new Map();
+            counts[field].set(key, (counts[field].get(key) ?? 0) + 1);
+        }
+    }
+
+    // Devolver solo los campos con un valor dominante que aparece ≥ minCount
+    const suggestions: Record<string, unknown> = {};
+    for (const [field, valueMap] of Object.entries(counts)) {
+        let bestVal: string | null = null;
+        let bestCount = 0;
+        for (const [val, count] of valueMap) {
+            if (count > bestCount) { bestCount = count; bestVal = val; }
+        }
+        if (bestVal !== null && bestCount >= minCount) {
+            suggestions[field] = NUMERIC_FIELDS.has(field) ? Number(bestVal) : bestVal;
+        }
+    }
+
+    return suggestions;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const SKIP_FIELDS = new Set([
