@@ -58,6 +58,15 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     const [isConfirming, setIsConfirming] = useState(false);
     const [localConfirmed, setLocalConfirmed] = useState(false);
 
+    // Cuando el contexto detecta que los datos cambiaron (UPDATE_INVOICE_FIELDS
+    // resetea ocrDataConfirmed a false), sincronizar el estado local para que
+    // el botón "Confirmar datos" reaparezca después de una edición post-confirmación.
+    React.useEffect(() => {
+        if (!ocrDataConfirmed) {
+            setLocalConfirmed(false);
+        }
+    }, [ocrDataConfirmed]);
+
     const handleConfirm = async () => {
         if (isConfirming) return;
         setIsConfirming(true);
