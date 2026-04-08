@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { getOcrJobHistory, retryOcrJob, type OcrJobRecord } from '@/app/actions/ocr-jobs';
-import { RefreshCw, CheckCircle2, XCircle, Loader2, FileText, RotateCcw, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { computeExampleQualityScore } from '@/app/actions/ocr-confirm';
+import { RefreshCw, CheckCircle2, XCircle, Loader2, FileText, RotateCcw, ArrowRight, ChevronDown, ChevronUp, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { detectAnomalies } from '@/lib/anomalyDetector';
@@ -206,7 +207,7 @@ export default function OcrJobsPanel() {
 
     if (loading) {
         return (
-            <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-slate-700/40 p-4 sm:p-6">
+            <div className="bg-white/90 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/80 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-none p-5 flex flex-col h-full hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
                 <div className="flex items-center gap-2 mb-4">
                     <FileText size={18} className="text-slate-400" />
                     <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Jobs OCR</h3>
@@ -221,7 +222,7 @@ export default function OcrJobsPanel() {
     }
 
     return (
-        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-slate-700/40 p-4 sm:p-6">
+        <div className="bg-white/90 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/80 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-none p-5 flex flex-col h-full hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                     <FileText size={18} className="text-indigo-500" />
@@ -271,6 +272,22 @@ export default function OcrJobsPanel() {
                                             <span className={`text-[10px] font-medium ${config.color} shrink-0`}>
                                                 {config.label}
                                             </span>
+                                            {isCompleted && (() => {
+                                                const qs = computeExampleQualityScore({
+                                                    extracted_fields: job.extracted_data ?? null,
+                                                    is_validated: false,
+                                                    corrected_fields: null,
+                                                });
+                                                const cls = qs >= 80 ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
+                                                    : qs >= 60 ? 'text-amber-600 bg-amber-50 border-amber-200'
+                                                    : 'text-red-600 bg-red-50 border-red-200';
+                                                return (
+                                                    <span className={`inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-px rounded border shrink-0 tabular-nums ${cls}`} title="Calidad del ejemplo de entrenamiento">
+                                                        <Star size={8} />
+                                                        {qs}
+                                                    </span>
+                                                );
+                                            })()}
                                         </div>
                                         <div className="flex items-center gap-2 flex-wrap mt-0.5">
                                             <span className="text-[10px] text-slate-400">
