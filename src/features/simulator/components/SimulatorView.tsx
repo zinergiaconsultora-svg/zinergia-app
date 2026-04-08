@@ -17,6 +17,9 @@ export const SimulatorView = () => {
         isAnalyzing,
         isMockMode,
         invoiceData,
+        originalInvoiceData,
+        ocrJobId,
+        ocrDataConfirmed,
         setInvoiceData,
         uploadError,
         results,
@@ -31,7 +34,8 @@ export const SimulatorView = () => {
         goBackToStep1,
         pdfUrl,
         clientProfile,
-        savedProposalId
+        savedProposalId,
+        confirmOcrData,
     } = useSimulatorContext();
 
     const updateInvoiceField = <K extends keyof InvoiceData>(key: K, value: InvoiceData[K]) => {
@@ -110,6 +114,10 @@ export const SimulatorView = () => {
                                 powerType={powerType}
                                 pdfUrl={pdfUrl}
                                 isMockMode={isMockMode}
+                                originalData={originalInvoiceData}
+                                ocrJobId={ocrJobId}
+                                ocrDataConfirmed={ocrDataConfirmed}
+                                onConfirmOcrData={confirmOcrData}
                             />
                             {/* OVERLAY: Mostrando durante la comparación */}
                             <LoadingOverlay

@@ -49,6 +49,7 @@ interface SimulatorState {
 type SimulatorAction =
     | { type: 'START_ANALYSIS' }
     | { type: 'SET_INVOICE_DATA'; payload: InvoiceData }
+    | { type: 'UPDATE_INVOICE_FIELDS'; payload: InvoiceData }
     | { type: 'SET_ERROR'; payload: string | null }
     | { type: 'SET_RESULTS'; payload: SavingsResult[] }
     | { type: 'SET_LOADING_MESSAGE'; payload: string }
@@ -93,6 +94,8 @@ function simulatorReducer(state: SimulatorState, action: SimulatorAction): Simul
         case 'START_ANALYSIS':
             return { ...state, isAnalyzing: true, uploadError: null, isMockMode: false };
         case 'SET_INVOICE_DATA':
+            // Usado exclusivamente para la llegada del resultado OCR.
+            // Fuerza step 2, guarda el snapshot original y detiene el análisis.
             return {
                 ...state,
                 invoiceData: action.payload,
@@ -101,6 +104,14 @@ function simulatorReducer(state: SimulatorState, action: SimulatorAction): Simul
                 ocrDataConfirmed: false,
                 step: 2,
                 isAnalyzing: false,
+            };
+        case 'UPDATE_INVOICE_FIELDS':
+            // Usado para edición de campos por el usuario en el formulario.
+            // NO toca step ni originalInvoiceData — el snapshot OCR permanece inmutable.
+            return {
+                ...state,
+                invoiceData: action.payload,
+                ocrDataConfirmed: false,
             };
         case 'SET_OCR_JOB_ID':
             return { ...state, ocrJobId: action.payload };
@@ -476,7 +487,7 @@ export function useSimulator() {
     }, []);
 
     const setInvoiceData = useCallback((data: InvoiceData) => {
-        dispatch({ type: 'SET_INVOICE_DATA', payload: data });
+        dispatch({ type: 'UPDATE_INVOICE_FIELDS', payload: data });
     }, []);
 
     const setStep = useCallback((step: Step) => {
@@ -494,8 +505,10 @@ export function useSimulator() {
             const result = await confirmOcrExtractionAction(state.ocrJobId, state.invoiceData);
             dispatch({ type: 'SET_OCR_DATA_CONFIRMED' });
             return { correctedFieldsCount: result.correctedFieldsCount };
-        } catch {
-            // No bloquear el flujo si falla la confirmación
+        } catch (error) {
+            // No bloquear el flujo del usuario — la confirmación es best-effort.
+            // El warn permite detectar fallos sistemáticos en producción.
+            console.warn('[OCR Confirm] Failed to save confirmation to training examples:', error);
             dispatch({ type: 'SET_OCR_DATA_CONFIRMED' });
             return { correctedFieldsCount: 0 };
         }
