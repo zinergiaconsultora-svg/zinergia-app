@@ -31,6 +31,11 @@ const OcrJobsPanel = dynamic(() => import('@/features/crm/components/OcrJobsPane
     loading: () => <div className="h-full bg-slate-100/50 dark:bg-slate-800/30 animate-pulse rounded-2xl" />,
 });
 
+const AgentLeaderboard = dynamic(() => import('./AgentLeaderboard'), {
+    ssr: false,
+    loading: () => <div className="h-48 bg-slate-100/50 dark:bg-slate-800/30 animate-pulse rounded-2xl" />,
+});
+
 interface AdminDashboardProps {
     stats: AdminStats;
     franchises: FranchiseWithAgents[];
@@ -194,10 +199,15 @@ export default function AdminDashboard({ stats, franchises, unassignedAgents }: 
 
                 </motion.div>
 
-                {/* OCR Accuracy Analytics */}
-                <motion.div variants={item} className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border border-white/80 dark:border-white/10 shadow-lg p-6 hover:shadow-xl transition-all">
-                    <SectionHeader title="Precisión OCR por Comercializadora" icon={BrainCircuit} />
-                    <OcrAccuracyPanel />
+                {/* OCR Accuracy Analytics + Agent Leaderboard */}
+                <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    <div className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border border-white/80 dark:border-white/10 shadow-lg p-6 hover:shadow-xl transition-all">
+                        <SectionHeader title="Precisión OCR por Comercializadora" icon={BrainCircuit} />
+                        <OcrAccuracyPanel />
+                    </div>
+                    <div className="hover:shadow-xl transition-all">
+                        <AgentLeaderboard />
+                    </div>
                 </motion.div>
 
                 {/* Franchise List Section */}

@@ -14,7 +14,13 @@ export interface InvoiceAnomaly {
     title: string;
     description: string;
     impact?: string;       // Impacto económico estimado
+    context?: string;      // Contexto histórico comparativo (ej: "2.4× mayor que la media")
     action: string;        // Qué debe hacer el agente
+}
+
+export interface EnergyHistoryEntry {
+    month: string;         // YYYY-MM
+    totalEnergy: number;   // kWh
 }
 
 // Umbrales de referencia del mercado español (2024-2025)
@@ -34,7 +40,19 @@ const THRESHOLDS = {
     EXTRA_CHARGES_RATIO: 0.15,
 };
 
-export function detectAnomalies(data: InvoiceData): InvoiceAnomaly[] {
+function computeHistoricalAvg(history: EnergyHistoryEntry[]): number | null {
+    if (!history || history.length < 2) return null;
+    const total = history.reduce((sum, e) => sum + e.totalEnergy, 0);
+    return total / history.length;
+}
+
+function historicalMultiplier(current: number, avg: number): string {
+    const ratio = current / avg;
+    if (ratio >= 1) return `${ratio.toFixed(1)}× por encima de tu media histórica`;
+    return `${(avg / current).toFixed(1)}× por debajo de tu media histórica`;
+}
+
+export function detectAnomalies(data: InvoiceData, energyHistory?: EnergyHistoryEntry[]): InvoiceAnomaly[] {
     const anomalies: InvoiceAnomaly[] = [];
 
     const totalPower = (data.power_p1 || 0) + (data.power_p2 || 0) + (data.power_p3 || 0);
@@ -43,6 +61,8 @@ export function detectAnomalies(data: InvoiceData): InvoiceAnomaly[] {
     const monthlyBill = data.total_amount || 0;
     const subtotal = data.subtotal || 0;
     const periodDays = data.period_days || 30;
+
+    const historicalAvgEnergy = computeHistoricalAvg(energyHistory ?? []);
 
     // ─────────────────────────────────────────────
     // 1. PENALIZACIÓN POR ENERGÍA REACTIVA
@@ -63,12 +83,16 @@ export function detectAnomalies(data: InvoiceData): InvoiceAnomaly[] {
     // 2. PRECIO DE ENERGÍA MUY ALTO
     // ─────────────────────────────────────────────
     if (data.current_energy_price_p1 && data.current_energy_price_p1 > THRESHOLDS.ENERGY_PRICE_P1_CRITICAL) {
+        const annualOvercost = Math.round((data.current_energy_price_p1 - THRESHOLDS.ENERGY_PRICE_P1_HIGH) * totalEnergy * 12);
         anomalies.push({
             id: 'energy_price_critical',
             severity: 'critical',
             title: 'Precio de energía crítico',
             description: `Paga ${data.current_energy_price_p1.toFixed(4)}€/kWh en P1, muy por encima de la media del mercado (${THRESHOLDS.ENERGY_PRICE_P1_HIGH}€/kWh).`,
-            impact: `Sobrecoste estimado de ${Math.round((data.current_energy_price_p1 - THRESHOLDS.ENERGY_PRICE_P1_HIGH) * totalEnergy * 12)}€/año`,
+            impact: `Sobrecoste estimado de ${annualOvercost}€/año`,
+            context: historicalAvgEnergy && totalEnergy > 0
+                ? `Consumo de ${totalEnergy.toFixed(0)} kWh este período — ${historicalMultiplier(totalEnergy, historicalAvgEnergy)}. Con este volumen, el sobrecoste acumulado es especialmente significativo.`
+                : undefined,
             action: 'Cambio de comercializadora urgente. Potencial ahorro >30%.',
         });
     } else if (data.current_energy_price_p1 && data.current_energy_price_p1 > THRESHOLDS.ENERGY_PRICE_P1_HIGH) {
@@ -77,6 +101,9 @@ export function detectAnomalies(data: InvoiceData): InvoiceAnomaly[] {
             severity: 'warning',
             title: 'Precio de energía superior al mercado',
             description: `Precio P1 de ${data.current_energy_price_p1.toFixed(4)}€/kWh. Existen ofertas más competitivas disponibles.`,
+            context: historicalAvgEnergy && totalEnergy > 0
+                ? `Consumo de ${totalEnergy.toFixed(0)} kWh · ${historicalMultiplier(totalEnergy, historicalAvgEnergy)}`
+                : undefined,
             action: 'Comparar tarifas disponibles en el simulador.',
         });
     }
@@ -85,19 +112,27 @@ export function detectAnomalies(data: InvoiceData): InvoiceAnomaly[] {
     // 3. PERÍODO DE FACTURACIÓN ANÓMALO
     // ─────────────────────────────────────────────
     if (periodDays < THRESHOLDS.PERIOD_DAYS_MIN) {
+        const dailyEnergy = totalEnergy > 0 && periodDays > 0 ? (totalEnergy / periodDays).toFixed(1) : null;
         anomalies.push({
             id: 'period_short',
             severity: 'warning',
             title: 'Período de facturación muy corto',
             description: `Solo ${periodDays} días facturados. Puede indicar un cambio de ciclo, error de lectura o factura de corte.`,
+            context: dailyEnergy
+                ? `Consumo diario implícito: ${dailyEnergy} kWh/día. Normalizado a 30 días equivaldría a ~${Math.round(parseFloat(dailyEnergy) * 30)} kWh.`
+                : undefined,
             action: 'Verificar si es una factura de cierre o si el consumo es representativo antes de hacer la comparativa.',
         });
     } else if (periodDays > THRESHOLDS.PERIOD_DAYS_MAX) {
+        const dailyEnergy = totalEnergy > 0 && periodDays > 0 ? (totalEnergy / periodDays).toFixed(1) : null;
         anomalies.push({
             id: 'period_long',
             severity: 'warning',
             title: 'Período de facturación muy largo',
             description: `${periodDays} días facturados. Podría incluir consumo de períodos anteriores o estimaciones acumuladas.`,
+            context: dailyEnergy
+                ? `Consumo diario implícito: ${dailyEnergy} kWh/día. Equivalente mensual: ~${Math.round(parseFloat(dailyEnergy) * 30)} kWh.`
+                : undefined,
             action: 'Verificar que el consumo no incluye estimaciones acumuladas antes de hacer la comparativa.',
         });
     }
@@ -110,12 +145,17 @@ export function detectAnomalies(data: InvoiceData): InvoiceAnomaly[] {
         const energyPerKw = totalEnergy / totalPower;
         if (energyPerKw < THRESHOLDS.ENERGY_POWER_RATIO_LOW && totalPower > 5) {
             const excessKw = Math.max(0, totalPower - totalEnergy / THRESHOLDS.ENERGY_POWER_RATIO_LOW);
+            const utilizationPct = Math.round((energyPerKw / THRESHOLDS.ENERGY_POWER_RATIO_LOW) * 100);
+            const histContext = historicalAvgEnergy
+                ? ` Tu media histórica es ${historicalAvgEnergy.toFixed(0)} kWh/mes — el patrón de baja utilización parece consistente.`
+                : '';
             anomalies.push({
                 id: 'power_oversized',
                 severity: 'warning',
                 title: 'Potencia contratada sobredimensionada',
                 description: `Ratio de ${energyPerKw.toFixed(0)} kWh/kW muy bajo — indica potencia contratada muy superior al uso real.`,
                 impact: `Reducción estimada de ${Math.round(excessKw * 0.12 * 365)}€/año`,
+                context: `Solo usas el ${utilizationPct}% de la capacidad instalada.${histContext}`,
                 action: 'Revisar historial de demanda máxima y proponer reducción de potencia contratada.',
             });
         }

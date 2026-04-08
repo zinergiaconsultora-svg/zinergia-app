@@ -163,8 +163,8 @@ export const SimulatorBatchUpload: React.FC<SimulatorBatchUploadProps> = ({ onLo
                         className="space-y-2"
                     >
                         {/* Stats bar */}
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-3 text-[11px] font-medium">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] font-medium">
                                 <span className="text-slate-500">{totalCount} archivo{totalCount !== 1 ? 's' : ''}</span>
                                 {pendingCount > 0 && (
                                     <span className="flex items-center gap-1 text-amber-600">
