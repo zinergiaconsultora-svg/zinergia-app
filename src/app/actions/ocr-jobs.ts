@@ -242,6 +242,73 @@ export async function checkDuplicateInvoice(
     return null;
 }
 
+// ── Historial de consumo por CUPS ─────────────────────────────────────────────
+
+export interface CupsEnergyMonth {
+    month: string;       // "2024-03"
+    totalEnergy: number; // kWh
+}
+
+/**
+ * Devuelve el consumo total (kWh) mensual de un CUPS de los últimos N meses.
+ * Usado para el sparkline histórico en el simulador.
+ */
+export async function getCupsEnergyHistory(
+    cups: string,
+    months = 12,
+): Promise<CupsEnergyMonth[]> {
+    if (!cups || cups.length < 18) return [];
+
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+        .from('ocr_jobs')
+        .select('extracted_data, created_at')
+        .eq('agent_id', user.id)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(60);
+
+    if (error || !data) return [];
+
+    const byMonth: Map<string, number> = new Map();
+
+    for (const job of data) {
+        const ext = job.extracted_data as Record<string, unknown> | null;
+        if (!ext) continue;
+        const jobCups = String(ext.cups ?? '').trim().toUpperCase();
+        if (jobCups !== cups.trim().toUpperCase()) continue;
+
+        // Determinar mes/año de la factura
+        const jDate = String(ext.invoice_date ?? job.created_at ?? '');
+        const isoM = jDate.match(/(\d{4})-(\d{2})/);
+        const dmyM = jDate.match(/\d{2}\/(\d{2})\/(\d{4})/);
+        const myM  = jDate.match(/(\d{2})\/(\d{4})/);
+        let ym: string | null = null;
+        if (isoM)      ym = `${isoM[1]}-${isoM[2]}`;
+        else if (dmyM) ym = `${dmyM[2]}-${dmyM[1]}`;
+        else if (myM)  ym = `${myM[2]}-${myM[1]}`;
+        if (!ym) continue;
+
+        let total = 0;
+        for (let p = 1; p <= 6; p++) {
+            total += Number(ext[`energy_p${p}`] ?? 0);
+        }
+        if (total <= 0) continue;
+
+        // Guardar solo la primera entrada por mes (la más reciente)
+        if (!byMonth.has(ym)) byMonth.set(ym, total);
+    }
+
+    // Ordenar cronológicamente y limitar a N meses
+    return [...byMonth.entries()]
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .slice(-months)
+        .map(([month, totalEnergy]) => ({ month, totalEnergy }));
+}
+
 export async function markOcrJobFailed(jobId: string, reason: string): Promise<void> {
     await requireServerRole(['admin', 'franchise', 'agent']);
     const supabase = await createClient();

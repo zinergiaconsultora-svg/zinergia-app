@@ -15,21 +15,23 @@ import React, {
     useState,
     useEffect,
 } from 'react';
-import type { PdfViewerHandle } from './PdfViewer';
+import type { PdfViewerHandle, ConfidenceField } from './PdfViewer';
 
 interface PdfViewerWrapperProps {
     url: string;
     className?: string;
+    confidenceFields?: ConfidenceField[];
 }
 
 type PdfViewerComponent = React.ComponentType<{
     url: string;
     className?: string;
+    confidenceFields?: ConfidenceField[];
     ref?: React.Ref<PdfViewerHandle>;
 }>;
 
 export const PdfViewerWrapper = forwardRef<PdfViewerHandle, PdfViewerWrapperProps>(
-    ({ url, className }, ref) => {
+    ({ url, className, confidenceFields }, ref) => {
         const [Viewer, setViewer] = useState<PdfViewerComponent | null>(null);
         const innerRef = useRef<PdfViewerHandle>(null);
 
@@ -56,7 +58,7 @@ export const PdfViewerWrapper = forwardRef<PdfViewerHandle, PdfViewerWrapperProp
             );
         }
 
-        return <Viewer ref={innerRef} url={url} className={className} />;
+        return <Viewer ref={innerRef} url={url} className={className} confidenceFields={confidenceFields} />;
     },
 );
 
