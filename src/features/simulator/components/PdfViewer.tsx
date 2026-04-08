@@ -35,6 +35,9 @@ import {
     Minimize2,
     FileText,
     MapPin,
+    Crosshair,
+    PanelRightOpen,
+    PanelRightClose,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -49,9 +52,16 @@ export interface PdfViewerHandle {
     locate: (value: string) => void;
 }
 
+export interface ConfidenceField {
+    label: string;
+    value: string;
+    score: number; // 0-1
+}
+
 interface PdfViewerProps {
     url: string;
     className?: string;
+    confidenceFields?: ConfidenceField[];
 }
 
 // ── Highlight CSS ─────────────────────────────────────────────────────────────
@@ -74,7 +84,7 @@ const HIGHLIGHT_STYLE = `
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
-    ({ url, className }, ref) => {
+    ({ url, className, confidenceFields }, ref) => {
         // ── Estado compartido entre inline y fullscreen ───────────────────────
         const [numPages, setNumPages] = useState(0);
         const [pageNumber, setPageNumber] = useState(1);
@@ -84,6 +94,7 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         const [highlightQuery, setHighlightQuery] = useState<string | null>(null);
         const [foundOnPage, setFoundOnPage] = useState<boolean | null>(null);
         const [portalMounted, setPortalMounted] = useState(false);
+        const [showConfPanel, setShowConfPanel] = useState(false);
 
         // Refs para medición de ancho
         const inlineContainerRef = useRef<HTMLDivElement>(null);
@@ -259,6 +270,25 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                         <ZoomIn size={13} />
                     </button>
                     <div className="w-px h-3.5 bg-slate-700 mx-1" />
+                    {confidenceFields && confidenceFields.length > 0 && (
+                        <>
+                            <div className="w-px h-3.5 bg-slate-700 mx-1" />
+                            <button
+                                type="button"
+                                onClick={() => setShowConfPanel(v => !v)}
+                                className={cn(
+                                    'p-1.5 rounded-lg transition-colors',
+                                    showConfPanel
+                                        ? 'bg-indigo-600 text-white'
+                                        : 'text-slate-400 hover:text-white hover:bg-slate-800',
+                                )}
+                                title="Panel de confianza OCR"
+                            >
+                                {showConfPanel ? <PanelRightClose size={13} /> : <PanelRightOpen size={13} />}
+                            </button>
+                        </>
+                    )}
+                    <div className="w-px h-3.5 bg-slate-700 mx-1" />
                     <button
                         type="button"
                         onClick={() => setIsFullscreen(f => !f)}
@@ -293,41 +323,94 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             </AnimatePresence>
         ) : null;
 
+        const buildConfidencePanel = () => {
+            if (!confidenceFields || confidenceFields.length === 0 || !showConfPanel) return null;
+            return (
+                <motion.div
+                    initial={{ width: 0, opacity: 0 }}
+                    animate={{ width: 200, opacity: 1 }}
+                    exit={{ width: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex-shrink-0 bg-slate-850 border-l border-slate-700 overflow-hidden flex flex-col"
+                    style={{ background: 'rgb(15 23 42)' }}
+                >
+                    <div className="px-3 py-2 border-b border-slate-700 flex items-center gap-1.5">
+                        <Crosshair size={11} className="text-indigo-400" />
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Confianza OCR</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto py-2">
+                        {confidenceFields.map((f) => {
+                            const pct = Math.round(f.score * 100);
+                            const color = f.score >= 0.9 ? 'bg-emerald-500' : f.score >= 0.7 ? 'bg-amber-400' : 'bg-red-400';
+                            const textColor = f.score >= 0.9 ? 'text-emerald-400' : f.score >= 0.7 ? 'text-amber-400' : 'text-red-400';
+                            return (
+                                <button
+                                    key={f.label}
+                                    type="button"
+                                    onClick={() => {
+                                        setHighlightQuery(f.value?.toString().trim() || null);
+                                        setFoundOnPage(null);
+                                        setPageNumber(1);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-slate-800 transition-colors group text-left"
+                                    title={`Localizar "${f.value}" en la factura`}
+                                >
+                                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${color}`} />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[9px] text-slate-500 uppercase tracking-wide leading-none mb-0.5">{f.label}</p>
+                                        <p className="text-[10px] text-slate-300 truncate font-mono leading-none">{f.value || '—'}</p>
+                                    </div>
+                                    <span className={`text-[9px] font-black tabular-nums shrink-0 ${textColor}`}>{pct}%</span>
+                                    <MapPin size={9} className="text-slate-600 group-hover:text-slate-400 shrink-0 transition-colors" />
+                                </button>
+                            );
+                        })}
+                    </div>
+                </motion.div>
+            );
+        };
+
         const buildPdfContent = (
             scrollRef: React.RefObject<HTMLDivElement | null>,
             width: number,
         ) => {
-            const w = fitWidth && width > 0 ? width : undefined;
+            const panelWidth = showConfPanel && confidenceFields && confidenceFields.length > 0 ? 200 : 0;
+            const w = fitWidth && width > 0 ? Math.max(width - panelWidth, 200) : undefined;
             const s = fitWidth ? undefined : scale;
             return (
-                <div ref={scrollRef} className="absolute inset-0 overflow-auto p-4 flex flex-col items-center gap-4">
-                    <Document
-                        file={url}
-                        onLoadSuccess={({ numPages: n }) => setNumPages(n)}
-                        loading={
-                            <div className="flex items-center justify-center h-48 w-full">
-                                <div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
-                            </div>
-                        }
-                        error={
-                            <div className="flex flex-col items-center gap-2 text-slate-500 text-sm p-12">
-                                <FileText size={32} className="opacity-40" />
-                                <span>No se pudo cargar el documento</span>
-                            </div>
-                        }
-                    >
-                        {(w !== undefined || !fitWidth) && (
-                            <Page
-                                pageNumber={pageNumber}
-                                width={w}
-                                scale={s}
-                                renderTextLayer
-                                renderAnnotationLayer={false}
-                                customTextRenderer={customTextRenderer}
-                                className="shadow-2xl shadow-black/60"
-                            />
-                        )}
-                    </Document>
+                <div className="absolute inset-0 flex overflow-hidden">
+                    <div ref={scrollRef} className="flex-1 overflow-auto p-4 flex flex-col items-center gap-4">
+                        <Document
+                            file={url}
+                            onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+                            loading={
+                                <div className="flex items-center justify-center h-48 w-full">
+                                    <div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+                                </div>
+                            }
+                            error={
+                                <div className="flex flex-col items-center gap-2 text-slate-500 text-sm p-12">
+                                    <FileText size={32} className="opacity-40" />
+                                    <span>No se pudo cargar el documento</span>
+                                </div>
+                            }
+                        >
+                            {(w !== undefined || !fitWidth) && (
+                                <Page
+                                    pageNumber={pageNumber}
+                                    width={w}
+                                    scale={s}
+                                    renderTextLayer
+                                    renderAnnotationLayer={false}
+                                    customTextRenderer={customTextRenderer}
+                                    className="shadow-2xl shadow-black/60"
+                                />
+                            )}
+                        </Document>
+                    </div>
+                    <AnimatePresence>
+                        {buildConfidencePanel()}
+                    </AnimatePresence>
                 </div>
             );
         };

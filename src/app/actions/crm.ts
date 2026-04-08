@@ -79,3 +79,34 @@ export async function deleteClientsBulk(clientIds: string[]): Promise<{ deleted:
     revalidatePath('/dashboard');
     return { deleted: data?.length ?? 0 };
 }
+
+// ── Búsqueda de cliente por CUPS ──────────────────────────────────────────────
+
+export interface ClientCupsMatch {
+    id: string;
+    name: string;
+    status: ClientStatus;
+    email?: string | null;
+}
+
+/**
+ * Busca si existe un cliente vinculado a este CUPS en el CRM del agente.
+ * Usado en el simulador para ofrecer vinculación automática.
+ */
+export async function findClientByCups(cups: string): Promise<ClientCupsMatch | null> {
+    if (!cups || cups.length < 18) return null;
+
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data, error } = await supabase
+        .from('clients')
+        .select('id, name, status, email')
+        .eq('owner_id', user.id)
+        .eq('cups', cups.trim().toUpperCase())
+        .maybeSingle();
+
+    if (error || !data) return null;
+    return data as ClientCupsMatch;
+}

@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import {
     Zap, ChevronLeft, ArrowRight, User, Building2, Hash,
     Calendar, MapPin, Activity, AlertCircle, AlertTriangle,
     CheckCircle2, ShieldCheck, ScanSearch, ChevronDown,
     TrendingUp, TrendingDown, Sparkles, Eye, EyeOff,
+    Link2, UserCheck, Loader2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -14,7 +15,7 @@ import { Card } from '@/components/ui/primitives/Card';
 import { Input } from '@/components/ui/primitives/Input';
 import { DemoModeAlert } from '@/components/ui/DemoModeAlert';
 import { PdfViewerWrapper } from './PdfViewerWrapper';
-import type { PdfViewerHandle } from './PdfViewer';
+import type { PdfViewerHandle, ConfidenceField } from './PdfViewer';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -104,6 +105,81 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         });
         return () => { cancelled = true; };
     }, [data.cups, data.invoice_date, isMockMode]);
+
+    // ── Vinculación automática al cliente por CUPS ────────────────────────────
+    const [cupsClient, setCupsClient] = useState<{ id: string; name: string } | null>(null);
+    const [cupsClientDismissed, setCupsClientDismissed] = useState(false);
+    useEffect(() => {
+        const cups = data.cups;
+        if (!cups || cups.length < 20 || isMockMode) { setCupsClient(null); return; }
+        setCupsClientDismissed(false);
+        let cancelled = false;
+        import('@/app/actions/crm').then(({ findClientByCups }) => {
+            findClientByCups(cups).then(r => {
+                if (!cancelled) setCupsClient(r);
+            }).catch(() => {});
+        });
+        return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [data.cups, isMockMode]);
+
+    // ── Sparkline histórico de consumo ────────────────────────────────────────
+    interface EnergyMonth { month: string; totalEnergy: number; }
+    const [energyHistory, setEnergyHistory] = useState<EnergyMonth[]>([]);
+    useEffect(() => {
+        const cups = data.cups;
+        if (!cups || cups.length < 20 || isMockMode) { setEnergyHistory([]); return; }
+        let cancelled = false;
+        import('@/app/actions/ocr-jobs').then(({ getCupsEnergyHistory }) => {
+            getCupsEnergyHistory(cups, 12).then(r => {
+                if (!cancelled) setEnergyHistory(r);
+            }).catch(() => {});
+        });
+        return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [data.cups, isMockMode]);
+
+    // ── Live tariff preview ───────────────────────────────────────────────────
+    interface LivePreview { bestName: string; annualSaving: number; }
+    const [livePreview, setLivePreview] = useState<LivePreview | null>(null);
+    const [livePreviewLoading, setLivePreviewLoading] = useState(false);
+    const livePreviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const triggerLivePreview = useCallback(() => {
+        if (livePreviewTimer.current) clearTimeout(livePreviewTimer.current);
+        const hasEnergy = [1,2,3,4,5,6].some(p => (data[`energy_p${p}` as keyof InvoiceData] as number) > 0);
+        const hasPower  = [1,2,3,4,5,6].some(p => (data[`power_p${p}` as keyof InvoiceData] as number) > 0);
+        if (!hasEnergy || !hasPower || isMockMode) { setLivePreview(null); return; }
+
+        setLivePreviewLoading(true);
+        livePreviewTimer.current = setTimeout(async () => {
+            try {
+                const { calculateSavingsAction } = await import('@/app/actions/compare');
+                const result = await calculateSavingsAction(data);
+                const offers = result?.offers ?? [];
+                if (offers.length === 0) { setLivePreview(null); return; }
+                const best = offers.reduce((a: { annual_saving?: number; name?: string }, b: { annual_saving?: number; name?: string }) =>
+                    (b.annual_saving ?? 0) > (a.annual_saving ?? 0) ? b : a
+                );
+                setLivePreview({
+                    bestName: best.name ?? 'Mejor tarifa',
+                    annualSaving: best.annual_saving ?? 0,
+                });
+            } catch {
+                setLivePreview(null);
+            } finally {
+                setLivePreviewLoading(false);
+            }
+        }, 1800);
+    }, [data, isMockMode]);
+
+    useEffect(() => {
+        triggerLivePreview();
+        return () => { if (livePreviewTimer.current) clearTimeout(livePreviewTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [data.energy_p1, data.energy_p2, data.energy_p3, data.energy_p4, data.energy_p5, data.energy_p6,
+        data.power_p1, data.power_p2, data.power_p3, data.power_p4, data.power_p5, data.power_p6,
+        data.period_days]);
 
     // ── Sincronizar confirmación local ────────────────────────────────────────
     React.useEffect(() => {
@@ -273,6 +349,26 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     const hasErrors = allAlerts.some(a => a.type === 'error');
     const hasWarnings = allAlerts.some(a => a.type === 'warning');
 
+    // ── Confidence fields para el panel del PDF ──────────────────────────────
+    const confidenceFieldsForPdf = useMemo((): ConfidenceField[] => {
+        const conf = (data as unknown as Record<string, unknown>)._confidence as Record<string, number> | undefined;
+        if (!conf) return [];
+        const LABELS: Record<string, string> = {
+            client_name: 'Titular', cups: 'CUPS', dni_cif: 'DNI/CIF',
+            company_name: 'Comercializadora', invoice_number: 'Nº Factura',
+            invoice_date: 'Fecha', supply_address: 'Dirección',
+            total_amount: 'Total €', tariff_name: 'Tarifa',
+        };
+        return Object.entries(conf)
+            .filter(([k]) => LABELS[k] && data[k as keyof InvoiceData])
+            .map(([k, score]) => ({
+                label: LABELS[k],
+                value: String(data[k as keyof InvoiceData] ?? ''),
+                score,
+            }))
+            .sort((a, b) => a.score - b.score); // primero los de menor confianza
+    }, [data]);
+
     // ── OCR Score ring ────────────────────────────────────────────────────────
     const scoreColor = globalConfidence === null ? 'text-slate-400'
         : globalConfidence >= 0.9 ? 'text-emerald-500'
@@ -440,7 +536,12 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                         exit={{ opacity: 0, x: -16 }}
                         className="sticky top-4 h-[820px]"
                     >
-                        <PdfViewerWrapper ref={pdfViewerRef} url={pdfUrl} className="h-full" />
+                        <PdfViewerWrapper
+                            ref={pdfViewerRef}
+                            url={pdfUrl}
+                            className="h-full"
+                            confidenceFields={confidenceFieldsForPdf}
+                        />
                     </motion.div>
                 )}
 
@@ -509,6 +610,35 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                         <section>
                             <SectionLabel color="bg-blue-500" label="Punto de Suministro" />
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-2xl bg-white/70 border border-slate-100 shadow-sm">
+
+                                {/* CUPS client link banner */}
+                                <AnimatePresence>
+                                    {cupsClient && !cupsClientDismissed && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            className="sm:col-span-2 overflow-hidden"
+                                        >
+                                            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-indigo-50 border border-indigo-200 mb-1">
+                                                <UserCheck size={14} className="text-indigo-500 shrink-0" />
+                                                <p className="text-xs text-indigo-700 flex-1">
+                                                    <span className="font-bold">{cupsClient.name}</span>
+                                                    <span className="text-indigo-500 ml-1.5">— cliente en tu CRM</span>
+                                                </p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { onUpdate('client_name', cupsClient.name as InvoiceData['client_name']); setCupsClientDismissed(true); toast.success(`Vinculado a ${cupsClient.name}`); }}
+                                                    className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-600 text-white text-[10px] font-bold hover:bg-indigo-700 transition-colors"
+                                                >
+                                                    <Link2 size={9} /> Vincular
+                                                </button>
+                                                <button type="button" onClick={() => setCupsClientDismissed(true)} className="text-indigo-300 hover:text-indigo-500 transition-colors text-sm leading-none">×</button>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
                                 <div className="sm:col-span-2">
                                     <Input label="CUPS"
                                         labelBadge={<ConfidencePill value={getConfidence('cups')} />}
@@ -519,6 +649,19 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                         onChange={e => onUpdate('cups', e.target.value.toUpperCase())}
                                         action={pdfUrl && data.cups ? <LocateButton onClick={() => locate(data.cups)} lowConfidence={isLowConfidence('cups')} /> : undefined}
                                     />
+                                    {/* Sparkline histórico de consumo */}
+                                    <AnimatePresence>
+                                        {energyHistory.length >= 2 && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                className="mt-2 overflow-hidden"
+                                            >
+                                                <EnergySparkline history={energyHistory} currentEnergy={totalEnergyNow} />
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </div>
                                 <Input label="Dirección"
                                     labelBadge={<ConfidencePill value={getConfidence('supply_address')} />}
@@ -575,6 +718,42 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                 accent="purple" placeholder="—"
                             />
                         </section>
+
+                        {/* Live tariff preview */}
+                        <AnimatePresence>
+                            {(livePreviewLoading || livePreview) && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 6 }}
+                                    className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-3.5 flex items-center gap-3"
+                                >
+                                    {livePreviewLoading ? (
+                                        <>
+                                            <Loader2 size={16} className="text-emerald-500 animate-spin shrink-0" />
+                                            <span className="text-xs text-emerald-700 font-medium">Calculando ahorro potencial…</span>
+                                        </>
+                                    ) : livePreview && (
+                                        <>
+                                            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 flex items-center justify-center shrink-0">
+                                                <Zap size={15} className="text-emerald-600" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest mb-0.5">Preview · Mejor tarifa</p>
+                                                <p className="text-sm font-bold text-emerald-900 truncate">{livePreview.bestName}</p>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <p className="text-[9px] text-emerald-600 uppercase tracking-wide mb-0.5">Ahorro est.</p>
+                                                <p className="text-base font-black text-emerald-700 tabular-nums">
+                                                    {livePreview.annualSaving > 0 ? `${livePreview.annualSaving.toFixed(0)} €` : '—'}
+                                                    <span className="text-[9px] font-medium text-emerald-500 ml-1">/año</span>
+                                                </p>
+                                            </div>
+                                        </>
+                                    )}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {/* CTA */}
                         <motion.button
@@ -696,5 +875,72 @@ const ConfidencePill: React.FC<{ value: number | null }> = ({ value }) => {
         <span className={`inline-flex items-center px-1.5 py-px rounded border normal-case tracking-normal font-black text-[9px] tabular-nums ${cls}`}>
             {pct}%
         </span>
+    );
+};
+
+// ── EnergySparkline ───────────────────────────────────────────────────────────
+
+interface SparklineProps {
+    history: { month: string; totalEnergy: number }[];
+    currentEnergy: number;
+}
+
+const EnergySparkline: React.FC<SparklineProps> = ({ history, currentEnergy }) => {
+    const W = 260, H = 40, PAD = 4;
+    const all = [...history];
+    // Incluir el mes actual si tiene energía y es distinto al último
+    const lastMonth = all[all.length - 1]?.month ?? '';
+    const now = new Date();
+    const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    if (currentEnergy > 0 && thisMonth !== lastMonth) {
+        all.push({ month: thisMonth, totalEnergy: currentEnergy });
+    }
+    if (all.length < 2) return null;
+
+    const maxE = Math.max(...all.map(d => d.totalEnergy));
+    const minE = Math.min(...all.map(d => d.totalEnergy));
+    const range = maxE - minE || 1;
+    const step = (W - PAD * 2) / (all.length - 1);
+
+    const points = all.map((d, i) => ({
+        x: PAD + i * step,
+        y: H - PAD - ((d.totalEnergy - minE) / range) * (H - PAD * 2),
+        d,
+        isCurrent: d.month === thisMonth,
+    }));
+
+    const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    const lastP = points[points.length - 1];
+
+    return (
+        <div className="flex items-center gap-2 px-2 py-2 rounded-xl bg-blue-50/60 border border-blue-100">
+            <svg width={W} height={H} className="shrink-0 overflow-visible">
+                {/* Fill area */}
+                <defs>
+                    <linearGradient id="spk-fill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="rgb(99,102,241)" stopOpacity="0.18" />
+                        <stop offset="100%" stopColor="rgb(99,102,241)" stopOpacity="0" />
+                    </linearGradient>
+                </defs>
+                <path
+                    d={`${pathD} L${lastP.x.toFixed(1)},${H} L${PAD},${H} Z`}
+                    fill="url(#spk-fill)"
+                />
+                {/* Line */}
+                <path d={pathD} fill="none" stroke="rgb(99,102,241)" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+                {/* Dots */}
+                {points.map((p, i) => (
+                    <circle key={i} cx={p.x} cy={p.y} r={p.isCurrent ? 3.5 : 2}
+                        fill={p.isCurrent ? 'rgb(99,102,241)' : 'white'}
+                        stroke="rgb(99,102,241)" strokeWidth="1.5"
+                    />
+                ))}
+            </svg>
+            <div className="shrink-0 text-right">
+                <p className="text-[8px] text-blue-400 font-bold uppercase tracking-wide leading-none mb-0.5">{all.length} meses</p>
+                <p className="text-[10px] font-black text-blue-700 tabular-nums">{Math.round(maxE).toLocaleString('es-ES')} kWh</p>
+                <p className="text-[8px] text-blue-400">máx</p>
+            </div>
+        </div>
     );
 };
