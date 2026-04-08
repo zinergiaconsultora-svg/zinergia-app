@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from 'next/navigation';
 import { crmService } from '@/services/crmService';
 import { Client } from '@/types/crm';
@@ -11,13 +11,25 @@ import {
     Layers,
     Bell,
     ArrowUpRight,
-    Zap
+    Zap,
+    FileText,
+    UploadCloud,
+    ChevronRight,
+    CheckCircle2,
+    XCircle,
+    Clock,
+    Check,
+    Trash2,
+    Mail
 } from 'lucide-react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { formatCurrency } from '@/lib/utils/format';
 import { DashboardSkeleton } from '@/components/ui/DashboardSkeleton';
+import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
+import { MagneticCard } from "@/components/ui/MagneticCard";
+import { AnimatedSparkline } from "@/components/ui/AnimatedSparkline";
 
 
 
@@ -181,11 +193,11 @@ export default function DashboardView() {
     if (loading) return <DashboardSkeleton />;
 
     return (
-        <div className="w-full bg-white lg:bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-300 font-sans overflow-x-hidden flex flex-col relative selection:bg-indigo-100">
-            {/* Background Effects — desktop only */}
-            <div className="hidden lg:block fixed inset-0 pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-indigo-200/30 dark:bg-indigo-900/20 rounded-full blur-[80px] mix-blend-multiply dark:mix-blend-screen opacity-50"></div>
-                <div className="absolute bottom-[-10%] right-[-10%] w-[30vw] h-[30vw] bg-emerald-100/50 dark:bg-emerald-900/20 rounded-full blur-[80px] mix-blend-multiply dark:mix-blend-screen opacity-50"></div>
+        <div className="w-full bg-white lg:bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-300 font-sans overflow-x-hidden flex flex-col relative selection:bg-indigo-100 bg-dot-pattern">
+            {/* Ambient Glows — Efecto Ultra Premium (detrás de todo) */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden" z-index="-1">
+                <div className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] ambient-glow-blue rounded-full blur-[100px] animate-spin-slow opacity-60"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] ambient-glow-energy rounded-full blur-[100px] animate-spin-slow opacity-60" style={{ animationDirection: 'reverse' }}></div>
             </div>
 
             <motion.div
@@ -233,25 +245,28 @@ export default function DashboardView() {
 
 
                 {/* 2. KPIs — iOS grouped list en móvil, grid en desktop */}
-                <div className="mx-4 lg:mx-0 mt-4 lg:mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both" style={{ animationDelay: '300ms' }}>
+                <motion.div variants={item} className="mx-4 lg:mx-0 mt-4 lg:mt-0">
                     {/* Mobile: horizontal scroll KPI chips */}
                     <div className="flex gap-3 overflow-x-auto pb-1 lg:hidden scrollbar-none snap-x snap-mandatory">
-                        <div className="snap-start shrink-0 bg-white rounded-2xl border border-[#e5e5ea] px-4 py-3 min-w-[140px] shadow-sm">
+                        <MagneticCard className="snap-start shrink-0 bg-white rounded-2xl border border-[#e5e5ea] px-4 py-3 min-w-[140px] shadow-sm" onClick={() => { if(typeof window !== 'undefined') { import('@/lib/utils/haptics').then(m => m.haptics.light()) } }}>
                             <p className="text-[11px] text-[#8e8e93] font-medium mb-1">Ahorro detectado</p>
-                            <p className="text-lg font-bold text-slate-900">{formatCurrency(stats.financials.total_detected)}</p>
-                        </div>
-                        <div className="snap-start shrink-0 bg-white rounded-2xl border border-[#e5e5ea] px-4 py-3 min-w-[140px] shadow-sm">
+                            <p className="text-lg font-bold text-slate-900"><AnimatedCounter value={stats.financials.total_detected} suffix=" €" /></p>
+                            <AnimatedSparkline color="#10b981" delay={0.1} />
+                        </MagneticCard>
+                        <MagneticCard className="snap-start shrink-0 bg-white rounded-2xl border border-[#e5e5ea] px-4 py-3 min-w-[140px] shadow-sm" onClick={() => { if(typeof window !== 'undefined') { import('@/lib/utils/haptics').then(m => m.haptics.light()) } }}>
                             <p className="text-[11px] text-[#8e8e93] font-medium mb-1">Objetivo {goalProgress}%</p>
-                            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1 mb-1">
-                                {/* width is dynamic — inline style required */}
-                                <div className="h-1.5 bg-energy-500 rounded-full transition-all" style={{ width: `${goalProgress}%` }} />
+                            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1 mb-1 relative overflow-hidden">
+                                <div className="h-full bg-energy-500 rounded-full transition-all" style={{ width: `${goalProgress}%` }} />
+                                {/* Sparkline animado superpuesto a la barra de progreso */}
+                                <AnimatedSparkline color="#ff5722" strokeWidth={1} className="absolute inset-0 opacity-50 mix-blend-multiply" delay={0.2} />
                             </div>
-                            <p className="text-xs text-slate-500">{formatCurrency(MONTHLY_GOAL)}</p>
-                        </div>
-                        <div className="snap-start shrink-0 bg-white rounded-2xl border border-[#e5e5ea] px-4 py-3 min-w-[140px] shadow-sm">
+                            <p className="text-xs text-slate-500"><AnimatedCounter value={MONTHLY_GOAL} suffix=" €" /></p>
+                        </MagneticCard>
+                        <MagneticCard className="snap-start shrink-0 bg-white rounded-2xl border border-[#e5e5ea] px-4 py-3 min-w-[140px] shadow-sm" onClick={() => { if(typeof window !== 'undefined') { import('@/lib/utils/haptics').then(m => m.haptics.light()) } }}>
                             <p className="text-[11px] text-[#8e8e93] font-medium mb-1">Pipeline activo</p>
-                            <p className="text-lg font-bold text-slate-900">{formatCurrency(stats.financials.pipeline)}</p>
-                        </div>
+                            <p className="text-lg font-bold text-slate-900"><AnimatedCounter value={stats.financials.pipeline} suffix=" €" /></p>
+                            <AnimatedSparkline color="#3b82f6" delay={0.3} />
+                        </MagneticCard>
                         <Link href="/dashboard/tariffs" className="snap-start shrink-0 bg-indigo-50 rounded-2xl border border-indigo-100 px-4 py-3 min-w-[140px] shadow-sm flex items-center gap-2 active:bg-indigo-100 transition-colors">
                             <Zap size={16} className="text-indigo-500 shrink-0" />
                             <div>
@@ -262,9 +277,9 @@ export default function DashboardView() {
                     </div>
                     {/* Desktop: original grid */}
                     <div className="hidden lg:grid grid-cols-4 gap-4">
-                        <GlassKpiCard label="Ahorro Detectado" value={formatCurrency(stats.financials.total_detected)} icon={TrendingUp} delay={0.1} />
-                        <GlassKpiCard label="Objetivo Mensual" value={`${goalProgress}%`} subValue={formatCurrency(MONTHLY_GOAL)} icon={Target} progress={goalProgress} delay={0.2} />
-                        <GlassKpiCard label="Pipeline Activo" value={formatCurrency(stats.financials.pipeline)} icon={Layers} delay={0.3} />
+                        <GlassKpiCard label="Ahorro Detectado" value={<AnimatedCounter value={stats.financials.total_detected} suffix=" €" />} icon={TrendingUp} delay={0.1} />
+                        <GlassKpiCard label="Objetivo Mensual" value={`${goalProgress}%`} subValue={<AnimatedCounter value={MONTHLY_GOAL} suffix=" €" />} icon={Target} progress={goalProgress} delay={0.2} />
+                        <GlassKpiCard label="Pipeline Activo" value={<AnimatedCounter value={stats.financials.pipeline} suffix=" €" />} icon={Layers} delay={0.3} />
                         <div
                             role="button"
                             tabIndex={0}
@@ -283,7 +298,7 @@ export default function DashboardView() {
                             </div>
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* 3. MAIN BENTO GRID (Balanced Layout without gaps) */}
                 <motion.div variants={item} className="flex flex-col gap-4">
@@ -369,9 +384,9 @@ function SectionHeader({ title, link }: { title: string, link?: string }) {
 
 interface KpiCardProps {
     label: string;
-    value: string;
+    value: React.ReactNode;
     icon: React.ElementType;
-    subValue?: string;
+    subValue?: React.ReactNode;
     progress?: number;
     delay?: number;
 }

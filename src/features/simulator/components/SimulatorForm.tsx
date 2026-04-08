@@ -28,6 +28,7 @@ interface SimulatorFormProps {
     isAnalyzing: boolean;
     loadingMessage: string;
     powerType: string;
+    onPowerTypeOverride?: (type: '2.0' | '3.0' | '3.1') => void;
     pdfUrl?: string | null;
     isMockMode?: boolean;
     originalData?: InvoiceData | null;
@@ -40,13 +41,14 @@ interface SimulatorFormProps {
 
 export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     data, onUpdate, onCompare, onBack, isAnalyzing, loadingMessage,
-    powerType, pdfUrl, isMockMode = false,
+    powerType, onPowerTypeOverride, pdfUrl, isMockMode = false,
     originalData: _originalData, ocrJobId, ocrDataConfirmed = false, onConfirmOcrData,
 }) => {
     const [isConfirming, setIsConfirming] = useState(false);
     const [localConfirmed, setLocalConfirmed] = useState(false);
     const [showPdf, setShowPdf] = useState(true);
     const [alertsExpanded, setAlertsExpanded] = useState(true);
+    const [showTariffOverride, setShowTariffOverride] = useState(false);
     const pdfViewerRef = useRef<PdfViewerHandle>(null);
 
     // ── Correcciones automáticas ──────────────────────────────────────────────
@@ -588,7 +590,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                         initial={{ opacity: 0, x: -16 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -16 }}
-                        className="sticky top-4 h-[820px]"
+                        className="xl:sticky xl:top-4 h-[50vw] min-h-[320px] xl:h-[820px]"
                     >
                         <PdfViewerWrapper
                             ref={pdfViewerRef}
@@ -606,20 +608,63 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                     <div className="space-y-5">
 
                         {/* Tariff card */}
-                        <div className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white">
-                            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
-                                <Zap size={18} className="text-emerald-400" />
+                        <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white overflow-hidden">
+                            <div className="flex items-center gap-4 p-4">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
+                                    <Zap size={18} className="text-emerald-400" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Tarifa detectada</p>
+                                    <p className="text-base font-bold text-white truncate">
+                                        {powerType === '2.0' && 'Tensión Baja 2.0TD'}
+                                        {powerType === '3.0' && 'Empresa 3.0TD'}
+                                        {powerType === '3.1' && 'Alta Tensión 3.1TD'}
+                                        {data.tariff_name && <span className="ml-2 text-slate-400 text-sm font-normal">· {data.tariff_name}</span>}
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-lg">IA</span>
+                                    {onPowerTypeOverride && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowTariffOverride(v => !v)}
+                                            className="text-[9px] font-bold uppercase tracking-widest text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 px-2 py-1 rounded-lg transition-colors"
+                                        >
+                                            {showTariffOverride ? 'Cerrar' : 'Cambiar'}
+                                        </button>
+                                    )}
+                                </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Tarifa detectada</p>
-                                <p className="text-base font-bold text-white truncate">
-                                    {powerType === '2.0' && 'Tensión Baja 2.0TD'}
-                                    {powerType === '3.0' && 'Empresa 3.0TD'}
-                                    {powerType === '3.1' && 'Alta Tensión 3.1TD'}
-                                    {data.tariff_name && <span className="ml-2 text-slate-400 text-sm font-normal">· {data.tariff_name}</span>}
-                                </p>
-                            </div>
-                            <span className="shrink-0 text-[9px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-lg">IA</span>
+                            {/* Override picker */}
+                            <AnimatePresence>
+                                {showTariffOverride && onPowerTypeOverride && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="overflow-hidden border-t border-white/10"
+                                    >
+                                        <div className="px-4 py-3 flex items-center gap-2">
+                                            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mr-1">Forzar tipo:</span>
+                                            {(['2.0', '3.0', '3.1'] as const).map(t => (
+                                                <button
+                                                    key={t}
+                                                    type="button"
+                                                    onClick={() => { onPowerTypeOverride(t); setShowTariffOverride(false); }}
+                                                    className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-all ${
+                                                        powerType === t
+                                                            ? 'bg-emerald-500 border-emerald-400 text-white'
+                                                            : 'bg-white/5 border-white/15 text-slate-300 hover:bg-white/10 hover:text-white'
+                                                    }`}
+                                                >
+                                                    {t}TD
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
 
                         {/* Contract data */}

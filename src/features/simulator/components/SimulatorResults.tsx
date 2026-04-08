@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ChevronLeft, Lightbulb, TrendingDown, Zap, Download, FileText, TableProperties, ChevronDown } from 'lucide-react';
+import { ChevronLeft, Lightbulb, TrendingDown, Zap, Download, FileText, TableProperties, ChevronDown, Share2, MessageCircle, Mail, Copy, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { DemoModeAlert } from '@/components/ui/DemoModeAlert';
 import { Modal } from '@/components/ui/Modal';
@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { DigitalProposalCard } from '@/features/comparator/components/DigitalProposalCard';
 import { SavingsResult, Proposal } from '@/types/crm';
 import { OptimizationRecommendation, AuditOpportunity } from '@/lib/aletheia/types';
-import { detectAnomalies } from '@/lib/anomalyDetector';
+import { detectAnomalies, EnergyHistoryEntry } from '@/lib/anomalyDetector';
 import { AnomalyPanel } from '@/components/AnomalyPanel';
 import { OpportunityCard } from './Results/OpportunityCard';
 import { ProposalPDF } from '@/features/proposal/components/ProposalPDF';
@@ -46,6 +46,22 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
     const [isSaving, setIsSaving] = React.useState(false);
     const [showExportMenu, setShowExportMenu] = React.useState(false);
     const exportMenuRef = React.useRef<HTMLDivElement>(null);
+    const [energyHistory, setEnergyHistory] = React.useState<EnergyHistoryEntry[]>([]);
+    const [shareUrl, setShareUrl] = React.useState<string | null>(null);
+    const [isGeneratingLink, setIsGeneratingLink] = React.useState(false);
+    const [showShareMenu, setShowShareMenu] = React.useState(false);
+    const shareMenuRef = React.useRef<HTMLDivElement>(null);
+    const [linkCopied, setLinkCopied] = React.useState(false);
+
+    // Fetch energy history for contextual anomaly explanations
+    React.useEffect(() => {
+        if (!invoiceData?.cups) return;
+        import('@/app/actions/ocr-jobs').then(({ getCupsEnergyHistory }) => {
+            getCupsEnergyHistory(invoiceData.cups!).then(history => {
+                setEnergyHistory(history.map(h => ({ month: h.month, totalEnergy: h.totalEnergy })));
+            }).catch(() => { /* non-critical, ignore */ });
+        });
+    }, [invoiceData?.cups]);
 
     // Cerrar el menú al hacer click fuera
     React.useEffect(() => {
@@ -57,6 +73,68 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
     }, []);
+    // Cerrar share menu al hacer click fuera
+    React.useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (shareMenuRef.current && !shareMenuRef.current.contains(e.target as Node)) {
+                setShowShareMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const handleGetShareUrl = async (): Promise<string | null> => {
+        if (shareUrl) return shareUrl;
+        if (!savedProposalId) return null;
+        setIsGeneratingLink(true);
+        try {
+            const { generatePublicLinkAction } = await import('@/app/actions/publicProposal');
+            const result = await generatePublicLinkAction(savedProposalId);
+            setShareUrl(result.url);
+            return result.url;
+        } catch {
+            toast.error('No se pudo generar el enlace de compartir');
+            return null;
+        } finally {
+            setIsGeneratingLink(false);
+        }
+    };
+
+    const handleShareWhatsApp = async () => {
+        const url = await handleGetShareUrl();
+        if (!url) return;
+        const client = invoiceData?.client_name ? ` para ${invoiceData.client_name}` : '';
+        const bestSaving = results[0]?.savings_percent;
+        const msg = `Propuesta energética Zinergia${client}${bestSaving ? ` — ahorro hasta ${bestSaving.toFixed(0)}%` : ''}:\n${url}`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
+        setShowShareMenu(false);
+    };
+
+    const handleShareEmail = async () => {
+        const url = await handleGetShareUrl();
+        if (!url) return;
+        const client = invoiceData?.client_name || 'tu empresa';
+        const bestSaving = results[0]?.savings_percent;
+        const subject = `Propuesta de optimización energética — Zinergia`;
+        const body = `Hola,\n\nTe comparto la propuesta de optimización energética para ${client}${bestSaving ? `, con un ahorro estimado del ${bestSaving.toFixed(0)}%` : ''}:\n\n${url}\n\nSaludos,\nZinergia`;
+        window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_self');
+        setShowShareMenu(false);
+    };
+
+    const handleCopyLink = async () => {
+        const url = await handleGetShareUrl();
+        if (!url) return;
+        try {
+            await navigator.clipboard.writeText(url);
+            setLinkCopied(true);
+            setTimeout(() => setLinkCopied(false), 2000);
+        } catch {
+            toast.error('No se pudo copiar el enlace');
+        }
+        setShowShareMenu(false);
+    };
+
     const [showEmailModal, setShowEmailModal] = React.useState(false);
     const [emailAddress, setEmailAddress] = React.useState('');
     const [isSendingEmail, setIsSendingEmail] = React.useState(false);
@@ -294,7 +372,7 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
 
                 {/* Anomalías detectadas en la factura */}
                 {invoiceData && (() => {
-                    const anomalies = detectAnomalies(invoiceData);
+                    const anomalies = detectAnomalies(invoiceData, energyHistory);
                     return anomalies.length > 0 ? (
                         <motion.div
                             initial={{ opacity: 0, y: 16 }}
@@ -311,43 +389,107 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center justify-between mb-6"
+                    className="mb-6"
                 >
-                    <div className="flex items-center gap-4">
+                    {/* Title row */}
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                        <div>
+                            <h2 className="font-display text-xl sm:text-2xl font-bold text-slate-900">Análisis Completo</h2>
+                            <p className="text-xs sm:text-sm text-slate-500 font-body mt-0.5">
+                                Mejores propuestas para tarifa <span className="font-semibold text-emerald-600">{powerType}</span>
+                            </p>
+                        </div>
                         <button
+                            type="button"
                             onClick={onReset}
-                            className="flex items-center gap-2 text-slate-500 hover:text-emerald-600 font-medium text-sm transition-colors focus-visible:ring-2 focus-visible:ring-emerald-400 rounded-lg px-2 py-1 font-display"
+                            className="flex items-center gap-1.5 text-slate-400 hover:text-emerald-600 font-medium text-xs sm:text-sm transition-colors rounded-lg px-2 py-1.5 shrink-0"
                             aria-label="Comenzar nueva simulación"
                         >
-                            <ChevronLeft size={16} aria-hidden="true" />
-                            Nueva simulación
+                            <ChevronLeft size={14} aria-hidden="true" />
+                            <span className="hidden sm:inline">Nueva simulación</span>
+                            <span className="sm:hidden">Volver</span>
                         </button>
-                        {invoiceData && (
-                            <>
+                    </div>
+                    {/* Action buttons row — wraps on mobile */}
+                    {invoiceData && (
+                        <div className="flex flex-wrap gap-2">
                                 <button
+                                    type="button"
                                     onClick={handleSaveProposal}
                                     disabled={isSaving}
-                                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm transition-colors focus-visible:ring-2 focus-visible:ring-indigo-400 rounded-lg px-4 py-2 font-display disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm transition-colors focus-visible:ring-2 focus-visible:ring-indigo-400 rounded-lg px-3 py-2 font-display disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isSaving ? (
                                         <>
                                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                            Guardando...
+                                            <span className="hidden sm:inline">Guardando...</span>
                                         </>
                                     ) : (
                                         <>
-                                            <Zap size={16} aria-hidden="true" />
-                                            Guardar en CRM
+                                            <Zap size={14} aria-hidden="true" />
+                                            <span className="hidden sm:inline">Guardar en CRM</span>
+                                            <span className="sm:hidden">Guardar</span>
                                         </>
                                     )}
                                 </button>
+                                {/* Share dropdown */}
+                                {savedProposalId && (
+                                    <div className="relative" ref={shareMenuRef}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowShareMenu(v => !v)}
+                                            disabled={isGeneratingLink}
+                                            className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white font-medium text-sm transition-colors rounded-lg px-4 py-2 font-display disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {isGeneratingLink ? (
+                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                            ) : (
+                                                <Share2 size={15} />
+                                            )}
+                                            Compartir
+                                        </button>
+                                        {showShareMenu && (
+                                            <div className="absolute left-0 top-full mt-1.5 w-52 bg-white rounded-xl border border-slate-200 shadow-xl z-20 overflow-hidden">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleShareWhatsApp}
+                                                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-green-50 transition-colors"
+                                                >
+                                                    <MessageCircle size={14} className="text-green-500" />
+                                                    Enviar por WhatsApp
+                                                </button>
+                                                <div className="border-t border-slate-100" />
+                                                <button
+                                                    type="button"
+                                                    onClick={handleShareEmail}
+                                                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                                                >
+                                                    <Mail size={14} className="text-slate-400" />
+                                                    Enviar por email
+                                                </button>
+                                                <div className="border-t border-slate-100" />
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCopyLink}
+                                                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                                                >
+                                                    {linkCopied
+                                                        ? <Check size={14} className="text-emerald-500" />
+                                                        : <Copy size={14} className="text-slate-400" />
+                                                    }
+                                                    {linkCopied ? '¡Copiado!' : 'Copiar enlace'}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                                 {/* Export dropdown */}
                                 <div className="relative" ref={exportMenuRef}>
                                     <button
                                         type="button"
                                         onClick={() => setShowExportMenu(v => !v)}
                                         disabled={isExporting}
-                                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm transition-colors focus-visible:ring-2 focus-visible:ring-emerald-400 rounded-lg px-4 py-2 font-display disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm transition-colors focus-visible:ring-2 focus-visible:ring-emerald-400 rounded-lg px-3 py-2 font-display disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {isExporting ? (
                                             <>
@@ -384,15 +526,8 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                                         </div>
                                     )}
                                 </div>
-                            </>
-                        )}
-                    </div>
-                    <div className="text-right">
-                        <h2 className="font-display text-2xl font-bold text-slate-900">Análisis Completo</h2>
-                        <p className="text-sm text-slate-500 font-body">
-                            Optimizaciones y mejores propuestas para tarifa <span className="font-semibold text-emerald-600">{powerType}</span>
-                        </p>
-                    </div>
+                        </div>
+                    )}
                 </motion.div>
 
                 {/* Sección de Optimizaciones */}
@@ -421,28 +556,24 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                                             {getIcon(rec.type)}
                                         </div>
                                         <div className="flex-1">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div>
-                                                    <h4 className="font-semibold text-sm">{rec.title}</h4>
-                                                    <p className="text-xs mt-1 opacity-90">{rec.description}</p>
-                                                    {rec.action_items && rec.action_items.length > 0 && (
-                                                        <ul className="mt-2 space-y-1">
-                                                            {rec.action_items.slice(0, 3).map((item, i) => (
-                                                                <li key={i} className="text-xs flex items-start gap-2">
-                                                                    <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-current mt-1.5 opacity-70" />
-                                                                    <span>{item}</span>
-                                                                </li>
-                                                            ))}
-                                                        </ul>
-                                                    )}
-                                                </div>
+                                            <div className="flex flex-col gap-2">
                                                 {rec.annual_savings > 0 && (
-                                                    <div className="text-right flex-shrink-0">
-                                                        <div className="text-2xl font-bold">
-                                                            {rec.annual_savings.toFixed(0)}€
-                                                        </div>
-                                                        <div className="text-xs opacity-75">ahorro/año</div>
+                                                    <div className="text-xl font-bold">
+                                                        {rec.annual_savings.toFixed(0)}€
+                                                        <span className="text-xs font-medium opacity-75 ml-1">ahorro/año</span>
                                                     </div>
+                                                )}
+                                                <h4 className="font-semibold text-sm">{rec.title}</h4>
+                                                <p className="text-xs opacity-90">{rec.description}</p>
+                                                {rec.action_items && rec.action_items.length > 0 && (
+                                                    <ul className="mt-1 space-y-1">
+                                                        {rec.action_items.slice(0, 3).map((item, i) => (
+                                                            <li key={i} className="text-xs flex items-start gap-2">
+                                                                <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-current mt-1.5 opacity-70" />
+                                                                <span>{item}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
                                                 )}
                                             </div>
                                         </div>
@@ -543,12 +674,14 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                     </div>
                     <div className="flex justify-end gap-3 mt-6">
                         <button
+                            type="button"
                             onClick={() => setShowEmailModal(false)}
                             className="px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors text-sm font-medium"
                         >
                             Cancelar
                         </button>
                         <button
+                            type="button"
                             onClick={handleSendEmail}
                             disabled={isSendingEmail || !emailAddress}
                             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"

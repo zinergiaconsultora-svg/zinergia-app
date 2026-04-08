@@ -8,10 +8,10 @@ const envSchema = z.object({
     // Resend
     RESEND_API_KEY: z.string().min(1).optional(), // Optional for now if not strictly required
 
-    // Webhooks (Critical for detailed flows)
-    WEBHOOK_API_KEY: z.string().min(1),
-    OCR_WEBHOOK_URL: z.string().url(),
-    COMPARISON_WEBHOOK_URL: z.string().url(),
+    // Webhooks (Critical for detailed flows — optional at module init, validated inside each action)
+    WEBHOOK_API_KEY: z.string().min(1).optional(),
+    OCR_WEBHOOK_URL: z.string().url().optional(),
+    COMPARISON_WEBHOOK_URL: z.string().url().optional(),
 
     // Timeouts
     N8N_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),

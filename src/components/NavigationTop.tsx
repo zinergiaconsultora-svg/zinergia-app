@@ -21,6 +21,7 @@ import {
     Shield
 } from 'lucide-react';
 import { ZinergiaLogo } from './ui/ZinergiaLogo';
+import { haptics } from "@/lib/utils/haptics";
 import { motion, AnimatePresence } from 'framer-motion';
 import { crmService } from '@/services/crmService';
 import { logout } from '@/app/auth/actions';
@@ -80,22 +81,22 @@ export const NavigationTop = () => {
 
     return (
         <>
-            <header className="fixed top-0 left-0 right-0 z-50 pointer-events-none pt-safe">
+            <header className="fixed top-0 left-0 right-0 z-50 pointer-events-none">
             <motion.div
                 style={{ width: progressWidth }}
-                className="fixed top-0 left-0 h-[2px] bg-energy-500 z-[60]"
+                className="fixed top-[env(safe-area-inset-top)] left-0 h-[2px] bg-energy-500 z-[60]"
             />
 
-            {/* Mobile top bar — iOS style flat white */}
-            <div className="lg:hidden bg-white border-b border-[#e5e5ea] pointer-events-auto flex items-center justify-between px-4 h-12">
+            {/* Mobile top bar — iOS Native Glass Style */}
+            <div className="lg:hidden bg-white/85 backdrop-blur-xl border-b border-[#e5e5ea]/50 pointer-events-auto flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),16px)] pb-3">
                 <Link href="/dashboard" className="active:opacity-70 transition-opacity">
-                    <ZinergiaLogo className="w-24" />
+                    <ZinergiaLogo className="w-24 mt-1" />
                 </Link>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 mt-1">
                     <button
                         type="button"
                         onClick={handleLogout}
-                        className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-400 active:bg-slate-100 transition-colors"
+                        className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-500 active:bg-slate-200/60 transition-colors"
                         title="Cerrar Sesión"
                     >
                         <LogOut size={18} />
@@ -277,7 +278,7 @@ export const NavigationTop = () => {
             </header>
 
             {/* --- MÓVIL: BOTTOM TAB BAR iOS PURO --- */}
-            <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#e5e5ea] pb-safe">
+            <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-t border-[#e5e5ea] pb-[max(env(safe-area-inset-bottom),12px)] pt-1">
                 <div className="flex items-stretch justify-evenly max-w-md mx-auto">
                     {isAdmin ? (
                         /* Admin: tabs simplificados */
@@ -349,12 +350,31 @@ function NavIconLink({ href, label, icon: Icon, pathname, hoveredItem, setHovere
     setHoveredItem: (v: string | null) => void
 }) {
     const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
+    const isSimulador = label === 'Simulador';
+
+    let containerClass = isSimulador 
+        ? `relative flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-300 ${isActive ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30 ring-2 ring-rose-600/50 ring-offset-2' : 'bg-gradient-to-br from-rose-50 to-rose-100 text-rose-600 shadow-md hover:bg-rose-600 hover:from-rose-600 hover:to-rose-700 hover:text-white border border-rose-200/50'}`
+        : `relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300 ${isActive ? 'bg-energy-500 text-white shadow-lg shadow-energy-500/20' : 'text-slate-500 hover:bg-slate-100/50 hover:text-slate-900'}`;
+
     return (
-        <div className="relative group" onMouseEnter={() => setHoveredItem(label)} onMouseLeave={() => setHoveredItem(null)}>
-            <motion.div whileHover={{ scale: 1.1, rotate: 2 }} whileTap={{ scale: 0.9 }} transition={{ type: 'spring', stiffness: 400, damping: 17 }}>
-                <Link href={href} className={`relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300 ${isActive ? 'bg-energy-500 text-white shadow-lg shadow-energy-500/20' : 'text-slate-500 hover:bg-slate-100/50 hover:text-slate-900'}`}>
-                    <Icon size={22} strokeWidth={1.5} />
-                    {isActive && <motion.div layoutId="navGlow" className="absolute inset-0 bg-energy-500/20 blur-2xl rounded-full" />}
+        <div className={`relative group ${isSimulador ? 'animate-breathing' : ''}`} onMouseEnter={() => setHoveredItem(label)} onMouseLeave={() => setHoveredItem(null)}>
+            <motion.div 
+                whileHover={{ scale: 1.1, rotate: isSimulador ? 5 : 2 }} 
+                whileTap={{ scale: 0.9 }} 
+                transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                className={isSimulador ? "relative flex items-center justify-center rounded-full aura-border" : ""}
+            >
+                <Link href={href} className={containerClass} onClick={() => {
+                    if (isSimulador) {
+                        import('@/lib/utils/haptics').then(m => m.haptics.medium());
+                        import('@/lib/utils/audio').then(m => m.uiSound.pop());
+                    } else {
+                        import('@/lib/utils/haptics').then(m => m.haptics.light());
+                    }
+                }}>
+                    <Icon size={isSimulador ? 24 : 22} strokeWidth={isSimulador ? 2 : 1.5} />
+                    {isActive && !isSimulador && <motion.div layoutId="navGlow" className="absolute inset-0 bg-energy-500/20 blur-2xl rounded-full" />}
+                    {isActive && isSimulador && <motion.div layoutId="navGlowSimulador" className="absolute inset-0 bg-rose-600/30 blur-2xl rounded-full" />}
                 </Link>
             </motion.div>
             <AnimatePresence>
@@ -362,9 +382,9 @@ function NavIconLink({ href, label, icon: Icon, pathname, hoveredItem, setHovere
                     <motion.div
                         initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                        className="absolute top-full left-1/2 -translate-x-1/2 mt-3 px-2.5 py-1 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-[0.2em] rounded-md pointer-events-none whitespace-nowrap z-50 shadow-xl border border-white/10"
+                        className={`absolute top-full left-1/2 -translate-x-1/2 mt-3 px-2.5 py-1 text-white text-[10px] font-bold uppercase tracking-[0.2em] rounded-md pointer-events-none whitespace-nowrap z-50 shadow-xl border ${isSimulador ? 'bg-rose-600 border-rose-500' : 'bg-slate-900 border-white/10'}`}
                     >
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 w-2 h-2 bg-slate-900 rotate-45 border-l border-t border-white/10" />
+                        <div className={`absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 w-2 h-2 rotate-45 border-l border-t ${isSimulador ? 'bg-rose-600 border-rose-500' : 'bg-slate-900 border-white/10'}`} />
                         {label}
                     </motion.div>
                 )}

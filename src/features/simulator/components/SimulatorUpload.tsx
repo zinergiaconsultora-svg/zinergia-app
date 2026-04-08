@@ -154,9 +154,9 @@ export const SimulatorUpload: React.FC<SimulatorUploadProps> = ({
                             ${isDragging
                                 ? 'border-emerald-400 bg-emerald-50/80 scale-[1.01]'
                                 : uploadError
-                                    ? 'border-slate-200 bg-white/60'
-                                    : 'border-emerald-200 bg-white/70 hover:border-emerald-400 hover:bg-emerald-50/40'
-                            }`}
+                                    ? 'border-red-200 bg-white/80'
+                                    : 'border-emerald-200 bg-white/80 hover:border-emerald-400 hover:bg-emerald-50/40'
+                            } shadow-sm`}
                     >
                         <input
                             id="invoice-upload-simulator"
@@ -169,45 +169,60 @@ export const SimulatorUpload: React.FC<SimulatorUploadProps> = ({
                         />
 
                         {/* Top section */}
-                        <div className="w-full px-8 pt-10 pb-8 flex flex-col items-center text-center">
+                        <div className="w-full px-6 sm:px-10 pt-10 pb-8 flex flex-col items-center text-center">
                             {/* Icon */}
                             <motion.div
-                                animate={isDragging ? { scale: 1.1, rotate: -6 } : { scale: 1, rotate: 0 }}
-                                transition={{ type: 'spring', stiffness: 300 }}
-                                className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-5 shadow-lg transition-colors ${
-                                    isDragging ? 'bg-emerald-500' : 'bg-gradient-to-br from-emerald-100 to-teal-100'
+                                animate={isDragging ? { scale: 1.12, rotate: -8 } : { scale: 1, rotate: 0 }}
+                                transition={{ type: 'spring', stiffness: 320, damping: 18 }}
+                                className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center mb-5 shadow-xl transition-all ${
+                                    isDragging
+                                        ? 'bg-emerald-500 shadow-emerald-500/40'
+                                        : 'bg-gradient-to-br from-emerald-100 to-teal-50 shadow-emerald-100/60'
                                 }`}
                             >
-                                <Upload size={26} className={isDragging ? 'text-white' : 'text-emerald-600'} />
+                                <Upload size={28} className={isDragging ? 'text-white' : 'text-emerald-600'} />
                             </motion.div>
 
-                            <h3 className="text-xl font-bold text-slate-800 mb-1.5">
-                                {isDragging ? 'Suelta para analizar' : uploadError ? 'Vuelve a intentarlo' : 'Arrastra tu factura aquí'}
+                            <h3 className="text-xl sm:text-2xl font-bold text-slate-800 mb-2 tracking-tight">
+                                {isDragging ? '¡Suelta para analizar!' : uploadError ? 'Inténtalo de nuevo' : 'Arrastra tu factura aquí'}
                             </h3>
-                            <p className="text-sm text-slate-500 mb-5">
-                                {isDragging ? 'Listo para procesar con IA' : 'o haz clic para seleccionar un PDF'}
+                            <p className="text-sm text-slate-500 mb-6 max-w-xs">
+                                {isDragging
+                                    ? 'El motor IA procesará el documento automáticamente'
+                                    : 'o haz clic en cualquier parte para seleccionar un PDF desde tu dispositivo'}
                             </p>
 
-                            <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-slate-900 text-white text-xs font-bold shadow-sm">
-                                <FileText size={11} />
-                                Solo archivos PDF
-                            </span>
+                            <div className="flex items-center gap-3">
+                                <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/30 hover:bg-emerald-700 transition-colors">
+                                    <Upload size={11} />
+                                    Seleccionar PDF
+                                </span>
+                                <span className="text-xs text-slate-400 font-medium">o arrastra aquí</span>
+                            </div>
                         </div>
 
                         {/* Divider */}
                         <div className="w-full h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
 
                         {/* Feature grid */}
-                        <div className="w-full grid grid-cols-2 sm:grid-cols-4 gap-0 divide-x divide-y divide-slate-100">
+                        <div className="w-full grid grid-cols-2 sm:grid-cols-4 divide-slate-100 border-t border-slate-100">
                             {FEATURES.map((f, i) => {
                                 const FIcon = f.icon;
+                                const isRight = i % 2 !== 0;
+                                const isBottom = i >= 2;
                                 return (
-                                    <div key={i} className="flex flex-col items-center gap-1 px-4 py-4">
+                                    <div
+                                        key={i}
+                                        className={`flex flex-col items-center gap-1 px-3 py-4
+                                            ${isRight ? 'border-l border-slate-100' : ''}
+                                            ${isBottom ? 'border-t border-slate-100' : ''}
+                                            sm:border-t-0 sm:border-l sm:first:border-l-0`}
+                                    >
                                         <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center mb-1">
                                             <FIcon size={13} className="text-slate-500" />
                                         </div>
                                         <span className="text-[10px] font-bold text-slate-700 text-center leading-tight">{f.label}</span>
-                                        <span className="text-[9px] text-slate-400 text-center">{f.desc}</span>
+                                        <span className="text-[9px] text-slate-400 text-center hidden sm:block">{f.desc}</span>
                                     </div>
                                 );
                             })}

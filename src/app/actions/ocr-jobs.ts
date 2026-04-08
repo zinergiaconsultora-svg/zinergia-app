@@ -309,6 +309,125 @@ export async function getCupsEnergyHistory(
         .map(([month, totalEnergy]) => ({ month, totalEnergy }));
 }
 
+// ── Agent Precision Leaderboard ───────────────────────────────────────────────
+
+export interface AgentLeaderboardEntry {
+    agentId: string;
+    fullName: string;
+    email: string;
+    totalJobs: number;
+    completedJobs: number;
+    failedJobs: number;
+    successRate: number;         // 0–1
+    validatedCount: number;      // # of jobs where OCR was confirmed
+    correctionCount: number;     // # of fields corrected across all jobs
+    avgFieldsPerCorrection: number;
+}
+
+export async function getAgentPrecisionLeaderboard(): Promise<AgentLeaderboardEntry[]> {
+    await requireServerRole(['admin', 'franchise']);
+
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceKey) return [];
+    const { createClient: createSupabase } = await import('@supabase/supabase-js');
+    const admin = createSupabase(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
+
+    // Pull all completed/failed jobs with agent_id
+    const { data: jobs, error: jobsErr } = await admin
+        .from('ocr_jobs')
+        .select('agent_id, status')
+        .not('agent_id', 'is', null)
+        .in('status', ['completed', 'failed'])
+        .limit(5000);
+
+    if (jobsErr || !jobs) return [];
+
+    // Pull validated training examples with agent job link
+    const { data: examples } = await admin
+        .from('ocr_training_examples')
+        .select('ocr_job_id, is_validated, corrected_fields')
+        .not('ocr_job_id', 'is', null)
+        .eq('is_validated', true)
+        .limit(5000);
+
+    // Build a map: ocr_job_id → { validated, fieldCount }
+    const examplesByJob = new Map<string, { fieldCount: number }>();
+    for (const ex of examples ?? []) {
+        if (!ex.ocr_job_id) continue;
+        const correctedFields = (ex.corrected_fields as Record<string, unknown> | null) ?? {};
+        examplesByJob.set(ex.ocr_job_id, { fieldCount: Object.keys(correctedFields).length });
+    }
+
+    // Group jobs by agent_id
+    const byAgent = new Map<string, {
+        total: number; completed: number; failed: number;
+        validatedCount: number; correctionCount: number; totalFieldsSum: number;
+    }>();
+
+    for (const job of jobs) {
+        const aid = String(job.agent_id);
+        if (!byAgent.has(aid)) byAgent.set(aid, { total: 0, completed: 0, failed: 0, validatedCount: 0, correctionCount: 0, totalFieldsSum: 0 });
+        const g = byAgent.get(aid)!;
+        g.total++;
+        if (job.status === 'completed') g.completed++;
+        if (job.status === 'failed') g.failed++;
+    }
+
+    if (byAgent.size === 0) return [];
+
+    // Fetch agent profiles
+    const agentIds = [...byAgent.keys()];
+    const { data: profiles } = await admin
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', agentIds);
+
+    const profileMap = new Map<string, { full_name: string | null; email: string }>();
+    for (const p of profiles ?? []) profileMap.set(p.id, { full_name: p.full_name, email: p.email });
+
+    // Wire training examples back into agents via job IDs
+    // We need agent_id from jobs — build job→agent map
+    const jobAgentMap = new Map<string, string>();
+    // Re-query with job IDs to link examples → agents
+    const { data: jobsWithId } = await admin
+        .from('ocr_jobs')
+        .select('id, agent_id')
+        .not('agent_id', 'is', null)
+        .in('status', ['completed'])
+        .limit(5000);
+
+    for (const j of jobsWithId ?? []) {
+        if (j.id && j.agent_id) jobAgentMap.set(j.id, String(j.agent_id));
+    }
+
+    for (const [jobId, ex] of examplesByJob) {
+        const aid = jobAgentMap.get(jobId);
+        if (!aid || !byAgent.has(aid)) continue;
+        const g = byAgent.get(aid)!;
+        g.validatedCount++;
+        g.correctionCount += ex.fieldCount;
+        g.totalFieldsSum += ex.fieldCount;
+    }
+
+    return [...byAgent.entries()]
+        .map(([agentId, g]) => {
+            const profile = profileMap.get(agentId);
+            return {
+                agentId,
+                fullName: profile?.full_name ?? 'Agente desconocido',
+                email: profile?.email ?? '',
+                totalJobs: g.total,
+                completedJobs: g.completed,
+                failedJobs: g.failed,
+                successRate: g.total > 0 ? g.completed / g.total : 0,
+                validatedCount: g.validatedCount,
+                correctionCount: g.correctionCount,
+                avgFieldsPerCorrection: g.validatedCount > 0 ? g.correctionCount / g.validatedCount : 0,
+            };
+        })
+        .sort((a, b) => b.completedJobs - a.completedJobs || b.successRate - a.successRate);
+}
+
 export async function markOcrJobFailed(jobId: string, reason: string): Promise<void> {
     await requireServerRole(['admin', 'franchise', 'agent']);
     const supabase = await createClient();
