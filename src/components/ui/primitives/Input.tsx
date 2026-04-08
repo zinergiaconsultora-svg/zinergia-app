@@ -3,6 +3,8 @@ import { cn } from '@/lib/utils';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     label?: string;
+    /** Elemento adicional renderizado inline junto al label (p.ej. badge de confianza OCR) */
+    labelBadge?: React.ReactNode;
     error?: string;
     warning?: string;
     icon?: React.ReactNode;
@@ -11,7 +13,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-    ({ className, label, error, warning, icon, action, id, ...props }, ref) => {
+    ({ className, label, labelBadge, error, warning, icon, action, id, ...props }, ref) => {
         const generatedId = React.useId();
         const inputId = id || generatedId;
 
@@ -20,9 +22,10 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
                 {label && (
                     <label
                         htmlFor={inputId}
-                        className="text-[11px] font-bold text-slate-500 uppercase tracking-widest block"
+                        className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5"
                     >
                         {label}
+                        {labelBadge}
                     </label>
                 )}
                 <div className="relative group">
