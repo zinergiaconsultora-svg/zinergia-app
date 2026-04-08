@@ -62,7 +62,7 @@ export const SavingsTrendChart = ({ data }: { data: { name: string; value: numbe
 
     return (
         <div className="h-full w-full">
-            <div className="h-64 w-full">
+            <div className="h-full w-full">
                 <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                     <AreaChart data={data} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                         <defs>
@@ -112,7 +112,7 @@ export const PipelinePieChart = ({
 
     return (
         <div className="h-full w-full relative">
-            <div className="h-64 w-full">
+            <div className="h-full w-full">
                 <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                     <PieChart>
                         <Pie

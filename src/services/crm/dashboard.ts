@@ -40,7 +40,7 @@ export const dashboardService = {
                 .eq('franchise_id', franchiseId)
                 .order('created_at', { ascending: false })
                 .limit(5),
-            supabase.from('profiles').select('full_name, role, avatar_url').maybeSingle(),
+            supabase.from('profiles').select('full_name, role').maybeSingle(),
         ]);
 
         const rpc = (rpcResponse.data ?? {}) as Partial<RpcResult>;

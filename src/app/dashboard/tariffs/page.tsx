@@ -14,7 +14,7 @@ export default async function TariffsPage() {
         getTarifas('gas', activeOnly),
         getTariffCommissions(),
         getCollaboratorPct(),
-    ])
+    ]);
 
     if (role === 'admin') {
         return (
