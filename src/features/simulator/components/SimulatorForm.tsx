@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
     Zap,
     ChevronLeft,
@@ -62,6 +62,20 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     const [isConfirming, setIsConfirming] = useState(false);
     const [localConfirmed, setLocalConfirmed] = useState(false);
     const pdfViewerRef = useRef<PdfViewerHandle>(null);
+
+    // Detección de factura duplicada (mismo CUPS + mismo mes)
+    const [duplicateInfo, setDuplicateInfo] = useState<{ createdAt: string; invoiceNumber: string | null } | null>(null);
+    useEffect(() => {
+        if (!data.cups || !data.invoice_date || isMockMode) return;
+        setDuplicateInfo(null); // Reset on change
+        let cancelled = false;
+        import('@/app/actions/ocr-jobs').then(({ checkDuplicateInvoice }) => {
+            checkDuplicateInvoice(data.cups!, data.invoice_date!).then(result => {
+                if (!cancelled) setDuplicateInfo(result ? { createdAt: result.createdAt, invoiceNumber: result.invoiceNumber } : null);
+            }).catch(() => {});
+        });
+        return () => { cancelled = true; };
+    }, [data.cups, data.invoice_date, isMockMode]);
 
     /** Localiza un valor en el PDF. Solo actúa si hay PDF cargado. */
     const locate = (value: string | number | undefined) => {
@@ -273,6 +287,23 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                     </div>
                 </div>
             </div>
+
+            {/* Banner: factura duplicada detectada */}
+            {duplicateInfo && (
+                <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-4 flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3"
+                >
+                    <AlertTriangle size={16} className="text-orange-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-orange-800 font-medium">
+                        <span className="font-bold">Posible factura duplicada</span> — ya existe una extracción de este CUPS
+                        {duplicateInfo.invoiceNumber ? ` (factura ${duplicateInfo.invoiceNumber})` : ''} del mismo mes, procesada el{' '}
+                        {new Date(duplicateInfo.createdAt).toLocaleDateString('es-ES')}.
+                        Verifica que no estás analizando la misma factura dos veces.
+                    </p>
+                </motion.div>
+            )}
 
             {/* Banner: alerta cuando hay múltiples campos con baja confianza OCR */}
             {lowConfidenceCount >= 3 && (

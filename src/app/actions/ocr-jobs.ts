@@ -101,6 +101,71 @@ export async function getOcrJobsByClient(clientId: string, limit = 20): Promise<
     return (data ?? []) as OcrJobRecord[];
 }
 
+/**
+ * Comprueba si ya existe una factura completada con el mismo CUPS y el mismo mes/año.
+ * Devuelve los datos básicos del job previo, o null si no hay duplicado.
+ */
+export async function checkDuplicateInvoice(
+    cups: string,
+    invoiceDate: string,
+): Promise<{ jobId: string; createdAt: string; invoiceNumber: string | null } | null> {
+    if (!cups || cups.length < 18) return null;
+
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    // Extraer año y mes de la fecha de factura (formatos: YYYY-MM-DD, DD/MM/YYYY, MM/YYYY)
+    let yearMonth: string | null = null;
+    const iso = invoiceDate?.match(/(\d{4})-(\d{2})/);
+    const dmy = invoiceDate?.match(/\d{2}\/(\d{2})\/(\d{4})/);
+    const my  = invoiceDate?.match(/(\d{2})\/(\d{4})/);
+    if (iso)      yearMonth = `${iso[1]}-${iso[2]}`;
+    else if (dmy) yearMonth = `${dmy[2]}-${dmy[1]}`;
+    else if (my)  yearMonth = `${my[2]}-${my[1]}`;
+
+    if (!yearMonth) return null;
+
+    // Buscar jobs completados del mismo agente con el mismo CUPS
+    const { data, error } = await supabase
+        .from('ocr_jobs')
+        .select('id, created_at, extracted_data')
+        .eq('agent_id', user.id)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+    if (error || !data) return null;
+
+    for (const job of data) {
+        const ext = job.extracted_data as Record<string, unknown> | null;
+        if (!ext) continue;
+
+        const jobCups = String(ext.cups ?? '').trim().toUpperCase();
+        if (jobCups !== cups.trim().toUpperCase()) continue;
+
+        // Mismo CUPS — comprobar si es el mismo mes/año según invoice_date del job
+        const jobDate = String(ext.invoice_date ?? '');
+        const jIso = jobDate.match(/(\d{4})-(\d{2})/);
+        const jDmy = jobDate.match(/\d{2}\/(\d{2})\/(\d{4})/);
+        const jMy  = jobDate.match(/(\d{2})\/(\d{4})/);
+        let jobYearMonth: string | null = null;
+        if (jIso)      jobYearMonth = `${jIso[1]}-${jIso[2]}`;
+        else if (jDmy) jobYearMonth = `${jDmy[2]}-${jDmy[1]}`;
+        else if (jMy)  jobYearMonth = `${jMy[2]}-${jMy[1]}`;
+
+        if (jobYearMonth === yearMonth) {
+            return {
+                jobId: job.id,
+                createdAt: job.created_at,
+                invoiceNumber: ext.invoice_number ? String(ext.invoice_number) : null,
+            };
+        }
+    }
+
+    return null;
+}
+
 export async function markOcrJobFailed(jobId: string, reason: string): Promise<void> {
     await requireServerRole(['admin', 'franchise', 'agent']);
     const supabase = await createClient();
