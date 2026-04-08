@@ -146,6 +146,47 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     const hasEnergyValues = [1, 2, 3, 4, 5, 6].some(p => (data[`energy_p${p}` as keyof InvoiceData] as number) > 0);
     const hasPowerValues = [1, 2, 3, 4, 5, 6].some(p => (data[`power_p${p}` as keyof InvoiceData] as number) > 0);
 
+    /** Validaciones cruzadas entre campos: formato, coherencia tarifa/períodos, sanidad fechas. */
+    const crossFieldIssues = useMemo(() => {
+        const issues: Array<{ severity: 'error' | 'warning'; message: string }> = [];
+
+        // ── DNI/CIF/NIE format ────────────────────────────────────────────────
+        if (data.dni_cif) {
+            const clean = data.dni_cif.trim().toUpperCase();
+            const isNIF = /^[0-9]{8}[TRWAGMYFPDXBNJZSQVHLCKE]$/.test(clean);
+            const isNIE = /^[XYZ][0-9]{7}[TRWAGMYFPDXBNJZSQVHLCKE]$/.test(clean);
+            const isCIF = /^[ABCDEFGHJNPQRSUVW][0-9]{7}[0-9A-J]$/.test(clean);
+            if (!isNIF && !isNIE && !isCIF) {
+                issues.push({ severity: 'warning', message: `"${clean}" no coincide con formato NIF, NIE ni CIF español` });
+            }
+        }
+
+        // ── CUPS estructura ───────────────────────────────────────────────────
+        if (data.cups) {
+            if (!data.cups.startsWith('ES')) {
+                issues.push({ severity: 'error', message: 'CUPS debe comenzar con "ES" — probable error OCR' });
+            } else if (!/^ES[0-9]{16}[A-Z0-9]{2}([A-Z0-9]{2})?$/.test(data.cups)) {
+                issues.push({ severity: 'warning', message: 'Estructura de CUPS inusual — verifica los caracteres finales' });
+            }
+        }
+
+        // ── Coherencia tarifa / períodos ──────────────────────────────────────
+        const hasHighPeriodEnergy = [4, 5, 6].some(p => (data[`energy_p${p}` as keyof InvoiceData] as number) > 0);
+        const hasHighPeriodPower  = [4, 5, 6].some(p => (data[`power_p${p}` as keyof InvoiceData] as number) > 0);
+        if (powerType === '2.0' && (hasHighPeriodEnergy || hasHighPeriodPower)) {
+            issues.push({ severity: 'warning', message: 'Tarifa 2.0TD detectada, pero hay valores en P4-P6 — posible error OCR en tarifa o en períodos' });
+        }
+
+        // ── Sanidad período de facturación ────────────────────────────────────
+        if (data.period_days > 0 && data.period_days < 20) {
+            issues.push({ severity: 'warning', message: `Período de ${data.period_days} días es inusualmente corto para una factura mensual` });
+        } else if (data.period_days > 45) {
+            issues.push({ severity: 'warning', message: `Período de ${data.period_days} días es largo — ¿factura bimestral?` });
+        }
+
+        return issues;
+    }, [data, powerType]);
+
     return (
         <motion.div
             key="simulator-form"
@@ -293,6 +334,25 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                             </div>
                         </div>
                     </Card>
+
+                    {/* Cross-field validation alerts */}
+                    {crossFieldIssues.length > 0 && (
+                        <div className="space-y-2">
+                            {crossFieldIssues.map((issue, i) => (
+                                <div
+                                    key={i}
+                                    className={`flex items-start gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium ${
+                                        issue.severity === 'error'
+                                            ? 'bg-red-50 border border-red-200 text-red-800'
+                                            : 'bg-amber-50 border border-amber-200 text-amber-800'
+                                    }`}
+                                >
+                                    <AlertTriangle size={14} className={`flex-shrink-0 mt-0.5 ${issue.severity === 'error' ? 'text-red-500' : 'text-amber-500'}`} />
+                                    {issue.message}
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     {/* Group 1: Identity & Contract */}
                     <div className="space-y-4">
