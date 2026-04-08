@@ -1,17 +1,19 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSimulatorContext } from '../contexts/SimulatorContext';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { InvoiceData } from '@/types/crm';
 import { SimulatorUpload } from './SimulatorUpload';
+import { SimulatorBatchUpload } from './SimulatorBatchUpload';
 import { SimulatorForm } from './SimulatorForm';
 import { SimulatorResults } from './SimulatorResults';
 import { SimulatorSkeleton } from './SimulatorSkeleton';
 import { LoadingOverlay } from './LoadingOverlay';
 
 export const SimulatorView = () => {
+    const [batchMode, setBatchMode] = useState(false);
     const {
         step,
         isAnalyzing,
@@ -85,14 +87,26 @@ export const SimulatorView = () => {
 
                 <AnimatePresence mode="wait">
 
-                    {/* PASO 1: Subir Factura */}
-                    {step === 1 && !isAnalyzing && (
+                    {/* PASO 1: Subir Factura — modo individual */}
+                    {step === 1 && !isAnalyzing && !batchMode && (
                         <SimulatorUpload
                             onFileUpload={handleFileUpload}
                             onDrop={handleDrop}
                             onDragOver={handleDragOver}
                             isAnalyzing={isAnalyzing}
                             uploadError={uploadError}
+                            onBatchMode={() => setBatchMode(true)}
+                        />
+                    )}
+
+                    {/* PASO 1: Modo lote */}
+                    {step === 1 && !isAnalyzing && batchMode && (
+                        <SimulatorBatchUpload
+                            onLoadInvoice={(data) => {
+                                setInvoiceData(data);
+                                setBatchMode(false);
+                            }}
+                            onExit={() => setBatchMode(false)}
                         />
                     )}
 
