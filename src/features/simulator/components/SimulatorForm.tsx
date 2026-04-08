@@ -13,6 +13,7 @@ import {
     Activity,
     Info,
     AlertCircle,
+    AlertTriangle,
     CheckCircle2,
     ShieldCheck,
     ScanSearch,
@@ -93,12 +94,41 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         }, 600);
     };
 
-    // Returns true if the field has low confidence (< 0.7) from OCR
-    const isLowConfidence = (field: string): boolean => {
+    /** Devuelve el valor de confianza OCR 0-1 para un campo, o null si no está disponible. */
+    const getConfidence = (field: string): number | null => {
         const conf = (data as unknown as Record<string, unknown>)._confidence as Record<string, number> | undefined;
-        if (!conf || conf[field] === undefined) return false;
-        return conf[field] < 0.7;
+        if (!conf || conf[field] === undefined) return null;
+        return conf[field];
     };
+
+    /** True si la confianza OCR del campo es inferior a 0.7. */
+    const isLowConfidence = (field: string): boolean => {
+        const c = getConfidence(field);
+        return c !== null && c < 0.7;
+    };
+
+    /** Warning text con porcentaje incluido para campos de baja confianza. */
+    const lowConfWarn = (field: string): string | undefined => {
+        const c = getConfidence(field);
+        if (c !== null && c < 0.7) return `Confianza ${Math.round(c * 100)}% — revisa este dato`;
+        return undefined;
+    };
+
+    /** Score global OCR: media de todos los campos con dato de confianza. */
+    const globalConfidence = useMemo(() => {
+        const conf = (data as unknown as Record<string, unknown>)._confidence as Record<string, number> | undefined;
+        if (!conf) return null;
+        const vals = Object.values(conf).filter((v): v is number => typeof v === 'number');
+        if (vals.length === 0) return null;
+        return vals.reduce((a, b) => a + b, 0) / vals.length;
+    }, [data]);
+
+    /** Número de campos con confianza OCR < 0.7. */
+    const lowConfidenceCount = useMemo(() => {
+        const conf = (data as unknown as Record<string, unknown>)._confidence as Record<string, number> | undefined;
+        if (!conf) return 0;
+        return Object.values(conf).filter((v): v is number => typeof v === 'number' && v < 0.7).length;
+    }, [data]);
 
     // Toggle for PDF View
     const [showPdf, setShowPdf] = React.useState(true);
@@ -177,6 +207,22 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                         </motion.button>
                     )}
 
+                    {globalConfidence !== null && (
+                        <div className="text-center hidden sm:block">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Calidad OCR</p>
+                            <div className="flex items-center gap-1.5">
+                                <div
+                                    className="w-14 h-1.5 bg-slate-200 rounded-full overflow-hidden"
+                                    style={{ '--bar-w': `${Math.round(globalConfidence * 100)}%` } as React.CSSProperties}
+                                >
+                                    <div className={`h-full rounded-full transition-all [width:var(--bar-w)] ${globalConfidence >= 0.9 ? 'bg-emerald-500' : globalConfidence >= 0.7 ? 'bg-amber-400' : 'bg-red-400'}`} />
+                                </div>
+                                <span className={`text-xs font-black tabular-nums ${globalConfidence >= 0.9 ? 'text-emerald-600' : globalConfidence >= 0.7 ? 'text-amber-500' : 'text-red-500'}`}>
+                                    {Math.round(globalConfidence * 100)}%
+                                </span>
+                            </div>
+                        </div>
+                    )}
                     <div className="text-right">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estado Auditoría</p>
                         <p className="text-sm font-bold text-slate-900 flex items-center gap-2 justify-end">
@@ -186,6 +232,20 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                     </div>
                 </div>
             </div>
+
+            {/* Banner: alerta cuando hay múltiples campos con baja confianza OCR */}
+            {lowConfidenceCount >= 3 && (
+                <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-6 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3"
+                >
+                    <AlertTriangle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-amber-800 font-medium">
+                        <span className="font-bold">{lowConfidenceCount} campos con confianza baja</span> — el OCR no pudo leer estos datos con precisión. Revísalos antes de continuar para obtener resultados más exactos.
+                    </p>
+                </motion.div>
+            )}
 
             <div className={`grid grid-cols-1 ${showPdf && pdfUrl ? 'xl:grid-cols-2 gap-8' : 'lg:grid-cols-12 gap-8'}`}>
 
@@ -243,44 +303,48 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                         <Card className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white/60">
                             <Input
                                 label="Titular / Cliente"
+                                labelBadge={<ConfidencePill value={getConfidence('client_name')} />}
                                 icon={<User size={16} />}
                                 value={data.client_name}
                                 onChange={(e) => onUpdate('client_name', e.target.value)}
                                 placeholder="Nombre completo"
                                 warning={
-                                    isLowConfidence('client_name') ? 'Confianza baja — revisa este dato' :
+                                    lowConfWarn('client_name') ??
                                     (data.client_name && data.client_name.length < 5 ? 'Nombre muy corto (¿OCR incompleto?)' : undefined)
                                 }
                                 action={pdfUrl && data.client_name ? <LocateButton onClick={() => locate(data.client_name)} lowConfidence={isLowConfidence('client_name')} /> : undefined}
                             />
                             <Input
                                 label="CIF / DNI"
+                                labelBadge={<ConfidencePill value={getConfidence('dni_cif')} />}
                                 icon={<Hash size={16} />}
                                 value={data.dni_cif}
                                 onChange={(e) => onUpdate('dni_cif', e.target.value)}
                                 placeholder="Identificación"
                                 warning={
-                                    isLowConfidence('dni_cif') ? 'Confianza baja — revisa este dato' :
+                                    lowConfWarn('dni_cif') ??
                                     (data.dni_cif && !/^[0-9A-Z]{9}$/.test(data.dni_cif) ? 'Formato inusual' : undefined)
                                 }
                                 action={pdfUrl && data.dni_cif ? <LocateButton onClick={() => locate(data.dni_cif)} lowConfidence={isLowConfidence('dni_cif')} /> : undefined}
                             />
                             <Input
                                 label="Comercializadora Actual"
+                                labelBadge={<ConfidencePill value={getConfidence('company_name')} />}
                                 icon={<Building2 size={16} />}
                                 value={data.company_name}
                                 onChange={(e) => onUpdate('company_name', e.target.value)}
                                 placeholder="Ej: Endesa, Iberdrola..."
-                                warning={isLowConfidence('company_name') ? 'Confianza baja — revisa este dato' : undefined}
+                                warning={lowConfWarn('company_name')}
                                 action={pdfUrl && data.company_name ? <LocateButton onClick={() => locate(data.company_name)} lowConfidence={isLowConfidence('company_name')} /> : undefined}
                             />
                             <Input
                                 label="Nº de Factura"
+                                labelBadge={<ConfidencePill value={getConfidence('invoice_number')} />}
                                 icon={<Hash size={16} />}
                                 value={data.invoice_number}
                                 onChange={(e) => onUpdate('invoice_number', e.target.value)}
                                 warning={
-                                    isLowConfidence('invoice_number') ? 'Confianza baja — revisa este dato' :
+                                    lowConfWarn('invoice_number') ??
                                     (!data.invoice_number ? 'Dato no encontrado en el PDF' : undefined)
                                 }
                                 action={pdfUrl && data.invoice_number ? <LocateButton onClick={() => locate(data.invoice_number)} lowConfidence={isLowConfidence('invoice_number')} /> : undefined}
@@ -298,11 +362,12 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                             <div className="md:col-span-2">
                                 <Input
                                     label="CUPS"
+                                    labelBadge={<ConfidencePill value={getConfidence('cups')} />}
                                     icon={<Activity size={16} />}
                                     value={data.cups}
                                     error={!isCupsValid && data.cups ? 'Longitud de CUPS sospechosa' : undefined}
                                     warning={
-                                        isLowConfidence('cups') ? 'Confianza baja — revisa este dato' :
+                                        lowConfWarn('cups') ??
                                         (isCupsValid && !data.cups?.startsWith('ES') ? 'CUPS debe empezar por ES' : undefined)
                                     }
                                     onChange={(e) => onUpdate('cups', e.target.value.toUpperCase())}
@@ -312,11 +377,12 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                             </div>
                             <Input
                                 label="Dirección de Suministro"
+                                labelBadge={<ConfidencePill value={getConfidence('supply_address')} />}
                                 icon={<MapPin size={16} />}
                                 value={data.supply_address}
                                 onChange={(e) => onUpdate('supply_address', e.target.value)}
                                 warning={
-                                    isLowConfidence('supply_address') ? 'Confianza baja — revisa este dato' :
+                                    lowConfWarn('supply_address') ??
                                     (data.supply_address && data.supply_address.length < 10 ? 'Dirección incompleta' : undefined)
                                 }
                                 action={pdfUrl && data.supply_address ? <LocateButton onClick={() => locate(data.supply_address)} lowConfidence={isLowConfidence('supply_address')} /> : undefined}
@@ -331,9 +397,11 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                 />
                                 <Input
                                     label="Fecha"
+                                    labelBadge={<ConfidencePill value={getConfidence('invoice_date')} />}
                                     icon={<Calendar size={16} />}
                                     value={data.invoice_date}
                                     onChange={(e) => onUpdate('invoice_date', e.target.value)}
+                                    warning={lowConfWarn('invoice_date')}
                                     action={pdfUrl && data.invoice_date ? <LocateButton onClick={() => locate(data.invoice_date)} lowConfidence={isLowConfidence('invoice_date')} /> : undefined}
                                 />
                             </div>
@@ -497,4 +565,26 @@ const LocateButton: React.FC<LocateButtonProps> = ({ onClick, lowConfidence }) =
         <ScanSearch size={14} />
     </motion.button>
 );
+
+// ── ConfidencePill ────────────────────────────────────────────────────────────
+
+/**
+ * Badge de confianza OCR renderizado inline junto al label de un campo.
+ * Verde ≥90%, ámbar 70-89%, rojo <70%.
+ * Se pasa como labelBadge al componente Input.
+ */
+const ConfidencePill: React.FC<{ value: number | null }> = ({ value }) => {
+    if (value === null) return null;
+    const pct = Math.round(value * 100);
+    const cls = value >= 0.9
+        ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+        : value >= 0.7
+            ? 'text-amber-600 bg-amber-50 border-amber-200'
+            : 'text-red-600 bg-red-50 border-red-200';
+    return (
+        <span className={`inline-flex items-center px-1.5 py-px rounded border normal-case tracking-normal font-black text-[9px] tabular-nums ${cls}`}>
+            {pct}%
+        </span>
+    );
+};
 
