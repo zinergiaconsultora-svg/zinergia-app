@@ -18,7 +18,7 @@ import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { formatCurrency } from '@/lib/utils/format';
 import { DashboardSkeleton } from '@/components/ui/DashboardSkeleton';
-import { QuickUploadZone } from './QuickUploadZone';
+
 
 
 const NotificationsPopover = dynamic(() =>
@@ -230,30 +230,10 @@ export default function DashboardView() {
                     </div>
                 </motion.div>
 
-                {/* 2. HERO UPLOAD — desktop only with glass effect */}
-                <motion.div variants={item} className="hidden lg:block relative w-full group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-emerald-500/10 to-teal-500/10 blur-3xl opacity-50 rounded-[3rem]" />
-                    <div className="relative glass-premium rounded-[2.5rem] border border-white/20 shadow-2xl overflow-hidden p-8 lg:p-12 flex flex-col lg:flex-row items-center gap-10">
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                        <div className="flex-1 text-center lg:text-left">
-                            <h2 className="text-3xl lg:text-4xl font-display font-bold text-slate-800 dark:text-white leading-tight mb-4 tracking-tight">
-                                Optimiza tu <span className="text-transparent bg-clip-text bg-gradient-to-r from-energy-600 to-energy-400">Energía</span> en segundos
-                            </h2>
-                            <p className="text-slate-500 dark:text-slate-400 text-lg max-w-xl mx-auto lg:mx-0 font-body">
-                                Sube tu factura PDF y deja que nuestra ingeniería detecte el mayor ahorro posible para tus clientes.
-                            </p>
-                        </div>
-                        <QuickUploadZone />
-                    </div>
-                </motion.div>
 
-                {/* 3. MOBILE UPLOAD — iOS card style */}
-                <motion.div variants={item} className="lg:hidden mx-4 mt-3 mb-2">
-                    <QuickUploadZone />
-                </motion.div>
 
                 {/* 2. KPIs — iOS grouped list en móvil, grid en desktop */}
-                <motion.div variants={item} className="mx-4 lg:mx-0 mt-4 lg:mt-0">
+                <div className="mx-4 lg:mx-0 mt-4 lg:mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both" style={{ animationDelay: '300ms' }}>
                     {/* Mobile: horizontal scroll KPI chips */}
                     <div className="flex gap-3 overflow-x-auto pb-1 lg:hidden scrollbar-none snap-x snap-mandatory">
                         <div className="snap-start shrink-0 bg-white rounded-2xl border border-[#e5e5ea] px-4 py-3 min-w-[140px] shadow-sm">
@@ -285,20 +265,25 @@ export default function DashboardView() {
                         <GlassKpiCard label="Ahorro Detectado" value={formatCurrency(stats.financials.total_detected)} icon={TrendingUp} delay={0.1} />
                         <GlassKpiCard label="Objetivo Mensual" value={`${goalProgress}%`} subValue={formatCurrency(MONTHLY_GOAL)} icon={Target} progress={goalProgress} delay={0.2} />
                         <GlassKpiCard label="Pipeline Activo" value={formatCurrency(stats.financials.pipeline)} icon={Layers} delay={0.3} />
-                        <Link href="/dashboard/tariffs">
-                            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 }} className="flex flex-col justify-between p-3 bg-indigo-50/80 backdrop-blur-xl rounded-2xl border border-indigo-100 shadow-lg hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full">
-                                <div className="flex items-center justify-between text-indigo-400 mb-1">
-                                    <span className="text-[9px] font-medium uppercase tracking-widest opacity-80">Tarifas</span>
-                                    <Zap size={13} strokeWidth={1.5} className="opacity-70" />
-                                </div>
-                                <div>
-                                    <div className="text-sm font-semibold text-indigo-700 leading-tight">Ver precios</div>
-                                    <div className="text-[9px] text-indigo-400 font-normal mt-0.5">y comisiones →</div>
-                                </div>
-                            </motion.div>
-                        </Link>
+                        <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => router.push('/dashboard/tariffs')}
+                            onKeyDown={(e) => { if (e.key === 'Enter') router.push('/dashboard/tariffs'); }}
+                            className="flex flex-col justify-between p-3 bg-indigo-50/80 backdrop-blur-xl rounded-2xl border border-indigo-100 shadow-lg hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full animate-in fade-in zoom-in-95 fill-mode-both"
+                            style={{ animationDelay: '400ms', animationDuration: '500ms' }}
+                        >
+                            <div className="flex items-center justify-between text-indigo-400 mb-1">
+                                <span className="text-[9px] font-medium uppercase tracking-widest opacity-80">Tarifas</span>
+                                <Zap size={13} strokeWidth={1.5} className="opacity-70" />
+                            </div>
+                            <div>
+                                <div className="text-sm font-semibold text-indigo-700 leading-tight">Ver precios</div>
+                                <div className="text-[9px] text-indigo-400 font-normal mt-0.5">y comisiones →</div>
+                            </div>
+                        </div>
                     </div>
-                </motion.div>
+                </div>
 
                 {/* 3. MAIN BENTO GRID (Balanced Layout without gaps) */}
                 <motion.div variants={item} className="flex flex-col gap-4">
@@ -306,22 +291,22 @@ export default function DashboardView() {
                     {/* ROW 1: Charts (Trend 2/3 + Pipeline 1/3) */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                         {/* Trend Chart (col-span-2) */}
-                        <div className="lg:col-span-2 bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-4 flex flex-col group hover:bg-white/80 transition-colors">
+                        <div className="lg:col-span-2 bg-white/90 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/80 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-none p-5 flex flex-col group hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
                             <SectionHeader title="Tendencia de Ahorro" link="Ver Reporte" />
-                            <div className="mt-2 h-[220px]">
+                            <div className="mt-4 h-[180px] w-full">
                                 <SavingsTrendChart data={stats.savingsTrend ?? []} />
                             </div>
                         </div>
 
                         {/* Pipeline Chart (col-span-1) */}
-                        <div className="lg:col-span-1 bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-4 flex flex-col hover:bg-white/80 transition-colors">
+                        <div className="lg:col-span-1 bg-white/90 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/80 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-none p-5 flex flex-col group hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
                             <SectionHeader title="Distribución de Pipeline" />
-                            <div className="flex-1 relative min-h-[160px] flex items-center justify-center mt-2">
-                                <div className="h-full w-full max-h-[160px]">
+                            <div className="flex-1 relative min-h-[140px] flex items-center justify-center mt-2">
+                                <div className="h-full w-full max-h-[140px]">
                                     <PipelinePieChart active={activeDeals} won={wonDeals} lost={lostDeals} />
                                 </div>
                             </div>
-                            <div className="flex justify-between border-t border-slate-100 pt-3 mt-2">
+                            <div className="flex justify-between border-t border-slate-100 dark:border-slate-800 pt-3 mt-2">
                                 <div className="text-center">
                                     <div className="text-[10px] uppercase text-slate-400 font-bold tracking-wider">Conversión</div>
                                     <div className="text-sm font-bold text-emerald-600">{stats.financials.conversion_rate}%</div>
@@ -335,11 +320,11 @@ export default function DashboardView() {
                     </div>
 
                     {/* ROW 2: Lists (Recent Activity 1/2 + OCR Jobs 1/2) */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[400px]">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[320px]">
                         {/* Recent Activity */}
-                        <div className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border border-white/80 dark:border-white/10 shadow-lg hover:shadow-xl hover:-translate-y-1 p-4 flex flex-col transition-all duration-300 overflow-hidden h-full">
+                        <div className="bg-white/90 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/80 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-none p-5 flex flex-col hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 overflow-hidden h-full">
                             <SectionHeader title="Actividad Reciente" />
-                            <div className="flex-1 overflow-y-auto mt-3 space-y-2 pr-2 custom-scrollbar">
+                            <div className="flex-1 overflow-y-auto mt-4 space-y-2 pr-2 custom-scrollbar">
                                 {stats.recentProposals.map((proposal) => (
                                     <div key={proposal.id} onClick={() => router.push(`/dashboard/proposals/${proposal.id}`)} className="flex items-center justify-between p-3 rounded-xl bg-white/50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500/50 hover:shadow-md hover:bg-white cursor-pointer group transition-all duration-300">
                                         <div className="flex items-center gap-3 min-w-0">
