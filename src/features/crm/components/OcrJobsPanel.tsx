@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { getOcrJobHistory, retryOcrJob, type OcrJobRecord } from '@/app/actions/ocr-jobs';
-import { computeExampleQualityScore } from '@/app/actions/ocr-confirm';
+import { computeExampleQualityScore } from '@/lib/utils/ocr-quality';
 import { RefreshCw, CheckCircle2, XCircle, Loader2, FileText, RotateCcw, ArrowRight, ChevronDown, ChevronUp, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';

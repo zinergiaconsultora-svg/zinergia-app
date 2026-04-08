@@ -1,5 +1,18 @@
 'use client';
 
+/**
+ * PdfViewer — visor de PDF con zoom, navegación y búsqueda de texto.
+ *
+ * ARQUITECTURA FULLSCREEN:
+ * position:fixed dentro de un motion.div (framer-motion) NO funciona.
+ * Framer aplica CSS transforms que crean un nuevo stacking context,
+ * haciendo que fixed sea relativo al ancestor transformado en lugar del viewport.
+ *
+ * Solución: createPortal al document.body para el modo pantalla completa,
+ * con z-index 9999. El visor inline permanece montado (invisible) para
+ * mantener el estado (página, zoom) y el ResizeObserver activo.
+ */
+
 import React, {
     useState,
     useRef,
@@ -8,6 +21,7 @@ import React, {
     useImperativeHandle,
     forwardRef,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/TextLayer.css';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -32,11 +46,6 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export interface PdfViewerHandle {
-    /**
-     * Busca `value` en la capa de texto del PDF actual.
-     * Hace scroll hasta la primera coincidencia y la resalta durante 3 s.
-     * Si no hay capa de texto (PDF escaneado) no hace nada.
-     */
     locate: (value: string) => void;
 }
 
@@ -45,7 +54,7 @@ interface PdfViewerProps {
     className?: string;
 }
 
-// ── Highlight styles (inyectadas una vez en el DOM) ───────────────────────────
+// ── Highlight CSS ─────────────────────────────────────────────────────────────
 
 const HIGHLIGHT_STYLE = `
   .react-pdf__Page__textContent mark.pdf-hl {
@@ -62,10 +71,11 @@ const HIGHLIGHT_STYLE = `
   }
 `;
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     ({ url, className }, ref) => {
+        // ── Estado compartido entre inline y fullscreen ───────────────────────
         const [numPages, setNumPages] = useState(0);
         const [pageNumber, setPageNumber] = useState(1);
         const [scale, setScale] = useState(1);
@@ -73,22 +83,57 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         const [isFullscreen, setIsFullscreen] = useState(false);
         const [highlightQuery, setHighlightQuery] = useState<string | null>(null);
         const [foundOnPage, setFoundOnPage] = useState<boolean | null>(null);
-        const [containerWidth, setContainerWidth] = useState(0);
+        const [portalMounted, setPortalMounted] = useState(false);
 
-        const containerRef = useRef<HTMLDivElement>(null);
-        const scrollAreaRef = useRef<HTMLDivElement>(null);
+        // Refs para medición de ancho
+        const inlineContainerRef = useRef<HTMLDivElement>(null);
+        const fsContainerRef = useRef<HTMLDivElement>(null);
+        const inlineScrollRef = useRef<HTMLDivElement>(null);
+        const fsScrollRef = useRef<HTMLDivElement>(null);
+        const [inlineWidth, setInlineWidth] = useState(0);
+        const [fsWidth, setFsWidth] = useState(0);
+
         const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-        // ── Medir ancho del contenedor para fit-width ─────────────────────────
+        // Portal solo disponible en cliente
+        useEffect(() => setPortalMounted(true), []);
+
+        // ── Medir ancho inline ────────────────────────────────────────────────
         useEffect(() => {
-            const el = scrollAreaRef.current;
+            const el = inlineContainerRef.current;
             if (!el) return;
-            const ro = new ResizeObserver(([entry]) => {
-                setContainerWidth((entry.contentRect.width - 32) || 0);
-            });
+            const measure = () => {
+                const w = el.clientWidth - 32;
+                setInlineWidth(w > 0 ? w : 0);
+            };
+            measure();
+            const ro = new ResizeObserver(measure);
             ro.observe(el);
             return () => ro.disconnect();
-        }, [isFullscreen]); // re-observe cuando cambia fullscreen
+        }, []);
+
+        // ── Medir ancho fullscreen ────────────────────────────────────────────
+        useEffect(() => {
+            if (!isFullscreen) return;
+            // Esperar un frame para que el portal se haya pintado
+            const frame = requestAnimationFrame(() => {
+                const el = fsContainerRef.current;
+                if (!el) return;
+                const measure = () => {
+                    const w = el.clientWidth - 32;
+                    setFsWidth(w > 0 ? w : 0);
+                };
+                measure();
+                const ro = new ResizeObserver(measure);
+                ro.observe(el);
+                // Guardamos el observer para cleanup
+                (fsContainerRef as React.MutableRefObject<HTMLDivElement & { _ro?: ResizeObserver }>).current._ro = ro;
+            });
+            return () => {
+                cancelAnimationFrame(frame);
+                (fsContainerRef as React.MutableRefObject<(HTMLDivElement & { _ro?: ResizeObserver }) | null>).current?._ro?.disconnect();
+            };
+        }, [isFullscreen]);
 
         // ── ESC cierra fullscreen ─────────────────────────────────────────────
         useEffect(() => {
@@ -103,19 +148,20 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         // ── Scroll a la primera marca después del render ──────────────────────
         useEffect(() => {
             if (!highlightQuery) return;
+            const scrollRef = isFullscreen ? fsScrollRef : inlineScrollRef;
             const timer = setTimeout(() => {
-                const mark = scrollAreaRef.current?.querySelector('mark.pdf-hl');
+                const mark = scrollRef.current?.querySelector('mark.pdf-hl');
                 if (mark) {
                     mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     setFoundOnPage(true);
                 } else {
                     setFoundOnPage(false);
                 }
-            }, 200);
+            }, 250);
             return () => clearTimeout(timer);
-        }, [highlightQuery, pageNumber]);
+        }, [highlightQuery, pageNumber, isFullscreen]);
 
-        // ── Borrar highlight tras 3 s ─────────────────────────────────────────
+        // ── Limpiar highlight tras 3.5 s ──────────────────────────────────────
         useEffect(() => {
             if (!highlightQuery) return;
             if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
@@ -123,9 +169,7 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 setHighlightQuery(null);
                 setFoundOnPage(null);
             }, 3500);
-            return () => {
-                if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
-            };
+            return () => { if (clearTimerRef.current) clearTimeout(clearTimerRef.current); };
         }, [highlightQuery]);
 
         // ── Expose locate() ───────────────────────────────────────────────────
@@ -135,12 +179,11 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                 if (!clean || clean === '0') return;
                 setHighlightQuery(clean);
                 setFoundOnPage(null);
-                // Empezar búsqueda desde página 1 para no perderse nada
                 setPageNumber(1);
             },
         }));
 
-        // ── Custom text renderer con highlight ───────────────────────────────
+        // ── Custom renderer con highlight ─────────────────────────────────────
         const customTextRenderer = useCallback(
             ({ str }: { str: string }): string => {
                 if (!highlightQuery || !str) return str;
@@ -153,11 +196,9 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             [highlightQuery],
         );
 
-        const pageWidthProp = fitWidth && containerWidth > 0 ? containerWidth : undefined;
-        const scaleProp = fitWidth ? undefined : scale;
+        // ── Builders ──────────────────────────────────────────────────────────
 
-        // ── Toolbar ───────────────────────────────────────────────────────────
-        const toolbar = (
+        const buildToolbar = (fs: boolean) => (
             <div className="flex items-center justify-between px-3 py-2 bg-slate-950 border-b border-slate-800 flex-shrink-0 gap-2">
                 <div className="flex items-center gap-1.5 min-w-0">
                     <FileText size={13} className="text-slate-500 flex-shrink-0" />
@@ -165,10 +206,9 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                         Factura original
                     </span>
                 </div>
-
                 <div className="flex items-center gap-0.5">
-                    {/* Navegación de páginas */}
                     <button
+                        type="button"
                         onClick={() => setPageNumber(p => Math.max(1, p - 1))}
                         disabled={pageNumber <= 1}
                         className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-25 transition-colors"
@@ -176,10 +216,11 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                     >
                         <ChevronLeft size={13} />
                     </button>
-                    <span className="text-[11px] text-slate-300 font-mono tabular-nums w-16 text-center select-none">
+                    <span className="text-[11px] text-slate-300 font-mono tabular-nums w-14 text-center select-none">
                         {pageNumber} / {numPages || '—'}
                     </span>
                     <button
+                        type="button"
                         onClick={() => setPageNumber(p => Math.min(numPages, p + 1))}
                         disabled={pageNumber >= numPages}
                         className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-25 transition-colors"
@@ -187,11 +228,9 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                     >
                         <ChevronRight size={13} />
                     </button>
-
                     <div className="w-px h-3.5 bg-slate-700 mx-1" />
-
-                    {/* Zoom */}
                     <button
+                        type="button"
                         onClick={() => { setFitWidth(false); setScale(s => Math.max(0.5, +(s - 0.25).toFixed(2))); }}
                         className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
                         title="Alejar"
@@ -199,6 +238,7 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                         <ZoomOut size={13} />
                     </button>
                     <button
+                        type="button"
                         onClick={() => setFitWidth(f => !f)}
                         className={cn(
                             'px-2 py-1 rounded-lg text-[10px] font-bold transition-colors min-w-[52px] text-center',
@@ -206,44 +246,41 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                                 ? 'bg-emerald-600 text-white'
                                 : 'text-slate-400 hover:text-white hover:bg-slate-800',
                         )}
-                        title={fitWidth ? 'Modo ajustar al ancho (activo)' : 'Ajustar al ancho'}
+                        title={fitWidth ? 'Modo ajustar (activo) — click para zoom libre' : 'Ajustar al ancho'}
                     >
                         {fitWidth ? 'Ajustar' : `${Math.round(scale * 100)}%`}
                     </button>
                     <button
+                        type="button"
                         onClick={() => { setFitWidth(false); setScale(s => Math.min(3, +(s + 0.25).toFixed(2))); }}
                         className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
                         title="Acercar"
                     >
                         <ZoomIn size={13} />
                     </button>
-
                     <div className="w-px h-3.5 bg-slate-700 mx-1" />
-
-                    {/* Fullscreen */}
                     <button
+                        type="button"
                         onClick={() => setIsFullscreen(f => !f)}
                         className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                        title={isFullscreen ? 'Salir de pantalla completa (Esc)' : 'Pantalla completa'}
+                        title={fs ? 'Salir de pantalla completa (Esc)' : 'Pantalla completa'}
                     >
-                        {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                        {fs ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
                     </button>
                 </div>
             </div>
         );
 
-        // ── Feedback de búsqueda ──────────────────────────────────────────────
-        const searchFeedback = highlightQuery && (
+        const buildSearchFeedback = () => highlightQuery ? (
             <AnimatePresence>
                 <motion.div
+                    key="feedback"
                     initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -6 }}
                     className={cn(
-                        'absolute top-12 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold shadow-lg',
-                        foundOnPage === false
-                            ? 'bg-slate-700 text-slate-300'
-                            : 'bg-amber-400 text-amber-950',
+                        'absolute top-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold shadow-lg pointer-events-none',
+                        foundOnPage === false ? 'bg-slate-700 text-slate-300' : 'bg-amber-400 text-amber-950',
                     )}
                 >
                     <MapPin size={11} />
@@ -254,62 +291,90 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                           : `Buscando "${highlightQuery}"…`}
                 </motion.div>
             </AnimatePresence>
-        );
+        ) : null;
 
-        // ── PDF content ───────────────────────────────────────────────────────
-        const pdfContent = (
-            <div ref={scrollAreaRef} className="flex-1 overflow-auto p-4 flex flex-col items-center gap-4">
-                <Document
-                    file={url}
-                    onLoadSuccess={({ numPages: n }) => setNumPages(n)}
-                    loading={
-                        <div className="flex items-center justify-center h-48 w-full">
-                            <div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
-                        </div>
-                    }
-                    error={
-                        <div className="flex flex-col items-center gap-2 text-slate-500 text-sm p-12">
-                            <FileText size={32} className="opacity-40" />
-                            <span>No se pudo cargar el documento</span>
-                        </div>
-                    }
-                >
-                    <Page
-                        pageNumber={pageNumber}
-                        width={pageWidthProp}
-                        scale={scaleProp}
-                        renderTextLayer
-                        renderAnnotationLayer={false}
-                        customTextRenderer={customTextRenderer}
-                        className="shadow-2xl shadow-black/60"
+        const buildPdfContent = (
+            scrollRef: React.RefObject<HTMLDivElement | null>,
+            width: number,
+        ) => {
+            const w = fitWidth && width > 0 ? width : undefined;
+            const s = fitWidth ? undefined : scale;
+            return (
+                <div ref={scrollRef} className="absolute inset-0 overflow-auto p-4 flex flex-col items-center gap-4">
+                    <Document
+                        file={url}
+                        onLoadSuccess={({ numPages: n }) => setNumPages(n)}
                         loading={
-                            <div className="bg-slate-800 animate-pulse rounded" style={{ width: pageWidthProp || 600, height: 848 }} />
+                            <div className="flex items-center justify-center h-48 w-full">
+                                <div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+                            </div>
                         }
-                    />
-                </Document>
-            </div>
-        );
+                        error={
+                            <div className="flex flex-col items-center gap-2 text-slate-500 text-sm p-12">
+                                <FileText size={32} className="opacity-40" />
+                                <span>No se pudo cargar el documento</span>
+                            </div>
+                        }
+                    >
+                        {(w !== undefined || !fitWidth) && (
+                            <Page
+                                pageNumber={pageNumber}
+                                width={w}
+                                scale={s}
+                                renderTextLayer
+                                renderAnnotationLayer={false}
+                                customTextRenderer={customTextRenderer}
+                                className="shadow-2xl shadow-black/60"
+                            />
+                        )}
+                    </Document>
+                </div>
+            );
+        };
 
-        // ── Shell ─────────────────────────────────────────────────────────────
+        // ── Render ─────────────────────────────────────────────────────────────
         return (
             <>
                 <style>{HIGHLIGHT_STYLE}</style>
 
+                {/* ── Inline viewer ─────────────────────────────────────────── */}
+                {/* Siempre montado; invisible cuando fullscreen para mantener */}
+                {/* el ResizeObserver activo y el estado (página, zoom) intacto. */}
                 <div
-                    ref={containerRef}
+                    ref={inlineContainerRef}
                     className={cn(
-                        'flex flex-col bg-slate-900 overflow-hidden transition-all duration-300',
-                        isFullscreen
-                            ? 'fixed inset-0 z-50 rounded-none'
-                            : cn('rounded-2xl border border-slate-700/60', className),
+                        'flex flex-col bg-slate-900 rounded-2xl border border-slate-700/60 overflow-hidden',
+                        isFullscreen ? 'invisible' : '',
+                        className,
                     )}
                 >
-                    {toolbar}
-                    <div className="relative flex-1 min-h-0">
-                        {searchFeedback}
-                        {pdfContent}
+                    {buildToolbar(false)}
+                    <div className="relative flex-1 min-h-0 overflow-hidden">
+                        {!isFullscreen && buildSearchFeedback()}
+                        {buildPdfContent(inlineScrollRef, inlineWidth)}
                     </div>
                 </div>
+
+                {/* ── Fullscreen portal ─────────────────────────────────────── */}
+                {/* createPortal escapa el stacking context de framer-motion.   */}
+                {/* z-[9999] garantiza que esté por encima de todo.              */}
+                {portalMounted && isFullscreen && createPortal(
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                        className="fixed inset-0 z-[9999] flex flex-col bg-slate-900"
+                        ref={fsContainerRef}
+                    >
+                        {buildToolbar(true)}
+                        <div className="relative flex-1 min-h-0 overflow-hidden">
+                            {buildSearchFeedback()}
+                            {buildPdfContent(fsScrollRef, fsWidth)}
+                        </div>
+                    </motion.div>,
+                    document.body,
+                )}
             </>
         );
     },
