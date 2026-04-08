@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import {
     Upload, RefreshCw, Clock, WifiOff, FileX, AlertTriangle,
-    ShieldCheck, Brain, Zap, FileText,
+    ShieldCheck, Brain, Zap, FileText, Layers,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -44,6 +44,7 @@ interface SimulatorUploadProps {
     onDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
     isAnalyzing: boolean;
     uploadError: string | null;
+    onBatchMode?: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -56,7 +57,7 @@ const FEATURES = [
 ];
 
 export const SimulatorUpload: React.FC<SimulatorUploadProps> = ({
-    onFileUpload, onDrop, onDragOver, isAnalyzing, uploadError,
+    onFileUpload, onDrop, onDragOver, isAnalyzing, uploadError, onBatchMode,
 }) => {
     const [isDragging, setIsDragging] = useState(false);
 
@@ -119,6 +120,20 @@ export const SimulatorUpload: React.FC<SimulatorUploadProps> = ({
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Batch mode link */}
+            {!isAnalyzing && onBatchMode && (
+                <div className="flex justify-end mb-3">
+                    <button
+                        type="button"
+                        onClick={onBatchMode}
+                        className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-indigo-600 transition-colors font-medium"
+                    >
+                        <Layers size={12} />
+                        Procesar varias facturas a la vez
+                    </button>
+                </div>
+            )}
 
             {/* Drop zone */}
             {!isAnalyzing && (

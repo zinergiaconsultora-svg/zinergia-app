@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ChevronLeft, Lightbulb, TrendingDown, Zap, Download } from 'lucide-react';
+import { ChevronLeft, Lightbulb, TrendingDown, Zap, Download, FileText, TableProperties, ChevronDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { DemoModeAlert } from '@/components/ui/DemoModeAlert';
 import { Modal } from '@/components/ui/Modal';
@@ -44,6 +44,19 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
 }) => {
     const [isExporting, setIsExporting] = React.useState(false);
     const [isSaving, setIsSaving] = React.useState(false);
+    const [showExportMenu, setShowExportMenu] = React.useState(false);
+    const exportMenuRef = React.useRef<HTMLDivElement>(null);
+
+    // Cerrar el menú al hacer click fuera
+    React.useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+                setShowExportMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
     const [showEmailModal, setShowEmailModal] = React.useState(false);
     const [emailAddress, setEmailAddress] = React.useState('');
     const [isSendingEmail, setIsSendingEmail] = React.useState(false);
@@ -88,6 +101,65 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
         } finally {
             setIsExporting(false);
         }
+    };
+
+    const handleExportCSV = () => {
+        if (!invoiceData || results.length === 0) return;
+        const rows: string[][] = [];
+
+        // Header info
+        rows.push(['ZINERGIA — Comparativa de Tarifas']);
+        rows.push(['Generado', new Date().toLocaleDateString('es-ES')]);
+        rows.push([]);
+        rows.push(['DATOS DE LA FACTURA']);
+        rows.push(['Cliente', invoiceData.client_name ?? '—']);
+        rows.push(['CUPS', invoiceData.cups ?? '—']);
+        rows.push(['Comercializadora actual', invoiceData.company_name ?? '—']);
+        rows.push(['Tarifa actual', invoiceData.tariff_name ?? '—']);
+        rows.push(['Período (días)', String(invoiceData.period_days)]);
+        rows.push(['Fecha factura', invoiceData.invoice_date ?? '—']);
+        rows.push([]);
+        rows.push(['CONSUMO POR PERÍODO (kWh)']);
+        rows.push(['P1', 'P2', 'P3', 'P4', 'P5', 'P6']);
+        rows.push([1,2,3,4,5,6].map(p =>
+            String((invoiceData[`energy_p${p}` as keyof InvoiceData] as number) || 0)
+        ));
+        rows.push([]);
+        rows.push(['POTENCIA POR PERÍODO (kW)']);
+        rows.push(['P1', 'P2', 'P3', 'P4', 'P5', 'P6']);
+        rows.push([1,2,3,4,5,6].map(p =>
+            String((invoiceData[`power_p${p}` as keyof InvoiceData] as number) || 0)
+        ));
+        rows.push([]);
+        rows.push(['COMPARATIVA DE TARIFAS']);
+        rows.push(['#', 'Comercializadora', 'Tarifa', 'Coste anual (€)', 'Ahorro vs actual (€)', 'Ahorro (%)']);
+        const currentCost = results[0].current_annual_cost;
+        rows.push(['ACTUAL', invoiceData.company_name ?? '—', invoiceData.tariff_name ?? '—',
+            currentCost.toFixed(2), '0,00', '0,0%']);
+        results.forEach((r, i) => {
+            rows.push([
+                String(i + 1),
+                r.offer.marketer_name,
+                r.offer.tariff_name,
+                r.offer_annual_cost.toFixed(2),
+                r.annual_savings.toFixed(2),
+                `${r.savings_percent.toFixed(1)}%`,
+            ]);
+        });
+
+        const csvContent = rows.map(r =>
+            r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(';')
+        ).join('\r\n');
+
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `zinergia-comparativa-${invoiceData.client_name?.replace(/\s+/g, '-') || 'factura'}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        setShowExportMenu(false);
+        toast.success('CSV exportado correctamente');
     };
 
     const handleSaveProposal = async () => {
@@ -269,23 +341,49 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                                         </>
                                     )}
                                 </button>
-                                <button
-                                    onClick={handleExportPDF}
-                                    disabled={isExporting}
-                                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm transition-colors focus-visible:ring-2 focus-visible:ring-emerald-400 rounded-lg px-4 py-2 font-display disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isExporting ? (
-                                        <>
-                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                            Exportando...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Download size={16} aria-hidden="true" />
-                                            Exportar PDF
-                                        </>
+                                {/* Export dropdown */}
+                                <div className="relative" ref={exportMenuRef}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowExportMenu(v => !v)}
+                                        disabled={isExporting}
+                                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm transition-colors focus-visible:ring-2 focus-visible:ring-emerald-400 rounded-lg px-4 py-2 font-display disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isExporting ? (
+                                            <>
+                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                Exportando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Download size={16} />
+                                                Exportar
+                                                <ChevronDown size={13} className={`transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
+                                            </>
+                                        )}
+                                    </button>
+                                    {showExportMenu && (
+                                        <div className="absolute right-0 top-full mt-1.5 w-44 bg-white rounded-xl border border-slate-200 shadow-xl z-20 overflow-hidden">
+                                            <button
+                                                type="button"
+                                                onClick={() => { setShowExportMenu(false); handleExportPDF(); }}
+                                                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                                            >
+                                                <FileText size={14} className="text-slate-400" />
+                                                Propuesta PDF
+                                            </button>
+                                            <div className="border-t border-slate-100" />
+                                            <button
+                                                type="button"
+                                                onClick={handleExportCSV}
+                                                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                                            >
+                                                <TableProperties size={14} className="text-slate-400" />
+                                                Comparativa CSV
+                                            </button>
+                                        </div>
                                     )}
-                                </button>
+                                </div>
                             </>
                         )}
                     </div>

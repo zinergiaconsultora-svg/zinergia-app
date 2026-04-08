@@ -231,6 +231,70 @@ export async function getSuggestedCorrections(
     return suggestions;
 }
 
+// ── Estadísticas de correcciones por campo ────────────────────────────────────
+
+export interface FieldCorrectionStat {
+    field: string;
+    count: number;
+    mostFrequentValue: string | null;
+}
+
+/**
+ * Para una comercializadora, devuelve cuántas veces se ha corregido cada campo
+ * y cuál es el valor más frecuente corregido. Útil para mostrar tooltips de
+ * "Este campo fue corregido N veces — valor usual: X" en el formulario.
+ */
+export async function getFieldCorrectionStats(
+    companyName: string,
+): Promise<FieldCorrectionStat[]> {
+    if (!companyName) return [];
+
+    const normalized = normalizeCompanyName(companyName);
+    if (!normalized) return [];
+
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceKey) return [];
+    const { createClient: createSupabase } = await import('@supabase/supabase-js');
+    const admin = createSupabase(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
+
+    const { data, error } = await admin
+        .from('ocr_training_examples')
+        .select('corrected_fields')
+        .eq('company_name', normalized)
+        .eq('is_validated', true)
+        .not('corrected_fields', 'is', null)
+        .limit(200);
+
+    if (error || !data || data.length === 0) return [];
+
+    const counts: Record<string, Map<string, number>> = {};
+    const totalCounts: Record<string, number> = {};
+
+    for (const row of data) {
+        const fields = row.corrected_fields as Record<string, unknown> | null;
+        if (!fields) continue;
+        for (const [field, value] of Object.entries(fields)) {
+            if (SKIP_FIELDS.has(field)) continue;
+            if (value === null || value === undefined || value === '') continue;
+            totalCounts[field] = (totalCounts[field] ?? 0) + 1;
+            const key = String(value);
+            if (!counts[field]) counts[field] = new Map();
+            counts[field].set(key, (counts[field].get(key) ?? 0) + 1);
+        }
+    }
+
+    return Object.entries(totalCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([field, count]) => {
+            let bestVal: string | null = null;
+            let bestCount = 0;
+            for (const [val, c] of counts[field] ?? []) {
+                if (c > bestCount) { bestCount = c; bestVal = val; }
+            }
+            return { field, count, mostFrequentValue: bestVal };
+        });
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const SKIP_FIELDS = new Set([

@@ -6,7 +6,7 @@ import {
     Calendar, MapPin, Activity, AlertCircle, AlertTriangle,
     CheckCircle2, ShieldCheck, ScanSearch, ChevronDown,
     TrendingUp, TrendingDown, Sparkles, Eye, EyeOff,
-    Link2, UserCheck, Loader2,
+    Link2, UserCheck, Loader2, Info, Target,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/primitives/Input';
 import { DemoModeAlert } from '@/components/ui/DemoModeAlert';
 import { PdfViewerWrapper } from './PdfViewerWrapper';
 import type { PdfViewerHandle, ConfidenceField } from './PdfViewer';
+import { computeOpportunityScore } from '@/lib/utils/opportunity-score';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -180,6 +181,28 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     }, [data.energy_p1, data.energy_p2, data.energy_p3, data.energy_p4, data.energy_p5, data.energy_p6,
         data.power_p1, data.power_p2, data.power_p3, data.power_p4, data.power_p5, data.power_p6,
         data.period_days]);
+
+    // ── Historial de correcciones por campo ───────────────────────────────────
+    interface FieldStat { field: string; count: number; mostFrequentValue: string | null; }
+    const [fieldStats, setFieldStats] = useState<FieldStat[]>([]);
+    useEffect(() => {
+        if (!data.company_name || isMockMode) { setFieldStats([]); return; }
+        let cancelled = false;
+        import('@/app/actions/ocr-confirm').then(({ getFieldCorrectionStats }) => {
+            getFieldCorrectionStats(data.company_name!).then(r => {
+                if (!cancelled) setFieldStats(r);
+            }).catch(() => {});
+        });
+        return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [data.company_name, isMockMode]);
+
+    const getFieldStat = useCallback((field: string) =>
+        fieldStats.find(s => s.field === field), [fieldStats]);
+
+    // ── Score de oportunidad ──────────────────────────────────────────────────
+    const opportunityScore = useMemo(() =>
+        computeOpportunityScore(data), [data]);
 
     // ── Sincronizar confirmación local ────────────────────────────────────────
     React.useEffect(() => {
@@ -414,6 +437,37 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                         </button>
                     )}
 
+                    {/* Opportunity score badge */}
+                    {(hasEnergyValues || hasPowerValues) && (
+                        <div className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-xl border cursor-default
+                            ${opportunityScore.color === 'emerald' ? 'bg-emerald-50 border-emerald-200' :
+                              opportunityScore.color === 'amber'   ? 'bg-amber-50 border-amber-200' :
+                                                                     'bg-slate-50 border-slate-200'}`}>
+                            <Target size={13} className={
+                                opportunityScore.color === 'emerald' ? 'text-emerald-600' :
+                                opportunityScore.color === 'amber'   ? 'text-amber-600' : 'text-slate-400'} />
+                            <div>
+                                <p className="text-[8px] font-bold uppercase tracking-widest text-slate-400 leading-none mb-0.5">Oportunidad</p>
+                                <p className={`text-sm font-black tabular-nums leading-none
+                                    ${opportunityScore.color === 'emerald' ? 'text-emerald-700' :
+                                      opportunityScore.color === 'amber'   ? 'text-amber-700' : 'text-slate-500'}`}>
+                                    {opportunityScore.total}<span className="text-[9px] font-medium ml-px">/100</span>
+                                </p>
+                            </div>
+                            {/* Tooltip */}
+                            <div className="absolute top-full right-0 mt-1.5 w-56 z-20 hidden group-hover:block">
+                                <div className="bg-slate-900 rounded-xl p-3 shadow-xl text-left">
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Score {opportunityScore.label}</p>
+                                    {opportunityScore.insights.map((ins, i) => (
+                                        <p key={i} className="text-[10px] text-slate-300 leading-snug mb-1 flex gap-1.5">
+                                            <span className="text-emerald-400 shrink-0">·</span>{ins}
+                                        </p>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* OCR score ring */}
                     {globalConfidence !== null && (
                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/60 border border-slate-200">
@@ -573,7 +627,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                             <SectionLabel color="bg-emerald-500" label="Datos del Contrato" />
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-2xl bg-white/70 border border-slate-100 shadow-sm">
                                 <Input label="Titular / Cliente"
-                                    labelBadge={<ConfidencePill value={getConfidence('client_name')} />}
+                                    labelBadge={<><ConfidencePill value={getConfidence('client_name')} /><CorrectionBadge stat={getFieldStat('client_name')} /></>}
                                     icon={<User size={15} />}
                                     value={data.client_name ?? ''} onChange={e => onUpdate('client_name', e.target.value)}
                                     placeholder="Nombre completo"
@@ -581,7 +635,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                     action={pdfUrl && data.client_name ? <LocateButton onClick={() => locate(data.client_name)} lowConfidence={isLowConfidence('client_name')} /> : undefined}
                                 />
                                 <Input label="CIF / DNI"
-                                    labelBadge={<ConfidencePill value={getConfidence('dni_cif')} />}
+                                    labelBadge={<><ConfidencePill value={getConfidence('dni_cif')} /><CorrectionBadge stat={getFieldStat('dni_cif')} /></>}
                                     icon={<Hash size={15} />}
                                     value={data.dni_cif ?? ''} onChange={e => onUpdate('dni_cif', e.target.value)}
                                     placeholder="Identificación"
@@ -589,7 +643,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                     action={pdfUrl && data.dni_cif ? <LocateButton onClick={() => locate(data.dni_cif)} lowConfidence={isLowConfidence('dni_cif')} /> : undefined}
                                 />
                                 <Input label="Comercializadora"
-                                    labelBadge={<ConfidencePill value={getConfidence('company_name')} />}
+                                    labelBadge={<><ConfidencePill value={getConfidence('company_name')} /><CorrectionBadge stat={getFieldStat('company_name')} /></>}
                                     icon={<Building2 size={15} />}
                                     value={data.company_name ?? ''} onChange={e => onUpdate('company_name', e.target.value)}
                                     placeholder="Endesa, Iberdrola…"
@@ -875,6 +929,37 @@ const ConfidencePill: React.FC<{ value: number | null }> = ({ value }) => {
         <span className={`inline-flex items-center px-1.5 py-px rounded border normal-case tracking-normal font-black text-[9px] tabular-nums ${cls}`}>
             {pct}%
         </span>
+    );
+};
+
+// ── CorrectionBadge ───────────────────────────────────────────────────────────
+
+interface CorrectionBadgeProps {
+    stat?: { count: number; mostFrequentValue: string | null };
+}
+
+const CorrectionBadge: React.FC<CorrectionBadgeProps> = ({ stat }) => {
+    if (!stat || stat.count === 0) return null;
+    return (
+        <div className="group relative inline-flex items-center">
+            <button type="button" className="flex items-center gap-0.5 text-amber-400 hover:text-amber-600 transition-colors">
+                <Info size={10} />
+                <span className="text-[9px] font-black tabular-nums">{stat.count}</span>
+            </button>
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-44 z-30 hidden group-hover:block pointer-events-none">
+                <div className="bg-slate-900 rounded-lg p-2.5 shadow-xl text-left">
+                    <p className="text-[9px] font-bold text-amber-400 mb-1">
+                        Corregido {stat.count} {stat.count === 1 ? 'vez' : 'veces'}
+                    </p>
+                    {stat.mostFrequentValue && (
+                        <p className="text-[9px] text-slate-300">
+                            Valor usual: <span className="font-mono font-bold">{stat.mostFrequentValue}</span>
+                        </p>
+                    )}
+                </div>
+                <div className="w-2 h-2 bg-slate-900 rotate-45 mx-auto -mt-1" />
+            </div>
+        </div>
     );
 };
 
