@@ -1,8 +1,56 @@
 'use client';
 
 import React from 'react';
-import { Upload, XCircle } from 'lucide-react';
+import { Upload, XCircle, RefreshCw, Clock, WifiOff, FileX, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// ── Diagnóstico de error ──────────────────────────────────────────────────────
+
+interface ErrorDiagnosis {
+    icon: React.ElementType;
+    title: string;
+    description: string;
+    suggestion: string;
+    severity: 'timeout' | 'rejected' | 'format' | 'generic';
+}
+
+function diagnoseError(msg: string): ErrorDiagnosis {
+    const m = msg.toLowerCase();
+    if (m.includes('timeout') || m.includes('5 minutos') || m.includes('no respondió')) {
+        return {
+            icon: Clock,
+            title: 'Tiempo de espera agotado',
+            description: msg,
+            suggestion: 'El servicio de análisis tardó demasiado. Puede estar arrancando — inténtalo de nuevo en 30 segundos.',
+            severity: 'timeout',
+        };
+    }
+    if (m.includes('n8n') || m.includes('webhook') || m.includes('rechazó')) {
+        return {
+            icon: WifiOff,
+            title: 'Error de conexión con el analizador',
+            description: msg,
+            suggestion: 'El motor OCR no está disponible. Verifica que el flujo N8N esté activo y vuelve a intentarlo.',
+            severity: 'rejected',
+        };
+    }
+    if (m.includes('pdf') || m.includes('format') || m.includes('archivo')) {
+        return {
+            icon: FileX,
+            title: 'Formato de archivo no válido',
+            description: msg,
+            suggestion: 'Asegúrate de subir un archivo PDF válido. Archivos escaneados o protegidos pueden fallar.',
+            severity: 'format',
+        };
+    }
+    return {
+        icon: AlertTriangle,
+        title: 'Error al procesar la factura',
+        description: msg,
+        suggestion: 'Vuelve a intentarlo. Si el problema persiste, contacta con soporte.',
+        severity: 'generic',
+    };
+}
 
 interface SimulatorUploadProps {
     onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -32,28 +80,47 @@ export const SimulatorUpload: React.FC<SimulatorUploadProps> = ({
                 <p className="text-sm text-slate-500">Arrastra o selecciona tu factura en PDF para extraer los datos automáticamente</p>
             </div>
 
-            {/* Error de upload */}
+            {/* Error de upload — diagnóstico detallado */}
             <AnimatePresence>
                 {uploadError && (
                     <motion.div
-                        initial={{ opacity: 0, y: -20 }}
+                        initial={{ opacity: 0, y: -16 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="mb-6 bg-red-50 border-2 border-red-200 rounded-2xl p-6 flex items-center gap-4"
+                        exit={{ opacity: 0, y: -16 }}
+                        className="mb-6"
                     >
-                        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <XCircle className="w-6 h-6 text-red-600" />
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-red-700 mb-1">Error al procesar</h3>
-                            <p className="text-sm text-red-600">{uploadError}</p>
-                        </div>
+                        {(() => {
+                            const dx = diagnoseError(uploadError);
+                            const DxIcon = dx.icon;
+                            return (
+                                <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-5 flex gap-4">
+                                    <div className="w-11 h-11 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <DxIcon className="w-5 h-5 text-red-600" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <h3 className="font-bold text-red-700 text-sm">{dx.title}</h3>
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-red-400 bg-red-100 px-2 py-0.5 rounded shrink-0">
+                                                {dx.severity === 'timeout' ? 'Timeout' : dx.severity === 'rejected' ? 'Conexión' : dx.severity === 'format' ? 'Formato' : 'Error'}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-red-500 mt-1 mb-2 font-mono truncate" title={dx.description}>
+                                            {dx.description.length > 120 ? dx.description.slice(0, 117) + '…' : dx.description}
+                                        </p>
+                                        <p className="text-xs text-red-700 font-medium flex items-center gap-1.5">
+                                            <RefreshCw size={11} className="flex-shrink-0" />
+                                            {dx.suggestion}
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* Zona de arrastrar factura - Diseño Premium */}
-            {!isAnalyzing && !uploadError && (
+            {/* Zona de arrastrar factura — visible también tras un error para reintentar */}
+            {!isAnalyzing && (
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
