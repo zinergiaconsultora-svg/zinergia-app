@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import {
     Zap,
     ChevronLeft,
@@ -15,6 +15,7 @@ import {
     AlertCircle,
     CheckCircle2,
     ShieldCheck,
+    ScanSearch,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -22,6 +23,8 @@ import { InvoiceData } from '@/types/crm';
 import { Card } from '@/components/ui/primitives/Card';
 import { Input } from '@/components/ui/primitives/Input';
 import { DemoModeAlert } from '@/components/ui/DemoModeAlert';
+import { PdfViewerWrapper } from './PdfViewerWrapper';
+import type { PdfViewerHandle } from './PdfViewer';
 
 interface SimulatorFormProps {
     data: InvoiceData;
@@ -57,6 +60,13 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
 }) => {
     const [isConfirming, setIsConfirming] = useState(false);
     const [localConfirmed, setLocalConfirmed] = useState(false);
+    const pdfViewerRef = useRef<PdfViewerHandle>(null);
+
+    /** Localiza un valor en el PDF. Solo actúa si hay PDF cargado. */
+    const locate = (value: string | number | undefined) => {
+        if (!pdfUrl || value === undefined || value === null) return;
+        pdfViewerRef.current?.locate(String(value));
+    };
 
     // Cuando el contexto detecta que los datos cambiaron (UPDATE_INVOICE_FIELDS
     // resetea ocrDataConfirmed a false), sincronizar el estado local para que
@@ -128,7 +138,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                 </motion.button>
 
                 <div className="flex items-center gap-4 bg-white/40 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/60 shadow-sm">
-                    {/* Toggle PDF View Button */}
+                    {/* Toggle panel PDF */}
                     {pdfUrl && (
                         <motion.button
                             whileHover={{ scale: 1.05 }}
@@ -136,7 +146,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                             onClick={() => setShowPdf(!showPdf)}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${showPdf ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500 hover:text-emerald-600'}`}
                         >
-                            {showPdf ? 'Ocultar PDF' : 'Ver PDF Original'}
+                            {showPdf ? 'Ocultar factura' : 'Ver factura'}
                         </motion.button>
                     )}
 
@@ -185,15 +195,12 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
-                        className="h-[800px] bg-slate-800 rounded-2xl overflow-hidden shadow-2xl border border-slate-700 sticky top-4"
+                        className="sticky top-4 h-[800px]"
                     >
-                        <div className="bg-slate-900 px-4 py-2 flex items-center justify-between">
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Documento Original</span>
-                        </div>
-                        <iframe
-                            src={pdfUrl}
-                            className="w-full h-full"
-                            title="PDF Preview"
+                        <PdfViewerWrapper
+                            ref={pdfViewerRef}
+                            url={pdfUrl}
+                            className="h-full"
                         />
                     </motion.div>
                 )}
@@ -244,6 +251,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                     isLowConfidence('client_name') ? 'Confianza baja — revisa este dato' :
                                     (data.client_name && data.client_name.length < 5 ? 'Nombre muy corto (¿OCR incompleto?)' : undefined)
                                 }
+                                action={pdfUrl && data.client_name ? <LocateButton onClick={() => locate(data.client_name)} lowConfidence={isLowConfidence('client_name')} /> : undefined}
                             />
                             <Input
                                 label="CIF / DNI"
@@ -255,6 +263,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                     isLowConfidence('dni_cif') ? 'Confianza baja — revisa este dato' :
                                     (data.dni_cif && !/^[0-9A-Z]{9}$/.test(data.dni_cif) ? 'Formato inusual' : undefined)
                                 }
+                                action={pdfUrl && data.dni_cif ? <LocateButton onClick={() => locate(data.dni_cif)} lowConfidence={isLowConfidence('dni_cif')} /> : undefined}
                             />
                             <Input
                                 label="Comercializadora Actual"
@@ -263,6 +272,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                 onChange={(e) => onUpdate('company_name', e.target.value)}
                                 placeholder="Ej: Endesa, Iberdrola..."
                                 warning={isLowConfidence('company_name') ? 'Confianza baja — revisa este dato' : undefined}
+                                action={pdfUrl && data.company_name ? <LocateButton onClick={() => locate(data.company_name)} lowConfidence={isLowConfidence('company_name')} /> : undefined}
                             />
                             <Input
                                 label="Nº de Factura"
@@ -273,6 +283,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                     isLowConfidence('invoice_number') ? 'Confianza baja — revisa este dato' :
                                     (!data.invoice_number ? 'Dato no encontrado en el PDF' : undefined)
                                 }
+                                action={pdfUrl && data.invoice_number ? <LocateButton onClick={() => locate(data.invoice_number)} lowConfidence={isLowConfidence('invoice_number')} /> : undefined}
                             />
                         </Card>
                     </div>
@@ -296,6 +307,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                     }
                                     onChange={(e) => onUpdate('cups', e.target.value.toUpperCase())}
                                     className="font-mono"
+                                    action={pdfUrl && data.cups ? <LocateButton onClick={() => locate(data.cups)} lowConfidence={isLowConfidence('cups')} /> : undefined}
                                 />
                             </div>
                             <Input
@@ -307,6 +319,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                     isLowConfidence('supply_address') ? 'Confianza baja — revisa este dato' :
                                     (data.supply_address && data.supply_address.length < 10 ? 'Dirección incompleta' : undefined)
                                 }
+                                action={pdfUrl && data.supply_address ? <LocateButton onClick={() => locate(data.supply_address)} lowConfidence={isLowConfidence('supply_address')} /> : undefined}
                             />
                             <div className="grid grid-cols-2 gap-4">
                                 <Input
@@ -321,6 +334,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                     icon={<Calendar size={16} />}
                                     value={data.invoice_date}
                                     onChange={(e) => onUpdate('invoice_date', e.target.value)}
+                                    action={pdfUrl && data.invoice_date ? <LocateButton onClick={() => locate(data.invoice_date)} lowConfidence={isLowConfidence('invoice_date')} /> : undefined}
                                 />
                             </div>
                         </Card>
@@ -454,4 +468,33 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         </motion.div>
     );
 };
+
+// ── LocateButton ──────────────────────────────────────────────────────────────
+
+interface LocateButtonProps {
+    onClick: () => void;
+    lowConfidence?: boolean;
+}
+
+/**
+ * Botón pequeño que aparece en el trailing de un Input cuando hay PDF cargado.
+ * Al pulsarlo, el PdfViewer busca y resalta el valor del campo en el documento.
+ * Si el campo tiene baja confianza OCR, el icono pulsa en naranja para llamar la atención.
+ */
+const LocateButton: React.FC<LocateButtonProps> = ({ onClick, lowConfidence }) => (
+    <motion.button
+        type="button"
+        onClick={onClick}
+        whileHover={{ scale: 1.15 }}
+        whileTap={{ scale: 0.9 }}
+        title="Localizar en la factura"
+        className={`p-1 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
+            lowConfidence
+                ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 animate-pulse'
+                : 'text-slate-300 hover:text-emerald-600 hover:bg-emerald-50'
+        }`}
+    >
+        <ScanSearch size={14} />
+    </motion.button>
+);
 
