@@ -2,23 +2,12 @@
 
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
-    Zap,
-    ChevronLeft,
-    ArrowRight,
-    User,
-    Building2,
-    Hash,
-    Calendar,
-    MapPin,
-    Activity,
-    Info,
-    AlertCircle,
-    AlertTriangle,
-    CheckCircle2,
-    ShieldCheck,
-    ScanSearch,
+    Zap, ChevronLeft, ArrowRight, User, Building2, Hash,
+    Calendar, MapPin, Activity, AlertCircle, AlertTriangle,
+    CheckCircle2, ShieldCheck, ScanSearch, ChevronDown,
+    TrendingUp, TrendingDown, Sparkles, Eye, EyeOff,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { InvoiceData } from '@/types/crm';
 import { Card } from '@/components/ui/primitives/Card';
@@ -26,6 +15,8 @@ import { Input } from '@/components/ui/primitives/Input';
 import { DemoModeAlert } from '@/components/ui/DemoModeAlert';
 import { PdfViewerWrapper } from './PdfViewerWrapper';
 import type { PdfViewerHandle } from './PdfViewer';
+
+// ── Props ─────────────────────────────────────────────────────────────────────
 
 interface SimulatorFormProps {
     data: InvoiceData;
@@ -37,33 +28,26 @@ interface SimulatorFormProps {
     powerType: string;
     pdfUrl?: string | null;
     isMockMode?: boolean;
-    // Fase 2: corrección humana
     originalData?: InvoiceData | null;
     ocrJobId?: string | null;
     ocrDataConfirmed?: boolean;
     onConfirmOcrData?: () => Promise<{ correctedFieldsCount: number }>;
 }
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export const SimulatorForm: React.FC<SimulatorFormProps> = ({
-    data,
-    onUpdate,
-    onCompare,
-    onBack,
-    isAnalyzing,
-    loadingMessage,
-    powerType,
-    pdfUrl,
-    isMockMode = false,
-    originalData: _originalData,
-    ocrJobId,
-    ocrDataConfirmed = false,
-    onConfirmOcrData,
+    data, onUpdate, onCompare, onBack, isAnalyzing, loadingMessage,
+    powerType, pdfUrl, isMockMode = false,
+    originalData: _originalData, ocrJobId, ocrDataConfirmed = false, onConfirmOcrData,
 }) => {
     const [isConfirming, setIsConfirming] = useState(false);
     const [localConfirmed, setLocalConfirmed] = useState(false);
+    const [showPdf, setShowPdf] = useState(true);
+    const [alertsExpanded, setAlertsExpanded] = useState(true);
     const pdfViewerRef = useRef<PdfViewerHandle>(null);
 
-    // Correcciones automáticas por patrón
+    // ── Correcciones automáticas ──────────────────────────────────────────────
     const [suggestions, setSuggestions] = useState<Record<string, unknown>>({});
     const [suggestionsApplied, setSuggestionsApplied] = useState(false);
     useEffect(() => {
@@ -72,8 +56,8 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         setSuggestionsApplied(false);
         let cancelled = false;
         import('@/app/actions/ocr-confirm').then(({ getSuggestedCorrections }) => {
-            getSuggestedCorrections(data.company_name!).then(result => {
-                if (!cancelled && Object.keys(result).length > 0) setSuggestions(result);
+            getSuggestedCorrections(data.company_name!).then(r => {
+                if (!cancelled && Object.keys(r).length > 0) setSuggestions(r);
             }).catch(() => {});
         });
         return () => { cancelled = true; };
@@ -81,12 +65,6 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     }, [data.company_name, isMockMode]);
 
     const applySuggestions = () => {
-        const merged = { ...data } as Record<string, unknown>;
-        for (const [field, value] of Object.entries(suggestions)) {
-            merged[field] = value;
-        }
-        onUpdate('company_name', merged.company_name as string); // trigger UPDATE_INVOICE_FIELDS via full update
-        // Apply each field
         for (const [field, value] of Object.entries(suggestions)) {
             onUpdate(field as keyof InvoiceData, value as InvoiceData[keyof InvoiceData]);
         }
@@ -94,139 +72,87 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         setSuggestions({});
     };
 
-    // Comparativa con factura anterior del mismo CUPS
+    // ── Comparativa factura anterior ──────────────────────────────────────────
     const [prevInvoice, setPrevInvoice] = useState<{ totalEnergyKwh: number; totalAmountEur: number | null; invoiceDate: string | null } | null>(null);
     useEffect(() => {
         if (!data.cups || !data.invoice_date || isMockMode) return;
         setPrevInvoice(null);
         let cancelled = false;
         import('@/app/actions/ocr-jobs').then(({ getPreviousInvoiceData }) => {
-            getPreviousInvoiceData(data.cups!, data.invoice_date!).then(result => {
-                if (!cancelled) setPrevInvoice(result);
+            getPreviousInvoiceData(data.cups!, data.invoice_date!).then(r => {
+                if (!cancelled) setPrevInvoice(r);
             }).catch(() => {});
         });
         return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data.cups, data.invoice_date, isMockMode]);
 
-    // Energía total actual
     const totalEnergyNow = useMemo(() =>
-        [1, 2, 3, 4, 5, 6].reduce((sum, p) => sum + ((data[`energy_p${p}` as keyof InvoiceData] as number) || 0), 0),
+        [1, 2, 3, 4, 5, 6].reduce((s, p) => s + ((data[`energy_p${p}` as keyof InvoiceData] as number) || 0), 0),
     [data]);
 
-    // Detección de factura duplicada (mismo CUPS + mismo mes)
+    // ── Duplicado ─────────────────────────────────────────────────────────────
     const [duplicateInfo, setDuplicateInfo] = useState<{ createdAt: string; invoiceNumber: string | null } | null>(null);
     useEffect(() => {
         if (!data.cups || !data.invoice_date || isMockMode) return;
-        setDuplicateInfo(null); // Reset on change
+        setDuplicateInfo(null);
         let cancelled = false;
         import('@/app/actions/ocr-jobs').then(({ checkDuplicateInvoice }) => {
-            checkDuplicateInvoice(data.cups!, data.invoice_date!).then(result => {
-                if (!cancelled) setDuplicateInfo(result ? { createdAt: result.createdAt, invoiceNumber: result.invoiceNumber } : null);
+            checkDuplicateInvoice(data.cups!, data.invoice_date!).then(r => {
+                if (!cancelled) setDuplicateInfo(r ? { createdAt: r.createdAt, invoiceNumber: r.invoiceNumber } : null);
             }).catch(() => {});
         });
         return () => { cancelled = true; };
     }, [data.cups, data.invoice_date, isMockMode]);
 
-    /** Localiza un valor en el PDF. Solo actúa si hay PDF cargado. */
-    const locate = (value: string | number | undefined) => {
-        if (!pdfUrl || value === undefined || value === null) return;
-        pdfViewerRef.current?.locate(String(value));
-    };
-
-    // Cuando el contexto detecta que los datos cambiaron (UPDATE_INVOICE_FIELDS
-    // resetea ocrDataConfirmed a false), sincronizar el estado local para que
-    // el botón "Confirmar datos" reaparezca después de una edición post-confirmación.
+    // ── Sincronizar confirmación local ────────────────────────────────────────
     React.useEffect(() => {
-        if (!ocrDataConfirmed) {
-            setLocalConfirmed(false);
-        }
+        if (!ocrDataConfirmed) setLocalConfirmed(false);
     }, [ocrDataConfirmed]);
 
     const handleConfirm = async () => {
         if (isConfirming) return;
         setIsConfirming(true);
-
-        // Feedback inmediato — no esperar a la server action
         setTimeout(() => {
             setIsConfirming(false);
             setLocalConfirmed(true);
             toast.success('Datos confirmados. ¡Gracias!');
-            if (onConfirmOcrData) {
-                // Guardar en segundo plano, sin bloquear la UI
-                onConfirmOcrData().catch(() => {});
-            }
+            if (onConfirmOcrData) onConfirmOcrData().catch(() => {});
         }, 600);
     };
 
-    /** Devuelve el valor de confianza OCR 0-1 para un campo, o null si no está disponible. */
+    // ── Confianza OCR ─────────────────────────────────────────────────────────
     const getConfidence = (field: string): number | null => {
         const conf = (data as unknown as Record<string, unknown>)._confidence as Record<string, number> | undefined;
         if (!conf || conf[field] === undefined) return null;
         return conf[field];
     };
+    const isLowConfidence = (f: string) => { const c = getConfidence(f); return c !== null && c < 0.7; };
+    const lowConfWarn = (f: string) => { const c = getConfidence(f); return (c !== null && c < 0.7) ? `Confianza ${Math.round(c * 100)}% — revisa este dato` : undefined; };
 
-    /** True si la confianza OCR del campo es inferior a 0.7. */
-    const isLowConfidence = (field: string): boolean => {
-        const c = getConfidence(field);
-        return c !== null && c < 0.7;
-    };
-
-    /** Warning text con porcentaje incluido para campos de baja confianza. */
-    const lowConfWarn = (field: string): string | undefined => {
-        const c = getConfidence(field);
-        if (c !== null && c < 0.7) return `Confianza ${Math.round(c * 100)}% — revisa este dato`;
-        return undefined;
-    };
-
-    /** Score global OCR: media de todos los campos con dato de confianza. */
     const globalConfidence = useMemo(() => {
         const conf = (data as unknown as Record<string, unknown>)._confidence as Record<string, number> | undefined;
         if (!conf) return null;
         const vals = Object.values(conf).filter((v): v is number => typeof v === 'number');
-        if (vals.length === 0) return null;
-        return vals.reduce((a, b) => a + b, 0) / vals.length;
+        return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
     }, [data]);
 
-    /** Número de campos con confianza OCR < 0.7. */
     const lowConfidenceCount = useMemo(() => {
         const conf = (data as unknown as Record<string, unknown>)._confidence as Record<string, number> | undefined;
         if (!conf) return 0;
         return Object.values(conf).filter((v): v is number => typeof v === 'number' && v < 0.7).length;
     }, [data]);
 
-    // Toggle for PDF View
-    const [showPdf, setShowPdf] = React.useState(true);
-
-    const visibleEnergyPeriods = useMemo(() => {
-        return [1, 2, 3, 4, 5, 6].filter(p => (powerType === '2.0' ? p <= 3 : powerType === '3.0' ? p <= 6 : true));
-    }, [powerType]);
-
-    const visiblePowerPeriods = useMemo(() => {
-        return [1, 2, 3, 4, 5, 6].filter(p => (powerType === '2.0' ? p <= 2 : powerType === '3.0' ? p <= 6 : true));
-    }, [powerType]);
-
-    // Basic validation for visual feedback
-    const isCupsValid = data.cups?.length === 20 || data.cups?.length === 22;
-    const hasEnergyValues = [1, 2, 3, 4, 5, 6].some(p => (data[`energy_p${p}` as keyof InvoiceData] as number) > 0);
-    const hasPowerValues = [1, 2, 3, 4, 5, 6].some(p => (data[`power_p${p}` as keyof InvoiceData] as number) > 0);
-
-    /** Validaciones cruzadas entre campos: formato, coherencia tarifa/períodos, sanidad fechas. */
+    // ── Validaciones cruzadas ─────────────────────────────────────────────────
     const crossFieldIssues = useMemo(() => {
         const issues: Array<{ severity: 'error' | 'warning'; message: string }> = [];
-
-        // ── DNI/CIF/NIE format ────────────────────────────────────────────────
         if (data.dni_cif) {
-            const clean = data.dni_cif.trim().toUpperCase();
-            const isNIF = /^[0-9]{8}[TRWAGMYFPDXBNJZSQVHLCKE]$/.test(clean);
-            const isNIE = /^[XYZ][0-9]{7}[TRWAGMYFPDXBNJZSQVHLCKE]$/.test(clean);
-            const isCIF = /^[ABCDEFGHJNPQRSUVW][0-9]{7}[0-9A-J]$/.test(clean);
-            if (!isNIF && !isNIE && !isCIF) {
-                issues.push({ severity: 'warning', message: `"${clean}" no coincide con formato NIF, NIE ni CIF español` });
-            }
+            const c = data.dni_cif.trim().toUpperCase();
+            const ok = /^[0-9]{8}[TRWAGMYFPDXBNJZSQVHLCKE]$/.test(c)
+                || /^[XYZ][0-9]{7}[TRWAGMYFPDXBNJZSQVHLCKE]$/.test(c)
+                || /^[ABCDEFGHJNPQRSUVW][0-9]{7}[0-9A-J]$/.test(c);
+            if (!ok) issues.push({ severity: 'warning', message: `"${c}" no coincide con NIF, NIE ni CIF español` });
         }
-
-        // ── CUPS estructura ───────────────────────────────────────────────────
         if (data.cups) {
             if (!data.cups.startsWith('ES')) {
                 issues.push({ severity: 'error', message: 'CUPS debe comenzar con "ES" — probable error OCR' });
@@ -234,526 +160,517 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                 issues.push({ severity: 'warning', message: 'Estructura de CUPS inusual — verifica los caracteres finales' });
             }
         }
-
-        // ── Coherencia tarifa / períodos ──────────────────────────────────────
-        const hasHighPeriodEnergy = [4, 5, 6].some(p => (data[`energy_p${p}` as keyof InvoiceData] as number) > 0);
-        const hasHighPeriodPower  = [4, 5, 6].some(p => (data[`power_p${p}` as keyof InvoiceData] as number) > 0);
-        if (powerType === '2.0' && (hasHighPeriodEnergy || hasHighPeriodPower)) {
-            issues.push({ severity: 'warning', message: 'Tarifa 2.0TD detectada, pero hay valores en P4-P6 — posible error OCR en tarifa o en períodos' });
+        const hasP456Energy = [4, 5, 6].some(p => (data[`energy_p${p}` as keyof InvoiceData] as number) > 0);
+        const hasP456Power  = [4, 5, 6].some(p => (data[`power_p${p}` as keyof InvoiceData] as number) > 0);
+        if (powerType === '2.0' && (hasP456Energy || hasP456Power)) {
+            issues.push({ severity: 'warning', message: 'Tarifa 2.0TD con valores en P4-P6 — posible error OCR' });
         }
-
-        // ── Sanidad período de facturación ────────────────────────────────────
         if (data.period_days > 0 && data.period_days < 20) {
-            issues.push({ severity: 'warning', message: `Período de ${data.period_days} días es inusualmente corto para una factura mensual` });
+            issues.push({ severity: 'warning', message: `Período de ${data.period_days} días es inusualmente corto` });
         } else if (data.period_days > 45) {
-            issues.push({ severity: 'warning', message: `Período de ${data.period_days} días es largo — ¿factura bimestral?` });
+            issues.push({ severity: 'warning', message: `Período de ${data.period_days} días — ¿factura bimestral?` });
         }
-
         return issues;
     }, [data, powerType]);
 
+    // ── Periodos visibles ─────────────────────────────────────────────────────
+    const visibleEnergyPeriods = useMemo(() =>
+        [1, 2, 3, 4, 5, 6].filter(p => powerType === '2.0' ? p <= 3 : true), [powerType]);
+    const visiblePowerPeriods = useMemo(() =>
+        [1, 2, 3, 4, 5, 6].filter(p => powerType === '2.0' ? p <= 2 : true), [powerType]);
+
+    const isCupsValid = data.cups?.length === 20 || data.cups?.length === 22;
+    const hasEnergyValues = [1,2,3,4,5,6].some(p => (data[`energy_p${p}` as keyof InvoiceData] as number) > 0);
+    const hasPowerValues  = [1,2,3,4,5,6].some(p => (data[`power_p${p}` as keyof InvoiceData] as number) > 0);
+
+    const locate = (value: string | number | undefined) => {
+        if (!pdfUrl || value === undefined || value === null) return;
+        pdfViewerRef.current?.locate(String(value));
+    };
+
+    // ── Alertas consolidadas ──────────────────────────────────────────────────
+    const allAlerts = useMemo(() => {
+        const list: Array<{ type: 'info' | 'warning' | 'error' | 'success' | 'learned'; message: React.ReactNode; action?: React.ReactNode }> = [];
+
+        if (prevInvoice && totalEnergyNow > 0) {
+            const delta = totalEnergyNow - prevInvoice.totalEnergyKwh;
+            const pct = prevInvoice.totalEnergyKwh > 0 ? Math.round((delta / prevInvoice.totalEnergyKwh) * 100) : 0;
+            const up = delta > 0;
+            list.push({
+                type: 'info',
+                message: (
+                    <span>
+                        <span className="font-bold">Factura anterior</span>
+                        {prevInvoice.invoiceDate && <span className="opacity-70"> · {prevInvoice.invoiceDate}</span>}
+                        {' — '}
+                        <span className={`font-bold ${up ? 'text-red-600' : 'text-emerald-600'}`}>
+                            {up ? <TrendingUp size={12} className="inline mr-0.5" /> : <TrendingDown size={12} className="inline mr-0.5" />}
+                            {up ? '+' : ''}{pct}% ({up ? '+' : ''}{Math.round(delta)} kWh)
+                        </span>
+                        <span className="opacity-60 ml-2 text-xs">ant: {Math.round(prevInvoice.totalEnergyKwh)} kWh{prevInvoice.totalAmountEur !== null ? ` · ${prevInvoice.totalAmountEur.toFixed(2)} €` : ''}</span>
+                    </span>
+                ),
+            });
+        }
+
+        if (!suggestionsApplied && Object.keys(suggestions).length > 0) {
+            list.push({
+                type: 'learned',
+                message: (
+                    <span>
+                        <span className="font-bold">Correcciones aprendidas</span> — {Object.keys(suggestions).length} campo{Object.keys(suggestions).length > 1 ? 's' : ''} mejorable{Object.keys(suggestions).length > 1 ? 's' : ''} para {data.company_name}
+                    </span>
+                ),
+                action: (
+                    <button type="button" onClick={applySuggestions}
+                        className="shrink-0 px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-bold hover:bg-emerald-700 transition-colors">
+                        Aplicar
+                    </button>
+                ),
+            });
+        }
+
+        if (duplicateInfo) {
+            list.push({
+                type: 'warning',
+                message: (
+                    <span>
+                        <span className="font-bold">Posible duplicado</span> — misma factura del mismo mes ya procesada el{' '}
+                        {new Date(duplicateInfo.createdAt).toLocaleDateString('es-ES')}
+                        {duplicateInfo.invoiceNumber ? ` (${duplicateInfo.invoiceNumber})` : ''}
+                    </span>
+                ),
+            });
+        }
+
+        if (lowConfidenceCount >= 3) {
+            list.push({
+                type: 'warning',
+                message: (
+                    <span>
+                        <span className="font-bold">{lowConfidenceCount} campos con baja confianza OCR</span> — revísalos antes de continuar
+                    </span>
+                ),
+            });
+        }
+
+        for (const issue of crossFieldIssues) {
+            list.push({ type: issue.severity === 'error' ? 'error' : 'warning', message: issue.message });
+        }
+
+        return list;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [prevInvoice, totalEnergyNow, suggestions, suggestionsApplied, duplicateInfo, lowConfidenceCount, crossFieldIssues, data.company_name]);
+
+    const alertColors = {
+        info:    { bg: 'bg-indigo-50 border-indigo-200',    icon: 'text-indigo-500',  text: 'text-indigo-800' },
+        warning: { bg: 'bg-amber-50 border-amber-200',      icon: 'text-amber-500',   text: 'text-amber-800' },
+        error:   { bg: 'bg-red-50 border-red-200',          icon: 'text-red-500',     text: 'text-red-800' },
+        success: { bg: 'bg-emerald-50 border-emerald-200',  icon: 'text-emerald-500', text: 'text-emerald-800' },
+        learned: { bg: 'bg-emerald-50 border-emerald-200',  icon: 'text-emerald-500', text: 'text-emerald-800' },
+    };
+
+    const hasErrors = allAlerts.some(a => a.type === 'error');
+    const hasWarnings = allAlerts.some(a => a.type === 'warning');
+
+    // ── OCR Score ring ────────────────────────────────────────────────────────
+    const scoreColor = globalConfidence === null ? 'text-slate-400'
+        : globalConfidence >= 0.9 ? 'text-emerald-500'
+        : globalConfidence >= 0.7 ? 'text-amber-500' : 'text-red-500';
+    const ringColor = globalConfidence === null ? 'stroke-slate-200'
+        : globalConfidence >= 0.9 ? 'stroke-emerald-400'
+        : globalConfidence >= 0.7 ? 'stroke-amber-400' : 'stroke-red-400';
+    const circumference = 2 * Math.PI * 16;
+    const dashOffset = globalConfidence !== null
+        ? circumference * (1 - globalConfidence) : circumference;
+
+    // ── Render ────────────────────────────────────────────────────────────────
     return (
         <motion.div
             key="simulator-form"
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -30 }}
-            className="max-w-5xl mx-auto pb-12"
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+            className="max-w-6xl mx-auto pb-12"
         >
             <DemoModeAlert show={isMockMode} />
 
-            {/* Header & Navigation */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+            {/* ── Top bar ─────────────────────────────────────────────────── */}
+            <div className="flex items-center justify-between gap-4 mb-6">
                 <motion.button
-                    whileHover={{ x: -4 }}
+                    whileHover={{ x: -3 }}
                     onClick={onBack}
-                    className="flex items-center gap-2 text-slate-500 hover:text-emerald-600 font-bold text-sm transition-all group"
+                    className="flex items-center gap-1.5 text-slate-400 hover:text-slate-700 text-xs font-bold tracking-widest uppercase transition-colors group"
                 >
-                    <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-                    SUBIR OTRA FACTURA
+                    <ChevronLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
+                    Nueva factura
                 </motion.button>
 
-                <div className="flex items-center gap-4 bg-white/40 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/60 shadow-sm">
-                    {/* Toggle panel PDF */}
+                <div className="flex items-center gap-2">
+                    {/* PDF toggle */}
                     {pdfUrl && (
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setShowPdf(!showPdf)}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${showPdf ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500 hover:text-emerald-600'}`}
-                        >
-                            {showPdf ? 'Ocultar factura' : 'Ver factura'}
-                        </motion.button>
+                        <button type="button" onClick={() => setShowPdf(v => !v)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors border
+                                bg-white/60 border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700">
+                            {showPdf ? <EyeOff size={12} /> : <Eye size={12} />}
+                            {showPdf ? 'Ocultar PDF' : 'Ver PDF'}
+                        </button>
                     )}
 
-                    {/* Confirm OCR data button */}
-                    {(ocrDataConfirmed || localConfirmed) ? (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
-                            <ShieldCheck size={14} />
-                            Datos confirmados
-                        </div>
-                    ) : (
-                        <motion.button
-                            whileHover={{ scale: 1.03 }}
-                            whileTap={{ scale: 0.97 }}
-                            onClick={handleConfirm}
-                            disabled={isConfirming}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-emerald-700 transition-colors disabled:opacity-60"
-                        >
-                            {isConfirming ? (
-                                <motion.div
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                                    className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full"
-                                />
-                            ) : (
-                                <ShieldCheck size={14} />
-                            )}
-                            Confirmar datos
-                        </motion.button>
-                    )}
-
+                    {/* OCR score ring */}
                     {globalConfidence !== null && (
-                        <div className="text-center hidden sm:block">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Calidad OCR</p>
-                            <div className="flex items-center gap-1.5">
-                                <div
-                                    className="w-14 h-1.5 bg-slate-200 rounded-full overflow-hidden"
-                                    style={{ '--bar-w': `${Math.round(globalConfidence * 100)}%` } as React.CSSProperties}
-                                >
-                                    <div className={`h-full rounded-full transition-all [width:var(--bar-w)] ${globalConfidence >= 0.9 ? 'bg-emerald-500' : globalConfidence >= 0.7 ? 'bg-amber-400' : 'bg-red-400'}`} />
-                                </div>
-                                <span className={`text-xs font-black tabular-nums ${globalConfidence >= 0.9 ? 'text-emerald-600' : globalConfidence >= 0.7 ? 'text-amber-500' : 'text-red-500'}`}>
-                                    {Math.round(globalConfidence * 100)}%
-                                </span>
-                            </div>
-                        </div>
-                    )}
-                    <div className="text-right">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estado Auditoría</p>
-                        <p className="text-sm font-bold text-slate-900 flex items-center gap-2 justify-end">
-                            {data.detected_power_type ? 'Validado por IA' : 'Revisión Manual'}
-                            <CheckCircle2 size={14} className="text-emerald-500" />
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Banner: comparativa con factura anterior */}
-            {prevInvoice && totalEnergyNow > 0 && (
-                <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-4 flex items-center gap-3 bg-indigo-50 border border-indigo-200 rounded-2xl px-4 py-3"
-                >
-                    <Activity size={16} className="text-indigo-500 flex-shrink-0" />
-                    <div className="flex-1 text-sm text-indigo-800">
-                        <span className="font-bold">Comparativa con factura anterior</span>
-                        {prevInvoice.invoiceDate && (
-                            <span className="text-indigo-600 font-medium"> ({prevInvoice.invoiceDate})</span>
-                        )}
-                        {' — '}
-                        {(() => {
-                            const delta = totalEnergyNow - prevInvoice.totalEnergyKwh;
-                            const pct = prevInvoice.totalEnergyKwh > 0
-                                ? Math.round((delta / prevInvoice.totalEnergyKwh) * 100)
-                                : 0;
-                            const up = delta > 0;
-                            return (
-                                <span className={`font-bold ${up ? 'text-red-600' : 'text-emerald-600'}`}>
-                                    {up ? '▲' : '▼'} {Math.abs(pct)}% consumo ({up ? '+' : ''}{Math.round(delta)} kWh)
-                                </span>
-                            );
-                        })()}
-                        <span className="text-indigo-500 ml-2 text-xs">
-                            Anterior: {Math.round(prevInvoice.totalEnergyKwh)} kWh
-                            {prevInvoice.totalAmountEur !== null && ` · ${prevInvoice.totalAmountEur.toFixed(2)} €`}
-                        </span>
-                    </div>
-                </motion.div>
-            )}
-
-            {/* Banner: correcciones automáticas disponibles */}
-            {!suggestionsApplied && Object.keys(suggestions).length > 0 && (
-                <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-4 flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3"
-                >
-                    <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
-                    <p className="text-sm text-emerald-800 font-medium flex-1">
-                        <span className="font-bold">Correcciones aprendidas disponibles</span> — basadas en {Object.keys(suggestions).length} campo{Object.keys(suggestions).length > 1 ? 's' : ''} corregido{Object.keys(suggestions).length > 1 ? 's' : ''} frecuentemente para {data.company_name}.
-                    </p>
-                    <motion.button
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                        type="button"
-                        onClick={applySuggestions}
-                        className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors"
-                    >
-                        Aplicar
-                    </motion.button>
-                </motion.div>
-            )}
-
-            {/* Banner: factura duplicada detectada */}
-            {duplicateInfo && (
-                <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-4 flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3"
-                >
-                    <AlertTriangle size={16} className="text-orange-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-orange-800 font-medium">
-                        <span className="font-bold">Posible factura duplicada</span> — ya existe una extracción de este CUPS
-                        {duplicateInfo.invoiceNumber ? ` (factura ${duplicateInfo.invoiceNumber})` : ''} del mismo mes, procesada el{' '}
-                        {new Date(duplicateInfo.createdAt).toLocaleDateString('es-ES')}.
-                        Verifica que no estás analizando la misma factura dos veces.
-                    </p>
-                </motion.div>
-            )}
-
-            {/* Banner: alerta cuando hay múltiples campos con baja confianza OCR */}
-            {lowConfidenceCount >= 3 && (
-                <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-6 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3"
-                >
-                    <AlertTriangle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-amber-800 font-medium">
-                        <span className="font-bold">{lowConfidenceCount} campos con confianza baja</span> — el OCR no pudo leer estos datos con precisión. Revísalos antes de continuar para obtener resultados más exactos.
-                    </p>
-                </motion.div>
-            )}
-
-            <div className={`grid grid-cols-1 ${showPdf && pdfUrl ? 'xl:grid-cols-2 gap-8' : 'lg:grid-cols-12 gap-8'}`}>
-
-                {/* PDF PREVIEW PANEL */}
-                {showPdf && pdfUrl && (
-                    <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        className="sticky top-4 h-[800px]"
-                    >
-                        <PdfViewerWrapper
-                            ref={pdfViewerRef}
-                            url={pdfUrl}
-                            className="h-full"
-                        />
-                    </motion.div>
-                )}
-
-                {/* Left Column: Analysis & Groups (Adjusted Span) */}
-                <div className={showPdf && pdfUrl ? 'space-y-8' : 'lg:col-span-8 space-y-8'}>
-
-                    {/* Detection Summary Card */}
-                    <Card className="relative overflow-hidden border-2 border-emerald-100 bg-white/80">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -translate-y-1/2 translate-x-1/2 rounded-full" />
-
-                        <div className="flex flex-col md:flex-row md:items-center gap-6 relative z-10">
-                            <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                                <Zap className="w-8 h-8 text-white animate-pulse" />
-                            </div>
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/60 border border-slate-200">
+                            <svg width="36" height="36" viewBox="0 0 36 36" className="-rotate-90">
+                                <circle cx="18" cy="18" r="16" fill="none" strokeWidth="3" className="stroke-slate-100" />
+                                <circle cx="18" cy="18" r="16" fill="none" strokeWidth="3"
+                                    className={`${ringColor} transition-all duration-700`}
+                                    strokeDasharray={circumference}
+                                    strokeDashoffset={dashOffset}
+                                    strokeLinecap="round" />
+                            </svg>
                             <div>
-                                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">Diagnóstico Inicial</h3>
-                                <div className="flex items-end gap-3">
-                                    <p className="text-4xl font-extrabold text-slate-900 tracking-tight">
-                                        {powerType === '2.0' && 'Tensión Baja 2.0TD'}
-                                        {powerType === '3.0' && 'Empresa 3.0TD'}
-                                        {powerType === '3.1' && 'Alta Tensión 3.1TD'}
-                                    </p>
-                                    <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded uppercase mb-2">Detectado</span>
-                                </div>
-                                <p className="text-sm text-slate-500 mt-2 flex items-center gap-1.5 font-medium">
-                                    <Info size={14} className="text-emerald-500" />
-                                    Tarifa detectada: <span className="text-slate-900 font-bold">{data.tariff_name}</span>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">OCR</p>
+                                <p className={`text-sm font-black tabular-nums leading-none ${scoreColor}`}>
+                                    {Math.round(globalConfidence * 100)}%
                                 </p>
                             </div>
                         </div>
-                    </Card>
-
-                    {/* Cross-field validation alerts */}
-                    {crossFieldIssues.length > 0 && (
-                        <div className="space-y-2">
-                            {crossFieldIssues.map((issue, i) => (
-                                <div
-                                    key={i}
-                                    className={`flex items-start gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium ${
-                                        issue.severity === 'error'
-                                            ? 'bg-red-50 border border-red-200 text-red-800'
-                                            : 'bg-amber-50 border border-amber-200 text-amber-800'
-                                    }`}
-                                >
-                                    <AlertTriangle size={14} className={`flex-shrink-0 mt-0.5 ${issue.severity === 'error' ? 'text-red-500' : 'text-amber-500'}`} />
-                                    {issue.message}
-                                </div>
-                            ))}
-                        </div>
                     )}
 
-                    {/* Group 1: Identity & Contract */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3 px-2">
-                            <div className="w-1.5 h-6 bg-emerald-500 rounded-full" />
-                            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Datos del Contrato</h2>
-                        </div>
-                        <Card className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white/60">
-                            <Input
-                                label="Titular / Cliente"
-                                labelBadge={<ConfidencePill value={getConfidence('client_name')} />}
-                                icon={<User size={16} />}
-                                value={data.client_name}
-                                onChange={(e) => onUpdate('client_name', e.target.value)}
-                                placeholder="Nombre completo"
-                                warning={
-                                    lowConfWarn('client_name') ??
-                                    (data.client_name && data.client_name.length < 5 ? 'Nombre muy corto (¿OCR incompleto?)' : undefined)
-                                }
-                                action={pdfUrl && data.client_name ? <LocateButton onClick={() => locate(data.client_name)} lowConfidence={isLowConfidence('client_name')} /> : undefined}
-                            />
-                            <Input
-                                label="CIF / DNI"
-                                labelBadge={<ConfidencePill value={getConfidence('dni_cif')} />}
-                                icon={<Hash size={16} />}
-                                value={data.dni_cif}
-                                onChange={(e) => onUpdate('dni_cif', e.target.value)}
-                                placeholder="Identificación"
-                                warning={
-                                    lowConfWarn('dni_cif') ??
-                                    (data.dni_cif && !/^[0-9A-Z]{9}$/.test(data.dni_cif) ? 'Formato inusual' : undefined)
-                                }
-                                action={pdfUrl && data.dni_cif ? <LocateButton onClick={() => locate(data.dni_cif)} lowConfidence={isLowConfidence('dni_cif')} /> : undefined}
-                            />
-                            <Input
-                                label="Comercializadora Actual"
-                                labelBadge={<ConfidencePill value={getConfidence('company_name')} />}
-                                icon={<Building2 size={16} />}
-                                value={data.company_name}
-                                onChange={(e) => onUpdate('company_name', e.target.value)}
-                                placeholder="Ej: Endesa, Iberdrola..."
-                                warning={lowConfWarn('company_name')}
-                                action={pdfUrl && data.company_name ? <LocateButton onClick={() => locate(data.company_name)} lowConfidence={isLowConfidence('company_name')} /> : undefined}
-                            />
-                            <Input
-                                label="Nº de Factura"
-                                labelBadge={<ConfidencePill value={getConfidence('invoice_number')} />}
-                                icon={<Hash size={16} />}
-                                value={data.invoice_number}
-                                onChange={(e) => onUpdate('invoice_number', e.target.value)}
-                                warning={
-                                    lowConfWarn('invoice_number') ??
-                                    (!data.invoice_number ? 'Dato no encontrado en el PDF' : undefined)
-                                }
-                                action={pdfUrl && data.invoice_number ? <LocateButton onClick={() => locate(data.invoice_number)} lowConfidence={isLowConfidence('invoice_number')} /> : undefined}
-                            />
-                        </Card>
-                    </div>
-
-                    {/* Group 2: Supply Info */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3 px-2">
-                            <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
-                            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Punto de Suministro</h2>
-                        </div>
-                        <Card className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white/60">
-                            <div className="md:col-span-2">
-                                <Input
-                                    label="CUPS"
-                                    labelBadge={<ConfidencePill value={getConfidence('cups')} />}
-                                    icon={<Activity size={16} />}
-                                    value={data.cups}
-                                    error={!isCupsValid && data.cups ? 'Longitud de CUPS sospechosa' : undefined}
-                                    warning={
-                                        lowConfWarn('cups') ??
-                                        (isCupsValid && !data.cups?.startsWith('ES') ? 'CUPS debe empezar por ES' : undefined)
-                                    }
-                                    onChange={(e) => onUpdate('cups', e.target.value.toUpperCase())}
-                                    className="font-mono"
-                                    action={pdfUrl && data.cups ? <LocateButton onClick={() => locate(data.cups)} lowConfidence={isLowConfidence('cups')} /> : undefined}
-                                />
-                            </div>
-                            <Input
-                                label="Dirección de Suministro"
-                                labelBadge={<ConfidencePill value={getConfidence('supply_address')} />}
-                                icon={<MapPin size={16} />}
-                                value={data.supply_address}
-                                onChange={(e) => onUpdate('supply_address', e.target.value)}
-                                warning={
-                                    lowConfWarn('supply_address') ??
-                                    (data.supply_address && data.supply_address.length < 10 ? 'Dirección incompleta' : undefined)
-                                }
-                                action={pdfUrl && data.supply_address ? <LocateButton onClick={() => locate(data.supply_address)} lowConfidence={isLowConfidence('supply_address')} /> : undefined}
-                            />
-                            <div className="grid grid-cols-2 gap-4">
-                                <Input
-                                    label="Días Factura"
-                                    type="number"
-                                    icon={<Calendar size={16} />}
-                                    value={data.period_days}
-                                    onChange={(e) => onUpdate('period_days', parseInt(e.target.value) || 30)}
-                                />
-                                <Input
-                                    label="Fecha"
-                                    labelBadge={<ConfidencePill value={getConfidence('invoice_date')} />}
-                                    icon={<Calendar size={16} />}
-                                    value={data.invoice_date}
-                                    onChange={(e) => onUpdate('invoice_date', e.target.value)}
-                                    warning={lowConfWarn('invoice_date')}
-                                    action={pdfUrl && data.invoice_date ? <LocateButton onClick={() => locate(data.invoice_date)} lowConfidence={isLowConfidence('invoice_date')} /> : undefined}
-                                />
-                            </div>
-                        </Card>
-                    </div>
-
-                </div>
-
-                {/* Right Column: Values & Metrics */}
-                <div className={showPdf && pdfUrl ? 'space-y-8' : 'lg:col-span-4 space-y-8'}>
-
-                    {/* Energy Sectors */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3 px-2">
-                            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Consumo (kWh)</h2>
-                        </div>
-                        <Card className="bg-emerald-50/30 border border-emerald-100 shadow-sm">
-                            <div className="space-y-3">
-                                {visibleEnergyPeriods.map(p => {
-                                    const field = `energy_p${p}` as keyof InvoiceData;
-                                    return (
-                                        <div key={`energy-${p}`} className="flex items-center justify-between gap-4">
-                                            <span className="text-xs font-black text-emerald-600 bg-emerald-100 px-2 py-1 rounded w-8 text-center">P{p}</span>
-                                            <input
-                                                type="number"
-                                                aria-label={`Energía P${p}`}
-                                                value={data[field] as number}
-                                                onChange={(e) => onUpdate(field, parseFloat(e.target.value) || 0)}
-                                                className="flex-1 bg-transparent border-b border-emerald-200 focus:border-emerald-500 focus:outline-none text-right font-bold text-slate-800 text-sm py-1"
-                                            />
-                                        </div>
-                                    );
-                                })}
-                                {!hasEnergyValues && (
-                                    <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-orange-600 bg-orange-50 p-2 rounded-lg">
-                                        <AlertCircle size={14} />
-                                        SIN CONSUMO DETECTADO
-                                    </div>
-                                )}
-                            </div>
-                        </Card>
-                    </div>
-
-                    {/* Power Sectors */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3 px-2">
-                            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Potencias (kW)</h2>
-                        </div>
-                        <Card className="bg-amber-50/30 border border-amber-100 shadow-sm">
-                            <div className="space-y-3">
-                                {visiblePowerPeriods.map(p => {
-                                    const field = `power_p${p}` as keyof InvoiceData;
-                                    return (
-                                        <div key={`power-${p}`} className="flex items-center justify-between gap-4">
-                                            <span className="text-xs font-black text-amber-600 bg-amber-100 px-2 py-1 rounded w-8 text-center">P{p}</span>
-                                            <input
-                                                type="number"
-                                                aria-label={`Potencia P${p}`}
-                                                value={data[field] as number}
-                                                onChange={(e) => onUpdate(field, parseFloat(e.target.value) || 0)}
-                                                className="flex-1 bg-transparent border-b border-amber-200 focus:border-amber-500 focus:outline-none text-right font-bold text-slate-800 text-sm py-1"
-                                            />
-                                        </div>
-                                    );
-                                })}
-                                {!hasPowerValues && (
-                                    <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-red-600 bg-red-50 p-2 rounded-lg">
-                                        <AlertCircle size={14} />
-                                        FALTA POTENCIA CONTRATADA
-                                    </div>
-                                )}
-                            </div>
-                        </Card>
-                    </div>
-
-                    {/* Maximeter (Demandas Máximas) */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3 px-2">
-                            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Maxímetro (kW)</h2>
-                            <span className="text-[10px] uppercase font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded">Opcional</span>
-                        </div>
-                        <Card className="bg-purple-50/30 border border-purple-100 shadow-sm">
-                            <div className="space-y-3">
-                                {visiblePowerPeriods.map(p => {
-                                    const field = `max_demand_p${p}` as keyof InvoiceData;
-                                    return (
-                                        <div key={`max-demand-${p}`} className="flex items-center justify-between gap-4">
-                                            <span className="text-xs font-black text-purple-600 bg-purple-100 px-2 py-1 rounded w-8 text-center">P{p}</span>
-                                            <input
-                                                type="number"
-                                                aria-label={`Max Demand P${p}`}
-                                                value={data[field] as number || ''}
-                                                onChange={(e) => onUpdate(field, parseFloat(e.target.value) || 0)}
-                                                placeholder="0.00"
-                                                className="flex-1 bg-transparent border-b border-purple-200 focus:border-purple-500 focus:outline-none text-right font-bold text-slate-800 text-sm py-1 placeholder:text-slate-300"
-                                            />
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </Card>
-                    </div>
-
-                    {/* Final Action */}
-                    <motion.button
-                        whileHover={{ scale: 1.02, translateY: -2 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={onCompare}
-                        disabled={isAnalyzing || !hasEnergyValues || !hasPowerValues}
-                        className="w-full relative bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-6 rounded-[2rem] font-display font-bold text-xl shadow-xl shadow-emerald-500/30 flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale transition-all overflow-hidden group mt-6"
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
-
-                        {isAnalyzing ? (
-                            <div className="flex items-center gap-3">
-                                <motion.div
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                    className="w-6 h-6 border-3 border-white/20 border-t-white rounded-full"
-                                />
-                                <span>{loadingMessage}</span>
-                            </div>
+                    {/* Confirm button */}
+                    <AnimatePresence mode="wait">
+                        {(ocrDataConfirmed || localConfirmed) ? (
+                            <motion.div key="confirmed"
+                                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
+                                <CheckCircle2 size={13} />
+                                Confirmado
+                            </motion.div>
                         ) : (
-                            <>
-                                <span>Ejecutar Comparativa</span>
-                                <ArrowRight size={22} className="group-hover:translate-x-1.5 transition-transform" />
-                            </>
+                            <motion.button key="confirm"
+                                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                                onClick={handleConfirm} disabled={isConfirming}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-emerald-700 transition-colors disabled:opacity-60">
+                                {isConfirming
+                                    ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                                        className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full" />
+                                    : <ShieldCheck size={13} />
+                                }
+                                {isConfirming ? 'Guardando…' : 'Confirmar datos'}
+                            </motion.button>
                         )}
-                    </motion.button>
+                    </AnimatePresence>
+                </div>
+            </div>
+
+            {/* ── Alert panel ─────────────────────────────────────────────── */}
+            <AnimatePresence>
+                {allAlerts.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="mb-6"
+                    >
+                        <div className={`rounded-2xl border overflow-hidden ${
+                            hasErrors ? 'border-red-200 bg-red-50/50'
+                            : hasWarnings ? 'border-amber-200 bg-amber-50/30'
+                            : 'border-slate-200 bg-white/50'
+                        }`}>
+                            {/* Panel header */}
+                            <button type="button" onClick={() => setAlertsExpanded(v => !v)}
+                                className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-black/[0.02] transition-colors">
+                                <div className="flex items-center gap-2">
+                                    <AlertTriangle size={13} className={hasErrors ? 'text-red-500' : hasWarnings ? 'text-amber-500' : 'text-slate-400'} />
+                                    <span className="text-xs font-bold text-slate-600">
+                                        {allAlerts.length} aviso{allAlerts.length > 1 ? 's' : ''} del análisis
+                                    </span>
+                                    {allAlerts.some(a => a.type === 'learned') && (
+                                        <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-100 px-1.5 py-px rounded-full">
+                                            <Sparkles size={8} /> Aprendido
+                                        </span>
+                                    )}
+                                </div>
+                                <ChevronDown size={13} className={`text-slate-400 transition-transform ${alertsExpanded ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {/* Alert rows */}
+                            <AnimatePresence>
+                                {alertsExpanded && (
+                                    <motion.div
+                                        initial={{ height: 0 }}
+                                        animate={{ height: 'auto' }}
+                                        exit={{ height: 0 }}
+                                        className="overflow-hidden"
+                                    >
+                                        <div className="border-t border-black/5 divide-y divide-black/5">
+                                            {allAlerts.map((alert, i) => {
+                                                const c = alertColors[alert.type];
+                                                const Icon = alert.type === 'error' ? AlertTriangle
+                                                    : alert.type === 'learned' ? Sparkles
+                                                    : alert.type === 'info' ? Activity
+                                                    : AlertTriangle;
+                                                return (
+                                                    <div key={i} className={`flex items-center gap-2.5 px-4 py-2.5 ${c.bg}`}>
+                                                        <Icon size={12} className={`${c.icon} shrink-0`} />
+                                                        <p className={`text-xs flex-1 ${c.text}`}>{alert.message}</p>
+                                                        {alert.action}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ── Main grid ───────────────────────────────────────────────── */}
+            <div className={`grid grid-cols-1 gap-6 ${showPdf && pdfUrl ? 'xl:grid-cols-[1fr_1fr]' : 'lg:grid-cols-[1fr_340px]'}`}>
+
+                {/* PDF panel */}
+                {showPdf && pdfUrl && (
+                    <motion.div
+                        initial={{ opacity: 0, x: -16 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -16 }}
+                        className="sticky top-4 h-[820px]"
+                    >
+                        <PdfViewerWrapper ref={pdfViewerRef} url={pdfUrl} className="h-full" />
+                    </motion.div>
+                )}
+
+                {/* Form columns */}
+                <div className={`grid gap-6 ${showPdf && pdfUrl ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[1fr_300px]'}`}>
+
+                    {/* Left: fields */}
+                    <div className="space-y-5">
+
+                        {/* Tariff card */}
+                        <div className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
+                                <Zap size={18} className="text-emerald-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Tarifa detectada</p>
+                                <p className="text-base font-bold text-white truncate">
+                                    {powerType === '2.0' && 'Tensión Baja 2.0TD'}
+                                    {powerType === '3.0' && 'Empresa 3.0TD'}
+                                    {powerType === '3.1' && 'Alta Tensión 3.1TD'}
+                                    {data.tariff_name && <span className="ml-2 text-slate-400 text-sm font-normal">· {data.tariff_name}</span>}
+                                </p>
+                            </div>
+                            <span className="shrink-0 text-[9px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-lg">IA</span>
+                        </div>
+
+                        {/* Contract data */}
+                        <section>
+                            <SectionLabel color="bg-emerald-500" label="Datos del Contrato" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-2xl bg-white/70 border border-slate-100 shadow-sm">
+                                <Input label="Titular / Cliente"
+                                    labelBadge={<ConfidencePill value={getConfidence('client_name')} />}
+                                    icon={<User size={15} />}
+                                    value={data.client_name ?? ''} onChange={e => onUpdate('client_name', e.target.value)}
+                                    placeholder="Nombre completo"
+                                    warning={lowConfWarn('client_name') ?? (data.client_name && data.client_name.length < 5 ? 'Nombre muy corto' : undefined)}
+                                    action={pdfUrl && data.client_name ? <LocateButton onClick={() => locate(data.client_name)} lowConfidence={isLowConfidence('client_name')} /> : undefined}
+                                />
+                                <Input label="CIF / DNI"
+                                    labelBadge={<ConfidencePill value={getConfidence('dni_cif')} />}
+                                    icon={<Hash size={15} />}
+                                    value={data.dni_cif ?? ''} onChange={e => onUpdate('dni_cif', e.target.value)}
+                                    placeholder="Identificación"
+                                    warning={lowConfWarn('dni_cif')}
+                                    action={pdfUrl && data.dni_cif ? <LocateButton onClick={() => locate(data.dni_cif)} lowConfidence={isLowConfidence('dni_cif')} /> : undefined}
+                                />
+                                <Input label="Comercializadora"
+                                    labelBadge={<ConfidencePill value={getConfidence('company_name')} />}
+                                    icon={<Building2 size={15} />}
+                                    value={data.company_name ?? ''} onChange={e => onUpdate('company_name', e.target.value)}
+                                    placeholder="Endesa, Iberdrola…"
+                                    warning={lowConfWarn('company_name')}
+                                    action={pdfUrl && data.company_name ? <LocateButton onClick={() => locate(data.company_name)} lowConfidence={isLowConfidence('company_name')} /> : undefined}
+                                />
+                                <Input label="Nº Factura"
+                                    labelBadge={<ConfidencePill value={getConfidence('invoice_number')} />}
+                                    icon={<Hash size={15} />}
+                                    value={data.invoice_number ?? ''} onChange={e => onUpdate('invoice_number', e.target.value)}
+                                    warning={lowConfWarn('invoice_number') ?? (!data.invoice_number ? 'No encontrado' : undefined)}
+                                    action={pdfUrl && data.invoice_number ? <LocateButton onClick={() => locate(data.invoice_number)} lowConfidence={isLowConfidence('invoice_number')} /> : undefined}
+                                />
+                            </div>
+                        </section>
+
+                        {/* Supply point */}
+                        <section>
+                            <SectionLabel color="bg-blue-500" label="Punto de Suministro" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-2xl bg-white/70 border border-slate-100 shadow-sm">
+                                <div className="sm:col-span-2">
+                                    <Input label="CUPS"
+                                        labelBadge={<ConfidencePill value={getConfidence('cups')} />}
+                                        icon={<Activity size={15} />}
+                                        value={data.cups ?? ''} className="font-mono"
+                                        error={!isCupsValid && data.cups ? 'Longitud sospechosa' : undefined}
+                                        warning={lowConfWarn('cups') ?? (isCupsValid && !data.cups?.startsWith('ES') ? 'Debe empezar por ES' : undefined)}
+                                        onChange={e => onUpdate('cups', e.target.value.toUpperCase())}
+                                        action={pdfUrl && data.cups ? <LocateButton onClick={() => locate(data.cups)} lowConfidence={isLowConfidence('cups')} /> : undefined}
+                                    />
+                                </div>
+                                <Input label="Dirección"
+                                    labelBadge={<ConfidencePill value={getConfidence('supply_address')} />}
+                                    icon={<MapPin size={15} />}
+                                    value={data.supply_address ?? ''} onChange={e => onUpdate('supply_address', e.target.value)}
+                                    warning={lowConfWarn('supply_address') ?? (data.supply_address && data.supply_address.length < 10 ? 'Parece incompleta' : undefined)}
+                                    action={pdfUrl && data.supply_address ? <LocateButton onClick={() => locate(data.supply_address)} lowConfidence={isLowConfidence('supply_address')} /> : undefined}
+                                />
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Input label="Días" type="number" icon={<Calendar size={15} />}
+                                        value={data.period_days} onChange={e => onUpdate('period_days', parseInt(e.target.value) || 30)} />
+                                    <Input label="Fecha"
+                                        labelBadge={<ConfidencePill value={getConfidence('invoice_date')} />}
+                                        icon={<Calendar size={15} />}
+                                        value={data.invoice_date ?? ''} onChange={e => onUpdate('invoice_date', e.target.value)}
+                                        warning={lowConfWarn('invoice_date')}
+                                        action={pdfUrl && data.invoice_date ? <LocateButton onClick={() => locate(data.invoice_date)} lowConfidence={isLowConfidence('invoice_date')} /> : undefined}
+                                    />
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    {/* Right: energy/power + CTA */}
+                    <div className="space-y-5">
+
+                        {/* Energy */}
+                        <section>
+                            <SectionLabel color="bg-emerald-400" label="Consumo kWh" />
+                            <PeriodTable
+                                periods={visibleEnergyPeriods} prefix="energy_p" data={data} onUpdate={onUpdate}
+                                accent="emerald" missingAlert={!hasEnergyValues ? 'Sin consumo detectado' : undefined}
+                            />
+                        </section>
+
+                        {/* Power */}
+                        <section>
+                            <SectionLabel color="bg-amber-400" label="Potencia kW" />
+                            <PeriodTable
+                                periods={visiblePowerPeriods} prefix="power_p" data={data} onUpdate={onUpdate}
+                                accent="amber" missingAlert={!hasPowerValues ? 'Falta potencia contratada' : undefined}
+                            />
+                        </section>
+
+                        {/* Maximeter */}
+                        <section>
+                            <div className="flex items-center gap-2 mb-2 px-1">
+                                <div className="w-1 h-4 bg-purple-400 rounded-full" />
+                                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Maxímetro kW</h3>
+                                <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-px rounded">Opcional</span>
+                            </div>
+                            <PeriodTable
+                                periods={visiblePowerPeriods} prefix="max_demand_p" data={data} onUpdate={onUpdate}
+                                accent="purple" placeholder="—"
+                            />
+                        </section>
+
+                        {/* CTA */}
+                        <motion.button
+                            whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
+                            onClick={onCompare}
+                            disabled={isAnalyzing || !hasEnergyValues || !hasPowerValues}
+                            className="w-full relative bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-5 px-6 rounded-2xl font-bold text-base shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:grayscale transition-all overflow-hidden group"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
+                            {isAnalyzing ? (
+                                <>
+                                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                                        className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full" />
+                                    <span>{loadingMessage}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span>Ejecutar Comparativa</span>
+                                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                </>
+                            )}
+                        </motion.button>
+                    </div>
                 </div>
             </div>
         </motion.div>
     );
 };
 
-// ── LocateButton ──────────────────────────────────────────────────────────────
+// ── Sub-components ────────────────────────────────────────────────────────────
 
-interface LocateButtonProps {
-    onClick: () => void;
-    lowConfidence?: boolean;
+function SectionLabel({ color, label }: { color: string; label: string }) {
+    return (
+        <div className="flex items-center gap-2 mb-2 px-1">
+            <div className={`w-1 h-4 ${color} rounded-full`} />
+            <h3 className="text-xs font-bold text-slate-600 uppercase tracking-widest">{label}</h3>
+        </div>
+    );
 }
 
-/**
- * Botón pequeño que aparece en el trailing de un Input cuando hay PDF cargado.
- * Al pulsarlo, el PdfViewer busca y resalta el valor del campo en el documento.
- * Si el campo tiene baja confianza OCR, el icono pulsa en naranja para llamar la atención.
- */
+interface PeriodTableProps {
+    periods: number[];
+    prefix: string;
+    data: InvoiceData;
+    onUpdate: <K extends keyof InvoiceData>(key: K, value: InvoiceData[K]) => void;
+    accent: 'emerald' | 'amber' | 'purple';
+    missingAlert?: string;
+    placeholder?: string;
+}
+
+const ACCENT = {
+    emerald: { badge: 'text-emerald-700 bg-emerald-100', border: 'border-emerald-200 focus:border-emerald-500' },
+    amber:   { badge: 'text-amber-700 bg-amber-100',     border: 'border-amber-200 focus:border-amber-500' },
+    purple:  { badge: 'text-purple-700 bg-purple-100',   border: 'border-purple-200 focus:border-purple-500' },
+};
+
+function PeriodTable({ periods, prefix, data, onUpdate, accent, missingAlert, placeholder }: PeriodTableProps) {
+    const c = ACCENT[accent];
+    return (
+        <div className="rounded-2xl bg-white/70 border border-slate-100 shadow-sm overflow-hidden">
+            <div className="divide-y divide-slate-50">
+                {periods.map(p => {
+                    const field = `${prefix}${p}` as keyof InvoiceData;
+                    const val = (data[field] as number) || 0;
+                    return (
+                        <div key={p} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50/60 transition-colors">
+                            <span className={`text-[10px] font-black w-7 text-center py-0.5 rounded ${c.badge}`}>P{p}</span>
+                            <input
+                                type="number"
+                                aria-label={`${prefix}${p}`}
+                                value={val || ''}
+                                placeholder={placeholder ?? '0'}
+                                onChange={e => onUpdate(field, (parseFloat(e.target.value) || 0) as InvoiceData[typeof field])}
+                                className={`flex-1 bg-transparent border-b ${c.border} focus:outline-none text-right font-bold text-slate-800 text-sm py-0.5 placeholder:text-slate-300`}
+                            />
+                        </div>
+                    );
+                })}
+            </div>
+            {missingAlert && (
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-orange-50 border-t border-orange-100">
+                    <AlertCircle size={12} className="text-orange-500 shrink-0" />
+                    <span className="text-[10px] font-bold text-orange-600 uppercase tracking-wide">{missingAlert}</span>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ── LocateButton ──────────────────────────────────────────────────────────────
+
+interface LocateButtonProps { onClick: () => void; lowConfidence?: boolean; }
+
 const LocateButton: React.FC<LocateButtonProps> = ({ onClick, lowConfidence }) => (
-    <motion.button
-        type="button"
-        onClick={onClick}
-        whileHover={{ scale: 1.15 }}
-        whileTap={{ scale: 0.9 }}
+    <motion.button type="button" onClick={onClick}
+        whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
         title="Localizar en la factura"
         className={`p-1 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
             lowConfidence
@@ -761,17 +678,12 @@ const LocateButton: React.FC<LocateButtonProps> = ({ onClick, lowConfidence }) =
                 : 'text-slate-300 hover:text-emerald-600 hover:bg-emerald-50'
         }`}
     >
-        <ScanSearch size={14} />
+        <ScanSearch size={13} />
     </motion.button>
 );
 
 // ── ConfidencePill ────────────────────────────────────────────────────────────
 
-/**
- * Badge de confianza OCR renderizado inline junto al label de un campo.
- * Verde ≥90%, ámbar 70-89%, rojo <70%.
- * Se pasa como labelBadge al componente Input.
- */
 const ConfidencePill: React.FC<{ value: number | null }> = ({ value }) => {
     if (value === null) return null;
     const pct = Math.round(value * 100);
@@ -786,4 +698,3 @@ const ConfidencePill: React.FC<{ value: number | null }> = ({ value }) => {
         </span>
     );
 };
-
