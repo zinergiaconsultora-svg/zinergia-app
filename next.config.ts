@@ -5,11 +5,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
 
-  serverActions: {
-    bodySizeLimit: '12mb',
-  },
-
   experimental: {
+    serverActions: {
+      bodySizeLimit: '12mb',
+    },
     optimizePackageImports: [
       'lucide-react',
       'framer-motion',
