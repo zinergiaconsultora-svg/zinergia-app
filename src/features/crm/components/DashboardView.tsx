@@ -12,18 +12,9 @@ import {
     Bell,
     ArrowUpRight,
     Zap,
-    FileText,
-    UploadCloud,
-    ChevronRight,
-    CheckCircle2,
-    XCircle,
-    Clock,
-    Check,
-    Trash2,
-    Mail
 } from 'lucide-react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { formatCurrency } from '@/lib/utils/format';
 import { DashboardSkeleton } from '@/components/ui/DashboardSkeleton';
@@ -50,6 +41,7 @@ const PipelinePieChart = dynamic(() =>
     import('./DashboardCharts').then(m => ({ default: m.PipelinePieChart })),
     { loading: () => <div className="h-full w-full bg-slate-100/20 animate-pulse rounded-full" /> }
 );
+const SmartAlertsStrip = dynamic(() => import('./SmartAlertsStrip'), { ssr: false });
 
 interface DashboardStats {
     user?: {
@@ -195,7 +187,7 @@ export default function DashboardView() {
     return (
         <div className="w-full bg-white lg:bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-300 font-sans overflow-x-hidden flex flex-col relative selection:bg-indigo-100 bg-dot-pattern">
             {/* Ambient Glows — Efecto Ultra Premium (detrás de todo) */}
-            <div className="fixed inset-0 pointer-events-none overflow-hidden" z-index="-1">
+            <div className="fixed inset-0 pointer-events-none overflow-hidden z-[-1]">
                 <div className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] ambient-glow-blue rounded-full blur-[100px] animate-spin-slow opacity-60"></div>
                 <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] ambient-glow-energy rounded-full blur-[100px] animate-spin-slow opacity-60" style={{ animationDirection: 'reverse' }}></div>
             </div>
@@ -242,7 +234,10 @@ export default function DashboardView() {
                     </div>
                 </motion.div>
 
-
+                {/* Smart alerts — visible on both mobile and desktop */}
+                <motion.div variants={item} className="px-4 lg:px-0">
+                    <SmartAlertsStrip />
+                </motion.div>
 
                 {/* 2. KPIs — iOS grouped list en móvil, grid en desktop */}
                 <motion.div variants={item} className="mx-4 lg:mx-0 mt-4 lg:mt-0">
