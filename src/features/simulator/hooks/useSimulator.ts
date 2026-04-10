@@ -193,7 +193,27 @@ export function useSimulator() {
             return;
         }
 
-        // 2. Async Job Handling (Realtime)
+        // 2. Client pre-load from Pipeline "Simular" button
+        const clientRaw = sessionStorage.getItem('pendingClientPreload');
+        if (clientRaw) {
+            sessionStorage.removeItem('pendingClientPreload');
+            try {
+                const { client_id, client_name, cups } = JSON.parse(clientRaw) as {
+                    client_id: string;
+                    client_name: string;
+                    cups: string;
+                };
+                dispatch({
+                    type: 'UPDATE_INVOICE_FIELDS',
+                    payload: { ...defaultInvoiceData, client_id, client_name, cups },
+                });
+            } catch {
+                // Malformed entry — ignore
+            }
+            return;
+        }
+
+        // 3. Async Job Handling (Realtime)
         const jobId = sessionStorage.getItem('pendingOcrJobId');
         if (jobId) {
             sessionStorage.removeItem('pendingOcrJobId');
