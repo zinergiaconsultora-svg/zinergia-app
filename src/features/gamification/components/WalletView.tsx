@@ -15,7 +15,8 @@ import {
     ShieldCheck,
     Users,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    Download
 } from 'lucide-react';
 import { useWallet } from '../hooks/useWallet';
 import { toast } from 'sonner';
@@ -23,6 +24,7 @@ import { formatCurrency, formatDate } from '@/lib/utils/format';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { clearCommissionAction, payCommissionAction } from '@/app/actions/commissions';
 import { Commission } from '@/types/crm';
+import { exportCommissionsToCSV } from '@/lib/utils/exportCsv';
 
 interface WalletViewProps {
     canManage?: boolean;
@@ -283,20 +285,35 @@ export default function WalletView({ canManage = false, allCommissions: initialA
 
                     {showAdmin && (
                         <>
-                            {/* Filter tabs */}
-                            <div className="px-6 pb-3 flex gap-2 border-b border-slate-100 overflow-x-auto no-scrollbar whitespace-nowrap">
-                                {(['pending', 'cleared', 'paid', 'all'] as const).map(f => (
-                                    <button
-                                        type="button"
-                                        key={f}
-                                        onClick={() => setAdminFilter(f)}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${adminFilter === f ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-                                    >
-                                        {f === 'pending' ? `Pendientes (${adminCounts.pending})` :
-                                         f === 'cleared' ? `Aprobadas (${adminCounts.cleared})` :
-                                         f === 'paid'    ? `Pagadas (${adminCounts.paid})` : 'Todas'}
-                                    </button>
-                                ))}
+                            {/* Filter tabs + Export */}
+                            <div className="px-6 pb-3 flex items-center justify-between gap-2 border-b border-slate-100">
+                                <div className="flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
+                                    {(['pending', 'cleared', 'paid', 'all'] as const).map(f => (
+                                        <button
+                                            type="button"
+                                            key={f}
+                                            onClick={() => setAdminFilter(f)}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${adminFilter === f ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                                        >
+                                            {f === 'pending' ? `Pendientes (${adminCounts.pending})` :
+                                             f === 'cleared' ? `Aprobadas (${adminCounts.cleared})` :
+                                             f === 'paid'    ? `Pagadas (${adminCounts.paid})` : 'Todas'}
+                                        </button>
+                                    ))}
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const label = adminFilter === 'all' ? 'comisiones' : `comisiones-${adminFilter}`;
+                                        exportCommissionsToCSV(filteredAdmin, label);
+                                    }}
+                                    disabled={filteredAdmin.length === 0}
+                                    title="Exportar vista actual a CSV"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+                                >
+                                    <Download size={13} />
+                                    Exportar CSV
+                                </button>
                             </div>
 
                             <div className="divide-y divide-slate-50">
