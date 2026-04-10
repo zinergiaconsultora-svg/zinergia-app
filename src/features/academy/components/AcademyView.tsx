@@ -68,12 +68,8 @@ function saveOnboarding(state: Record<string, boolean>) {
 }
 
 function OnboardingChecklist() {
-    const [checked, setChecked] = useState<Record<string, boolean>>({});
+    const [checked, setChecked] = useState<Record<string, boolean>>(() => getOnboarding());
     const [open, setOpen] = useState(false);
-
-    useEffect(() => {
-        setChecked(getOnboarding());
-    }, []);
 
     const done = Object.values(checked).filter(Boolean).length;
     const allDone = done === ONBOARDING_STEPS.length;
