@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { requireServerRole } from '@/lib/auth/permissions';
+import { revalidatePath } from 'next/cache';
 
 // ─── Types ────────────────────────────────────────────────────────────
 export interface AdminStats {
@@ -148,6 +149,58 @@ export async function removeAgentFromFranchise(agentId: string): Promise<void> {
         .eq('id', agentId);
 
     if (error) throw new Error(`Error desvinculando agente: ${error.message}`);
+    revalidatePath('/admin');
+    revalidatePath('/admin/agents');
+}
+
+export async function createFranchiseAction(name: string): Promise<void> {
+    await requireServerRole(['admin']);
+    const supabase = await createClient();
+
+    const slug = name
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+    const { error } = await supabase
+        .from('franchises')
+        .insert({ name: name.trim(), slug, is_active: true });
+
+    if (error) throw new Error(`Error creando franquicia: ${error.message}`);
+    revalidatePath('/admin');
+}
+
+export async function getAllAgentsAction(): Promise<AgentProfile[]> {
+    await requireServerRole(['admin']);
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, role, franchise_id')
+        .in('role', ['agent', 'franchise', 'admin'])
+        .order('full_name', { ascending: true });
+
+    if (error) throw new Error(`Error cargando agentes: ${error.message}`);
+    return data ?? [];
+}
+
+export async function updateAgentAdminAction(
+    agentId: string,
+    updates: { full_name?: string; role?: string; franchise_id?: string | null },
+): Promise<void> {
+    await requireServerRole(['admin']);
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', agentId);
+
+    if (error) throw new Error(`Error actualizando agente: ${error.message}`);
+    revalidatePath('/admin');
+    revalidatePath('/admin/agents');
 }
 
 // ─── Reporting Queries ────────────────────────────────────────────────
