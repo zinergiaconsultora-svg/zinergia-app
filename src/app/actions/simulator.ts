@@ -6,7 +6,8 @@ import { Normalizer } from '@/lib/aletheia/normalizer';
 import { AletheiaResult, InvoiceData, TariffCandidate } from '@/lib/aletheia/types';
 import { Result, ok, err } from '@/lib/result';
 
-export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: any): Promise<Result<AletheiaResult>> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: Record<string, number>): Promise<Result<AletheiaResult>> {
     try {
         // 1. Fetch Active Tariffs from Supabase
         const supabase = await createClient();

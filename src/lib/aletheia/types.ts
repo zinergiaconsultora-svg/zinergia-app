@@ -60,7 +60,7 @@ export interface OptimizationRecommendation {
     description: string;
     annual_savings: number;
     priority: 'HIGH' | 'MEDIUM' | 'LOW';
-    details?: any[];
+    details?: Record<string, unknown>[];
     action_items?: string[];
 }
 
