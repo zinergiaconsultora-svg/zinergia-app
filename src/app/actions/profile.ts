@@ -52,6 +52,47 @@ export interface ProfileSettings {
     defaultVat: number;
 }
 
+// ── Agent profile (used by onboarding wizard) ─────────────────────────────
+
+export interface AgentProfile {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+    phone: string | null;
+    role: string | null;
+}
+
+export async function getAgentProfileAction(): Promise<AgentProfile | null> {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+
+    const { data } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, phone, role')
+        .eq('id', user.id)
+        .maybeSingle()
+
+    return data ?? null
+}
+
+export async function updateAgentProfileAction(input: {
+    full_name: string;
+    phone?: string;
+}): Promise<void> {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('No autenticado')
+
+    const { error } = await supabase
+        .from('profiles')
+        .update({ full_name: input.full_name, phone: input.phone ?? null })
+        .eq('id', user.id)
+
+    if (error) throw error
+    revalidatePath('/dashboard', 'layout')
+}
+
 export async function getProfileSettingsAction(): Promise<ProfileSettings> {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
