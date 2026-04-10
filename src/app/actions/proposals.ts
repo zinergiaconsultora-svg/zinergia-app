@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { Proposal } from '@/types/crm'
 import { getActiveCommissionRule } from './commissionRules'
+import { createNotificationInternal } from './notifications'
 
 /**
  * Updates a proposal's status and, if moving to 'accepted',
@@ -111,10 +112,58 @@ export async function updateProposalStatusAction(
         await processCommissions(supabase, proposal as Proposal)
     }
 
+    // 3. Create in-app notification for the agent
+    await createStatusNotification(supabase, user.id, proposal as Proposal, status)
+
     revalidatePath('/dashboard/proposals')
     revalidatePath(`/dashboard/proposals/${id}`)
     revalidatePath('/dashboard')
     return proposal as Proposal
+}
+
+async function createStatusNotification(
+    supabase: Awaited<ReturnType<typeof createClient>>,
+    userId: string,
+    proposal: Proposal,
+    status: Proposal['status']
+) {
+    try {
+        const cd = proposal.calculation_data as { client_name?: string } | null
+        const clientName = cd?.client_name ?? 'el cliente'
+        const savings = proposal.annual_savings
+            ? `${Math.round(proposal.annual_savings).toLocaleString('es-ES')} €/año`
+            : null
+
+        const map: Record<string, { title: string; message: string; type: string }> = {
+            accepted: {
+                title: '¡Propuesta firmada!',
+                message: `${clientName} ha aceptado la oferta${savings ? ` — ahorro de ${savings}` : ''}.`,
+                type: 'proposal_accepted',
+            },
+            rejected: {
+                title: 'Propuesta rechazada',
+                message: `${clientName} ha rechazado la propuesta. Puedes intentar una nueva simulación.`,
+                type: 'proposal_rejected',
+            },
+            sent: {
+                title: 'Propuesta enviada',
+                message: `La propuesta para ${clientName} ha sido enviada y está pendiente de respuesta.`,
+                type: 'proposal_sent',
+            },
+        }
+
+        const notif = map[status]
+        if (!notif) return
+
+        await createNotificationInternal(supabase, userId, {
+            title: notif.title,
+            message: notif.message,
+            type: notif.type as never,
+            link: `/dashboard/proposals`,
+        })
+    } catch {
+        // Non-critical — don't block the main action
+    }
 }
 
 async function processCommissions(

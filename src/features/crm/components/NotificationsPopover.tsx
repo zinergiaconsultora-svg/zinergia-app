@@ -25,13 +25,15 @@ const NotificationItem = memo(function NotificationItem({ notif, onMarkAsRead, o
             `}
         >
             <div className="flex gap-3 items-start pr-6" onClick={() => !notif.read && onMarkAsRead(notif.id)}>
-                <div className={`mt-0.5 shrink-0 p-2 rounded-xl border ${notif.type === 'success' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                    notif.type === 'warning' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                        'bg-blue-50 text-blue-600 border-blue-100'
+                <div className={`mt-0.5 shrink-0 p-2 rounded-xl border ${notif.type === 'success' || notif.type === 'proposal_accepted' || notif.type === 'commission_earned'
+                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                        : notif.type === 'warning' || notif.type === 'followup_due'
+                            ? 'bg-amber-50 text-amber-600 border-amber-100'
+                            : 'bg-blue-50 text-blue-600 border-blue-100'
                     }`}>
-                    {notif.type === 'success' && <CheckCircle2 size={16} />}
-                    {notif.type === 'warning' && <AlertCircle size={16} />}
-                    {notif.type === 'info' && <Info size={16} />}
+                    {(notif.type === 'success' || notif.type === 'proposal_accepted' || notif.type === 'commission_earned') && <CheckCircle2 size={16} />}
+                    {(notif.type === 'warning' || notif.type === 'followup_due') && <AlertCircle size={16} />}
+                    {(!notif.type || notif.type === 'info' || notif.type === 'proposal_rejected' || notif.type === 'proposal_sent' || notif.type === 'tariff_update') && <Info size={16} />}
                 </div>
                 <div className="flex-1 cursor-pointer">
                     <h4 className={`text-sm font-bold leading-tight mb-1 ${notif.read ? 'text-slate-600' : 'text-slate-800'}`}>
@@ -66,7 +68,7 @@ const NotificationItem = memo(function NotificationItem({ notif, onMarkAsRead, o
 
 interface Notification {
     id: string;
-    type: 'success' | 'warning' | 'info';
+    type: string | null;
     title: string;
     message: string;
     created_at: string;
