@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useClientDetails } from '../hooks/useClientDetails';
 import {
@@ -13,7 +13,11 @@ import {
     Edit3,
     Trash2,
     AlertTriangle,
-    ArrowRight
+    ArrowRight,
+    Zap,
+    TrendingDown,
+    CalendarDays,
+    CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CreateClientModal from './CreateClientModal';
@@ -105,6 +109,27 @@ export default function ClientDetailsView({ clientId }: { clientId: string }) {
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+    const handleSimulate = useCallback(() => {
+        if (!client) return;
+        sessionStorage.setItem('pendingClientPreload', JSON.stringify({
+            client_id: client.id,
+            client_name: client.name,
+            cups: client.cups ?? '',
+        }));
+        router.push('/dashboard/simulator');
+    }, [client, router]);
+
+    const kpis = useMemo(() => {
+        const signed = proposals.filter(p => p.status === 'accepted').length;
+        const bestSaving = proposals.length > 0
+            ? Math.max(...proposals.map(p => p.annual_savings || 0))
+            : null;
+        const lastDate = proposals.length > 0
+            ? new Date(Math.max(...proposals.map(p => new Date(p.created_at).getTime())))
+            : null;
+        return { signed, bestSaving, lastDate, total: proposals.length };
+    }, [proposals]);
 
     const handleEditSuccess = () => {
         refresh();
@@ -202,6 +227,49 @@ export default function ClientDetailsView({ clientId }: { clientId: string }) {
                         <PropertyCell label="Email" value={client.email} href={client.email ? `mailto:${client.email}` : undefined} />
                         <PropertyCell label="Teléfono" value={client.phone} href={client.phone ? `tel:${client.phone}` : undefined} />
                     </div>
+                </div>
+
+                {/* ═══ KPI STRIP + SIMULATE BUTTON ═══ */}
+                <div className="flex flex-wrap items-center gap-3 mb-5">
+                    {/* KPI pills */}
+                    <div className="flex flex-wrap gap-2 flex-1">
+                        <div className="flex items-center gap-2 bg-white/60 dark:bg-slate-900/50 backdrop-blur border border-slate-200/60 dark:border-slate-800 rounded-xl px-3 py-2 shadow-sm">
+                            <FileText size={14} className="text-indigo-400 shrink-0" />
+                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{kpis.total} propuestas</span>
+                        </div>
+                        {kpis.signed > 0 && (
+                            <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/40 rounded-xl px-3 py-2 shadow-sm">
+                                <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                                <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">{kpis.signed} firmada{kpis.signed > 1 ? 's' : ''}</span>
+                            </div>
+                        )}
+                        {kpis.bestSaving !== null && kpis.bestSaving > 0 && (
+                            <div className="flex items-center gap-2 bg-white/60 dark:bg-slate-900/50 backdrop-blur border border-slate-200/60 dark:border-slate-800 rounded-xl px-3 py-2 shadow-sm">
+                                <TrendingDown size={14} className="text-emerald-500 shrink-0" />
+                                <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                                    Mejor ahorro: <span className="text-emerald-600 dark:text-emerald-400">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(kpis.bestSaving)}/año</span>
+                                </span>
+                            </div>
+                        )}
+                        {kpis.lastDate && (
+                            <div className="flex items-center gap-2 bg-white/60 dark:bg-slate-900/50 backdrop-blur border border-slate-200/60 dark:border-slate-800 rounded-xl px-3 py-2 shadow-sm">
+                                <CalendarDays size={14} className="text-slate-400 shrink-0" />
+                                <span className="text-xs text-slate-500 dark:text-slate-400">
+                                    Última sim. {kpis.lastDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Simulate CTA */}
+                    <button
+                        type="button"
+                        onClick={handleSimulate}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-energy-500 hover:bg-energy-600 text-white text-sm font-bold shadow-md shadow-energy-500/20 transition-all hover:-translate-y-[1px] shrink-0"
+                    >
+                        <Zap size={15} strokeWidth={2.5} />
+                        Simular ahora
+                    </button>
                 </div>
 
                 {/* ═══ MAIN CONTENT: 2-column on large screens ═══ */}

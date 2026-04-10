@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, ChevronRight, User, LayoutGrid, Columns3, TrendingUp, Users, Target, Activity } from 'lucide-react';
+import { Plus, Search, ChevronRight, User, LayoutGrid, Columns3, TrendingUp, Users, Target, Activity, FileUp } from 'lucide-react';
 import { getClientScoresAction, type ClientScore } from '@/app/actions/clientScores';
 import { motion } from 'framer-motion';
 import { useClients } from '../hooks/useClients';
@@ -15,6 +15,11 @@ import BulkActions from './BulkActions';
 import { ClientStatus } from '@/types/crm';
 
 const CreateClientModal = dynamic(() => import('./CreateClientModal'), {
+    ssr: false,
+    loading: () => null
+});
+
+const CsvImportModal = dynamic(() => import('./CsvImportModal'), {
     ssr: false,
     loading: () => null
 });
@@ -58,6 +63,7 @@ const STATUS_FILTERS: { value: ClientStatus | 'all'; label: string; emoji: strin
 export default function ClientsView({ initialData }: ClientsViewProps) {
     const { clients, loading, loadingMore, hasMore, refresh, loadMore } = useClients(initialData);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isCsvImportOpen, setIsCsvImportOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [viewMode, setViewMode] = useState<ViewMode>('pipeline');
     const [statusFilter, setStatusFilter] = useState<ClientStatus | 'all'>('all');
@@ -159,6 +165,16 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                                 className="rounded-2xl py-6"
                             />
                         </div>
+                        <Button
+                            onClick={() => setIsCsvImportOpen(true)}
+                            variant="secondary"
+                            size="lg"
+                            className="h-[52px] rounded-2xl px-4 shrink-0"
+                            leftIcon={<FileUp size={18} />}
+                            title="Importar desde CSV"
+                        >
+                            <span className="hidden md:inline">CSV</span>
+                        </Button>
                         <Button
                             onClick={() => setIsModalOpen(true)}
                             variant="primary"
@@ -383,6 +399,13 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                 onClose={() => setIsModalOpen(false)}
                 onSuccess={refresh}
             />
+
+            {isCsvImportOpen && (
+                <CsvImportModal
+                    onClose={() => setIsCsvImportOpen(false)}
+                    onSuccess={refresh}
+                />
+            )}
         </div>
     );
 }

@@ -2,10 +2,16 @@
 
 import { useState, useTransition, useMemo } from 'react'
 import { toast } from 'sonner'
-import { Plus, Edit3, Trash2, ToggleLeft, ToggleRight, AlertTriangle, Flame } from 'lucide-react'
+import { Plus, Edit3, Trash2, ToggleLeft, ToggleRight, AlertTriangle, Flame, FileSpreadsheet } from 'lucide-react'
 import { TarifaRow, TariffCommissionRow, deleteTarifa, toggleTarifaActive } from '@/app/actions/tariffs'
 import { fmtEur, blankTarifa } from './tariff-form-utils'
 import { TarifaFormPanel } from './TarifaFormPanel'
+import dynamic from 'next/dynamic'
+
+const TariffExcelImportModal = dynamic(
+    () => import('./TariffExcelImportModal').then(m => ({ default: m.TariffExcelImportModal })),
+    { ssr: false }
+)
 
 interface Props {
     rows: TarifaRow[]
@@ -17,6 +23,7 @@ interface Props {
 export function GasTab({ rows, commissions, isAdmin, onUpdate }: Props) {
     const [formData, setFormData] = useState<Partial<TarifaRow> | null>(null)
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+    const [showImport, setShowImport] = useState(false)
     const [pending, start] = useTransition()
 
     const companiesWithCommission = useMemo(
@@ -56,8 +63,11 @@ export function GasTab({ rows, commissions, isAdmin, onUpdate }: Props) {
             )}
 
             {isAdmin && (
-                <div className="flex justify-end mb-4 bg-white/40 backdrop-blur-md p-2 rounded-2xl border border-white/60 shadow-sm">
-                    <button type="button" onClick={() => setFormData(blankTarifa('gas'))} className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white text-xs font-bold rounded-xl hover:bg-orange-600 hover:shadow-lg hover:shadow-orange-500/20 transition-all ml-auto">
+                <div className="flex justify-end gap-2 mb-4 bg-white/40 backdrop-blur-md p-2 rounded-2xl border border-white/60 shadow-sm">
+                    <button type="button" onClick={() => setShowImport(true)} className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-600/20 transition-all">
+                        <FileSpreadsheet size={14} /> Excel
+                    </button>
+                    <button type="button" onClick={() => setFormData(blankTarifa('gas'))} className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white text-xs font-bold rounded-xl hover:bg-orange-600 hover:shadow-lg hover:shadow-orange-500/20 transition-all">
                         <Plus size={14} /> Nueva tarifa gas
                     </button>
                 </div>
@@ -137,6 +147,14 @@ export function GasTab({ rows, commissions, isAdmin, onUpdate }: Props) {
                     </tbody>
                 </table>
             </div>
+
+            {showImport && (
+                <TariffExcelImportModal
+                    supplyType="gas"
+                    onClose={() => setShowImport(false)}
+                    onSuccess={() => { setShowImport(false); toast.success('Recarga la página para ver las tarifas importadas') }}
+                />
+            )}
         </div>
     )
 }
