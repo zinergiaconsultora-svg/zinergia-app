@@ -6,16 +6,121 @@ import { InvoiceData, SavingsResult } from '@/types/crm';
 import { createClient } from '@/lib/supabase/client';
 import { OptimizationRecommendation } from '@/lib/aletheia/types';
 
-import { analyzeDocumentAction } from '@/app/actions/ocr';
+import { analyzeDocumentAction, analyzeDocumentByUrlAction } from '@/app/actions/ocr';
 import { calculateSavingsAction } from '@/app/actions/compare';
+
+// ============================================================================
+// PDF TEXT EXTRACTION (client-side, only for digital/text-based PDFs)
+// Dramatically improves recognition quality by sending raw text to N8N
+// instead of relying solely on image OCR.
+// ============================================================================
+
+async function tryExtractPdfText(file: File): Promise<string | null> {
+    if (typeof window === 'undefined') return null;
+    try {
+        // pdfjs-dist is already bundled via react-pdf
+        const pdfjsLib = await import('pdfjs-dist');
+        // Use empty string to disable Web Worker (main-thread processing, fine for small files)
+        (pdfjsLib.GlobalWorkerOptions as { workerSrc: string }).workerSrc = '';
+
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({
+            data: arrayBuffer,
+            useWorkerFetch: false,
+            isEvalSupported: false,
+            useSystemFonts: true,
+        }).promise;
+
+        let text = '';
+        const pagesToRead = Math.min(pdf.numPages, 6);
+        for (let i = 1; i <= pagesToRead; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            const pageText = content.items
+                .map((item) => ('str' in item ? item.str : '') ?? '')
+                .join(' ');
+            text += pageText + '\n';
+        }
+
+        const trimmed = text.trim();
+        // Only return text if it looks like a real document (not just empty/garbage)
+        return trimmed.length > 150 ? trimmed : null;
+    } catch {
+        return null;
+    }
+}
+
+// ============================================================================
+// CLIENT-SIDE STORAGE UPLOAD
+// Uploads directly from the browser to Supabase Storage to bypass the
+// Next.js server action body size limit (~1MB by default).
+// ============================================================================
+
+async function tryUploadToStorage(file: File): Promise<{ url: string; path: string } | null> {
+    try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return null;
+
+        const ext = file.name.split('.').pop() ?? 'pdf';
+        const path = `${user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('ocr-invoices')
+            .upload(path, file, { contentType: file.type, upsert: false });
+
+        if (uploadError) {
+            console.warn('[Simulator] Client-side storage upload failed:', uploadError.message);
+            return null;
+        }
+
+        const { data: urlData } = await supabase.storage
+            .from('ocr-invoices')
+            .createSignedUrl(path, 60 * 60 * 24 * 7); // 7 days
+
+        return urlData?.signedUrl ? { url: urlData.signedUrl, path } : null;
+    } catch (e) {
+        console.warn('[Simulator] Client-side storage upload exception:', e);
+        return null;
+    }
+}
 
 // ============================================================================
 // WEBHOOK CALLS VIA SERVER ACTIONS
 // ============================================================================
 
 export async function analyzeDocumentWithRetry(file: File): Promise<{ jobId: string; isMock: boolean; data?: InvoiceData }> {
+    // Step 1: Extract text from the PDF (works for digital/text-based PDFs only).
+    // Run in parallel with the upload to avoid adding latency.
+    const [storageResult, rawText] = await Promise.all([
+        tryUploadToStorage(file),
+        tryExtractPdfText(file),
+    ]);
+
+    if (rawText) {
+        console.info(`[Simulator] PDF text extracted (${rawText.length} chars) — sending to OCR for higher accuracy`);
+    }
+
+    // Step 2a: If client-side upload succeeded, call the URL-based action.
+    // This avoids sending the binary through the server action entirely.
+    if (storageResult) {
+        try {
+            return await analyzeDocumentByUrlAction(
+                storageResult.url,
+                file.name,
+                file.type,
+                rawText ?? undefined,
+            );
+        } catch (e) {
+            console.warn('[Simulator] URL-based action failed, falling back to binary upload:', e);
+        }
+    }
+
+    // Step 2b: Fallback — send binary through the server action.
+    // This path is used when storage upload fails or when running locally.
     const formData = new FormData();
     formData.append('file', file);
+    if (rawText) formData.append('raw_text', rawText);
     return await analyzeDocumentAction(formData);
 }
 

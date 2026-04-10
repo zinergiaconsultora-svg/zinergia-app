@@ -122,6 +122,151 @@ async function uploadToStorage(
     }
 }
 
+/**
+ * Variante URL-based de analyzeDocumentAction.
+ * Recibe una URL firmada de Supabase (subida directamente desde el cliente),
+ * descarga el archivo en el servidor, y lo envía a N8N exactamente igual.
+ *
+ * Ventaja: el binario del PDF nunca pasa por el body de la server action,
+ * eliminando el límite de tamaño (~1MB) que causaba "unexpected server response".
+ */
+export async function analyzeDocumentByUrlAction(
+    fileUrl: string,
+    fileName: string,
+    fileType: string,
+    rawText?: string,
+): Promise<{ jobId: string; isMock: boolean; data?: InvoiceData }> {
+    const OCR_WEBHOOK_URL = env.OCR_WEBHOOK_URL;
+    const WEBHOOK_API_KEY = env.WEBHOOK_API_KEY;
+
+    if (!OCR_WEBHOOK_URL || !WEBHOOK_API_KEY) {
+        throw new Error('Variables de entorno de OCR no definidas');
+    }
+
+    if (!ALLOWED_TYPES.includes(fileType)) {
+        throw new Error(`Formato no soportado: ${fileType}. Usa PDF, JPG, PNG o WEBP.`);
+    }
+
+    try {
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('No estás autenticado');
+
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('franchise_id')
+            .eq('id', user.id)
+            .single();
+        const franchiseId = profile?.franchise_id;
+
+        // Create OCR job — file is already in storage (URL provided by client)
+        const { data: job, error: jobError } = await supabase
+            .from('ocr_jobs')
+            .insert({
+                agent_id: user.id,
+                franchise_id: franchiseId,
+                status: 'processing',
+                file_name: fileName,
+                file_path: fileUrl,
+                attempts: 1,
+            })
+            .select('id')
+            .single();
+
+        if (jobError || !job) {
+            throw new Error('Fallo al crear el trabajo de OCR en la base de datos');
+        }
+
+        // Download file from the signed URL (server→Supabase, fast within same infra)
+        // This keeps the N8N flow unchanged — N8N still receives the binary FormData.
+        const fileResponse = await fetch(fileUrl, { cache: 'no-store' });
+        if (!fileResponse.ok) {
+            throw new Error(`No se pudo descargar el archivo para su procesamiento (${fileResponse.status})`);
+        }
+        const blob = await fileResponse.blob();
+        const file = new File([blob], fileName, { type: fileType });
+
+        if (file.size > MAX_FILE_SIZE) {
+            throw new Error(`El archivo supera el límite de 10 MB (${(file.size / 1024 / 1024).toFixed(1)} MB).`);
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('job_id', job.id);
+        // raw_text allows N8N to use direct text extraction for digital PDFs
+        // (100% accurate, no OCR errors) instead of image OCR
+        if (rawText) formData.append('raw_text', rawText.slice(0, 8000));
+
+        const response = await fetchWithRetry(OCR_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'x-api-key': WEBHOOK_API_KEY },
+            body: formData,
+        });
+
+        const contentType = response.headers.get('content-type') ?? '';
+        if (contentType.includes('application/json')) {
+            try {
+                const body = await response.json();
+                const candidates = Array.isArray(body)
+                    ? [body[0]?.output, body[0]?.data, body[0]?.json, body[0]]
+                    : [body?.output, body?.data, body?.json, body?.result, body];
+
+                let rawData: Record<string, unknown> | null = null;
+                for (const candidate of candidates) {
+                    if (candidate && typeof candidate === 'object' && !Array.isArray(candidate) && Object.keys(candidate).length > 2) {
+                        rawData = candidate as Record<string, unknown>;
+                        break;
+                    }
+                }
+
+                const hasMeaningfulData = rawData && (
+                    rawData.client_name || rawData.CLIENTE_NOMBRE || rawData.TITULAR ||
+                    rawData.cups || rawData.CUPS || rawData.importe_total || rawData.total ||
+                    rawData.power_p1 || rawData.POTENCIA_P1 || rawData.energia_p1 || rawData.ENERGIA_P1
+                );
+
+                if (hasMeaningfulData && rawData) {
+                    const validatedData = parseRawInvoiceData(rawData);
+                    await supabase.from('ocr_jobs')
+                        .update({ status: 'completed', extracted_data: validatedData })
+                        .eq('id', job.id);
+                    return { jobId: job.id, isMock: false, data: validatedData as unknown as InvoiceData };
+                }
+            } catch {
+                // JSON parse failed — fall through to async flow
+            }
+        }
+
+        return { jobId: job.id, isMock: false };
+
+    } catch (error) {
+        if (env.NODE_ENV === 'development') {
+            console.warn('⚠️ OCR (URL) Webhook failed. Using MOCK data for development.', error);
+            return {
+                jobId: 'MOCK-JOB',
+                isMock: true,
+                data: {
+                    client_name: 'Empresa Mock S.L.',
+                    dni_cif: 'B12345678',
+                    company_name: 'Comercializadora Mock',
+                    cups: 'ES0021000000000000XX',
+                    tariff_name: '2.0TD',
+                    invoice_number: 'FACT-2024-001',
+                    invoice_date: new Date().toISOString().split('T')[0],
+                    period_days: 30,
+                    supply_address: 'Calle Falsa 123, Madrid',
+                    subtotal: 100.00, vat: 21.00, total_amount: 121.00, rights_cost: 0,
+                    power_p1: 4.6, power_p2: 4.6, power_p3: 0, power_p4: 0, power_p5: 0, power_p6: 0,
+                    energy_p1: 150, energy_p2: 100, energy_p3: 0, energy_p4: 0, energy_p5: 0, energy_p6: 0,
+                    detected_power_type: '2.0',
+                } as InvoiceData
+            };
+        }
+        console.error('[OCR] Error (URL flow) tras reintentos:', error);
+        throw new Error('No se ha podido enviar la factura para su procesamiento.');
+    }
+}
+
 export async function analyzeDocumentAction(formData: FormData): Promise<{ jobId: string; isMock: boolean; data?: InvoiceData }> {
     const OCR_WEBHOOK_URL = env.OCR_WEBHOOK_URL;
     const WEBHOOK_API_KEY = env.WEBHOOK_API_KEY;
