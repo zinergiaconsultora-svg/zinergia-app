@@ -12,6 +12,63 @@ import { getActiveCommissionRule } from './commissionRules'
  * Idempotent: a second call with status='accepted' is a no-op for commissions
  * (checked via existing network_commissions row for the proposal).
  */
+export interface ProposalHistoryItem {
+    id: string;
+    created_at: string;
+    current_annual_cost: number;
+    offer_annual_cost: number;
+    annual_savings: number;
+    savings_percent: number;
+    offer_snapshot: {
+        marketer_name: string;
+        tariff_name: string;
+    } | null;
+    calculation_data: {
+        company_name?: string;
+        tariff_name?: string;
+        cups?: string;
+    } | null;
+}
+
+/**
+ * Returns past proposals for a given CUPS, scoped to the current user's data.
+ * Used by the simulator's comparison feature.
+ */
+export async function getProposalHistoryByCupsAction(cups: string): Promise<ProposalHistoryItem[]> {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('No autenticado')
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, franchise_id')
+        .eq('id', user.id)
+        .single()
+
+    if (!profile) throw new Error('Perfil no encontrado')
+
+    let query = supabase
+        .from('proposals')
+        .select('id, created_at, current_annual_cost, offer_annual_cost, annual_savings, savings_percent, offer_snapshot, calculation_data')
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+    if (profile.role === 'agent') {
+        query = query.eq('agent_id', user.id) as typeof query
+    } else if (profile.role === 'franchise') {
+        query = query.eq('franchise_id', profile.franchise_id) as typeof query
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+
+    // Filter by CUPS client-side (stored in JSONB calculation_data)
+    return (data ?? []).filter(p => {
+        const cd = p.calculation_data as { cups?: string } | null
+        return cd?.cups === cups
+    }) as ProposalHistoryItem[]
+}
+
 export async function updateProposalStatusAction(
     id: string,
     status: Proposal['status']

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ChevronLeft, Lightbulb, TrendingDown, Zap, Download, FileText, TableProperties, ChevronDown, Share2, MessageCircle, Mail, Copy, Check, Presentation } from 'lucide-react';
+import { ChevronLeft, Lightbulb, TrendingDown, Zap, Download, FileText, TableProperties, ChevronDown, Share2, MessageCircle, Mail, Copy, Check, Presentation, GitCompare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { DemoModeAlert } from '@/components/ui/DemoModeAlert';
 import { Modal } from '@/components/ui/Modal';
@@ -14,13 +14,11 @@ import { OptimizationRecommendation, AuditOpportunity } from '@/lib/aletheia/typ
 import { detectAnomalies, EnergyHistoryEntry } from '@/lib/anomalyDetector';
 import { AnomalyPanel } from '@/components/AnomalyPanel';
 import { OpportunityCard } from './Results/OpportunityCard';
-import { ProposalPDF } from '@/features/proposal/components/ProposalPDF';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import { InvoiceData } from '@/types/crm';
 import dynamic from 'next/dynamic';
 
 const PresentationModal = dynamic(() => import('./PresentationModal'), { ssr: false });
+const CompareModal = dynamic(() => import('./CompareModal'), { ssr: false });
 
 interface SimulatorResultsProps {
     results: SavingsResult[];
@@ -46,6 +44,7 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
     savedProposalId,
 }) => {
     const [isPresenting, setIsPresenting] = React.useState(false);
+    const [isComparing, setIsComparing] = React.useState(false);
     const [isExporting, setIsExporting] = React.useState(false);
     const [isSaving, setIsSaving] = React.useState(false);
     const [showExportMenu, setShowExportMenu] = React.useState(false);
@@ -143,42 +142,36 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
     const [emailAddress, setEmailAddress] = React.useState('');
     const [isSendingEmail, setIsSendingEmail] = React.useState(false);
 
-    const pdfRef = React.useRef<HTMLDivElement>(null);
-
     const handleExportPDF = async () => {
-        if (!invoiceData || !results[0] || !pdfRef.current) return;
+        if (!invoiceData || !results[0]) return;
         setIsExporting(true);
         try {
-            const canvas = await html2canvas(pdfRef.current, {
-                scale: 2, // Retain high quality
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff'
+            const [{ pdf }, { ProposalPDFDocument }] = await Promise.all([
+                import('@react-pdf/renderer'),
+                import('@/features/proposal/components/ProposalPDFDocument'),
+            ]);
+
+            const element = React.createElement(ProposalPDFDocument, {
+                invoiceData,
+                results,
+                recommendations: optimizationRecommendations,
+                opportunities,
+                clientProfile,
             });
 
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
+            // @react-pdf/renderer pdf() accepts Document elements; cast needed as props differ
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const blob = await pdf(element as any).toBlob();
 
-
-            // Just fit width, as it's A4 designed
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const imgX = 0;
-            const imgY = 0;
-            const imgFinalWidth = pdfWidth;
-            const imgFinalHeight = (canvas.height * pdfWidth) / canvas.width;
-
-            pdf.addImage(imgData, 'PNG', imgX, imgY, imgFinalWidth, imgFinalHeight);
-
-            // If height exceeds A4, we might need multi-page logic, but ProposalPDF is designed for single/double page flow.
-            // For now, let's assume it fits or scales down. 
-            // Better strategy: If content is long, html2canvas capture might be too tall.
-            // But ProposalPDF styles are 'min-h-[297mm]' (A4). 
-            // If content overflows, we might want to split.
-            // For MVP, simple image placement is standard.
-
-            pdf.save(`zinergia-proposal-${invoiceData.client_name || 'draft'}.pdf`);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `zinergia-propuesta-${(invoiceData.client_name ?? 'borrador').replace(/\s+/g, '-')}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+            toast.success('PDF generado correctamente');
         } catch (error) {
-            console.error('Error exporting PDF:', error);
+            console.error('Error al generar PDF:', error);
             toast.error('Error al generar el PDF');
         } finally {
             setIsExporting(false);
@@ -349,20 +342,6 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
 
     return (
         <>
-            {/* Hidden PDF Container */}
-            <div className="absolute left-[-9999px] top-0">
-                <div ref={pdfRef}>
-                    {invoiceData && results[0] && (
-                        <ProposalPDF
-                            invoiceData={invoiceData}
-                            result={results[0]} // Pass the best result
-                            recommendations={optimizationRecommendations}
-                            opportunities={opportunities}
-                            clientProfile={clientProfile}
-                        />
-                    )}
-                </div>
-            </div>
 
             <motion.div
                 key="s3"
@@ -426,6 +405,18 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                                     <Presentation size={15} />
                                     <span className="hidden sm:inline">Presentar</span>
                                 </button>
+
+                                {/* Compare with history */}
+                                {invoiceData?.cups && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsComparing(true)}
+                                        className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white font-medium text-sm transition-colors rounded-lg px-3 py-2"
+                                    >
+                                        <GitCompare size={15} />
+                                        <span className="hidden sm:inline">Comparar</span>
+                                    </button>
+                                )}
 
                                 <button
                                     type="button"
@@ -672,6 +663,16 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                     invoiceData={invoiceData}
                     recommendations={optimizationRecommendations}
                     onClose={() => setIsPresenting(false)}
+                />
+            )}
+
+            {/* Compare with history Modal */}
+            {isComparing && invoiceData?.cups && results[0] && (
+                <CompareModal
+                    cups={invoiceData.cups}
+                    currentResults={results}
+                    currentCost={results[0].current_annual_cost}
+                    onClose={() => setIsComparing(false)}
                 />
             )}
 
