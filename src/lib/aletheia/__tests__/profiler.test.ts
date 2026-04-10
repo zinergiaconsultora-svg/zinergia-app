@@ -25,6 +25,7 @@ describe('Profiler', () => {
             p1: 10, p2: 10, p3: 10,
             p6: 800 // High P6 usage
         });
+        data.tariff_type = '3.0TD'; // P6 is the valley period for 3.0TD / 6.xTD
         const profile = Profiler.analyze(data);
         expect(profile.tags).toContain('WEEKEND_WARRIOR');
         expect(profile.sales_argument).toContain('horario barato');

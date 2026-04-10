@@ -302,7 +302,7 @@ export default function DashboardView() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                         {/* Trend Chart (col-span-2) */}
                         <div className="lg:col-span-2 bg-white/90 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/80 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-none p-5 flex flex-col group hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
-                            <SectionHeader title="Tendencia de Ahorro" link="Ver Reporte" />
+                            <SectionHeader title="Tendencia de Ahorro" link="Ver Reporte" linkHref="/dashboard/forecast" />
                             <div className="mt-4 h-[180px] w-full">
                                 <SavingsTrendChart data={stats.savingsTrend ?? []} />
                             </div>
@@ -365,14 +365,23 @@ export default function DashboardView() {
 
 // -- Components --
 
-function SectionHeader({ title, link }: { title: string, link?: string }) {
+function SectionHeader({ title, link, linkHref }: { title: string; link?: string; linkHref?: string }) {
+    const router = useRouter();
     return (
         <div className="flex items-center justify-between pl-1">
             <h3 className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
                 <span className="w-1 h-1 bg-indigo-400 rounded-full opacity-60"></span>
                 {title}
             </h3>
-            {link && <button type="button" className="text-[9px] font-medium text-indigo-400 hover:text-indigo-600 transition-colors uppercase tracking-wider">{link}</button>}
+            {link && (
+                <button
+                    type="button"
+                    onClick={linkHref ? () => router.push(linkHref) : undefined}
+                    className="text-[9px] font-medium text-indigo-400 hover:text-indigo-600 transition-colors uppercase tracking-wider"
+                >
+                    {link}
+                </button>
+            )}
         </div>
     );
 }
@@ -400,12 +409,12 @@ function GlassKpiCard({ label, value, icon: Icon, subValue, progress, delay = 0 
                 </div>
                 {progress !== undefined && (
                     <div className="w-full h-1 bg-slate-100 rounded-full mt-1.5 overflow-hidden">
-                        <div
-                            className="h-full bg-indigo-500/80 rounded-full transition-all duration-500"
-                            style={{
-                                width: `${progress}%`
-                            } as React.CSSProperties}
-                        ></div>
+                        <motion.div
+                            className="h-full bg-indigo-500/80 rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            transition={{ duration: 0.5, ease: 'easeOut' }}
+                        />
                     </div>
                 )}
             </div>
