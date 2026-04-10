@@ -93,7 +93,8 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         const [isFullscreen, setIsFullscreen] = useState(false);
         const [highlightQuery, setHighlightQuery] = useState<string | null>(null);
         const [foundOnPage, setFoundOnPage] = useState<boolean | null>(null);
-        const [portalMounted, setPortalMounted] = useState(false);
+        // Portal solo disponible en cliente — isMounted derived from typeof window
+        const [portalMounted, setPortalMounted] = useState(typeof window !== 'undefined');
         const [showConfPanel, setShowConfPanel] = useState(false);
 
         // Refs para medición de ancho
@@ -105,9 +106,6 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         const [fsWidth, setFsWidth] = useState(0);
 
         const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-        // Portal solo disponible en cliente
-        useEffect(() => setPortalMounted(true), []);
 
         // ── Medir ancho inline ────────────────────────────────────────────────
         useEffect(() => {

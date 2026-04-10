@@ -64,10 +64,9 @@ function saveDismissed(ids: Set<string>) {
 export default function SmartAlertsStrip() {
     const router = useRouter();
     const [alerts, setAlerts] = useState<SmartAlert[]>([]);
-    const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+    const [dismissed, setDismissed] = useState<Set<string>>(() => getDismissed());
 
     useEffect(() => {
-        setDismissed(getDismissed());
         getSmartAlertsAction().then(setAlerts).catch(() => { /* non-fatal */ });
     }, []);
 

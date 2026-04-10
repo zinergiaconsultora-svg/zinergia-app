@@ -67,6 +67,7 @@ export default function ProposalsPage() {
     }, []);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchProposals(0, false).finally(() => setIsLoading(false));
     }, [fetchProposals]);
 
