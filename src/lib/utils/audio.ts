@@ -7,7 +7,7 @@ function getAudioContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
     if (!audioCtx) {
         try {
-            audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
         } catch (e) {
             console.warn('AudioContext not supported', e);
         }

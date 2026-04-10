@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 
 import { DigitalProposalCard } from '@/features/comparator/components/DigitalProposalCard';
 import { SavingsResult, Proposal } from '@/types/crm';
-import { OptimizationRecommendation, AuditOpportunity } from '@/lib/aletheia/types';
+import { OptimizationRecommendation, AuditOpportunity, AletheiaResult } from '@/lib/aletheia/types';
 import { detectAnomalies, EnergyHistoryEntry } from '@/lib/anomalyDetector';
 import { AnomalyPanel } from '@/components/AnomalyPanel';
 import { OpportunityCard } from './Results/OpportunityCard';
@@ -259,7 +259,7 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                 invoiceData,
                 results[0],
                 invoiceData.client_name,
-                aletheiaSummary as any // Cast as partial AletheiaResult is acceptable for the service logic
+                aletheiaSummary as AletheiaResult
             );
             toast.success('Propuesta guardada correctamente en CRM');
         } catch (error) {

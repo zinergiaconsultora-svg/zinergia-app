@@ -80,6 +80,7 @@ export class Normalizer {
      * Main entry point to sanitize incoming invoice data
      * Implements "Pre-processing / Mastication" logic
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     static process(raw: any): InvoiceData {
         const warnings: string[] = [];
 
@@ -140,7 +141,7 @@ export class Normalizer {
         });
 
         // Cost Mapping with Fallbacks
-        let costPower = this.cleanFloat(raw.importe_potencia || raw.power_cost);
+        const costPower = this.cleanFloat(raw.importe_potencia || raw.power_cost);
         let costEnergy = this.cleanFloat(raw.importe_energia || raw.energy_cost);
         const costReactive = this.cleanFloat(raw.importe_reactiva || raw.reactive_cost);
         const costRental = this.cleanFloat(raw.alquiler_equipos || raw.rental_cost || raw.equipment_cost);

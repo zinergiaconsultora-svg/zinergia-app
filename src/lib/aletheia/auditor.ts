@@ -36,8 +36,6 @@ export class Auditor {
         // 2. Power Optimization Check
         // If Contracted >> MaxDemand, suggest reduction.
         if (data.max_demand) {
-            let potentialPowerSavings = 0;
-            
             // Determine active periods based on tariff type
             let activePeriods: TariffPeriod[];
             switch (data.tariff_type) {

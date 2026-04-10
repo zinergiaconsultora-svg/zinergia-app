@@ -496,7 +496,7 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
                     {salesArg && (
                         <>
                             <View style={s.quoteBox}>
-                                <Text style={s.quoteText}>"{salesArg}"</Text>
+                                <Text style={s.quoteText}>&quot;{salesArg}&quot;</Text>
                                 <Text style={s.quoteAuthor}>Auditoría Inteligente Aletheia</Text>
                             </View>
                         </>

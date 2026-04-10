@@ -73,23 +73,27 @@ export const crmService = {
     async calculateSavings(invoice: InvoiceData): Promise<SavingsResult[]> {
         const data = await calculateSavingsAction(invoice);
         if (data?.offers) {
-            return data.offers.map((offer: any) => ({
-                offer: {
-                    id: offer.id || crypto.randomUUID(),
-                    marketer_name: offer.marketer_name || 'Comercializadora',
-                    tariff_name: offer.tariff_name || 'Tarifa',
-                    logo_color: offer.logo_color || 'bg-blue-600',
-                    type: offer.type || 'fixed',
-                    power_price: offer.power_price || { p1: 0, p2: 0, p3: 0, p4: 0, p5: 0, p6: 0 },
-                    energy_price: offer.energy_price || { p1: 0, p2: 0, p3: 0, p4: 0, p5: 0, p6: 0 },
-                    fixed_fee: offer.fixed_fee || 0,
-                    contract_duration: offer.contract_duration || '12 meses',
-                },
-                current_annual_cost: data.current_annual_cost || 0,
-                offer_annual_cost: offer.annual_cost || 0,
-                annual_savings: Math.max(0, (data.current_annual_cost || 0) - (offer.annual_cost || 0)),
-                savings_percent: (data.current_annual_cost || 0) > 0 ? (((data.current_annual_cost || 0) - (offer.annual_cost || 0)) / (data.current_annual_cost || 0)) * 100 : 0,
-            }));
+            return data.offers.map((offer: Record<string, unknown>) => {
+                const offerAnnualCost = (offer.annual_cost as number) || 0;
+                const currentAnnualCost = (data.current_annual_cost as number) || 0;
+                return {
+                    offer: {
+                        id: offer.id || crypto.randomUUID(),
+                        marketer_name: offer.marketer_name || 'Comercializadora',
+                        tariff_name: offer.tariff_name || 'Tarifa',
+                        logo_color: offer.logo_color || 'bg-blue-600',
+                        type: offer.type || 'fixed',
+                        power_price: offer.power_price || { p1: 0, p2: 0, p3: 0, p4: 0, p5: 0, p6: 0 },
+                        energy_price: offer.energy_price || { p1: 0, p2: 0, p3: 0, p4: 0, p5: 0, p6: 0 },
+                        fixed_fee: offer.fixed_fee || 0,
+                        contract_duration: offer.contract_duration || '12 meses',
+                    },
+                    current_annual_cost: currentAnnualCost,
+                    offer_annual_cost: offerAnnualCost,
+                    annual_savings: Math.max(0, currentAnnualCost - offerAnnualCost),
+                    savings_percent: currentAnnualCost > 0 ? ((currentAnnualCost - offerAnnualCost) / currentAnnualCost) * 100 : 0,
+                };
+            });
         }
         return [];
     },
@@ -126,7 +130,7 @@ export const crmService = {
             fixed_fee: t.fixed_fee,
             power_price: { p1: t.power_price_p1, p2: t.power_price_p2, p3: t.power_price_p3 },
             energy_price: { p1: t.energy_price_p1, p2: t.energy_price_p2, p3: t.energy_price_p3 }
-        })) as any[];
+        })) as Offer[];
     },
 
 };
