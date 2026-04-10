@@ -37,6 +37,12 @@ export default async function AdminLayout({
                             📈 Reporting
                         </a>
                         <a
+                            href="/admin/agents"
+                            className="px-3 py-1.5 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/60 transition-all"
+                        >
+                            👥 Agentes
+                        </a>
+                        <a
                             href="/admin/academy"
                             className="px-3 py-1.5 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/60 transition-all"
                         >
