@@ -352,17 +352,17 @@ function NavIconLink({ href, label, icon: Icon, pathname, hoveredItem, setHovere
     const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
     const isSimulador = label === 'Simulador';
 
-    let containerClass = isSimulador 
-        ? `relative flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-300 ${isActive ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30 ring-2 ring-rose-600/50 ring-offset-2' : 'bg-gradient-to-br from-rose-50 to-rose-100 text-rose-600 shadow-md hover:bg-rose-600 hover:from-rose-600 hover:to-rose-700 hover:text-white border border-rose-200/50'}`
-        : `relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300 ${isActive ? 'bg-energy-500 text-white shadow-lg shadow-energy-500/20' : 'text-slate-500 hover:bg-slate-100/50 hover:text-slate-900'}`;
+    const containerClass = isSimulador 
+        ? `relative flex items-center justify-center w-12 h-12 rounded-[18px] transition-all duration-300 ${isActive ? 'bg-gradient-to-br from-rose-400 to-rose-600 text-white shadow-md shadow-rose-500/30 ring-1 ring-rose-300/50' : 'bg-rose-50 text-rose-500 shadow-sm ring-1 ring-rose-100 hover:bg-rose-100/70 hover:shadow-md'}`
+        : `relative flex items-center justify-center w-11 h-11 rounded-[16px] transition-all duration-300 ${isActive ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-500 hover:bg-slate-100/50 hover:text-slate-900'}`;
 
     return (
         <div className={`relative group ${isSimulador ? 'animate-breathing' : ''}`} onMouseEnter={() => setHoveredItem(label)} onMouseLeave={() => setHoveredItem(null)}>
             <motion.div 
-                whileHover={{ scale: 1.1, rotate: isSimulador ? 5 : 2 }} 
-                whileTap={{ scale: 0.9 }} 
-                transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-                className={isSimulador ? "relative flex items-center justify-center rounded-full aura-border" : ""}
+                whileHover={{ scale: 1.05 }} 
+                whileTap={{ scale: 0.95 }} 
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                className={isSimulador ? "relative flex items-center justify-center rounded-[18px]" : ""}
             >
                 <Link href={href} className={containerClass} onClick={() => {
                     if (isSimulador) {

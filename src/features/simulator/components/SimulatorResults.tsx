@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ChevronLeft, Lightbulb, TrendingDown, Zap, Download, FileText, TableProperties, ChevronDown, Share2, MessageCircle, Mail, Copy, Check } from 'lucide-react';
+import { ChevronLeft, Lightbulb, TrendingDown, Zap, Download, FileText, TableProperties, ChevronDown, Share2, MessageCircle, Mail, Copy, Check, Presentation } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { DemoModeAlert } from '@/components/ui/DemoModeAlert';
 import { Modal } from '@/components/ui/Modal';
@@ -18,6 +18,9 @@ import { ProposalPDF } from '@/features/proposal/components/ProposalPDF';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { InvoiceData } from '@/types/crm';
+import dynamic from 'next/dynamic';
+
+const PresentationModal = dynamic(() => import('./PresentationModal'), { ssr: false });
 
 interface SimulatorResultsProps {
     results: SavingsResult[];
@@ -42,6 +45,7 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
     clientProfile,
     savedProposalId,
 }) => {
+    const [isPresenting, setIsPresenting] = React.useState(false);
     const [isExporting, setIsExporting] = React.useState(false);
     const [isSaving, setIsSaving] = React.useState(false);
     const [showExportMenu, setShowExportMenu] = React.useState(false);
@@ -413,6 +417,16 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                     {/* Action buttons row — wraps on mobile */}
                     {invoiceData && (
                         <div className="flex flex-wrap gap-2">
+                                        {/* Presentation mode */}
+                                <button
+                                    type="button"
+                                    onClick={() => setIsPresenting(true)}
+                                    className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-medium text-sm transition-colors rounded-lg px-3 py-2"
+                                >
+                                    <Presentation size={15} />
+                                    <span className="hidden sm:inline">Presentar</span>
+                                </button>
+
                                 <button
                                     type="button"
                                     onClick={handleSaveProposal}
@@ -650,6 +664,16 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                     ))}
                 </motion.div>
             </motion.div>
+
+            {/* Presentation Modal */}
+            {isPresenting && invoiceData && results[0] && (
+                <PresentationModal
+                    results={results}
+                    invoiceData={invoiceData}
+                    recommendations={optimizationRecommendations}
+                    onClose={() => setIsPresenting(false)}
+                />
+            )}
 
             {/* Email Modal */}
             <Modal

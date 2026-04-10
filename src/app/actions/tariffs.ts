@@ -105,6 +105,78 @@ export async function deleteTarifa(id: string): Promise<void> {
     revalidatePath('/dashboard/tariffs')
 }
 
+// ─── Bulk Excel import ───────────────────────────────────────────────────────
+
+export interface BulkUpsertResult {
+    upserted: number
+    errors: string[]
+}
+
+export async function bulkUpsertTarifasAction(
+    rows: Array<Partial<TarifaRow>>,
+    supplyType: 'electricity' | 'gas'
+): Promise<BulkUpsertResult> {
+    await requireServerRole(['admin'])
+
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No hay filas para importar')
+    if (rows.length > 300) throw new Error('Máximo 300 tarifas por importación')
+
+    const supabase = await createClient()
+    const errors: string[] = []
+    const toUpsert: object[] = []
+    const now = new Date().toISOString()
+
+    rows.forEach((row, idx) => {
+        const rowNum = idx + 2
+        if (!row.company?.trim()) { errors.push(`Fila ${rowNum}: falta compañía`); return }
+        if (!row.tariff_name?.trim()) { errors.push(`Fila ${rowNum}: falta nombre de tarifa`); return }
+        toUpsert.push({
+            company: row.company.trim(),
+            tariff_name: row.tariff_name.trim(),
+            tariff_type: row.tariff_type ?? null,
+            supply_type: supplyType,
+            modelo: row.modelo ?? null,
+            tipo_cliente: row.tipo_cliente ?? 'PYME',
+            offer_type: row.offer_type ?? 'fixed',
+            contract_duration: row.contract_duration ?? '12 meses',
+            power_price_p1: Number(row.power_price_p1) || 0,
+            power_price_p2: Number(row.power_price_p2) || 0,
+            power_price_p3: Number(row.power_price_p3) || 0,
+            power_price_p4: Number(row.power_price_p4) || 0,
+            power_price_p5: Number(row.power_price_p5) || 0,
+            power_price_p6: Number(row.power_price_p6) || 0,
+            energy_price_p1: Number(row.energy_price_p1) || 0,
+            energy_price_p2: Number(row.energy_price_p2) || 0,
+            energy_price_p3: Number(row.energy_price_p3) || 0,
+            energy_price_p4: Number(row.energy_price_p4) || 0,
+            energy_price_p5: Number(row.energy_price_p5) || 0,
+            energy_price_p6: Number(row.energy_price_p6) || 0,
+            connection_fee: Number(row.connection_fee) || 0,
+            fixed_fee: Number(row.fixed_fee) || 0,
+            consumption_min_kwh: Number(row.consumption_min_kwh) || 0,
+            consumption_max_kwh: Number(row.consumption_max_kwh) || 999999,
+            fixed_annual_fee_gas: Number(row.fixed_annual_fee_gas) || 0,
+            variable_price_kwh_gas: Number(row.variable_price_kwh_gas) || 0,
+            notes: row.notes ?? null,
+            is_active: row.is_active !== false,
+            updated_at: now,
+        })
+    })
+
+    let upserted = 0
+    if (toUpsert.length > 0) {
+        const { data, error } = await supabase
+            .from('lv_zinergia_tarifas')
+            .upsert(toUpsert, { onConflict: 'company,tariff_name,supply_type', ignoreDuplicates: false })
+            .select('id')
+        if (error) throw new Error(`Error importando tarifas: ${error.message}`)
+        upserted = data?.length ?? 0
+    }
+
+    revalidatePath('/dashboard/tariffs')
+    return { upserted, errors }
+}
+
 // ─── Commissions ─────────────────────────────────────────────────────────────
 
 export async function getTariffCommissions(): Promise<TariffCommissionRow[]> {

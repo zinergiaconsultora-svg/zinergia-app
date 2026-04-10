@@ -2,10 +2,16 @@
 
 import { useState, useTransition, useMemo } from 'react'
 import { toast } from 'sonner'
-import { Plus, Edit3, Trash2, ToggleLeft, ToggleRight, Search, AlertTriangle } from 'lucide-react'
+import { Plus, Edit3, Trash2, ToggleLeft, ToggleRight, Search, AlertTriangle, FileSpreadsheet } from 'lucide-react'
 import { TarifaRow, TariffCommissionRow, deleteTarifa, toggleTarifaActive } from '@/app/actions/tariffs'
 import { MODELO_COLORS, fmt, blankTarifa } from './tariff-form-utils'
 import { TarifaFormPanel } from './TarifaFormPanel'
+import dynamic from 'next/dynamic'
+
+const TariffExcelImportModal = dynamic(
+    () => import('./TariffExcelImportModal').then(m => ({ default: m.TariffExcelImportModal })),
+    { ssr: false }
+)
 
 interface Props {
     rows: TarifaRow[]
@@ -19,6 +25,7 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
     const [companyFilter, setCompanyFilter] = useState('ALL')
     const [formData, setFormData] = useState<Partial<TarifaRow> | null>(null)
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+    const [showImport, setShowImport] = useState(false)
     const [pending, start] = useTransition()
 
     const companiesWithCommission = useMemo(
@@ -79,9 +86,14 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
                     ))}
                 </div>
                 {isAdmin && (
-                    <button type="button" onClick={() => setFormData(blankTarifa('electricity'))} className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-600/20 transition-all ml-auto">
-                        <Plus size={14} /> Nueva tarifa
-                    </button>
+                    <div className="flex items-center gap-2 ml-auto">
+                        <button type="button" onClick={() => setShowImport(true)} className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-600/20 transition-all">
+                            <FileSpreadsheet size={14} /> Excel
+                        </button>
+                        <button type="button" onClick={() => setFormData(blankTarifa('electricity'))} className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-600/20 transition-all">
+                            <Plus size={14} /> Nueva tarifa
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -172,6 +184,14 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
                     </tbody>
                 </table>
             </div>
+
+            {showImport && (
+                <TariffExcelImportModal
+                    supplyType="electricity"
+                    onClose={() => setShowImport(false)}
+                    onSuccess={() => { setShowImport(false); toast.success('Recarga la página para ver las tarifas importadas') }}
+                />
+            )}
         </div>
     )
 }
