@@ -145,12 +145,21 @@ export async function POST(request: Request) {
             };
         }
 
-        // 3. Recuperar job para obtener agent_id y franchise_id
+        // 3. Recuperar job para obtener agent_id y franchise_id (+ status para idempotencia)
         const { data: job } = await supabaseAdmin
             .from('ocr_jobs')
-            .select('id, agent_id, franchise_id, file_name')
+            .select('id, agent_id, franchise_id, file_name, status')
             .eq('id', job_id)
             .single();
+
+        // 3b. Idempotencia: si N8N reintenta tras un éxito, ignoramos el segundo callback
+        // para no sobrescribir datos buenos ni reactivar side effects (cliente, training, push).
+        // Permitimos `failed -> completed` (recuperación tras reintento exitoso) pero
+        // bloqueamos cualquier transición desde `completed`.
+        if (job?.status === 'completed') {
+            console.warn('[OCR Callback] Ignored duplicate callback for already-completed job:', job_id);
+            return NextResponse.json({ success: true, idempotent: true, client_id: null });
+        }
 
         // 4. Auto-crear/actualizar cliente desde los datos extraídos
         let clientId: string | null = null;
