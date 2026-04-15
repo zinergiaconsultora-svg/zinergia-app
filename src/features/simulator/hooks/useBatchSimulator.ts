@@ -21,10 +21,10 @@ function makeLocalId() {
     return Math.random().toString(36).slice(2);
 }
 
+// Mantiene `_confidence` (metadatos del OCR) para que el formulario pueda
+// pintar indicadores de confianza. Ver nota equivalente en useSimulator.ts.
 function extractInvoiceData(raw: Record<string, unknown>): InvoiceData {
-    const { _confidence: _c, ...rest } = raw;
-    void _c;
-    return rest as unknown as InvoiceData;
+    return raw as unknown as InvoiceData;
 }
 
 export function useBatchSimulator() {

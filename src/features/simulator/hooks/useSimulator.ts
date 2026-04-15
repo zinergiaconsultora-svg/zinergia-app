@@ -8,21 +8,13 @@ import { markOcrJobFailed, getOcrJobStatus } from '@/app/actions/ocr-jobs';
 
 type Step = 1 | 2 | 3;
 
-// Tipo para los rows de ocr_jobs recibidos via Realtime
-// IMPORTANTE: el campo en DB es `extracted_data`, no `invoice_data`
-interface OcrJobRow {
-    id: string;
-    status: 'processing' | 'completed' | 'failed';
-    extracted_data: Record<string, unknown> | null;
-    error_message: string | null;
-}
-
-// Extrae InvoiceData de extracted_data eliminando el campo interno _confidence
+// Normaliza el payload del OCR para el estado del simulador.
+// Mantiene `_confidence` (mapa de confianza por campo) porque SimulatorForm lo consume
+// para pintar indicadores de confianza y validaciones. OcrJobsPanel y ocr-confirm.ts
+// también lo leen; mantenerlo aquí garantiza consistencia en todas las capas.
 function extractInvoiceData(raw: Record<string, unknown> | null): InvoiceData | null {
     if (!raw) return null;
-    const { _confidence: _c, ...rest } = raw;
-    void _c;
-    return rest as unknown as InvoiceData;
+    return raw as unknown as InvoiceData;
 }
 
 interface SimulatorState {
@@ -219,40 +211,111 @@ export function useSimulator() {
             sessionStorage.removeItem('pendingOcrJobId');
             dispatch({ type: 'START_ANALYSIS' });
             dispatch({ type: 'SET_LOADING_MESSAGE', payload: 'Procesando documento con IA...' });
-            
+
+            let resolved = false;
             const supabase = createClient();
+
+            // Unificado con el camino principal: mismo canal y mismo evento de broadcast
+            // que emite el callback de N8N (/api/webhooks/ocr/callback). Evita depender de
+            // que `ocr_jobs` esté en la publicación realtime de Supabase.
             const channel = supabase.channel(`ocr_job_${jobId}`)
-                .on(
-                    'postgres_changes',
-                    { event: 'UPDATE', schema: 'public', table: 'ocr_jobs', filter: `id=eq.${jobId}` },
-                    (payload: { new: OcrJobRow }) => {
-                        const updatedJob = payload.new;
+                .on('broadcast', { event: 'ocr_result' }, (payload) => {
+                    if (resolved) return;
+                    const { status: jobStatus, data: jobData, error_message } = payload.payload as {
+                        status: string;
+                        data: Record<string, unknown> | null;
+                        error_message: string | null;
+                    };
+                    if (jobStatus === 'completed' && jobData) {
+                        resolved = true;
+                        clearTimeout(slowWarningIdPending);
                         clearTimeout(timeoutId);
-                        if (updatedJob.status === 'completed') {
-                            dispatch({ type: 'SET_INVOICE_DATA', payload: extractInvoiceData(updatedJob.extracted_data) as InvoiceData });
-                            supabase.removeChannel(channel);
-                        } else if (updatedJob.status === 'failed') {
-                            dispatch({ type: 'SET_ERROR', payload: updatedJob.error_message || 'Error en procesamiento OCR' });
-                            supabase.removeChannel(channel);
-                        }
+                        dispatch({ type: 'SET_INVOICE_DATA', payload: extractInvoiceData(jobData) as InvoiceData });
+                        supabase.removeChannel(channel);
+                    } else if (jobStatus === 'failed') {
+                        resolved = true;
+                        clearTimeout(slowWarningIdPending);
+                        clearTimeout(timeoutId);
+                        dispatch({ type: 'SET_ERROR', payload: error_message || 'Error en análisis OCR' });
+                        supabase.removeChannel(channel);
                     }
-                )
+                })
                 .subscribe();
+
+            // Safety net de arranque: si el callback ya respondió antes de que montáramos
+            // este componente, el broadcast se perdió. Comprobamos el estado persistido en DB.
+            getOcrJobStatus(jobId).then((job) => {
+                if (resolved || !job) return;
+                if (job.status === 'completed') {
+                    resolved = true;
+                    clearTimeout(slowWarningIdPending);
+                    clearTimeout(timeoutId);
+                    dispatch({ type: 'SET_INVOICE_DATA', payload: extractInvoiceData(job.extracted_data as Record<string, unknown>) as InvoiceData });
+                    supabase.removeChannel(channel);
+                } else if (job.status === 'failed') {
+                    resolved = true;
+                    clearTimeout(slowWarningIdPending);
+                    clearTimeout(timeoutId);
+                    dispatch({ type: 'SET_ERROR', payload: job.error_message || 'Error en análisis OCR' });
+                    supabase.removeChannel(channel);
+                }
+            }).catch((err) => {
+                // Best-effort — el broadcast o el polling cubrirán. Logged para detección.
+                console.warn('[OCR Simulator] Startup status check failed (non-fatal):', err);
+            });
+
+            // Polling de respaldo cada 4 s — mismo patrón que el camino principal
+            const pollInterval = setInterval(async () => {
+                if (resolved) return;
+                try {
+                    const job = await getOcrJobStatus(jobId);
+                    if (!job || resolved) return;
+                    if (job.status === 'completed') {
+                        resolved = true;
+                        clearInterval(pollInterval);
+                        clearTimeout(slowWarningIdPending);
+                        clearTimeout(timeoutId);
+                        dispatch({ type: 'SET_INVOICE_DATA', payload: extractInvoiceData(job.extracted_data as Record<string, unknown>) as InvoiceData });
+                        supabase.removeChannel(channel);
+                    } else if (job.status === 'failed') {
+                        resolved = true;
+                        clearInterval(pollInterval);
+                        clearTimeout(slowWarningIdPending);
+                        clearTimeout(timeoutId);
+                        dispatch({ type: 'SET_ERROR', payload: job.error_message || 'Error en análisis OCR' });
+                        supabase.removeChannel(channel);
+                    }
+                } catch (pollErr) {
+                    // Polling es best-effort: el broadcast o el timeout resolverán.
+                    // Logged para detectar fallos sistemáticos en producción.
+                    console.warn('[OCR Simulator] Poll tick failed (non-fatal):', pollErr);
+                }
+            }, 4000);
 
             // Aviso "tardando más de lo normal" al minuto
             const slowWarningIdPending = setTimeout(() => {
-                dispatch({ type: 'SET_LOADING_MESSAGE', payload: 'Tardando más de lo habitual... N8N puede estar arrancando. Por favor espera.' });
+                if (!resolved) {
+                    dispatch({ type: 'SET_LOADING_MESSAGE', payload: 'Tardando más de lo habitual... N8N puede estar arrancando. Por favor espera.' });
+                }
             }, OCR_SLOW_WARNING_MS);
 
             // Safety net: si N8N no responde en 5 min, marcar como fallido en DB y abortar
             const timeoutId = setTimeout(() => {
+                resolved = true;
+                clearInterval(pollInterval);
                 clearTimeout(slowWarningIdPending);
                 dispatch({ type: 'SET_ERROR', payload: 'El servidor no respondió en 5 minutos. Comprueba el flujo de N8N e inténtalo de nuevo.' });
                 supabase.removeChannel(channel);
-                markOcrJobFailed(jobId, 'Timeout: N8N no respondió en 5 minutos').catch(() => {});
+                markOcrJobFailed(jobId, 'Timeout: N8N no respondió en 5 minutos').catch((err) => {
+                    // Si falla la marca como fallido, el job queda 'processing' en DB.
+                    // Log explícito para poder detectar y limpiar esos jobs colgados.
+                    console.error('[OCR Simulator] markOcrJobFailed failed — job may remain "processing" in DB:', err);
+                });
             }, OCR_REALTIME_TIMEOUT_MS);
 
             return () => {
+                resolved = true;
+                clearInterval(pollInterval);
                 clearTimeout(slowWarningIdPending);
                 clearTimeout(timeoutId);
                 supabase.removeChannel(channel);
@@ -335,7 +398,11 @@ export function useSimulator() {
 
             // Polling fallback: server action (bypasses RLS issues with browser client)
             let resolved = false;
-            const pollInterval = setInterval(async () => {
+
+            // Cierra la race: si N8N respondió entre el INSERT del job y el subscribe del canal,
+            // el broadcast se perdió. Esta comprobación única se dispara inmediatamente, sin esperar
+            // el primer tick de los 4 s del polling.
+            const checkJobOnce = async () => {
                 if (resolved) return;
                 try {
                     const job = await getOcrJobStatus(result.jobId!);
@@ -359,8 +426,11 @@ export function useSimulator() {
                         activeChannelRef.current = null;
                         activeSupabaseRef.current = null;
                     }
-                } catch { /* polling es best-effort */ }
-            }, 4000);
+                } catch { /* best-effort */ }
+            };
+            void checkJobOnce();
+
+            const pollInterval = setInterval(checkJobOnce, 4000);
 
             // Aviso "tardando más de lo normal" al minuto
             const slowWarningId = setTimeout(() => {
@@ -378,7 +448,9 @@ export function useSimulator() {
                 supabase.removeChannel(channel);
                 activeChannelRef.current = null;
                 activeSupabaseRef.current = null;
-                markOcrJobFailed(result.jobId!, 'Timeout: N8N no respondió en 5 minutos').catch(() => {});
+                markOcrJobFailed(result.jobId!, 'Timeout: N8N no respondió en 5 minutos').catch((err) => {
+                    console.error('[OCR Simulator] markOcrJobFailed failed — job may remain "processing" in DB:', err);
+                });
             }, OCR_REALTIME_TIMEOUT_MS);
 
         } catch (error) {
