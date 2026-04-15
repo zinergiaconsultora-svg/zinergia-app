@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { requireServerRole } from '@/lib/auth/permissions';
 import { env } from '@/lib/env';
+import { postOcrToN8n } from '@/lib/ocr/dispatch';
 
 export interface OcrJobRecord {
     id: string;
@@ -506,20 +507,15 @@ export async function retryOcrJob(jobId: string): Promise<{ success: boolean; me
             const fileName = job.file_name ?? 'factura.pdf';
             const file = new File([blob], fileName, { type: blob.type });
 
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('job_id', jobId);
-
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 30_000);
-
-            const webhookResponse = await fetch(OCR_WEBHOOK_URL, {
-                method: 'POST',
-                headers: { 'x-api-key': WEBHOOK_API_KEY },
-                body: formData,
-                signal: controller.signal,
+            // Retry path: no automatic re-retries — the user already triggered
+            // this manually and we don't want a 9-attempt explosion.
+            const webhookResponse = await postOcrToN8n({
+                webhookUrl: OCR_WEBHOOK_URL,
+                apiKey: WEBHOOK_API_KEY,
+                file,
+                jobId,
+                withRetries: false,
             });
-            clearTimeout(timeout);
 
             if (!webhookResponse.ok) {
                 await supabase
