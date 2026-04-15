@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { env } from '@/lib/env';
 import { sendPushToUser } from '@/lib/push/sendPush';
+import { clientIpFromHeaders, createRateLimiter } from '@/lib/rate-limit';
+
+// Per-IP sliding window. N8N normally hits us once per OCR job, so 60/min is
+// generous. An attacker that bypassed the API key check would still be capped.
+const callbackRateLimit = createRateLimiter({ limit: 60, windowMs: 60_000 });
 
 function normalizeCompanyName(raw: string): string {
     return raw
@@ -22,6 +27,20 @@ function normalizeCompanyName(raw: string): string {
 }
 
 export async function POST(request: Request) {
+    // 0. Rate limit per IP (defense-in-depth — auth comes next).
+    const ip = clientIpFromHeaders(request.headers);
+    const rl = callbackRateLimit(ip);
+    if (!rl.allowed) {
+        console.warn(`[OCR Callback] Rate limit exceeded for ip=${ip} (retry in ${rl.retryAfterMs}ms)`);
+        return NextResponse.json(
+            { error: 'Too Many Requests' },
+            {
+                status: 429,
+                headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) },
+            },
+        );
+    }
+
     // 1. Autenticar request de N8N
     const apiKey = request.headers.get('x-api-key');
     const authHeader = request.headers.get('authorization');
