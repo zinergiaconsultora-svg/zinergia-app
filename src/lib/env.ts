@@ -21,8 +21,33 @@ const envSchema = z.object({
     VAPID_PRIVATE_KEY: z.string().min(1).optional(),
     VAPID_SUBJECT: z.string().min(1).optional(),
 
+    // PII encryption (AES-256-GCM key + HMAC-SHA-256 blind-index pepper).
+    // Required in production; optional in dev/test so the app still boots without
+    // keys (any call into src/lib/crypto/pii.ts will throw at use time if missing).
+    // Generate with: `node scripts/generate-encryption-keys.mjs`
+    APP_ENCRYPTION_KEY: z.string().min(1).optional(),
+    APP_ENCRYPTION_PEPPER: z.string().min(1).optional(),
+
     // Node Environment
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+}).superRefine((data, ctx) => {
+    // Hard requirement in production: refuse to boot without PII encryption keys.
+    if (data.NODE_ENV === 'production') {
+        if (!data.APP_ENCRYPTION_KEY) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['APP_ENCRYPTION_KEY'],
+                message: 'APP_ENCRYPTION_KEY is required in production. Generate with `node scripts/generate-encryption-keys.mjs`.',
+            });
+        }
+        if (!data.APP_ENCRYPTION_PEPPER) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['APP_ENCRYPTION_PEPPER'],
+                message: 'APP_ENCRYPTION_PEPPER is required in production. Generate with `node scripts/generate-encryption-keys.mjs`.',
+            });
+        }
+    }
 });
 
 const getEnv = () => {
