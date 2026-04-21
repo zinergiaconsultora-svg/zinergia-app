@@ -5,6 +5,7 @@ import { requireServerRole } from '@/lib/auth/permissions';
 import { revalidatePath } from 'next/cache';
 import { uuidSchema, updateAgentSchema, createFranchiseSchema } from '@/lib/validation/schemas';
 import { z } from 'zod';
+import { logAdminAction } from '@/lib/audit/logger';
 
 // ─── Types ────────────────────────────────────────────────────────────
 export interface AdminStats {
@@ -178,6 +179,7 @@ export async function createFranchiseAction(name: string): Promise<void> {
 
     if (error) throw new Error(`Error creando franquicia: ${error.message}`);
     revalidatePath('/admin');
+    logAdminAction('create_franchise', 'franchises', undefined, { name: validName }).catch(() => {});
 }
 
 export async function getAllAgentsAction(): Promise<AgentProfile[]> {
@@ -211,6 +213,7 @@ export async function updateAgentAdminAction(
     if (error) throw new Error(`Error actualizando agente: ${error.message}`);
     revalidatePath('/admin');
     revalidatePath('/admin/agents');
+    logAdminAction('update_agent', 'profiles', id, safeUpdates as Record<string, unknown>).catch(() => {});
 }
 
 // ─── Reporting Queries ────────────────────────────────────────────────

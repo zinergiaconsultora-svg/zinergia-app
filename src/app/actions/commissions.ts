@@ -5,6 +5,7 @@ import { requireServerRole } from '@/lib/auth/permissions'
 import { revalidatePath } from 'next/cache'
 import { Commission } from '@/types/crm'
 import { uuidSchema } from '@/lib/validation/schemas'
+import { logAdminAction } from '@/lib/audit/logger'
 
 /**
  * Advances a commission to 'cleared' (pending → cleared).
@@ -26,6 +27,7 @@ export async function clearCommissionAction(id: string): Promise<Commission> {
     if (error) throw error
     if (!data) throw new Error('Comisión no encontrada o ya procesada')
     revalidatePath('/dashboard/wallet')
+    logAdminAction('clear_commission', 'network_commissions', safeId).catch(() => {})
     return data as Commission
 }
 
@@ -49,6 +51,7 @@ export async function payCommissionAction(id: string): Promise<Commission> {
     if (error) throw error
     if (!data) throw new Error('Comisión no encontrada o ya pagada')
     revalidatePath('/dashboard/wallet')
+    logAdminAction('pay_commission', 'network_commissions', safeId).catch(() => {})
     return data as Commission
 }
 

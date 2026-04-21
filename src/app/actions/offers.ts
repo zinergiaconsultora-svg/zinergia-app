@@ -5,6 +5,7 @@ import { requireServerRole } from '@/lib/auth/permissions'
 import { revalidatePath } from 'next/cache'
 import { offerSchema, uuidSchema } from '@/lib/validation/schemas'
 import type { Offer } from '@/types/crm'
+import { logAdminAction } from '@/lib/audit/logger'
 
 export async function saveOfferAction(offer: Partial<Offer>) {
     await requireServerRole(['admin', 'franchise'])
@@ -26,6 +27,7 @@ export async function saveOfferAction(offer: Partial<Offer>) {
             .single()
         if (error) throw error
         revalidatePath('/dashboard/tariffs')
+        logAdminAction('update_offer', 'lv_zinergia_tarifas', id, { nombre: parsed.data.nombre }).catch(() => {})
         return data
     }
 
@@ -36,6 +38,7 @@ export async function saveOfferAction(offer: Partial<Offer>) {
         .single()
     if (error) throw error
     revalidatePath('/dashboard/tariffs')
+    logAdminAction('create_offer', 'lv_zinergia_tarifas', (data as { id: string }).id, { nombre: parsed.data.nombre }).catch(() => {})
     return data
 }
 
@@ -49,4 +52,5 @@ export async function deleteOfferAction(id: string) {
     const { error } = await supabase.from('lv_zinergia_tarifas').delete().eq('id', parsedId.data)
     if (error) throw error
     revalidatePath('/dashboard/tariffs')
+    logAdminAction('delete_offer', 'lv_zinergia_tarifas', parsedId.data).catch(() => {})
 }

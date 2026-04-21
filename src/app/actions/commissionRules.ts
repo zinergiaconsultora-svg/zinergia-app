@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireServerRole } from '@/lib/auth/permissions'
 import { CommissionRule } from '@/types/crm'
 import { commissionRuleSchema } from '@/lib/validation/schemas'
+import { logAdminAction } from '@/lib/audit/logger'
 
 // Hardcoded fallback used when the commission_rules table doesn't exist yet
 // or has no active rule. Matches the seeded default.
@@ -93,5 +94,6 @@ export async function saveCommissionRule(
         .single()
 
     if (error) throw error
+    logAdminAction('save_commission_rule', 'commission_rules', (data as CommissionRule).id, { name: rule.name, commission_rate: rule.commission_rate }).catch(() => {})
     return data as CommissionRule
 }
