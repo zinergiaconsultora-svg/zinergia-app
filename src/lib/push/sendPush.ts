@@ -1,5 +1,5 @@
 import webpush from 'web-push';
-import { createClient } from '@supabase/supabase-js';
+import { createServiceClient } from '@/lib/supabase/service';
 
 // Lazy VAPID init — no llamar a setVapidDetails en tiempo de módulo
 // para evitar errores durante el build de Next.js
@@ -39,10 +39,7 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
     }
 
     try {
-        const supabaseAdmin = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
-        );
+        const supabaseAdmin = createServiceClient();
 
         const { data: subs } = await supabaseAdmin
             .from('push_subscriptions')

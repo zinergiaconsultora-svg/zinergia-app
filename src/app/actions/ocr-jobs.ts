@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { createServiceClient } from '@/lib/supabase/service';
 import { requireServerRole } from '@/lib/auth/permissions';
 import { env } from '@/lib/env';
 
@@ -42,9 +42,7 @@ export async function getOcrJobStatus(jobId: string): Promise<OcrJobRecord | nul
     if (!user) return null;
 
     // Use service role to bypass RLS completely
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceKey) return null;
-    const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
+    const admin = createServiceClient();
 
     const { data, error } = await admin
         .from('ocr_jobs')
@@ -327,10 +325,7 @@ export interface AgentLeaderboardEntry {
 export async function getAgentPrecisionLeaderboard(): Promise<AgentLeaderboardEntry[]> {
     await requireServerRole(['admin', 'franchise']);
 
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceKey) return [];
-    const { createClient: createSupabase } = await import('@supabase/supabase-js');
-    const admin = createSupabase(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
+    const admin = createServiceClient();
 
     // Pull all completed/failed jobs with agent_id
     const { data: jobs, error: jobsErr } = await admin
