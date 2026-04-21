@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { env } from '@/lib/env';
 import { sendPushToUser } from '@/lib/push/sendPush';
+import { encryptNullable, hashCups, hashDni } from '@/lib/crypto/pii';
 
 function normalizeCompanyName(raw: string): string {
     return raw
@@ -160,14 +161,15 @@ export async function POST(request: Request) {
                 const cups = invoiceData.cups as string;
                 const dniCif = invoiceData.dni_cif as string;
 
-                // Buscar cliente existente por CUPS (más único) o por DNI/CIF
+                // Buscar cliente existente por CUPS (más único) o por DNI/CIF.
+                // Usa blind-index hash para búsqueda de igualdad (RGPD-safe).
                 let existingClient = null;
                 if (cups) {
                     const { data } = await supabaseAdmin
                         .from('clients')
                         .select('id')
                         .eq('franchise_id', job.franchise_id)
-                        .eq('cups', cups)
+                        .eq('cups_hash', hashCups(cups))
                         .maybeSingle();
                     existingClient = data;
                 }
@@ -176,17 +178,19 @@ export async function POST(request: Request) {
                         .from('clients')
                         .select('id')
                         .eq('franchise_id', job.franchise_id)
-                        .eq('dni_cif', dniCif)
+                        .eq('dni_cif_hash', hashDni(dniCif))
                         .maybeSingle();
                     existingClient = data;
                 }
 
                 if (existingClient) {
-                    // Actualizar datos del cliente existente
+                    // Actualizar datos del cliente existente (dual-write RGPD).
                     await supabaseAdmin
                         .from('clients')
                         .update({
                             cups: cups || undefined,
+                            cups_ciphertext: cups ? encryptNullable(cups) : undefined,
+                            cups_hash: cups ? hashCups(cups) : undefined,
                             current_supplier: (invoiceData.company_name as string) || undefined,
                             tariff_type: (invoiceData.tariff_name as string) || undefined,
                             address: (invoiceData.supply_address as string) || undefined,
@@ -202,7 +206,7 @@ export async function POST(request: Request) {
                         .eq('id', existingClient.id);
                     clientId = existingClient.id;
                 } else if (clientName && clientName !== 'Cliente Desconocido') {
-                    // Crear nuevo cliente
+                    // Crear nuevo cliente (dual-write RGPD).
                     const { data: newClient } = await supabaseAdmin
                         .from('clients')
                         .insert({
@@ -210,7 +214,11 @@ export async function POST(request: Request) {
                             owner_id: job.agent_id,
                             name: clientName,
                             dni_cif: dniCif || null,
+                            dni_cif_ciphertext: dniCif ? encryptNullable(dniCif) : null,
+                            dni_cif_hash: dniCif ? hashDni(dniCif) : null,
                             cups: cups || null,
+                            cups_ciphertext: cups ? encryptNullable(cups) : null,
+                            cups_hash: cups ? hashCups(cups) : null,
                             address: (invoiceData.supply_address as string) || null,
                             current_supplier: (invoiceData.company_name as string) || null,
                             tariff_type: (invoiceData.tariff_name as string) || null,
