@@ -2,14 +2,11 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { computeClientScore, type ClientScore } from '@/lib/crm/clientScoring';
+
+export type { ClientScore };
 
 const clientIdsSchema = z.array(z.uuid()).min(1).max(500);
-
-export interface ClientScore {
-    clientId: string;
-    score: number;       // 0-100
-    reasons: string[];   // short labels explaining the score
-}
 
 /**
  * Computes priority scores for a list of client IDs.
@@ -68,59 +65,24 @@ export async function getClientScoresAction(clientIds: string[]): Promise<Client
     const clientMeta = new Map<string, { status: string; created_at: string }>();
     (clients ?? []).forEach(c => clientMeta.set(c.id, { status: c.status, created_at: c.created_at }));
 
-    // ── Build scores ──
+    // ── Build scores using pure computeClientScore ──
     return clientIds.map(id => {
-        let score = 0;
-        const reasons: string[] = [];
-
-        // 1. Anomaly score
-        const ocr = latestOcr.get(id);
-        if (ocr) {
-            const d = ocr.extracted_data;
-            const forensic = d?.forensic_details as Record<string, unknown> | null;
-            const price = d?.current_energy_price_p1 as number | undefined;
-            const hasCritical = !!forensic?.reactive_penalty || (price != null && price > 0.22);
-            const hasWarning = !hasCritical && (
-                (d?.tariff_name as string | undefined)?.toUpperCase().includes('PVPC') ||
-                (price != null && price > 0.19)
-            );
-            if (hasCritical) { score += 40; reasons.push('Anomalía crítica'); }
-            else if (hasWarning) { score += 20; reasons.push('Anomalía detectada'); }
-
-            // Savings potential from total_amount
-            const monthly = d?.total_amount as number | undefined;
-            if (monthly) {
-                const annual = monthly * 12;
-                if (annual > 2000) { score += 20; reasons.push('Alto potencial'); }
-                else if (annual > 800) { score += 10; reasons.push('Potencial medio'); }
+        const ocrJob = latestOcr.get(id);
+        const ocrData = ocrJob
+            ? {
+                forensic_details: ocrJob.extracted_data?.forensic_details as { reactive_penalty?: unknown } | null,
+                current_energy_price_p1: ocrJob.extracted_data?.current_energy_price_p1 as number | null,
+                tariff_name: ocrJob.extracted_data?.tariff_name as string | null,
+                total_amount: ocrJob.extracted_data?.total_amount as number | null,
             }
-        }
+            : null;
 
-        // 2. Days without active proposal
-        const prop = latestProposal.get(id);
-        const meta = clientMeta.get(id);
-        const noActiveProposal = !prop || prop.status === 'rejected' || prop.status === 'lost';
-        if (noActiveProposal && meta?.created_at) {
-            // Use client creation date when no proposal exists, otherwise last rejected/lost proposal date
-            const referenceDate = !prop ? meta.created_at : (prop.created_at ?? meta.created_at);
-            const daysSince = Math.floor((now - new Date(referenceDate).getTime()) / 86_400_000);
-            if (!prop) {
-                // New client: lower threshold — >7d is already urgent
-                if (daysSince > 7) { score += 20; reasons.push('Sin propuesta'); }
-                else if (daysSince > 3) { score += 10; reasons.push('Sin propuesta'); }
-            } else {
-                // After rejected/lost: higher threshold
-                if (daysSince > 14) { score += 20; reasons.push('>14d sin propuesta'); }
-                else if (daysSince > 7) { score += 12; reasons.push('>7d sin propuesta'); }
-                else if (daysSince > 3) { score += 5; }
-            }
-        }
-
-        // 3. Client status bonus
-        const status = meta?.status;
-        if (status === 'new') { score += 10; }
-        else if (status === 'contacted') { score += 5; }
-
-        return { clientId: id, score: Math.min(score, 100), reasons };
+        return computeClientScore(
+            id,
+            ocrData,
+            latestProposal.get(id) ?? null,
+            clientMeta.get(id) ?? null,
+            now,
+        );
     });
 }
