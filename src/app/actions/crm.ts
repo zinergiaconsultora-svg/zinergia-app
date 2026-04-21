@@ -5,6 +5,7 @@ import { requireServerRole } from '@/lib/auth/permissions';
 import { revalidatePath } from 'next/cache';
 import type { ClientStatus, ClientType } from '@/types/crm';
 import { z } from 'zod';
+import { encryptNullable, hashCups, hashDni } from '@/lib/crypto/pii';
 
 const CLIENT_STATUSES = ['new', 'contacted', 'in_process', 'won', 'lost'] as const;
 
@@ -144,16 +145,22 @@ export async function importClientsFromCsvAction(rows: CsvClientRow[]): Promise<
     const franchiseId = profile?.franchise_id;
     if (!franchiseId) throw new Error('No se encontró la franquicia del agente');
 
-    // Pre-fetch existing CUPS in this franchise to detect duplicates
+    // Pre-fetch existing CUPS in this franchise to detect duplicates.
+    // Uses the blind-index hash column for equality search (RGPD-safe).
     const candidateCups = rows.map(r => r.cups?.trim().toUpperCase()).filter(Boolean) as string[];
     const existingCups = new Set<string>();
     if (candidateCups.length > 0) {
+        const candidateHashes = candidateCups.map(c => hashCups(c));
         const { data: existing } = await supabase
             .from('clients')
-            .select('cups')
+            .select('cups, cups_hash')
             .eq('franchise_id', franchiseId)
-            .in('cups', candidateCups);
-        (existing ?? []).forEach(r => { if (r.cups) existingCups.add(r.cups); });
+            .in('cups_hash', candidateHashes);
+        (existing ?? []).forEach(r => {
+            if (r.cups) existingCups.add(r.cups);
+            // Also track via hash in case the plaintext column is already cleared.
+            if (r.cups_hash) existingCups.add(r.cups_hash);
+        });
     }
 
     const toInsert: object[] = [];
@@ -169,22 +176,31 @@ export async function importClientsFromCsvAction(rows: CsvClientRow[]): Promise<
         }
         const clean = result.data;
         const normalizedCups = clean.cups?.trim().toUpperCase() ?? '';
-        if (normalizedCups && existingCups.has(normalizedCups)) {
+        const cupsHash = normalizedCups ? hashCups(normalizedCups) : null;
+        // Dedup check against both plaintext set and hash set.
+        if (normalizedCups && (existingCups.has(normalizedCups) || (cupsHash && existingCups.has(cupsHash)))) {
             skipped++;
             return;
         }
+        const normalizedDni = clean.dni_cif?.trim() ?? '';
         toInsert.push({
             name: clean.name,
             email: clean.email || null,
             phone: clean.phone || null,
             address: clean.address || null,
+            // Plaintext columns kept during dual-write phase.
             cups: normalizedCups || null,
+            dni_cif: normalizedDni || null,
+            // Encrypted + blind-index columns (RGPD).
+            cups_ciphertext: normalizedCups ? encryptNullable(normalizedCups) : null,
+            cups_hash: cupsHash,
+            dni_cif_ciphertext: normalizedDni ? encryptNullable(normalizedDni) : null,
+            dni_cif_hash: normalizedDni ? hashDni(normalizedDni) : null,
             average_monthly_bill: clean.average_monthly_bill ?? null,
             current_supplier: clean.current_supplier || null,
             tariff_type: clean.tariff_type || null,
             type: clean.type ?? 'particular',
             status: clean.status ?? 'new',
-            dni_cif: clean.dni_cif || null,
             city: clean.city || null,
             zip_code: clean.zip_code || null,
             franchise_id: franchiseId,
@@ -231,7 +247,7 @@ export async function findClientByCups(cups: string): Promise<ClientCupsMatch | 
         .from('clients')
         .select('id, name, status, email')
         .eq('owner_id', user.id)
-        .eq('cups', cups.trim().toUpperCase())
+        .eq('cups_hash', hashCups(cups))
         .maybeSingle();
 
     if (error || !data) return null;
