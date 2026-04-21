@@ -1,8 +1,7 @@
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase/server';
-import { env } from '@/lib/env';
+import { createServiceClient } from '@/lib/supabase/service';
 import { InvoiceData } from '@/types/crm';
 
 /**
@@ -27,9 +26,7 @@ export async function confirmOcrExtractionAction(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('No autenticado');
 
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceKey) throw new Error('Server misconfigured');
-    const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
+    const admin = createServiceClient();
 
     // 1. Recuperar el ejemplo asociado al job
     const { data: existing } = await admin
@@ -107,10 +104,7 @@ export async function getOcrAccuracyStats(): Promise<OcrCompanyStats[]> {
     const { requireServerRole } = await import('@/lib/auth/permissions');
     await requireServerRole(['admin']);
 
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceKey) return [];
-    const { createClient: createSupabase } = await import('@supabase/supabase-js');
-    const admin = createSupabase(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
+    const admin = createServiceClient();
 
     const { data, error } = await admin
         .from('ocr_training_examples')
@@ -185,10 +179,7 @@ export async function getSuggestedCorrections(
     const normalized = normalizeCompanyName(companyName);
     if (!normalized) return {};
 
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceKey) return {};
-    const { createClient: createSupabase } = await import('@supabase/supabase-js');
-    const admin = createSupabase(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
+    const admin = createServiceClient();
 
     const { data, error } = await admin
         .from('ocr_training_examples')
@@ -252,10 +243,7 @@ export async function getFieldCorrectionStats(
     const normalized = normalizeCompanyName(companyName);
     if (!normalized) return [];
 
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceKey) return [];
-    const { createClient: createSupabase } = await import('@supabase/supabase-js');
-    const admin = createSupabase(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
+    const admin = createServiceClient();
 
     const { data, error } = await admin
         .from('ocr_training_examples')
