@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServiceClient } from '@/lib/supabase/service';
 import { env } from '@/lib/env';
 import { sendPushToUser } from '@/lib/push/sendPush';
 import { encryptNullable, hashCups, hashDni } from '@/lib/crypto/pii';
@@ -46,14 +46,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: `Invalid status: ${status}` }, { status: 400 });
         }
 
-        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        if (!serviceKey) {
-            return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
-        }
-        const supabaseAdmin = createClient(
-            env.NEXT_PUBLIC_SUPABASE_URL!,
-            serviceKey
-        );
+        const supabaseAdmin = createServiceClient();
 
         // 2. Normalizar datos extraídos
         let invoiceData: Record<string, unknown> | null = null;
