@@ -60,6 +60,18 @@ export default async function AdminLayout({
                         >
                             🔒 RGPD
                         </a>
+                        <a
+                            href="/admin/audit"
+                            className="px-3 py-1.5 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/60 transition-all"
+                        >
+                            📋 Audit
+                        </a>
+                        <a
+                            href="/admin/business-metrics"
+                            className="px-3 py-1.5 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/60 transition-all"
+                        >
+                            📊 KPIs
+                        </a>
                     </nav>
                 </div>
                 <div className="flex items-center gap-3">
