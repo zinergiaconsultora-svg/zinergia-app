@@ -11,6 +11,10 @@
         {
             "path": "/api/cron/weekly-summary",
             "schedule": "0 8 * * 1"
+        },
+        {
+            "path": "/api/cron/purge-expired-clients",
+            "schedule": "0 2 * * *"
         }
     ]
 }

@@ -5,7 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath } from 'next/cache';
 import { Proposal } from '@/types/crm';
 import { getActiveCommissionRule } from './commissionRules';
-import { calculateCommissionSplit } from '@/lib/commissions/calculator';
+import { calculateCommissionSplit, applyFranchiseOverride } from '@/lib/commissions/calculator';
 import { z } from 'zod';
 
 const uuidSchema = z.uuid();
@@ -203,7 +203,17 @@ export async function acceptPublicProposalAction(
                 .maybeSingle();
 
             if (!existingComm) {
-                const rule = await getActiveCommissionRule();
+                const baseRule = await getActiveCommissionRule();
+
+                // Apply per-franchise royalty override if configured
+                const { data: franchiseCfg } = await adminClient
+                    .from('franchise_config')
+                    .select('royalty_percent')
+                    .eq('franchise_id', agentProfile.franchise_id)
+                    .eq('active', true)
+                    .maybeSingle();
+
+                const rule = applyFranchiseOverride(baseRule, franchiseCfg?.royalty_percent ?? null);
                 const split = calculateCommissionSplit(propData.annual_savings as number, rule);
                 // ignoreDuplicates: el UNIQUE constraint en proposal_id actúa como guardia atómica
                 await adminClient.from('network_commissions').upsert({

@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { Proposal } from '@/types/crm'
 import { getActiveCommissionRule } from './commissionRules'
 import { createNotificationInternal } from './notifications'
-import { calculateCommissionSplit } from '@/lib/commissions/calculator'
+import { calculateCommissionSplit, applyFranchiseOverride } from '@/lib/commissions/calculator'
 
 /**
  * Updates a proposal's status and, if moving to 'accepted',
@@ -194,7 +194,17 @@ async function processCommissions(
         if (!profile?.franchise_id) return
 
         // Load active commission rule (falls back to defaults if table missing)
-        const rule = await getActiveCommissionRule()
+        const baseRule = await getActiveCommissionRule()
+
+        // Apply per-franchise royalty override if configured
+        const { data: franchiseCfg } = await supabase
+            .from('franchise_config')
+            .select('royalty_percent')
+            .eq('franchise_id', profile.franchise_id)
+            .eq('active', true)
+            .maybeSingle()
+
+        const rule = applyFranchiseOverride(baseRule, franchiseCfg?.royalty_percent ?? null)
         const split = calculateCommissionSplit(proposal.annual_savings || 0, rule)
 
         // Upsert con ignoreDuplicates: si dos requests concurrentes llegan al mismo tiempo,
