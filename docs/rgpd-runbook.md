@@ -180,11 +180,11 @@ emails, importes) en el backup afectado.
 
 ## 8. TODO pendientes (no bloquean Paso 2A)
 
-- [ ] Script `scripts/backfill-pii-encryption.mjs` (Paso 2B).
-- [ ] Script `scripts/delete-client.mjs` (Paso 6).
-- [ ] Cron `purge_expired_clients()` SQL (Paso 6).
-- [ ] Panel `/admin/rgpd` con: pendientes de purgar, últimas eliminaciones,
-      rotaciones de claves, alertas de retención (Paso 6).
+- [x] Script `scripts/backfill-pii-encryption.mjs` (Paso 2B).
+- [x] Script `scripts/delete-client.mjs` (Paso 6).
+- [x] Cron `purge_expired_clients()` SQL (Paso 6) — Vercel Cron 02:00 UTC diario.
+- [x] Panel `/admin/rgpd` con: pendientes de purgar, últimas eliminaciones,
+      alertas de retención (Paso 6).
 - [ ] Cifrado de `clients.nombre`, `clients.email`, `clients.direccion`:
       decisión diferida. Por coste/beneficio y porque el email es identifier
       operativo, de momento no se cifran. Reevaluar si se añade un
