@@ -5,6 +5,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 import { Proposal } from '@/types/crm';
 import { getActiveCommissionRule } from './commissionRules';
+import { calculateCommissionSplit } from '@/lib/commissions/calculator';
 import { z } from 'zod';
 
 const uuidSchema = z.uuid();
@@ -206,16 +207,16 @@ export async function acceptPublicProposalAction(
 
             if (!existingComm) {
                 const rule = await getActiveCommissionRule();
-                const pot = (propData.annual_savings as number) * rule.commission_rate;
+                const split = calculateCommissionSplit(propData.annual_savings as number, rule);
                 // ignoreDuplicates: el UNIQUE constraint en proposal_id actúa como guardia atómica
                 await adminClient.from('network_commissions').upsert({
                     proposal_id: proposal.id,
                     agent_id: agentProfile.id,
                     franchise_id: agentProfile.franchise_id,
-                    total_revenue: pot,
-                    agent_commission: pot * rule.agent_share,
-                    franchise_profit: pot * rule.franchise_share,
-                    hq_royalty: pot * rule.hq_share,
+                    total_revenue: split.pot,
+                    agent_commission: split.agent_commission,
+                    franchise_profit: split.franchise_profit,
+                    hq_royalty: split.hq_royalty,
                     status: 'pending',
                 }, { onConflict: 'proposal_id', ignoreDuplicates: true });
             }
