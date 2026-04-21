@@ -60,7 +60,9 @@ The 5 migrations from before 2026-04-20 live in `supabase/migrations/_archive/`.
 
 - `SUPABASE_SERVICE_ROLE_KEY` must only appear in `src/lib/supabase/service.ts`. Any other import is a bug.
 - Every mutating server action must call `requireServerRole(...)` before any DB write.
-- Sensitive PII (`CUPS`, `DNI`, direccion, nombre completo) is subject to an encryption/anonymization strategy — see `docs/rgpd.md` once it exists.
+- Sensitive PII (`CUPS`, `DNI`) is encrypted at the application layer via `src/lib/crypto/pii.ts` (AES-256-GCM ciphertext + HMAC-SHA-256 blind index). See `docs/rgpd-runbook.md` for key management, rotation, retention, and derecho al olvido. `direccion` and `nombre completo` are NOT currently encrypted — decision revisited if scope changes.
+- Keys: `APP_ENCRYPTION_KEY` (base64, 32 bytes) + `APP_ENCRYPTION_PEPPER` (hex, ≥16 bytes) are **required in production** (`src/lib/env.ts` enforces via `superRefine`). Generate with `node scripts/generate-encryption-keys.mjs`. Never commit. Never paste in chat.
+- For queries that need equality on CUPS/DNI, use the `*_hash` column with `hashCups()` / `hashDni()`. Never query the ciphertext column — it is probabilistic.
 - No `console.log` of PII. No PII in error messages that reach the client.
 
 ## Git & PR conventions
