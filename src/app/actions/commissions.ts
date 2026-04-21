@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireServerRole } from '@/lib/auth/permissions'
 import { revalidatePath } from 'next/cache'
 import { Commission } from '@/types/crm'
+import { uuidSchema } from '@/lib/validation/schemas'
 
 /**
  * Advances a commission to 'cleared' (pending → cleared).
@@ -11,12 +12,13 @@ import { Commission } from '@/types/crm'
  */
 export async function clearCommissionAction(id: string): Promise<Commission> {
     await requireServerRole(['admin', 'franchise'])
+    const safeId = uuidSchema.parse(id)
     const supabase = await createClient()
 
     const { data, error } = await supabase
         .from('network_commissions')
         .update({ status: 'cleared' })
-        .eq('id', id)
+        .eq('id', safeId)
         .eq('status', 'pending')          // Guard: only transition from pending
         .select()
         .single()
@@ -33,12 +35,13 @@ export async function clearCommissionAction(id: string): Promise<Commission> {
  */
 export async function payCommissionAction(id: string): Promise<Commission> {
     await requireServerRole(['admin', 'franchise'])
+    const safeId = uuidSchema.parse(id)
     const supabase = await createClient()
 
     const { data, error } = await supabase
         .from('network_commissions')
         .update({ status: 'paid' })
-        .eq('id', id)
+        .eq('id', safeId)
         .eq('status', 'cleared')          // Guard: only transition from cleared
         .select()
         .single()
