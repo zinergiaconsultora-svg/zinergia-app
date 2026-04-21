@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServiceClient } from '@/lib/supabase/service';
 import { env } from '@/lib/env';
 
 /**
@@ -47,11 +47,7 @@ export async function GET(request: Request) {
     const company = normalizeCompanyName(rawCompany);
 
     // ── DB ───────────────────────────────────────────────────────────────────
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceKey) {
-        return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
-    }
-    const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
+    const supabase = createServiceClient();
 
     let query = supabase
         .from('ocr_training_examples')
