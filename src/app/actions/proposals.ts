@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { Proposal } from '@/types/crm'
 import { getActiveCommissionRule } from './commissionRules'
 import { createNotificationInternal } from './notifications'
+import { calculateCommissionSplit } from '@/lib/commissions/calculator'
 
 /**
  * Updates a proposal's status and, if moving to 'accepted',
@@ -194,7 +195,7 @@ async function processCommissions(
 
         // Load active commission rule (falls back to defaults if table missing)
         const rule = await getActiveCommissionRule()
-        const pot = (proposal.annual_savings || 0) * rule.commission_rate
+        const split = calculateCommissionSplit(proposal.annual_savings || 0, rule)
 
         // Upsert con ignoreDuplicates: si dos requests concurrentes llegan al mismo tiempo,
         // el UNIQUE constraint en proposal_id garantiza que solo uno insertará. El otro
@@ -204,10 +205,10 @@ async function processCommissions(
             proposal_id: proposal.id,
             agent_id: user.id,
             franchise_id: profile.franchise_id,
-            total_revenue: pot,
-            agent_commission: pot * rule.agent_share,
-            franchise_profit: pot * rule.franchise_share,
-            hq_royalty: pot * rule.hq_share,
+            total_revenue: split.pot,
+            agent_commission: split.agent_commission,
+            franchise_profit: split.franchise_profit,
+            hq_royalty: split.hq_royalty,
             status: 'pending',
         }, { onConflict: 'proposal_id', ignoreDuplicates: true })
 
@@ -220,7 +221,7 @@ async function processCommissions(
 
         await supabase.from('user_points').upsert({
             user_id: user.id,
-            points: (current?.points || 0) + rule.points_per_win,
+            points: (current?.points || 0) + split.points,
             last_updated: new Date().toISOString(),
         })
     } catch (err) {
