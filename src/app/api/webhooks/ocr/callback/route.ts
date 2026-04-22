@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { createServiceClient } from '@/lib/supabase/service';
 import { env } from '@/lib/env';
 import { sendPushToUser } from '@/lib/push/sendPush';
 import { encryptNullable, hashCups, hashDni } from '@/lib/crypto/pii';
+import { moduleLogger } from '@/lib/logger';
+
+const log = moduleLogger('ocr-callback');
 
 function normalizeCompanyName(raw: string): string {
     return raw
@@ -26,10 +30,10 @@ export async function POST(request: Request) {
     // 1. Autenticar request de N8N
     const apiKey = request.headers.get('x-api-key');
     const authHeader = request.headers.get('authorization');
-    console.log('[OCR Callback] Received. x-api-key present:', !!apiKey, '| authorization present:', !!authHeader, '| key match:', apiKey === env.WEBHOOK_API_KEY);
+    log.info({ hasApiKey: !!apiKey, hasAuth: !!authHeader }, 'OCR callback received');
 
     if (apiKey !== env.WEBHOOK_API_KEY) {
-        console.warn('[OCR Callback] Auth failed. Received x-api-key:', apiKey?.slice(0, 8) ?? 'null');
+        log.warn({ keyPrefix: apiKey?.slice(0, 8) ?? 'null' }, 'OCR callback auth failed');
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -232,7 +236,7 @@ export async function POST(request: Request) {
                 }
             } catch (clientErr) {
                 // No bloquear el flujo si falla la creación del cliente
-                console.warn('[OCR Callback] Auto-client creation failed (non-blocking):', clientErr);
+                log.warn({ err: clientErr }, 'Auto-client creation failed (non-blocking)');
             }
         }
 
@@ -248,7 +252,8 @@ export async function POST(request: Request) {
             .eq('id', job_id);
 
         if (dbError) {
-            console.error('[OCR Callback] DB Update Error:', dbError);
+            Sentry.captureException(dbError, { extra: { jobId: job_id, status } });
+            log.error({ err: dbError, jobId: job_id, status }, 'OCR callback DB update failed');
             return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
         }
 
@@ -296,7 +301,7 @@ export async function POST(request: Request) {
                         }, { onConflict: 'file_hash', ignoreDuplicates: true });
                 } catch (trainingErr) {
                     // No bloquear el flujo si falla el guardado del ejemplo
-                    console.warn('[OCR Callback] Training example save failed (non-blocking):', trainingErr);
+                    log.warn({ err: trainingErr, jobId: job_id }, 'Training example save failed (non-blocking)');
                 }
             }
         }
@@ -321,7 +326,7 @@ export async function POST(request: Request) {
                 setTimeout(() => resolve(), 3000);
             });
         } catch (bcErr) {
-            console.warn('[OCR Callback] Broadcast failed (non-blocking):', bcErr);
+            log.warn({ err: bcErr, jobId: job_id }, 'Realtime broadcast failed (non-blocking)');
         }
 
         // 7. Web Push al agente — no bloquea la respuesta
@@ -350,7 +355,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true, client_id: clientId });
 
     } catch (error) {
-        console.error('[OCR Callback] Parsing Error:', error);
+        Sentry.captureException(error);
+        log.error({ err: error }, 'OCR callback unhandled error');
         return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }
 }
