@@ -10,6 +10,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
     "supabase:verify": "node scripts/verify-supabase.js",
     "supabase:check": "node scripts/check-setup.js"
   },
@@ -43,7 +46,8 @@
     "web-push": "^3.6.7",
     "xlsx": "^0.18.5",
     "pino": "^10.3.1",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "@playwright/test": "^1.52.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
