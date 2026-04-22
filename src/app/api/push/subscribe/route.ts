@@ -1,8 +1,25 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { rateLimit, getClientKey } from '@/lib/rate-limit';
+
+// Abuse prevention: 30 subscription upserts per IP per minute.
+// Legit clients subscribe once per device; this is far above the real-user
+// ceiling and only catches scripted abuse.
+const limiter = rateLimit({ windowMs: 60_000, max: 30 });
 
 export async function POST(request: Request) {
     try {
+        const rl = limiter.check(getClientKey(request));
+        if (!rl.allowed) {
+            return NextResponse.json(
+                { error: 'Too Many Requests' },
+                {
+                    status: 429,
+                    headers: { 'Retry-After': String(rl.retryAfterSeconds) },
+                },
+            );
+        }
+
         const subscription = await request.json();
         if (!subscription?.endpoint) {
             return NextResponse.json({ error: 'Invalid subscription' }, { status: 400 });

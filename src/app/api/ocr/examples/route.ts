@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { env } from '@/lib/env';
+import { rateLimit, getClientKey } from '@/lib/rate-limit';
+
+// Defense-in-depth rate limit on top of x-api-key auth.
+// Shared across invocations within a warm Node/Edge container.
+const limiter = rateLimit({ windowMs: 60_000, max: 120 });
 
 /**
  * GET /api/ocr/examples?company=NATURGY&limit=5&validated_only=false
@@ -27,6 +32,18 @@ import { env } from '@/lib/env';
  * }
  */
 export async function GET(request: Request) {
+    // ── Rate limit (per-IP) ──────────────────────────────────────────────────
+    const rl = limiter.check(getClientKey(request));
+    if (!rl.allowed) {
+        return NextResponse.json(
+            { error: 'Too Many Requests' },
+            {
+                status: 429,
+                headers: { 'Retry-After': String(rl.retryAfterSeconds) },
+            },
+        );
+    }
+
     // ── Auth ─────────────────────────────────────────────────────────────────
     const apiKey = request.headers.get('x-api-key');
     if (apiKey !== env.WEBHOOK_API_KEY) {
@@ -51,7 +68,7 @@ export async function GET(request: Request) {
 
     let query = supabase
         .from('ocr_training_examples')
-        .select('extracted_fields, raw_text_sample, is_validated, confidence_avg, created_at')
+        .select('extracted_fields, raw_text_sample, is_validated, confidence_avg, created_at', { count: 'exact' })
         .eq('company_name', company)
         .order('is_validated', { ascending: false })   // validados primero
         .order('confidence_avg', { ascending: false })  // mayor confianza primero
@@ -62,14 +79,7 @@ export async function GET(request: Request) {
         query = query.eq('is_validated', true);
     }
 
-    const { data: examples, error, count } = await supabase
-        .from('ocr_training_examples')
-        .select('extracted_fields, raw_text_sample, is_validated, confidence_avg, created_at', { count: 'exact' })
-        .eq('company_name', company)
-        .order('is_validated', { ascending: false })
-        .order('confidence_avg', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(limit);
+    const { data: examples, error, count } = await query;
 
     if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
