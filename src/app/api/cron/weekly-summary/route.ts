@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { sendPushToUser } from '@/lib/push/sendPush';
+import { moduleLogger } from '@/lib/logger';
+
+const log = moduleLogger('cron:weekly-summary');
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -103,11 +106,11 @@ export async function GET(request: Request) {
 
             results.push({ agentId: agent.id, sent: true });
         } catch (e) {
-            console.warn(`[WeeklySummary] Failed for agent ${agent.id}:`, e);
+            log.warn({ err: e, agentId: agent.id }, 'Weekly summary push failed for agent');
             results.push({ agentId: agent.id, sent: false });
         }
     }
 
-    console.log('[WeeklySummary] Done:', JSON.stringify(results));
+    log.info({ sent: results.filter(r => r.sent).length, total: results.length }, 'Weekly summary done');
     return NextResponse.json({ success: true, results, timestamp: now.toISOString() });
 }
