@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { createServiceClient } from '@/lib/supabase/service';
 import { sendPushToUser } from '@/lib/push/sendPush';
+import { moduleLogger } from '@/lib/logger';
+
+const log = moduleLogger('cron:proposal-followup');
 
 // Proteger con secret — llamado por Vercel Cron o pg_cron via HTTP
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -43,7 +47,8 @@ export async function GET(request: Request) {
             .not('public_token', 'is', null); // Solo propuestas con link enviado
 
         if (error) {
-            console.error(`[FollowUp] Error querying ${days}d proposals:`, error.message);
+            Sentry.captureException(error, { extra: { days } });
+            log.error({ err: error, days }, 'Error querying followup proposals');
             results.push({ day: days, notified: 0, errors: 1 });
             continue;
         }
@@ -72,7 +77,7 @@ export async function GET(request: Request) {
 
                 notified++;
             } catch (e) {
-                console.warn(`[FollowUp] Push failed for proposal ${proposal.id}:`, e);
+                log.warn({ err: e, proposalId: proposal.id }, 'Push failed for proposal followup');
                 errors++;
             }
         }
@@ -80,6 +85,6 @@ export async function GET(request: Request) {
         results.push({ day: days, notified, errors });
     }
 
-    console.log('[FollowUp] Results:', JSON.stringify(results));
+    log.info({ results }, 'Proposal followup done');
     return NextResponse.json({ success: true, results, timestamp: now.toISOString() });
 }

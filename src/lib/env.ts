@@ -28,6 +28,11 @@ const envSchema = z.object({
     APP_ENCRYPTION_KEY: z.string().min(1).optional(),
     APP_ENCRYPTION_PEPPER: z.string().min(1).optional(),
 
+    // Sentry (optional — if not set, error tracking is disabled in dev)
+    SENTRY_DSN: z.string().url().optional(),
+    SENTRY_ORG: z.string().optional(),
+    SENTRY_PROJECT: z.string().optional(),
+
     // Node Environment
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 }).superRefine((data, ctx) => {
