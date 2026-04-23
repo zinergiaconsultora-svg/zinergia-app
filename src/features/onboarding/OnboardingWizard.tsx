@@ -77,7 +77,7 @@ function FloatingOrbs() {
 
 function StepDots({ total, current }: { total: number; current: number }) {
     return (
-        <div className="flex items-center gap-2 justify-center mb-8">
+        <div className="flex items-center gap-2 justify-center mb-8" role="progressbar" aria-valuenow={current + 1} aria-valuemin={1} aria-valuemax={total} aria-label={`Paso ${current + 1} de ${total}`}>
             {Array.from({ length: total }).map((_, i) => (
                 <motion.div
                     key={i}
@@ -181,7 +181,7 @@ function StepWelcome({ profile, onNext, onSkip }: {
 
             <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
                 <p className="text-[11px] font-bold text-indigo-400 uppercase tracking-[0.2em] mb-2">Bienvenido a Zinergia</p>
-                <h1 className="text-3xl font-black text-white mb-3 leading-tight">
+                <h1 id="onboarding-title" className="text-3xl font-black text-white mb-3 leading-tight">
                     Hola, {firstName} 👋
                 </h1>
                 <p className="text-slate-400 text-sm leading-relaxed max-w-xs mx-auto">
@@ -264,7 +264,7 @@ function StepProfile({ profile, onNext, onBack }: {
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="text-center">
-                <h2 className="text-xl font-black text-white">Tu perfil de agente</h2>
+                <h2 id="onboarding-title" className="text-xl font-black text-white">Tu perfil de agente</h2>
                 <p className="text-sm text-slate-400 mt-1">Así te verán tus clientes y tu equipo</p>
             </div>
 
@@ -388,7 +388,7 @@ function StepHowItWorks({ onNext, onBack }: { onNext: () => void; onBack: () => 
     return (
         <div className="space-y-5">
             <div className="text-center">
-                <h2 className="text-xl font-black text-white">Así funciona Zinergia</h2>
+                <h2 id="onboarding-title" className="text-xl font-black text-white">Así funciona Zinergia</h2>
                 <p className="text-sm text-slate-400 mt-1">3 pasos para cerrar una venta</p>
             </div>
 
@@ -549,7 +549,7 @@ function StepReady({ name, onDone, onNavigate }: {
                 <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-[0.2em] mb-2">
                     Configuración completada
                 </p>
-                <h2 className="text-3xl font-black text-white leading-tight">
+                <h2 id="onboarding-title" className="text-3xl font-black text-white leading-tight">
                     ¡Ya eres agente,<br />{firstName}!
                 </h2>
                 <p className="text-slate-400 text-sm mt-3 max-w-xs mx-auto leading-relaxed">
@@ -650,10 +650,14 @@ export function OnboardingWizard() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     className="absolute inset-0 bg-slate-950/88 backdrop-blur-md"
+                    aria-hidden="true"
                 />
 
                 {/* Card — bottom sheet on mobile, centered modal on sm+ */}
                 <motion.div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="onboarding-title"
                     initial={{ opacity: 0, y: 32, scale: 0.97 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ duration: 0.38, ease: [0.32, 0.72, 0, 1] }}
