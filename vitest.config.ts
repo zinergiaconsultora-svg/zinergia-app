@@ -7,7 +7,8 @@ export default defineConfig({
     test: {
         environment: 'jsdom',
         globals: true,
-        setupFiles: [], // We can add setup file later if needed
+        exclude: ['e2e/**', 'node_modules/**', '.next/**'],
+        setupFiles: [],
         alias: {
             '@': path.resolve(__dirname, './src'),
         },
