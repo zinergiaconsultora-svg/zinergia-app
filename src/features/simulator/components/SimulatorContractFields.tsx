@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Zap, User, Building2, Hash, Calendar, MapPin, Activity, Link2, UserCheck,
+    ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -45,7 +46,12 @@ const SimulatorContractFields: React.FC<SimulatorContractFieldsProps> = ({
     isCupsValid, energyHistory, totalEnergyNow,
     cupsClient, cupsClientDismissed, onDismissCupsClient,
     showTariffOverride, onToggleTariffOverride,
-}) => (
+}) => {
+    const hasSecondaryIssues = isLowConfidence('supply_address') || isLowConfidence('invoice_date')
+        || isLowConfidence('invoice_number') || (data.client_name && data.client_name.length < 5);
+    const [secondaryExpanded, setSecondaryExpanded] = useState(hasSecondaryIssues);
+
+    return (
     <div className="space-y-5">
 
         {/* Tariff card */}
@@ -108,49 +114,10 @@ const SimulatorContractFields: React.FC<SimulatorContractFieldsProps> = ({
             </AnimatePresence>
         </div>
 
-        {/* Contract data */}
+        {/* Critical fields — always visible */}
         <section>
-            <SectionLabel color="bg-emerald-500" label="Datos del Contrato" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-2xl bg-white/70 border border-slate-100 shadow-sm">
-                <Input label="Titular / Cliente"
-                    labelBadge={<><ConfidencePill value={getConfidence('client_name')} /><CorrectionBadge stat={getFieldStat('client_name')} /></>}
-                    icon={<User size={15} />}
-                    value={data.client_name ?? ''} onChange={e => onUpdate('client_name', e.target.value)}
-                    placeholder="Nombre completo"
-                    warning={lowConfWarn('client_name') ?? (data.client_name && data.client_name.length < 5 ? 'Nombre muy corto' : undefined)}
-                    action={pdfUrl && data.client_name ? <LocateButton onClick={() => locate(data.client_name)} lowConfidence={isLowConfidence('client_name')} /> : undefined}
-                />
-                <Input label="CIF / DNI"
-                    labelBadge={<><ConfidencePill value={getConfidence('dni_cif')} /><CorrectionBadge stat={getFieldStat('dni_cif')} /></>}
-                    icon={<Hash size={15} />}
-                    value={data.dni_cif ?? ''} onChange={e => onUpdate('dni_cif', e.target.value)}
-                    placeholder="Identificación"
-                    warning={lowConfWarn('dni_cif')}
-                    action={pdfUrl && data.dni_cif ? <LocateButton onClick={() => locate(data.dni_cif)} lowConfidence={isLowConfidence('dni_cif')} /> : undefined}
-                />
-                <Input label="Comercializadora"
-                    labelBadge={<><ConfidencePill value={getConfidence('company_name')} /><CorrectionBadge stat={getFieldStat('company_name')} /></>}
-                    icon={<Building2 size={15} />}
-                    value={data.company_name ?? ''} onChange={e => onUpdate('company_name', e.target.value)}
-                    placeholder="Endesa, Iberdrola…"
-                    warning={lowConfWarn('company_name')}
-                    action={pdfUrl && data.company_name ? <LocateButton onClick={() => locate(data.company_name)} lowConfidence={isLowConfidence('company_name')} /> : undefined}
-                />
-                <Input label="Nº Factura"
-                    labelBadge={<ConfidencePill value={getConfidence('invoice_number')} />}
-                    icon={<Hash size={15} />}
-                    value={data.invoice_number ?? ''} onChange={e => onUpdate('invoice_number', e.target.value)}
-                    warning={lowConfWarn('invoice_number') ?? (!data.invoice_number ? 'No encontrado' : undefined)}
-                    action={pdfUrl && data.invoice_number ? <LocateButton onClick={() => locate(data.invoice_number)} lowConfidence={isLowConfidence('invoice_number')} /> : undefined}
-                />
-            </div>
-        </section>
-
-        {/* Supply point */}
-        <section>
-            <SectionLabel color="bg-blue-500" label="Punto de Suministro" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-2xl bg-white/70 border border-slate-100 shadow-sm">
-
+            <SectionLabel color="bg-emerald-500" label="Datos Críticos" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-2xl bg-white/70 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800 shadow-sm">
                 {/* CUPS client link banner */}
                 <AnimatePresence>
                     {cupsClient && !cupsClientDismissed && (
@@ -160,11 +127,11 @@ const SimulatorContractFields: React.FC<SimulatorContractFieldsProps> = ({
                             exit={{ opacity: 0, height: 0 }}
                             className="sm:col-span-2 overflow-hidden"
                         >
-                            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-indigo-50 border border-indigo-200 mb-1">
+                            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 mb-1">
                                 <UserCheck size={14} className="text-indigo-500 shrink-0" />
-                                <p className="text-xs text-indigo-700 flex-1">
+                                <p className="text-xs text-indigo-700 dark:text-indigo-300 flex-1">
                                     <span className="font-bold">{cupsClient.name}</span>
-                                    <span className="text-indigo-500 ml-1.5">— cliente en tu CRM</span>
+                                    <span className="text-indigo-500 dark:text-indigo-400 ml-1.5">— cliente en tu CRM</span>
                                 </p>
                                 <button
                                     type="button"
@@ -183,7 +150,7 @@ const SimulatorContractFields: React.FC<SimulatorContractFieldsProps> = ({
                     )}
                 </AnimatePresence>
 
-                <div className="sm:col-span-2">
+                <div className="sm:col-span-2" data-field-status={isLowConfidence('cups') ? 'warning' : isCupsValid ? undefined : 'error'}>
                     <Input label="CUPS"
                         labelBadge={<ConfidencePill value={getConfidence('cups')} />}
                         icon={<Activity size={15} />}
@@ -193,7 +160,6 @@ const SimulatorContractFields: React.FC<SimulatorContractFieldsProps> = ({
                         onChange={e => onUpdate('cups', e.target.value.toUpperCase())}
                         action={pdfUrl && data.cups ? <LocateButton onClick={() => locate(data.cups)} lowConfidence={isLowConfidence('cups')} /> : undefined}
                     />
-                    {/* Sparkline histórico de consumo */}
                     <AnimatePresence>
                         {energyHistory.length >= 2 && (
                             <motion.div
@@ -207,27 +173,103 @@ const SimulatorContractFields: React.FC<SimulatorContractFieldsProps> = ({
                         )}
                     </AnimatePresence>
                 </div>
-                <Input label="Dirección"
-                    labelBadge={<ConfidencePill value={getConfidence('supply_address')} />}
-                    icon={<MapPin size={15} />}
-                    value={data.supply_address ?? ''} onChange={e => onUpdate('supply_address', e.target.value)}
-                    warning={lowConfWarn('supply_address') ?? (data.supply_address && data.supply_address.length < 10 ? 'Parece incompleta' : undefined)}
-                    action={pdfUrl && data.supply_address ? <LocateButton onClick={() => locate(data.supply_address)} lowConfidence={isLowConfidence('supply_address')} /> : undefined}
-                />
-                <div className="grid grid-cols-2 gap-3">
-                    <Input label="Días" type="number" icon={<Calendar size={15} />}
-                        value={data.period_days} onChange={e => onUpdate('period_days', parseInt(e.target.value) || 30)} />
-                    <Input label="Fecha"
-                        labelBadge={<ConfidencePill value={getConfidence('invoice_date')} />}
-                        icon={<Calendar size={15} />}
-                        value={data.invoice_date ?? ''} onChange={e => onUpdate('invoice_date', e.target.value)}
-                        warning={lowConfWarn('invoice_date')}
-                        action={pdfUrl && data.invoice_date ? <LocateButton onClick={() => locate(data.invoice_date)} lowConfidence={isLowConfidence('invoice_date')} /> : undefined}
+                <div data-field-status={isLowConfidence('company_name') ? 'warning' : undefined}>
+                    <Input label="Comercializadora"
+                        labelBadge={<><ConfidencePill value={getConfidence('company_name')} /><CorrectionBadge stat={getFieldStat('company_name')} /></>}
+                        icon={<Building2 size={15} />}
+                        value={data.company_name ?? ''} onChange={e => onUpdate('company_name', e.target.value)}
+                        placeholder="Endesa, Iberdrola…"
+                        warning={lowConfWarn('company_name')}
+                        action={pdfUrl && data.company_name ? <LocateButton onClick={() => locate(data.company_name)} lowConfidence={isLowConfidence('company_name')} /> : undefined}
+                    />
+                </div>
+                <div data-field-status={isLowConfidence('dni_cif') ? 'warning' : undefined}>
+                    <Input label="CIF / DNI"
+                        labelBadge={<><ConfidencePill value={getConfidence('dni_cif')} /><CorrectionBadge stat={getFieldStat('dni_cif')} /></>}
+                        icon={<Hash size={15} />}
+                        value={data.dni_cif ?? ''} onChange={e => onUpdate('dni_cif', e.target.value)}
+                        placeholder="Identificación"
+                        warning={lowConfWarn('dni_cif')}
+                        action={pdfUrl && data.dni_cif ? <LocateButton onClick={() => locate(data.dni_cif)} lowConfidence={isLowConfidence('dni_cif')} /> : undefined}
                     />
                 </div>
             </div>
         </section>
+
+        {/* Secondary fields — collapsible */}
+        <section>
+            <button type="button" onClick={() => setSecondaryExpanded(v => !v)}
+                className="flex items-center gap-2 mb-2 px-1 w-full text-left group"
+            >
+                <div className="w-1 h-4 bg-slate-300 dark:bg-slate-600 rounded-full" />
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex-1">
+                    Datos Secundarios
+                    {!secondaryExpanded && (
+                        <span className="font-normal text-slate-300 dark:text-slate-600 ml-2 normal-case tracking-normal">
+                            Titular · Dirección · Fecha · Nº Factura
+                        </span>
+                    )}
+                </h3>
+                <ChevronDown size={13} className={`text-slate-400 transition-transform ${secondaryExpanded ? 'rotate-180' : ''}`} />
+            </button>
+            <AnimatePresence>
+                {secondaryExpanded && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                    >
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-2xl bg-white/50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-800">
+                            <div data-field-status={isLowConfidence('client_name') ? 'warning' : undefined}>
+                                <Input label="Titular / Cliente"
+                                    labelBadge={<><ConfidencePill value={getConfidence('client_name')} /><CorrectionBadge stat={getFieldStat('client_name')} /></>}
+                                    icon={<User size={15} />}
+                                    value={data.client_name ?? ''} onChange={e => onUpdate('client_name', e.target.value)}
+                                    placeholder="Nombre completo"
+                                    warning={lowConfWarn('client_name') ?? (data.client_name && data.client_name.length < 5 ? 'Nombre muy corto' : undefined)}
+                                    action={pdfUrl && data.client_name ? <LocateButton onClick={() => locate(data.client_name)} lowConfidence={isLowConfidence('client_name')} /> : undefined}
+                                />
+                            </div>
+                            <div data-field-status={isLowConfidence('invoice_number') ? 'warning' : undefined}>
+                                <Input label="Nº Factura"
+                                    labelBadge={<ConfidencePill value={getConfidence('invoice_number')} />}
+                                    icon={<Hash size={15} />}
+                                    value={data.invoice_number ?? ''} onChange={e => onUpdate('invoice_number', e.target.value)}
+                                    warning={lowConfWarn('invoice_number') ?? (!data.invoice_number ? 'No encontrado' : undefined)}
+                                    action={pdfUrl && data.invoice_number ? <LocateButton onClick={() => locate(data.invoice_number)} lowConfidence={isLowConfidence('invoice_number')} /> : undefined}
+                                />
+                            </div>
+                            <div data-field-status={isLowConfidence('supply_address') ? 'warning' : undefined}>
+                                <Input label="Dirección"
+                                    labelBadge={<ConfidencePill value={getConfidence('supply_address')} />}
+                                    icon={<MapPin size={15} />}
+                                    value={data.supply_address ?? ''} onChange={e => onUpdate('supply_address', e.target.value)}
+                                    warning={lowConfWarn('supply_address') ?? (data.supply_address && data.supply_address.length < 10 ? 'Parece incompleta' : undefined)}
+                                    action={pdfUrl && data.supply_address ? <LocateButton onClick={() => locate(data.supply_address)} lowConfidence={isLowConfidence('supply_address')} /> : undefined}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <Input label="Días" type="number" icon={<Calendar size={15} />}
+                                    value={data.period_days} onChange={e => onUpdate('period_days', parseInt(e.target.value) || 30)} />
+                                <div data-field-status={isLowConfidence('invoice_date') ? 'warning' : undefined}>
+                                    <Input label="Fecha"
+                                        labelBadge={<ConfidencePill value={getConfidence('invoice_date')} />}
+                                        icon={<Calendar size={15} />}
+                                        value={data.invoice_date ?? ''} onChange={e => onUpdate('invoice_date', e.target.value)}
+                                        warning={lowConfWarn('invoice_date')}
+                                        action={pdfUrl && data.invoice_date ? <LocateButton onClick={() => locate(data.invoice_date)} lowConfidence={isLowConfidence('invoice_date')} /> : undefined}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </section>
     </div>
-);
+    );
+};
 
 export default SimulatorContractFields;

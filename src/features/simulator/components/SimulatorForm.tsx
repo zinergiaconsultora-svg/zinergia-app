@@ -14,6 +14,9 @@ import SimulatorAlertPanel, { AlertItem } from './SimulatorAlertPanel';
 import SimulatorContractFields from './SimulatorContractFields';
 import SimulatorEnergyFields from './SimulatorEnergyFields';
 import SimulatorHeroValue from './SimulatorHeroValue';
+import PreviousInvoiceDiff from './PreviousInvoiceDiff';
+import { KeyboardHelpOverlay, KeyboardHint } from './KeyboardHelpOverlay';
+import { useKeyboardNav } from '../hooks/useKeyboardNav';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -511,6 +514,15 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         : powerType === '3.0' ? 'Empresa 3.0TD'
         : 'Alta Tensión 3.1TD';
 
+    // ── Keyboard navigation ──────────────────────────────────────────────────
+    const { showHelp, setShowHelp } = useKeyboardNav({
+        onConfirm: handleConfirm,
+        onCompare: onCompare,
+        onTogglePdf: () => setShowPdf(v => !v),
+        canConfirm: !isConfirming && !ocrDataConfirmed && !localConfirmed,
+        canCompare: hasEnergyValues && hasPowerValues && !isAnalyzing,
+    });
+
     // ── OCR Score ring ────────────────────────────────────────────────────────
     const scoreColor = globalConfidence === null ? 'text-slate-400'
         : globalConfidence >= 0.9 ? 'text-emerald-500'
@@ -574,6 +586,19 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                 onToggle={() => setAlertsExpanded(v => !v)}
             />
 
+            {/* ── Previous invoice diff ────────────────────────────────── */}
+            {prevInvoice && totalEnergyNow > 0 && (
+                <div className="mb-6">
+                    <PreviousInvoiceDiff
+                        prevEnergy={prevInvoice.totalEnergyKwh}
+                        currentEnergy={totalEnergyNow}
+                        prevAmount={prevInvoice.totalAmountEur}
+                        currentAmount={data.total_amount ?? null}
+                        prevDate={prevInvoice.invoiceDate}
+                    />
+                </div>
+            )}
+
             {/* ── Main grid ───────────────────────────────────────────────── */}
             <div className={`grid grid-cols-1 gap-6 ${showPdf && pdfUrl ? 'xl:grid-cols-[1fr_1fr]' : 'lg:grid-cols-[1fr_340px]'}`}>
 
@@ -632,6 +657,9 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                     />
                 </div>
             </div>
+
+            <KeyboardHelpOverlay show={showHelp} onClose={() => setShowHelp(false)} />
+            <KeyboardHint />
         </motion.div>
     );
 };
