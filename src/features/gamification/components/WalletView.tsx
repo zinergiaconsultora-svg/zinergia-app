@@ -24,6 +24,7 @@ import { formatCurrency, formatDate } from '@/lib/utils/format';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { clearCommissionAction, payCommissionAction } from '@/app/actions/commissions';
 import { Commission } from '@/types/crm';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { exportCommissionsToCSV } from '@/lib/utils/exportCsv';
 
 interface WalletViewProps {
@@ -318,10 +319,13 @@ export default function WalletView({ canManage = false, allCommissions: initialA
 
                             <div className="divide-y divide-slate-50">
                                 {filteredAdmin.length === 0 ? (
-                                    <div className="p-8 text-center text-slate-400 text-sm flex flex-col items-center gap-2">
-                                        <Users size={32} className="opacity-30" />
-                                        No hay comisiones en este estado.
-                                    </div>
+                                    <EmptyState
+                                        icon={Users}
+                                        tone="slate"
+                                        compact
+                                        title="Sin comisiones en este estado"
+                                        description="Cambia de filtro o vuelve cuando se registren nuevos cobros."
+                                    />
                                 ) : filteredAdmin.map(comm => (
                                     <div key={comm.id} className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors gap-4">
                                         <div className="flex items-center gap-3 min-w-0">
@@ -397,9 +401,13 @@ export default function WalletView({ canManage = false, allCommissions: initialA
 
                 <div className="divide-y divide-slate-50">
                     {commissions.length === 0 ? (
-                        <div className="p-12 text-center text-slate-400 text-sm">
-                            No hay movimientos registrados aún.
-                        </div>
+                        <EmptyState
+                            icon={Wallet}
+                            tone="emerald"
+                            title="Aún no hay movimientos"
+                            description="Cuando cierres tu primera comisión, los movimientos aparecerán aquí en tiempo real."
+                            action={{ label: 'Ir al simulador', href: '/dashboard/simulator', icon: TrendingUp }}
+                        />
                     ) : (
                         commissions.map((comm) => (
                             <div key={comm.id} className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors">

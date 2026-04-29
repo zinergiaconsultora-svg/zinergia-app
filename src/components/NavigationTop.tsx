@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { ZinergiaLogo } from './ui/ZinergiaLogo';
 import { NotificationBell } from './ui/NotificationBell';
+import { ThemeToggle } from './ui/ThemeToggle';
 import { haptics } from "@/lib/utils/haptics";
 import { motion, AnimatePresence } from 'framer-motion';
 import { crmService } from '@/services/crmService';
@@ -94,6 +95,7 @@ export const NavigationTop = () => {
                     <ZinergiaLogo className="w-24 mt-1" />
                 </Link>
                 <div className="flex items-center gap-1 mt-1">
+                    <ThemeToggle />
                     <NotificationBell />
                     <button
                         type="button"
@@ -183,6 +185,9 @@ export const NavigationTop = () => {
                                 />
                             </motion.div>
                         </div>
+
+                        {/* Theme Toggle */}
+                        <ThemeToggle />
 
                         {/* Notification Bell */}
                         <NotificationBell />

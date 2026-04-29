@@ -13,6 +13,7 @@ import {
     AlertTriangle,
 } from 'lucide-react';
 import { useState } from 'react';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useBillingHistory } from '../hooks/useBillingHistory';
 import { formatCurrency } from '@/lib/utils/format';
 
@@ -122,10 +123,12 @@ export default function BillingHistoryPanel({ franchiseId, canManage }: BillingH
                     {/* Cycles table */}
                     <div className="divide-y divide-slate-50">
                         {cycles.length === 0 ? (
-                            <div className="p-12 text-center text-slate-400 text-sm flex flex-col items-center gap-2">
-                                <FileText size={32} className="opacity-30" />
-                                No hay liquidaciones registradas aún.
-                            </div>
+                            <EmptyState
+                                icon={FileText}
+                                tone="amber"
+                                title="Sin liquidaciones todavía"
+                                description="Cuando cierres el primer ciclo de cobros, las liquidaciones aparecerán aquí con su estado y desglose."
+                            />
                         ) : (
                             cycles.map(cycle => (
                                 <div
