@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { ScrollText } from 'lucide-react';
 import { getAuditLogAction } from '@/app/actions/auditLog';
 import type { AuditResult } from '@/app/actions/auditLog';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface Props {
     initialData: AuditResult;
@@ -98,9 +100,12 @@ export default function AuditPanel({ initialData }: Props) {
             {/* Table */}
             <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700/50">
                 {data.entries.length === 0 ? (
-                    <div className="p-10 text-center text-sm text-slate-400 dark:text-slate-500">
-                        No hay entradas de auditoría todavía.
-                    </div>
+                    <EmptyState
+                        icon={ScrollText}
+                        tone="indigo"
+                        title="Sin entradas de auditoría"
+                        description="Aún no se ha registrado ninguna acción. Cuando ocurran cambios sensibles, aparecerán aquí con autor, fecha y detalle."
+                    />
                 ) : (
                     <table className="w-full text-sm">
                         <thead>

@@ -4,26 +4,32 @@ import React, { useEffect, useState } from 'react';
 import { Users, TrendingUp, Target, Wallet, ArrowUpRight, Zap, Building2, BarChart3, CheckCircle2, Clock } from 'lucide-react';
 import { getFranchiseOverviewAction, FranchiseOverview, AgentStat } from '@/app/actions/franchise';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
+import { Card } from '@/components/ui/Card';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { AnimatedSparkline } from '@/components/ui/AnimatedSparkline';
 
 const FMT_EUR = (n: number) =>
     new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
 
-function KpiCard({ icon, label, value, sub, color }: {
+function KpiCard({ icon, label, value, sub, color, sparklineColor, hero = false }: {
     icon: React.ReactNode;
     label: string;
     value: string | number;
     sub?: string;
     color: string;
+    sparklineColor?: string;
+    hero?: boolean;
 }) {
     return (
-        <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl p-5 shadow-sm">
+        <Card variant={hero ? 'hero' : 'elevated'} interactive className="p-5">
             <div className={`flex items-center gap-2 mb-3 ${color}`}>
                 {icon}
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</span>
             </div>
             <div className="text-3xl font-black text-slate-900 dark:text-white leading-none">{value}</div>
             {sub && <div className="text-xs text-slate-400 mt-1">{sub}</div>}
-        </div>
+            {sparklineColor && <AnimatedSparkline color={sparklineColor} delay={0.3} className="mt-3" />}
+        </Card>
     );
 }
 
@@ -161,6 +167,7 @@ export default function FranchiseDashboard() {
                         label="Clientes"
                         value={totals.clients}
                         color="text-indigo-500"
+                        sparklineColor="#6366f1"
                     />
                     <KpiCard
                         icon={<Target size={16} />}
@@ -168,6 +175,8 @@ export default function FranchiseDashboard() {
                         value={FMT_EUR(totals.pipeline_value)}
                         sub="factura/mes en proceso"
                         color="text-violet-500"
+                        sparklineColor="#8b5cf6"
+                        hero
                     />
                     <KpiCard
                         icon={<BarChart3 size={16} />}
@@ -181,6 +190,7 @@ export default function FranchiseDashboard() {
                         value={`${conversionPct}%`}
                         sub={`${totals.accepted} firmadas`}
                         color="text-emerald-500"
+                        sparklineColor="#10b981"
                     />
                     <KpiCard
                         icon={<Wallet size={16} />}
@@ -201,10 +211,13 @@ export default function FranchiseDashboard() {
                     </div>
 
                     {agents.length === 0 ? (
-                        <div className="py-16 text-center text-slate-400">
-                            <Users size={32} className="mx-auto mb-3 opacity-30" />
-                            <p className="text-sm">Aún no hay agentes en esta franquicia</p>
-                        </div>
+                        <EmptyState
+                            icon={Users}
+                            tone="indigo"
+                            title="Sin agentes en la franquicia"
+                            description="Cuando inviten agentes a unirse, aparecerán aquí con su rendimiento y conversión en tiempo real."
+                            action={{ label: 'Invitar a un agente', href: '/dashboard/network', icon: ArrowUpRight }}
+                        />
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-xs">

@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { Clock, Trash2 } from 'lucide-react';
 import { eraseClientAction, triggerPurgeAction } from '@/app/actions/rgpd';
 import type { RgpdStats } from '@/app/actions/rgpd';
+import { EmptyState as SharedEmptyState } from '@/components/ui/EmptyState';
 
 interface Props {
     stats: RgpdStats;
@@ -84,7 +86,13 @@ export default function RgpdPanel({ stats }: Props) {
                     Clientes próximos a expirar (30 días)
                 </h2>
                 {stats.expiringSoon.length === 0 ? (
-                    <EmptyState text="Ningún cliente expira en los próximos 30 días." />
+                    <SharedEmptyState
+                        icon={Clock}
+                        tone="emerald"
+                        compact
+                        title="Sin clientes próximos a expirar"
+                        description="Ningún cliente caduca en los próximos 30 días."
+                    />
                 ) : (
                     <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700/50">
                         <table className="w-full text-sm">
@@ -131,7 +139,13 @@ export default function RgpdPanel({ stats }: Props) {
                     Últimas eliminaciones (audit log)
                 </h2>
                 {stats.recentDeletions.length === 0 ? (
-                    <EmptyState text="No hay eliminaciones registradas aún." />
+                    <SharedEmptyState
+                        icon={Trash2}
+                        tone="slate"
+                        compact
+                        title="Sin eliminaciones registradas"
+                        description="Las solicitudes de derecho al olvido procesadas aparecerán aquí."
+                    />
                 ) : (
                     <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700/50">
                         <table className="w-full text-sm">
@@ -224,10 +238,3 @@ function ReasonBadge({ reason }: { reason: string }) {
     return <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">Retención 12 meses</span>;
 }
 
-function EmptyState({ text }: { text: string }) {
-    return (
-        <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700/50 p-8 text-center text-sm text-slate-400 dark:text-slate-500">
-            {text}
-        </div>
-    );
-}

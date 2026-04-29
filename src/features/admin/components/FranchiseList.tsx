@@ -15,6 +15,7 @@ import {
     X,
     Check,
 } from 'lucide-react';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { FranchiseWithAgents, AgentProfile } from '@/app/actions/admin';
 import {
     toggleFranchiseActive,
@@ -155,10 +156,12 @@ export default function FranchiseList({ franchises, unassignedAgents }: Franchis
             )}
 
             {franchises.length === 0 ? (
-                <div className="text-center py-12">
-                    <Building2 className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto mb-3" />
-                    <p className="text-sm text-slate-500 dark:text-slate-400">No hay franquicias registradas aún.</p>
-                </div>
+                <EmptyState
+                    icon={Building2}
+                    tone="indigo"
+                    title="Sin franquicias registradas"
+                    description="Aún no hay franquicias en la red. Usa el formulario superior para invitar a la primera y empezar a construir la estructura comercial."
+                />
             ) : (
                 franchises.map((franchise) => (
                     <div
