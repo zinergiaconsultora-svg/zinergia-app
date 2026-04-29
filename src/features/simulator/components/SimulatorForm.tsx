@@ -13,6 +13,7 @@ import SimulatorTopBar from './SimulatorTopBar';
 import SimulatorAlertPanel, { AlertItem } from './SimulatorAlertPanel';
 import SimulatorContractFields from './SimulatorContractFields';
 import SimulatorEnergyFields from './SimulatorEnergyFields';
+import SimulatorHeroValue from './SimulatorHeroValue';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -240,16 +241,37 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         return Object.values(conf).filter((v): v is number => typeof v === 'number' && v < 0.7).length;
     }, [data]);
 
-    // ── Validaciones cruzadas ─────────────────────────────────────────────────
-    const crossFieldIssues = useMemo(() => {
-        const issues: Array<{ severity: 'error' | 'warning'; message: string }> = [];
+    // ── Validaciones cruzadas (smart business rules) ───────────────────────────
+    interface CrossFieldIssue {
+        severity: 'error' | 'warning';
+        message: string;
+        suggestion?: { label: string; field: keyof InvoiceData; value: InvoiceData[keyof InvoiceData] };
+    }
+    const crossFieldIssues = useMemo((): CrossFieldIssue[] => {
+        const issues: CrossFieldIssue[] = [];
+
+        // CIF/NIF validation with auto-fix suggestion
         if (data.dni_cif) {
             const c = data.dni_cif.trim().toUpperCase();
             const ok = /^[0-9]{8}[TRWAGMYFPDXBNJZSQVHLCKE]$/.test(c)
                 || /^[XYZ][0-9]{7}[TRWAGMYFPDXBNJZSQVHLCKE]$/.test(c)
                 || /^[ABCDEFGHJNPQRSUVW][0-9]{7}[0-9A-J]$/.test(c);
-            if (!ok) issues.push({ severity: 'warning', message: `"${c}" no coincide con NIF, NIE ni CIF español` });
+            if (!ok) {
+                const stripped = c.replace(/[-.\s]/g, '');
+                const fixedOk = /^[0-9]{8}[TRWAGMYFPDXBNJZSQVHLCKE]$/.test(stripped)
+                    || /^[XYZ][0-9]{7}[TRWAGMYFPDXBNJZSQVHLCKE]$/.test(stripped)
+                    || /^[ABCDEFGHJNPQRSUVW][0-9]{7}[0-9A-J]$/.test(stripped);
+                issues.push({
+                    severity: 'warning',
+                    message: `"${c}" no coincide con NIF, NIE ni CIF español`,
+                    suggestion: fixedOk && stripped !== c
+                        ? { label: `Aplicar ${stripped}`, field: 'dni_cif', value: stripped }
+                        : undefined,
+                });
+            }
         }
+
+        // CUPS validation
         if (data.cups) {
             if (!data.cups.startsWith('ES')) {
                 issues.push({ severity: 'error', message: 'CUPS debe comenzar con "ES" — probable error OCR' });
@@ -257,18 +279,66 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                 issues.push({ severity: 'warning', message: 'Estructura de CUPS inusual — verifica los caracteres finales' });
             }
         }
+
+        // Tariff ↔ P4-P6 coherence
         const hasP456Energy = [4, 5, 6].some(p => (data[`energy_p${p}` as keyof InvoiceData] as number) > 0);
         const hasP456Power  = [4, 5, 6].some(p => (data[`power_p${p}` as keyof InvoiceData] as number) > 0);
         if (powerType === '2.0' && (hasP456Energy || hasP456Power)) {
             issues.push({ severity: 'warning', message: 'Tarifa 2.0TD con valores en P4-P6 — posible error OCR' });
         }
+
+        // Period length
         if (data.period_days > 0 && data.period_days < 20) {
             issues.push({ severity: 'warning', message: `Período de ${data.period_days} días es inusualmente corto` });
         } else if (data.period_days > 45) {
-            issues.push({ severity: 'warning', message: `Período de ${data.period_days} días — ¿factura bimestral?` });
+            issues.push({ severity: 'warning', message: `Período de ${data.period_days} días — ¿factura bimestral? Verifica que el consumo no esté duplicado` });
         }
+
+        // Power ↔ consumption coherence
+        const totalPower = [1, 2, 3].reduce((s, p) => s + ((data[`power_p${p}` as keyof InvoiceData] as number) || 0), 0);
+        const avgPower = totalPower / 3;
+        const annualizedEnergy = data.period_days > 0 ? (totalEnergyNow / data.period_days) * 365 : 0;
+        if (avgPower > 0 && annualizedEnergy > 0) {
+            const hoursAtFull = annualizedEnergy / avgPower;
+            if (hoursAtFull > 7000) {
+                issues.push({
+                    severity: 'warning',
+                    message: `Potencia ${avgPower.toFixed(1)} kW con ~${Math.round(annualizedEnergy)} kWh/año — consumo muy alto para esta potencia. ¿Potencia real mayor?`,
+                });
+            }
+        }
+
+        // Tariff ↔ power coherence (2.0TD should be ≤15 kW)
+        const maxPower = Math.max(
+            ...([1, 2, 3, 4, 5, 6].map(p => (data[`power_p${p}` as keyof InvoiceData] as number) || 0))
+        );
+        if (powerType === '2.0' && maxPower > 15) {
+            issues.push({
+                severity: 'warning',
+                message: `Potencia máxima ${maxPower} kW — debería ser tarifa 3.0TD (límite 2.0TD es 15 kW)`,
+            });
+        }
+        if (powerType === '3.0' && maxPower <= 15 && maxPower > 0) {
+            issues.push({
+                severity: 'warning',
+                message: `Potencia ≤15 kW en tarifa 3.0TD — podría ser más barata como 2.0TD`,
+            });
+        }
+
+        // Consumption jump vs previous invoice
+        if (prevInvoice && totalEnergyNow > 0 && prevInvoice.totalEnergyKwh > 0) {
+            const delta = totalEnergyNow - prevInvoice.totalEnergyKwh;
+            const pct = Math.abs(delta / prevInvoice.totalEnergyKwh) * 100;
+            if (pct > 40) {
+                issues.push({
+                    severity: 'warning',
+                    message: `Consumo ${delta > 0 ? 'subió' : 'bajó'} un ${Math.round(pct)}% vs factura anterior — verifica datos OCR o cambio real`,
+                });
+            }
+        }
+
         return issues;
-    }, [data, powerType]);
+    }, [data, powerType, totalEnergyNow, prevInvoice]);
 
     // ── Periodos visibles ─────────────────────────────────────────────────────
     const visibleEnergyPeriods = useMemo(() =>
@@ -352,7 +422,21 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         }
 
         for (const issue of crossFieldIssues) {
-            list.push({ type: issue.severity === 'error' ? 'error' : 'warning', message: issue.message });
+            list.push({
+                type: issue.severity === 'error' ? 'error' : 'warning',
+                message: issue.message,
+                action: issue.suggestion ? (
+                    <button type="button"
+                        onClick={() => {
+                            onUpdate(issue.suggestion!.field, issue.suggestion!.value);
+                            toast.success('Corrección aplicada');
+                        }}
+                        className="shrink-0 px-2.5 py-1 rounded-lg bg-amber-600 text-white text-[10px] font-bold hover:bg-amber-700 transition-colors"
+                    >
+                        {issue.suggestion.label}
+                    </button>
+                ) : undefined,
+            });
         }
 
         return list;
@@ -378,6 +462,54 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
             }))
             .sort((a, b) => a.score - b.score);
     }, [data]);
+
+    // ── Validation summary for Hero ─────────────────────────────────────────
+    const validationSummary = useMemo(() => {
+        const CRITICAL_FIELDS = ['cups', 'power_p1', 'power_p2', 'energy_p1', 'energy_p2', 'company_name', 'tariff_name'];
+        const ALL_FIELDS = ['cups', 'client_name', 'dni_cif', 'company_name', 'invoice_number',
+            'tariff_name', 'supply_address', 'invoice_date',
+            'power_p1', 'power_p2', 'power_p3', 'energy_p1', 'energy_p2', 'energy_p3'];
+        const conf = (data as unknown as Record<string, unknown>)._confidence as Record<string, number> | undefined;
+        let green = 0, yellow = 0, red = 0;
+        for (const f of ALL_FIELDS) {
+            const c = conf?.[f];
+            const isCritical = CRITICAL_FIELDS.includes(f);
+            if (c === undefined || c === null) {
+                if (data[f as keyof InvoiceData]) green++;
+                else if (isCritical) red++;
+                else yellow++;
+            } else if (c >= 0.9) green++;
+            else if (c >= 0.7) yellow++;
+            else red++;
+        }
+        const errorCount = crossFieldIssues.filter(i => i.severity === 'error').length;
+        return {
+            totalFields: ALL_FIELDS.length,
+            greenFields: green,
+            yellowFields: yellow,
+            redFields: red + errorCount,
+            alertCount: allAlerts.length,
+            errorCount,
+        };
+    }, [data, crossFieldIssues, allAlerts]);
+
+    const estimatedReviewTime = useMemo(() => {
+        const base = 15;
+        const perYellow = 10;
+        const perRed = 20;
+        return base + (validationSummary.yellowFields * perYellow) + (validationSummary.redFields * perRed);
+    }, [validationSummary]);
+
+    const currentAnnualCostEstimate = useMemo(() => {
+        if (data.total_amount && data.period_days > 0) {
+            return (data.total_amount / data.period_days) * 365;
+        }
+        return null;
+    }, [data.total_amount, data.period_days]);
+
+    const tariffLabel = powerType === '2.0' ? 'Tensión Baja 2.0TD'
+        : powerType === '3.0' ? 'Empresa 3.0TD'
+        : 'Alta Tensión 3.1TD';
 
     // ── OCR Score ring ────────────────────────────────────────────────────────
     const scoreColor = globalConfidence === null ? 'text-slate-400'
@@ -419,6 +551,21 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                 localConfirmed={localConfirmed}
                 isConfirming={isConfirming}
                 onConfirm={handleConfirm}
+            />
+
+            <SimulatorHeroValue
+                clientName={data.client_name ?? null}
+                companyName={data.company_name ?? null}
+                tariffLabel={tariffLabel}
+                livePreview={livePreview}
+                livePreviewLoading={livePreviewLoading}
+                currentAnnualCost={currentAnnualCostEstimate}
+                validation={validationSummary}
+                ocrDataConfirmed={ocrDataConfirmed}
+                localConfirmed={localConfirmed}
+                isConfirming={isConfirming}
+                onConfirm={handleConfirm}
+                estimatedReviewTime={estimatedReviewTime}
             />
 
             <SimulatorAlertPanel
