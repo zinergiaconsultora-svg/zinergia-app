@@ -1,10 +1,45 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
+const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).host
+  : '*.supabase.co';
+
+const cspDirectives = [
+  "default-src 'self'",
+  // 'unsafe-inline' required by Next.js runtime + Sentry; 'unsafe-eval' only in dev
+  `script-src 'self' 'unsafe-inline' ${process.env.NODE_ENV === 'development' ? "'unsafe-eval'" : ''} https://*.sentry.io`,
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
+  `img-src 'self' data: blob: https://i.pravatar.cc https://images.unsplash.com https://randomuser.me https://unpkg.com https://*.tile.openstreetmap.org https://${supabaseHost}`,
+  `font-src 'self' https://fonts.gstatic.com`,
+  `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://*.sentry.io https://nominatim.openstreetmap.org`,
+  "frame-src 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "worker-src 'self' blob:",
+];
+
+const securityHeaders = [
+  { key: 'Content-Security-Policy', value: cspDirectives.join('; ') },
+  { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
+];
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
+
+  async headers() {
+    return [
+      { source: '/(.*)', headers: securityHeaders },
+    ];
+  },
 
   experimental: {
     serverActions: {
@@ -20,12 +55,9 @@ const nextConfig: NextConfig = {
     ],
   },
   reactCompiler: true,
+
   turbopack: {
     resolveExtensions: ['.tsx', '.ts', '.jsx', '.js'],
-  },
-
-  typescript: {
-    ignoreBuildErrors: true,
   },
 
   webpack: (config, { dev, isServer }) => {
