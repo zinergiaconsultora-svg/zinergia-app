@@ -42,6 +42,14 @@ const PipelinePieChart = dynamic(() =>
     { loading: () => <div className="h-full w-full bg-slate-100/20 animate-pulse rounded-full" /> }
 );
 const SmartAlertsStrip = dynamic(() => import('./SmartAlertsStrip'), { ssr: false });
+const DailyBriefing = dynamic(() => import('@/features/copilot/components/DailyBriefing'), {
+    ssr: false,
+    loading: () => <div className="h-64 bg-slate-100/50 dark:bg-slate-800/30 animate-pulse rounded-2xl" />,
+});
+const RenewalsPanel = dynamic(() => import('@/features/renewals/components/RenewalsPanel'), {
+    ssr: false,
+    loading: () => <div className="h-64 bg-slate-100/50 dark:bg-slate-800/30 animate-pulse rounded-2xl" />,
+});
 
 interface DashboardStats {
     user?: {
@@ -329,7 +337,17 @@ export default function DashboardView() {
                         </div>
                     </div>
 
-                    {/* ROW 2: Lists (Recent Activity 1/2 + OCR Jobs 1/2) */}
+                    {/* ROW 2: Copilot (Daily Briefing 1/2 + Renewals 1/2) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="bg-white/90 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/80 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-none p-5">
+                            <DailyBriefing />
+                        </div>
+                        <div className="bg-white/90 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/80 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-none p-5">
+                            <RenewalsPanel />
+                        </div>
+                    </div>
+
+                    {/* ROW 3: Lists (Recent Activity 1/2 + OCR Jobs 1/2) */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[320px]">
                         {/* Recent Activity */}
                         <div className="bg-white/90 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/80 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-none p-5 flex flex-col hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 overflow-hidden h-full">
