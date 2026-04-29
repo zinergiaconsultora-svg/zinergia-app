@@ -4,7 +4,7 @@ import { useState, useCallback, useRef } from 'react';
 import { InvoiceData } from '@/types/crm';
 import { createClient } from '@/lib/supabase/client';
 
-export type BatchItemStatus = 'queued' | 'uploading' | 'processing' | 'completed' | 'failed';
+export type BatchItemStatus = 'queued' | 'uploading' | 'processing' | 'completed' | 'failed' | 'duplicate';
 
 export interface BatchItem {
     localId: string;
@@ -13,6 +13,8 @@ export interface BatchItem {
     jobId: string | null;
     data: InvoiceData | null;
     error: string | null;
+    duplicateOf?: string;
+    fileHash?: string;
 }
 
 const MAX_CONCURRENT = 2;
@@ -25,6 +27,14 @@ function extractInvoiceData(raw: Record<string, unknown>): InvoiceData {
     const { _confidence: _c, ...rest } = raw;
     void _c;
     return rest as unknown as InvoiceData;
+}
+
+async function computeFileHash(file: File): Promise<string> {
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    return Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
 }
 
 export function useBatchSimulator() {
@@ -42,14 +52,31 @@ export function useBatchSimulator() {
         updateItem(item.localId, { status: 'uploading' });
 
         try {
+            const fileHash = await computeFileHash(item.file);
+            updateItem(item.localId, { fileHash });
+
+            const { checkDuplicateAction, saveFileHashAction } = await import('@/app/actions/capture');
+            const dedup = await checkDuplicateAction(fileHash);
+            if (dedup.isDuplicate) {
+                updateItem(item.localId, {
+                    status: 'duplicate',
+                    duplicateOf: dedup.existingClientName ?? dedup.existingJobId,
+                    error: dedup.matchType === 'file_hash'
+                        ? `Factura ya procesada${dedup.existingClientName ? ` (${dedup.existingClientName})` : ''}`
+                        : `Cliente ya existe${dedup.existingClientName ? `: ${dedup.existingClientName}` : ''}`,
+                });
+                return;
+            }
+
             const { analyzeDocumentAction } = await import('@/app/actions/ocr');
             const formData = new FormData();
             formData.append('file', item.file);
 
             const result = await analyzeDocumentAction(formData);
 
+            saveFileHashAction(result.jobId, fileHash).catch(() => {});
+
             if (result.isMock || result.data) {
-                // Synchronous path — data already available
                 updateItem(item.localId, {
                     status: 'completed',
                     jobId: result.jobId,
@@ -135,9 +162,10 @@ export function useBatchSimulator() {
         queueRef.current = queueRef.current.filter(it => it.localId !== localId);
     }, []);
 
+    const terminalStatuses: BatchItemStatus[] = ['completed', 'failed', 'duplicate'];
     const clearCompleted = useCallback(() => {
-        setItems(prev => prev.filter(it => it.status !== 'completed' && it.status !== 'failed'));
-        queueRef.current = queueRef.current.filter(it => it.status !== 'completed' && it.status !== 'failed');
+        setItems(prev => prev.filter(it => !terminalStatuses.includes(it.status)));
+        queueRef.current = queueRef.current.filter(it => !terminalStatuses.includes(it.status));
     }, []);
 
     const completedItems = items.filter(it => it.status === 'completed' && it.data);
