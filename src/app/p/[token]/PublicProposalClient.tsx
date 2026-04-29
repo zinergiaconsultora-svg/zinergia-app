@@ -60,16 +60,16 @@ export default function PublicProposalClient({ proposal, token }: Props) {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col items-center px-4 py-12">
+        <main className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col items-center px-4 py-12" aria-labelledby="proposal-heading">
 
             {/* Logo */}
-            <div className="mb-8 flex flex-col items-center gap-2">
+            <header className="mb-8 flex flex-col items-center gap-2">
                 <div className="flex items-center gap-2">
-                    <Zap className="text-indigo-400" size={22} />
+                    <Zap className="text-indigo-400" size={22} aria-hidden="true" />
                     <span className="text-white font-bold text-xl tracking-tight">Zinergia</span>
                 </div>
-                <span className="text-slate-400 text-xs">Propuesta de Ahorro Energético</span>
-            </div>
+                <h1 id="proposal-heading" className="text-slate-400 text-xs">Propuesta de Ahorro Energético</h1>
+            </header>
 
             <div className="w-full max-w-lg">
                 <AnimatePresence mode="wait">
@@ -215,16 +215,19 @@ export default function PublicProposalClient({ proposal, token }: Props) {
 
                             {/* Campo nombre firmante */}
                             <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
-                                <label className="block">
+                                <label className="block" htmlFor="signer-name">
                                     <span className="text-slate-400 text-xs uppercase tracking-wider flex items-center gap-1 mb-2">
-                                        <User size={11} />
+                                        <User size={11} aria-hidden="true" />
                                         Nombre completo del firmante
                                     </span>
                                     <input
+                                        id="signer-name"
                                         type="text"
                                         value={signedName}
                                         onChange={(e) => setSignedName(e.target.value)}
                                         placeholder="Ej: María García López"
+                                        autoComplete="name"
+                                        required
                                         className="w-full px-4 py-3 bg-white/10 border border-white/10 rounded-xl text-white placeholder-slate-500 text-sm outline-none focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-400/30 transition-all"
                                     />
                                 </label>
@@ -245,8 +248,8 @@ export default function PublicProposalClient({ proposal, token }: Props) {
 
                             {/* Error */}
                             {result && !result.success && (
-                                <div className="bg-red-900/30 border border-red-500/30 rounded-xl p-3 flex items-center gap-2">
-                                    <AlertCircle size={16} className="text-red-400 shrink-0" />
+                                <div role="alert" className="bg-red-900/30 border border-red-500/30 rounded-xl p-3 flex items-center gap-2">
+                                    <AlertCircle size={16} className="text-red-400 shrink-0" aria-hidden="true" />
                                     <p className="text-red-300 text-sm">{result.message}</p>
                                 </div>
                             )}
@@ -325,10 +328,10 @@ export default function PublicProposalClient({ proposal, token }: Props) {
             </div>
 
             {/* Footer */}
-            <div className="mt-10 text-center text-slate-600 text-xs space-y-1">
+            <footer className="mt-10 text-center text-slate-600 text-xs space-y-1">
                 <p>Zinergia · Comparador de Tarifas Eléctricas</p>
                 <p>Propuesta generada con tecnología IA · Datos basados en tu factura real</p>
-            </div>
-        </div>
+            </footer>
+        </main>
     );
 }
