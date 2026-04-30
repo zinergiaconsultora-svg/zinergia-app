@@ -698,7 +698,7 @@ export default function WalletView({ canManage = false, allCommissions: initialA
                                         <div className="flex flex-wrap items-center justify-end gap-3 shrink-0">
                                             <div className="text-right">
                                                 <p className="text-sm font-bold text-slate-900">{formatCurrency(comm.agent_commission)}</p>
-                                                <p className="text-xs text-slate-400">Franquicia: {formatCurrency(comm.franchise_commission ?? comm.franchise_profit ?? 0)}</p>
+                                                <p className="text-xs text-slate-400">Franquicia: {formatCurrency(comm.franchise_commission ?? 0)}</p>
                                             </div>
                                             {comm.status === 'pending' && (
                                                 <button type="button" onClick={() => handleClear(comm.id)} disabled={isPending} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50">Aprobar</button>
