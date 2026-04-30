@@ -160,3 +160,8 @@ BEGIN
     END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 7. Bridge alias column for franchise_commission (generated from franchise_profit)
+-- Introducing a generated column to expose the canonical name while keeping existing data
+ALTER TABLE network_commissions
+  ADD COLUMN IF NOT EXISTS franchise_commission numeric GENERATED ALWAYS AS (franchise_profit) STORED;
