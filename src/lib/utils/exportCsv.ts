@@ -49,7 +49,7 @@ export function exportCommissionsToCSV(commissions: Commission[], label = 'comis
         c.proposal_id,
         c.agent_id,
         c.agent_commission.toFixed(2),
-        c.franchise_commission.toFixed(2),
+        ((c.franchise_commission ?? c.franchise_profit ?? 0) as number).toFixed(2),
         c.hq_royalty.toFixed(2),
         c.total_revenue.toFixed(2),
         STATUS_LABELS[c.status] ?? c.status,
@@ -57,7 +57,7 @@ export function exportCommissionsToCSV(commissions: Commission[], label = 'comis
 
     // Summary row
     const totalAgent = commissions.reduce((s, c) => s + c.agent_commission, 0);
-    const totalFranchise = commissions.reduce((s, c) => s + c.franchise_commission, 0);
+    const totalFranchise = commissions.reduce((s, c) => s + (c.franchise_commission ?? c.franchise_profit ?? 0), 0);
     const totalHq = commissions.reduce((s, c) => s + c.hq_royalty, 0);
     const totalRevenue = commissions.reduce((s, c) => s + c.total_revenue, 0);
     const totals = ['TOTAL', '', '', '', totalAgent.toFixed(2), totalFranchise.toFixed(2), totalHq.toFixed(2), totalRevenue.toFixed(2), ''];

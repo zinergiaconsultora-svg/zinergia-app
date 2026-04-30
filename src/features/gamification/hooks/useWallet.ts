@@ -108,11 +108,11 @@ export function useWallet() {
         .filter(w => w.status === 'paid')
         .reduce((sum, w) => sum + (w.amount || 0), 0);
 
-    const franchisePersonal = userRole === 'franchise'
+            const franchisePersonal = userRole === 'franchise'
         ? commissions.filter(c => c.agent_id === userId).reduce((sum, c) => sum + (c.agent_commission || 0), 0)
         : 0;
     const franchiseNetwork = userRole === 'franchise'
-        ? commissions.reduce((sum, c) => sum + (c.franchise_commission || 0), 0)
+        ? commissions.reduce((sum, c) => sum + (c.franchise_commission ?? c.franchise_profit ?? 0), 0)
         : 0;
 
     const clearedCommissions = commissions.filter(c => c.status === 'cleared');
