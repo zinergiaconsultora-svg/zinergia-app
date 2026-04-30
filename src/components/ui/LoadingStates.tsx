@@ -44,13 +44,31 @@ export function SkeletonKpi() {
     )
 }
 
-export function SkeletonTable() {
+export function SkeletonTable({ rows = 5, cols = 5 }: { rows?: number; cols?: number }) {
     return (
         <div className="space-y-3 animate-pulse">
             <div className="h-10 bg-gray-200 rounded" />
-            {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="h-16 bg-gray-200 rounded" />
+            {Array.from({ length: rows }).map((_, i) => (
+                <div key={i} className="flex gap-3">
+                    {Array.from({ length: cols }).map((_, j) => (
+                        <div key={j} className="h-16 flex-1 bg-gray-200 rounded" />
+                    ))}
+                </div>
             ))}
         </div>
+    )
+}
+
+export function Skeleton({ className, height, width, variant }: { className?: string; height?: number; width?: string | number; variant?: 'circular' | 'rectangular' }) {
+    const style = height !== undefined || width !== undefined ? {
+        height: height !== undefined ? `${height}px` : undefined,
+        width: typeof width === 'number' ? `${width}px` : width,
+    } : undefined
+
+    return (
+        <div
+            className={`animate-pulse bg-gray-200 ${variant === 'circular' ? 'rounded-full' : 'rounded'} ${className || ''}`}
+            style={style}
+        />
     )
 }
