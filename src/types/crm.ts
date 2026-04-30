@@ -241,7 +241,6 @@ export interface Commission {
     total_revenue: number;
     agent_commission: number;
     franchise_commission: number;
-    franchise_profit?: number;
     hq_royalty: number;
     status: 'pending' | 'cleared' | 'paid';
     created_at: string;
