@@ -3,6 +3,9 @@
 import { createClient } from '@/lib/supabase/server';
 import { requireServerRole } from '@/lib/auth/permissions';
 import { revalidatePath } from 'next/cache';
+import { uuidSchema, updateAgentSchema, createFranchiseSchema } from '@/lib/validation/schemas';
+import { z } from 'zod';
+import { logAdminAction } from '@/lib/audit/logger';
 
 // ─── Types ────────────────────────────────────────────────────────────
 export interface AdminStats {
@@ -117,36 +120,41 @@ export async function getUnassignedAgents(): Promise<AgentProfile[]> {
 
 export async function toggleFranchiseActive(franchiseId: string, isActive: boolean): Promise<void> {
     await requireServerRole(['admin']);
+    const id = uuidSchema.parse(franchiseId);
+    const active = z.boolean().parse(isActive);
     const supabase = await createClient();
 
     const { error } = await supabase
         .from('franchises')
-        .update({ is_active: isActive })
-        .eq('id', franchiseId);
+        .update({ is_active: active })
+        .eq('id', id);
 
     if (error) throw new Error(`Error actualizando franquicia: ${error.message}`);
 }
 
 export async function assignAgentToFranchise(agentId: string, franchiseId: string): Promise<void> {
     await requireServerRole(['admin']);
+    const parsedAgentId = uuidSchema.parse(agentId);
+    const parsedFranchiseId = uuidSchema.parse(franchiseId);
     const supabase = await createClient();
 
     const { error } = await supabase
         .from('profiles')
-        .update({ franchise_id: franchiseId })
-        .eq('id', agentId);
+        .update({ franchise_id: parsedFranchiseId })
+        .eq('id', parsedAgentId);
 
     if (error) throw new Error(`Error asignando agente: ${error.message}`);
 }
 
 export async function removeAgentFromFranchise(agentId: string): Promise<void> {
     await requireServerRole(['admin']);
+    const id = uuidSchema.parse(agentId);
     const supabase = await createClient();
 
     const { error } = await supabase
         .from('profiles')
         .update({ franchise_id: null })
-        .eq('id', agentId);
+        .eq('id', id);
 
     if (error) throw new Error(`Error desvinculando agente: ${error.message}`);
     revalidatePath('/admin');
@@ -155,9 +163,10 @@ export async function removeAgentFromFranchise(agentId: string): Promise<void> {
 
 export async function createFranchiseAction(name: string): Promise<void> {
     await requireServerRole(['admin']);
+    const { name: validName } = createFranchiseSchema.parse({ name });
     const supabase = await createClient();
 
-    const slug = name
+    const slug = validName
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
@@ -166,10 +175,11 @@ export async function createFranchiseAction(name: string): Promise<void> {
 
     const { error } = await supabase
         .from('franchises')
-        .insert({ name: name.trim(), slug, is_active: true });
+        .insert({ name: validName.trim(), slug, is_active: true });
 
     if (error) throw new Error(`Error creando franquicia: ${error.message}`);
     revalidatePath('/admin');
+    logAdminAction('create_franchise', 'franchises', undefined, { name: validName }).catch(() => {});
 }
 
 export async function getAllAgentsAction(): Promise<AgentProfile[]> {
@@ -191,16 +201,19 @@ export async function updateAgentAdminAction(
     updates: { full_name?: string; role?: string; franchise_id?: string | null },
 ): Promise<void> {
     await requireServerRole(['admin']);
+    const id = uuidSchema.parse(agentId);
+    const safeUpdates = updateAgentSchema.parse(updates);
     const supabase = await createClient();
 
     const { error } = await supabase
         .from('profiles')
-        .update(updates)
-        .eq('id', agentId);
+        .update(safeUpdates)
+        .eq('id', id);
 
     if (error) throw new Error(`Error actualizando agente: ${error.message}`);
     revalidatePath('/admin');
     revalidatePath('/admin/agents');
+    logAdminAction('update_agent', 'profiles', id, safeUpdates as Record<string, unknown>).catch(() => {});
 }
 
 // ─── Reporting Queries ────────────────────────────────────────────────

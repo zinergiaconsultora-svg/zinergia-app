@@ -6,15 +6,18 @@ import { revalidatePath } from 'next/cache'
 import { Commission } from '@/types/crm'
 import { createNotificationInternal } from './notifications'
 import { ActionResult, actionError, actionSuccess } from './helpers'
+import { uuidSchema } from '@/lib/validation/schemas'
+import { logAdminAction } from '@/lib/audit/logger'
 
 export async function clearCommissionAction(id: string): Promise<ActionResult<Commission>> {
     await requireServerRole(['admin', 'franchise'])
+    const safeId = uuidSchema.parse(id)
     const supabase = await createClient()
 
     const { data, error } = await supabase
         .from('network_commissions')
         .update({ status: 'cleared' })
-        .eq('id', id)
+        .eq('id', safeId)
         .eq('status', 'pending')
         .select('*, proposals(clients(name))')
         .single()
@@ -35,17 +38,19 @@ export async function clearCommissionAction(id: string): Promise<ActionResult<Co
     } catch { /* non-critical */ }
 
     revalidatePath('/dashboard/wallet')
+    logAdminAction('clear_commission', 'network_commissions', safeId).catch(() => {})
     return actionSuccess(data as Commission)
 }
 
 export async function payCommissionAction(id: string): Promise<ActionResult<Commission>> {
     await requireServerRole(['admin', 'franchise'])
+    const safeId = uuidSchema.parse(id)
     const supabase = await createClient()
 
     const { data, error } = await supabase
         .from('network_commissions')
         .update({ status: 'paid' })
-        .eq('id', id)
+        .eq('id', safeId)
         .eq('status', 'cleared')
         .select('*, proposals(clients(name))')
         .single()
@@ -66,6 +71,7 @@ export async function payCommissionAction(id: string): Promise<ActionResult<Comm
     } catch { /* non-critical */ }
 
     revalidatePath('/dashboard/wallet')
+    logAdminAction('pay_commission', 'network_commissions', safeId).catch(() => {})
     return actionSuccess(data as Commission)
 }
 
