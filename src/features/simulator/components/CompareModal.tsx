@@ -146,7 +146,7 @@ export default function CompareModal({ cups, currentResults, currentCost, onClos
                             <p className="text-[10px] text-slate-400 font-mono">{cups}</p>
                         </div>
                     </div>
-                    <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
+                    <button type="button" onClick={onClose} aria-label="Cerrar" className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
                         <X size={16} />
                     </button>
                 </div>

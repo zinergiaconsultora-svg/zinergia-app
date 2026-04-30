@@ -76,7 +76,7 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
             <div className="flex items-center gap-3 flex-wrap bg-white/40 backdrop-blur-md p-2 rounded-2xl border border-white/60 shadow-sm">
                 <div className="relative flex-1 min-w-[200px]">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input className="w-full pl-8 pr-3 py-2 text-sm bg-white/80 backdrop-blur border border-slate-200/50 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]" placeholder="Buscar tarifa..." value={search} onChange={e => setSearch(e.target.value)} />
+                    <input className="w-full pl-8 pr-3 py-2 text-sm bg-white/80 backdrop-blur border border-slate-200/50 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]" placeholder="Buscar tarifa..." value={search} onChange={e => setSearch(e.target.value)} aria-label="Buscar tarifa" />
                 </div>
                 <div className="flex gap-1 flex-wrap">
                     {['ALL', ...companies].map(c => (
@@ -149,7 +149,7 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
                                 <td className="px-3 py-2.5 text-right font-mono text-slate-500">{fmt(row.power_price_p1, 4)}</td>
                                 <td className="px-3 py-2.5 text-center">
                                     {isAdmin ? (
-                                        <button type="button" onClick={() => handleToggle(row)} disabled={pending} className="text-slate-400 hover:text-indigo-600 transition-colors">
+                                        <button type="button" onClick={() => handleToggle(row)} disabled={pending} aria-label="Activar o desactivar tarifa" className="text-slate-400 hover:text-indigo-600 transition-colors">
                                             {row.is_active ? <ToggleRight size={20} className="text-indigo-500" /> : <ToggleLeft size={20} />}
                                         </button>
                                     ) : (
@@ -159,8 +159,8 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
                                 {isAdmin && (
                                     <td className="px-3 py-2.5">
                                         <div className="flex items-center gap-1">
-                                            <button type="button" onClick={() => setFormData(row)} className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"><Edit3 size={13} /></button>
-                                            <button type="button" onClick={() => handleDelete(row.id)} className={`p-1.5 rounded-lg transition-colors ${deleteConfirm === row.id ? 'bg-rose-600 text-white' : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'}`}>
+                                            <button type="button" onClick={() => setFormData(row)} aria-label="Editar tarifa" className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"><Edit3 size={13} /></button>
+                                            <button type="button" onClick={() => handleDelete(row.id)} aria-label="Eliminar tarifa" className={`p-1.5 rounded-lg transition-colors ${deleteConfirm === row.id ? 'bg-rose-600 text-white' : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'}`}>
                                                 {deleteConfirm === row.id ? <span className="text-[9px] font-bold px-0.5">OK</span> : <Trash2 size={13} />}
                                             </button>
                                         </div>

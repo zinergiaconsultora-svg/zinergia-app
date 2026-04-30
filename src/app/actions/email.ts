@@ -74,10 +74,8 @@ export async function sendProposalEmail(
 ) {
     try {
         if (!process.env.RESEND_API_KEY) {
-            console.warn('RESEND_API_KEY is not set. Mocking email send.');
-            // Simulate delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            return { success: true, message: 'Email mocked (API Key missing)' };
+            console.warn('RESEND_API_KEY is not set. Email delivery disabled.');
+            return { success: false, error: 'El envío de email no está configurado. Contacta con soporte.' };
         }
 
         // Generate PDF Buffer

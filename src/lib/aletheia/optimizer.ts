@@ -1,4 +1,3 @@
-import { THRESHOLDS, TAX_CONFIG } from './config';
 import { InvoiceData, TariffPeriod, OptimizationRecommendation } from './types';
 
 export class Optimizer {
@@ -116,9 +115,7 @@ export class Optimizer {
 
         // Analyze consumption distribution
         const p1Consumption = periodConsumption['p1'] || 0;
-        const p3Consumption = periodConsumption['p3'] || 0;
-        const p6Consumption = data.tariff_type === '6.1TD' ? (periodConsumption['p6'] || 0) : 0;
-        const valleyConsumption = (periodConsumption['p3'] || 0) + (periodConsumption['p6'] || 0);
+        const valleyConsumption = (periodConsumption['p3'] || 0) + (data.tariff_type === '6.1TD' ? (periodConsumption['p6'] || 0) : 0);
 
         const p1Ratio = p1Consumption / totalConsumption;
         const valleyRatio = valleyConsumption / totalConsumption;

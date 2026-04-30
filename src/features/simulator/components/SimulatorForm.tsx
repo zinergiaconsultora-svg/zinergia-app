@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { logger } from '@/lib/utils/logger';
 import {
     Zap, ChevronLeft, ArrowRight, User, Building2, Hash,
     Calendar, MapPin, Activity, AlertCircle, AlertTriangle,
@@ -11,7 +12,6 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { InvoiceData } from '@/types/crm';
-import { Card } from '@/components/ui/primitives/Card';
 import { Input } from '@/components/ui/primitives/Input';
 import { DemoModeAlert } from '@/components/ui/DemoModeAlert';
 import { PdfViewerWrapper } from './PdfViewerWrapper';
@@ -42,7 +42,7 @@ interface SimulatorFormProps {
 export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     data, onUpdate, onCompare, onBack, isAnalyzing, loadingMessage,
     powerType, onPowerTypeOverride, pdfUrl, isMockMode = false,
-    originalData: _originalData, ocrJobId, ocrDataConfirmed = false, onConfirmOcrData,
+    originalData: _originalData, ocrDataConfirmed = false, onConfirmOcrData,
 }) => {
     const [isConfirming, setIsConfirming] = useState(false);
     const [localConfirmed, setLocalConfirmed] = useState(false);
@@ -62,10 +62,9 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         import('@/app/actions/ocr-confirm').then(({ getSuggestedCorrections }) => {
             getSuggestedCorrections(data.company_name!).then(r => {
                 if (!cancelled && Object.keys(r).length > 0) setSuggestions(r);
-            }).catch(() => {});
+            }).catch(() => { logger.warn('OCR suggestion failed') });
         });
         return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data.company_name, isMockMode]);
 
     const applySuggestions = () => {
@@ -85,10 +84,9 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         import('@/app/actions/ocr-jobs').then(({ getPreviousInvoiceData }) => {
             getPreviousInvoiceData(data.cups!, data.invoice_date!).then(r => {
                 if (!cancelled) setPrevInvoice(r);
-            }).catch(() => {});
+            }).catch(() => { logger.warn('OCR suggestion failed') });
         });
         return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data.cups, data.invoice_date, isMockMode]);
 
     const totalEnergyNow = useMemo(() =>
@@ -104,7 +102,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         import('@/app/actions/ocr-jobs').then(({ checkDuplicateInvoice }) => {
             checkDuplicateInvoice(data.cups!, data.invoice_date!).then(r => {
                 if (!cancelled) setDuplicateInfo(r ? { createdAt: r.createdAt, invoiceNumber: r.invoiceNumber } : null);
-            }).catch(() => {});
+            }).catch(() => { logger.warn('OCR suggestion failed') });
         });
         return () => { cancelled = true; };
     }, [data.cups, data.invoice_date, isMockMode]);
@@ -120,10 +118,9 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         import('@/app/actions/crm').then(({ findClientByCups }) => {
             findClientByCups(cups).then(r => {
                 if (!cancelled) setCupsClient(r);
-            }).catch(() => {});
+            }).catch(() => { logger.warn('OCR suggestion failed') });
         });
         return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data.cups, isMockMode]);
 
     // ── Sparkline histórico de consumo ────────────────────────────────────────
@@ -136,10 +133,9 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         import('@/app/actions/ocr-jobs').then(({ getCupsEnergyHistory }) => {
             getCupsEnergyHistory(cups, 12).then(r => {
                 if (!cancelled) setEnergyHistory(r);
-            }).catch(() => {});
+            }).catch(() => { logger.warn('OCR suggestion failed') });
         });
         return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data.cups, isMockMode]);
 
     // ── Live tariff preview ───────────────────────────────────────────────────
@@ -193,10 +189,9 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         import('@/app/actions/ocr-confirm').then(({ getFieldCorrectionStats }) => {
             getFieldCorrectionStats(data.company_name!).then(r => {
                 if (!cancelled) setFieldStats(r);
-            }).catch(() => {});
+            }).catch(() => { logger.warn('OCR suggestion failed') });
         });
         return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data.company_name, isMockMode]);
 
     const getFieldStat = useCallback((field: string) =>
@@ -218,7 +213,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
             setIsConfirming(false);
             setLocalConfirmed(true);
             toast.success('Datos confirmados. ¡Gracias!');
-            if (onConfirmOcrData) onConfirmOcrData().catch(() => {});
+            if (onConfirmOcrData) onConfirmOcrData().catch(() => { logger.warn('OCR suggestion failed') });
         }, 600);
     };
 
@@ -732,7 +727,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                                                 >
                                                     <Link2 size={9} /> Vincular
                                                 </button>
-                                                <button type="button" onClick={() => setCupsClientDismissed(true)} className="text-indigo-300 hover:text-indigo-500 transition-colors text-sm leading-none">×</button>
+                                                <button type="button" onClick={() => setCupsClientDismissed(true)} aria-label="Descartar" className="text-indigo-300 hover:text-indigo-500 transition-colors text-sm leading-none">×</button>
                                             </div>
                                         </motion.div>
                                     )}
@@ -987,7 +982,7 @@ const CorrectionBadge: React.FC<CorrectionBadgeProps> = ({ stat }) => {
     if (!stat || stat.count === 0) return null;
     return (
         <div className="group relative inline-flex items-center">
-            <button type="button" className="flex items-center gap-0.5 text-amber-400 hover:text-amber-600 transition-colors">
+            <button type="button" aria-label="Información de corrección" className="flex items-center gap-0.5 text-amber-400 hover:text-amber-600 transition-colors">
                 <Info size={10} />
                 <span className="text-[9px] font-black tabular-nums">{stat.count}</span>
             </button>

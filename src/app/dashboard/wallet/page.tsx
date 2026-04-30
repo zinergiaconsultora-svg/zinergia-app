@@ -14,12 +14,21 @@ export default async function WalletPage() {
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id ?? null;
 
+    let franchiseId: string | null = null;
+    if (userId) {
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('franchise_id')
+            .eq('id', userId)
+            .single();
+        franchiseId = profile?.franchise_id ?? null;
+    }
+
     let allCommissions: Commission[] = [];
     if (canManage) {
-        try {
-            allCommissions = await getAllCommissionsAction();
-        } catch {
-            // Non-fatal: admin panel will be empty
+        const result = await getAllCommissionsAction();
+        if (result.success) {
+            allCommissions = result.data;
         }
     }
 
@@ -27,7 +36,7 @@ export default async function WalletPage() {
         <>
             <WalletView canManage={canManage} allCommissions={allCommissions} />
             <div className="max-w-7xl mx-auto px-0 mt-8">
-                <BillingHistoryPanel franchiseId={userId} canManage={canManage} />
+                <BillingHistoryPanel franchiseId={franchiseId} canManage={canManage} />
             </div>
         </>
     );

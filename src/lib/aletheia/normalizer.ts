@@ -85,10 +85,6 @@ export class Normalizer {
         const warnings: string[] = [];
 
         // 1. Helper for safe float extraction
-        const getVal = (key: string): number => {
-            // Handle potential variations or typos in keys if necessary
-            return this.cleanFloat(raw[key]);
-        };
 
         // Helper to get from period structure
         const getP = (prefix: string, p: string) => {

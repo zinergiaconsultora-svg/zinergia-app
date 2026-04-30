@@ -4,7 +4,7 @@ import React, { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Zap, User, ArrowRight, ArrowLeft, Check,
+    Zap, ArrowRight, ArrowLeft, Check,
     Sparkles, FileText, Send, Users, X,
     GraduationCap, ChevronRight, TrendingUp,
 } from 'lucide-react';
@@ -400,7 +400,7 @@ function StepHowItWorks({ onNext, onBack }: { onNext: () => void; onBack: () => 
                 className="bg-gradient-to-r from-indigo-600/15 to-violet-600/15 border border-indigo-500/20 rounded-2xl p-4 flex items-center justify-between"
             >
                 <div>
-                    <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-1">Ahorro medio cliente</p>
+                    <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-1">Ahorro medio cliente <span className="text-slate-600 normal-case tracking-normal">· red Zinergia</span></p>
                     <p className="text-2xl font-black text-white">
                         {savings.toLocaleString('es-ES')}
                         <span className="text-indigo-400 text-lg ml-0.5">€</span>
@@ -409,7 +409,7 @@ function StepHowItWorks({ onNext, onBack }: { onNext: () => void; onBack: () => 
                 </div>
                 <div className="w-px h-10 bg-white/5" />
                 <div className="text-right">
-                    <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-1">Agentes activos</p>
+                    <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-1">Agentes activos <span className="text-slate-600 normal-case tracking-normal">· red Zinergia</span></p>
                     <p className="text-2xl font-black text-indigo-400">{agents.toLocaleString('es-ES')}</p>
                 </div>
             </motion.div>

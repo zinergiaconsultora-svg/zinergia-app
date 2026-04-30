@@ -214,7 +214,7 @@ export async function acceptPublicProposalAction(
                     franchise_id: agentProfile.franchise_id,
                     total_revenue: pot,
                     agent_commission: pot * rule.agent_share,
-                    franchise_profit: pot * rule.franchise_share,
+                    franchise_commission: pot * rule.franchise_share,
                     hq_royalty: pot * rule.hq_share,
                     status: 'pending',
                 }, { onConflict: 'proposal_id', ignoreDuplicates: true });

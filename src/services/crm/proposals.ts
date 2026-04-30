@@ -3,6 +3,8 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { Proposal, SavingsResult, InvoiceData } from '@/types/crm';
 import { AletheiaResult } from '@/lib/aletheia/types';
 import { getFranchiseId } from './shared';
+import { logger } from '@/lib/utils/logger';
+import { activitiesService } from './activities';
 import { updateProposalStatusAction } from '@/app/actions/proposals';
 
 export const proposalService = {
@@ -115,6 +117,18 @@ export const proposalService = {
             .single();
 
         if (proposalError) throw proposalError;
+
+        activitiesService.logActivity(
+            clientId!,
+            'simulation_completed',
+            `Simulación: ${bestResult.offer.marketer_name} — ahorro de ${Math.round(bestResult.annual_savings)}€/año`,
+            {
+                proposal_id: (savedProposal as Proposal).id,
+                marketer: bestResult.offer.marketer_name,
+                savings: bestResult.annual_savings,
+            }
+        ).catch((e) => logger.error('Failed to log proposal activity', e));
+
         return savedProposal;
     },
 

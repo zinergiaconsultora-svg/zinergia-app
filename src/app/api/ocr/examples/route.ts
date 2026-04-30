@@ -55,10 +55,10 @@ export async function GET(request: Request) {
 
     let query = supabase
         .from('ocr_training_examples')
-        .select('extracted_fields, raw_text_sample, is_validated, confidence_avg, created_at')
+        .select('extracted_fields, raw_text_sample, is_validated, confidence_avg, created_at', { count: 'exact' })
         .eq('company_name', company)
-        .order('is_validated', { ascending: false })   // validados primero
-        .order('confidence_avg', { ascending: false })  // mayor confianza primero
+        .order('is_validated', { ascending: false })
+        .order('confidence_avg', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(limit);
 
@@ -66,14 +66,7 @@ export async function GET(request: Request) {
         query = query.eq('is_validated', true);
     }
 
-    const { data: examples, error, count } = await supabase
-        .from('ocr_training_examples')
-        .select('extracted_fields, raw_text_sample, is_validated, confidence_avg, created_at', { count: 'exact' })
-        .eq('company_name', company)
-        .order('is_validated', { ascending: false })
-        .order('confidence_avg', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(limit);
+    const { data: examples, error, count } = await query;
 
     if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });

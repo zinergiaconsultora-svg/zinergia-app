@@ -66,6 +66,7 @@ export default function PresentationModal({ results, invoiceData, recommendation
                         <button
                             type="button"
                             onClick={onClose}
+                            aria-label="Cerrar"
                             className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
                         >
                             <X size={18} />

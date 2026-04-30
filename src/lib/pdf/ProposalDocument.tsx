@@ -6,7 +6,6 @@ import { Proposal } from '@/types/crm';
 const BRAND_BLUE   = '#1b2641';
 const BRAND_ORANGE = '#ff5722';
 const EMERALD      = '#059669';
-const SLATE_50     = '#f8fafc';
 const SLATE_100    = '#f1f5f9';
 const SLATE_200    = '#e2e8f0';
 const SLATE_400    = '#94a3b8';
