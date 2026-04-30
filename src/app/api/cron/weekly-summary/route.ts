@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServiceClient } from '@/lib/supabase/service';
 import { sendPushToUser } from '@/lib/push/sendPush';
+import { moduleLogger } from '@/lib/logger';
+
+const log = moduleLogger('cron:weekly-summary');
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -10,10 +13,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createServiceClient();
 
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 86_400_000).toISOString();
@@ -106,11 +106,11 @@ export async function GET(request: Request) {
 
             results.push({ agentId: agent.id, sent: true });
         } catch (e) {
-            console.warn(`[WeeklySummary] Failed for agent ${agent.id}:`, e);
+            log.warn({ err: e, agentId: agent.id }, 'Weekly summary push failed for agent');
             results.push({ agentId: agent.id, sent: false });
         }
     }
 
-    console.log('[WeeklySummary] Done:', JSON.stringify(results));
+    log.info({ sent: results.filter(r => r.sent).length, total: results.length }, 'Weekly summary done');
     return NextResponse.json({ success: true, results, timestamp: now.toISOString() });
 }

@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServiceClient } from '@/lib/supabase/service';
 import { env } from '@/lib/env';
+import { rateLimit, getClientKey } from '@/lib/rate-limit';
+
+// Defense-in-depth rate limit on top of x-api-key auth.
+// Shared across invocations within a warm Node/Edge container.
+const limiter = rateLimit({ windowMs: 60_000, max: 120 });
 
 /**
  * GET /api/ocr/examples?company=NATURGY&limit=5&validated_only=false
@@ -27,6 +32,18 @@ import { env } from '@/lib/env';
  * }
  */
 export async function GET(request: Request) {
+    // ── Rate limit (per-IP) ──────────────────────────────────────────────────
+    const rl = limiter.check(getClientKey(request));
+    if (!rl.allowed) {
+        return NextResponse.json(
+            { error: 'Too Many Requests' },
+            {
+                status: 429,
+                headers: { 'Retry-After': String(rl.retryAfterSeconds) },
+            },
+        );
+    }
+
     // ── Auth ─────────────────────────────────────────────────────────────────
     const apiKey = request.headers.get('x-api-key');
     if (apiKey !== env.WEBHOOK_API_KEY) {
@@ -47,11 +64,7 @@ export async function GET(request: Request) {
     const company = normalizeCompanyName(rawCompany);
 
     // ── DB ───────────────────────────────────────────────────────────────────
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceKey) {
-        return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
-    }
-    const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
+    const supabase = createServiceClient();
 
     let query = supabase
         .from('ocr_training_examples')

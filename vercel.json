@@ -11,6 +11,18 @@
         {
             "path": "/api/cron/weekly-summary",
             "schedule": "0 8 * * 1"
+        },
+        {
+            "path": "/api/cron/purge-expired-clients",
+            "schedule": "0 2 * * *"
+        },
+        {
+            "path": "/api/cron/detect-renewals",
+            "schedule": "0 3 * * *"
+        },
+        {
+            "path": "/api/cron/generate-actions",
+            "schedule": "0 6 * * *"
         }
     ]
 }

@@ -123,7 +123,10 @@ export default function LandingPage() {
                   aria-invalid={error ? 'true' : 'false'}
                 />
                 <div className="flex justify-end pt-1">
-                  <a href="#" className="text-xs font-bold uppercase tracking-widest text-indigo-500 hover:text-indigo-700 transition-colors">
+                  <a
+                    href="mailto:soporte@zinergia.com?subject=Recuperar%20contrase%C3%B1a"
+                    className="text-xs font-bold uppercase tracking-widest text-indigo-500 hover:text-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
+                  >
                     ¿Olvidaste tu contraseña?
                   </a>
                 </div>

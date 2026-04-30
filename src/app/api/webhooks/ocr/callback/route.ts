@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import * as Sentry from '@sentry/nextjs';
+import { createServiceClient } from '@/lib/supabase/service';
 import { env } from '@/lib/env';
 import { sendPushToUser } from '@/lib/push/sendPush';
+import { encryptNullable, hashCups, hashDni } from '@/lib/crypto/pii';
+import { moduleLogger } from '@/lib/logger';
+
+const log = moduleLogger('ocr-callback');
 
 function normalizeCompanyName(raw: string): string {
     return raw
@@ -25,10 +30,10 @@ export async function POST(request: Request) {
     // 1. Autenticar request de N8N
     const apiKey = request.headers.get('x-api-key');
     const authHeader = request.headers.get('authorization');
-    console.log('[OCR Callback] Received. x-api-key present:', !!apiKey, '| authorization present:', !!authHeader);
+    log.info({ hasApiKey: !!apiKey, hasAuth: !!authHeader }, 'OCR callback received');
 
     if (apiKey !== env.WEBHOOK_API_KEY) {
-        console.warn('[OCR Callback] Auth failed. Key present:', !!apiKey);
+        log.warn({ keyPrefix: apiKey?.slice(0, 8) ?? 'null' }, 'OCR callback auth failed');
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -45,14 +50,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: `Invalid status: ${status}` }, { status: 400 });
         }
 
-        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        if (!serviceKey) {
-            return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
-        }
-        const supabaseAdmin = createClient(
-            env.NEXT_PUBLIC_SUPABASE_URL!,
-            serviceKey
-        );
+        const supabaseAdmin = createServiceClient();
 
         // 2. Normalizar datos extraídos
         let invoiceData: Record<string, unknown> | null = null;
@@ -160,14 +158,15 @@ export async function POST(request: Request) {
                 const cups = invoiceData.cups as string;
                 const dniCif = invoiceData.dni_cif as string;
 
-                // Buscar cliente existente por CUPS (más único) o por DNI/CIF
+                // Buscar cliente existente por CUPS (más único) o por DNI/CIF.
+                // Usa blind-index hash para búsqueda de igualdad (RGPD-safe).
                 let existingClient = null;
                 if (cups) {
                     const { data } = await supabaseAdmin
                         .from('clients')
                         .select('id')
                         .eq('franchise_id', job.franchise_id)
-                        .eq('cups', cups)
+                        .eq('cups_hash', hashCups(cups))
                         .maybeSingle();
                     existingClient = data;
                 }
@@ -176,17 +175,19 @@ export async function POST(request: Request) {
                         .from('clients')
                         .select('id')
                         .eq('franchise_id', job.franchise_id)
-                        .eq('dni_cif', dniCif)
+                        .eq('dni_cif_hash', hashDni(dniCif))
                         .maybeSingle();
                     existingClient = data;
                 }
 
                 if (existingClient) {
-                    // Actualizar datos del cliente existente
+                    // Actualizar datos del cliente existente (dual-write RGPD).
                     await supabaseAdmin
                         .from('clients')
                         .update({
                             cups: cups || undefined,
+                            cups_ciphertext: cups ? encryptNullable(cups) : undefined,
+                            cups_hash: cups ? hashCups(cups) : undefined,
                             current_supplier: (invoiceData.company_name as string) || undefined,
                             tariff_type: (invoiceData.tariff_name as string) || undefined,
                             address: (invoiceData.supply_address as string) || undefined,
@@ -202,7 +203,7 @@ export async function POST(request: Request) {
                         .eq('id', existingClient.id);
                     clientId = existingClient.id;
                 } else if (clientName && clientName !== 'Cliente Desconocido') {
-                    // Crear nuevo cliente
+                    // Crear nuevo cliente (dual-write RGPD).
                     const { data: newClient } = await supabaseAdmin
                         .from('clients')
                         .insert({
@@ -210,7 +211,11 @@ export async function POST(request: Request) {
                             owner_id: job.agent_id,
                             name: clientName,
                             dni_cif: dniCif || null,
+                            dni_cif_ciphertext: dniCif ? encryptNullable(dniCif) : null,
+                            dni_cif_hash: dniCif ? hashDni(dniCif) : null,
                             cups: cups || null,
+                            cups_ciphertext: cups ? encryptNullable(cups) : null,
+                            cups_hash: cups ? hashCups(cups) : null,
                             address: (invoiceData.supply_address as string) || null,
                             current_supplier: (invoiceData.company_name as string) || null,
                             tariff_type: (invoiceData.tariff_name as string) || null,
@@ -231,7 +236,7 @@ export async function POST(request: Request) {
                 }
             } catch (clientErr) {
                 // No bloquear el flujo si falla la creación del cliente
-                console.warn('[OCR Callback] Auto-client creation failed (non-blocking):', clientErr);
+                log.warn({ err: clientErr }, 'Auto-client creation failed (non-blocking)');
             }
         }
 
@@ -247,7 +252,8 @@ export async function POST(request: Request) {
             .eq('id', job_id);
 
         if (dbError) {
-            console.error('[OCR Callback] DB Update Error:', dbError);
+            Sentry.captureException(dbError, { extra: { jobId: job_id, status } });
+            log.error({ err: dbError, jobId: job_id, status }, 'OCR callback DB update failed');
             return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
         }
 
@@ -295,7 +301,7 @@ export async function POST(request: Request) {
                         }, { onConflict: 'file_hash', ignoreDuplicates: true });
                 } catch (trainingErr) {
                     // No bloquear el flujo si falla el guardado del ejemplo
-                    console.warn('[OCR Callback] Training example save failed (non-blocking):', trainingErr);
+                    log.warn({ err: trainingErr, jobId: job_id }, 'Training example save failed (non-blocking)');
                 }
             }
         }
@@ -320,7 +326,7 @@ export async function POST(request: Request) {
                 setTimeout(() => resolve(), 3000);
             });
         } catch (bcErr) {
-            console.warn('[OCR Callback] Broadcast failed (non-blocking):', bcErr);
+            log.warn({ err: bcErr, jobId: job_id }, 'Realtime broadcast failed (non-blocking)');
         }
 
         // 7. Web Push al agente — no bloquea la respuesta
@@ -349,7 +355,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true, client_id: clientId });
 
     } catch (error) {
-        console.error('[OCR Callback] Parsing Error:', error);
+        Sentry.captureException(error);
+        log.error({ err: error }, 'OCR callback unhandled error');
         return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }
 }

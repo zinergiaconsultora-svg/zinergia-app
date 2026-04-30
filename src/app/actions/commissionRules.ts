@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireServerRole } from '@/lib/auth/permissions'
 import { CommissionRule } from '@/types/crm'
+import { commissionRuleSchema } from '@/lib/validation/schemas'
+import { logAdminAction } from '@/lib/audit/logger'
 
 // Hardcoded fallback used when the commission_rules table doesn't exist yet
 // or has no active rule. Matches the seeded default.
@@ -65,12 +67,9 @@ export async function saveCommissionRule(
 ): Promise<CommissionRule> {
     await requireServerRole(['admin', 'franchise'])
 
-    const total = rule.agent_share + rule.franchise_share + rule.hq_share
-    if (Math.abs(total - 1) > 0.001) {
-        throw new Error(`Los porcentajes deben sumar 100%. Suma actual: ${(total * 100).toFixed(1)}%`)
-    }
-    if (rule.commission_rate <= 0 || rule.commission_rate > 1) {
-        throw new Error('El porcentaje sobre el ahorro debe estar entre 1% y 100%')
+    const parsed = commissionRuleSchema.safeParse(rule)
+    if (!parsed.success) {
+        throw new Error(parsed.error.issues[0].message)
     }
 
     const supabase = await createClient()
@@ -95,5 +94,6 @@ export async function saveCommissionRule(
         .single()
 
     if (error) throw error
+    logAdminAction('save_commission_rule', 'commission_rules', (data as CommissionRule).id, { name: rule.name, commission_rate: rule.commission_rate }).catch(() => {})
     return data as CommissionRule
 }

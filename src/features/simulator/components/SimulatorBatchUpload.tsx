@@ -4,7 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Upload, FileText, CheckCircle2, XCircle, Loader2,
-    X, ArrowRight, Layers, Trash2,
+    X, ArrowRight, Layers, RotateCcw, Trash2, Copy,
 } from 'lucide-react';
 import { useBatchSimulator, BatchItem } from '../hooks/useBatchSimulator';
 import { InvoiceData } from '@/types/crm';
@@ -20,6 +20,7 @@ const STATUS_CONFIG = {
     processing: { icon: Loader2,     label: 'Procesando…',  color: 'text-amber-500',   bg: 'bg-amber-50',   ring: 'border-amber-200' },
     completed:  { icon: CheckCircle2,label: 'Listo',        color: 'text-emerald-500', bg: 'bg-emerald-50', ring: 'border-emerald-200' },
     failed:     { icon: XCircle,     label: 'Error',        color: 'text-red-500',     bg: 'bg-red-50',     ring: 'border-red-200' },
+    duplicate:  { icon: Copy,        label: 'Duplicada',    color: 'text-violet-500',  bg: 'bg-violet-50',  ring: 'border-violet-200' },
 } as const;
 
 function QueueRow({ item, onSimulate, onRemove }: {
@@ -63,7 +64,7 @@ function QueueRow({ item, onSimulate, onRemove }: {
                         Simular <ArrowRight size={10} />
                     </button>
                 )}
-                {(item.status === 'completed' || item.status === 'failed') && (
+                {(item.status === 'completed' || item.status === 'failed' || item.status === 'duplicate') && (
                     <button
                         type="button"
                         onClick={() => onRemove(item.localId)}

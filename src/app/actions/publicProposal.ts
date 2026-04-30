@@ -1,10 +1,11 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath } from 'next/cache';
 import { Proposal } from '@/types/crm';
 import { getActiveCommissionRule } from './commissionRules';
+import { calculateCommissionSplit, applyFranchiseOverride } from '@/lib/commissions/calculator';
 import { z } from 'zod';
 
 const uuidSchema = z.uuid();
@@ -102,10 +103,7 @@ export async function acceptPublicProposalAction(
         return { success: false, message: 'Nombre demasiado largo.' };
     }
 
-    const adminClient = createAdminClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const adminClient = createServiceClient();
 
     // Verificar que el token es válido y la propuesta está en 'sent'
     const { data: proposal, error: fetchError } = await adminClient
@@ -205,17 +203,27 @@ export async function acceptPublicProposalAction(
                 .maybeSingle();
 
             if (!existingComm) {
-                const rule = await getActiveCommissionRule();
-                const pot = (propData.annual_savings as number) * rule.commission_rate;
+                const baseRule = await getActiveCommissionRule();
+
+                // Apply per-franchise royalty override if configured
+                const { data: franchiseCfg } = await adminClient
+                    .from('franchise_config')
+                    .select('royalty_percent')
+                    .eq('franchise_id', agentProfile.franchise_id)
+                    .eq('active', true)
+                    .maybeSingle();
+
+                const rule = applyFranchiseOverride(baseRule, franchiseCfg?.royalty_percent ?? null);
+                const split = calculateCommissionSplit(propData.annual_savings as number, rule);
                 // ignoreDuplicates: el UNIQUE constraint en proposal_id actúa como guardia atómica
                 await adminClient.from('network_commissions').upsert({
                     proposal_id: proposal.id,
                     agent_id: agentProfile.id,
                     franchise_id: agentProfile.franchise_id,
-                    total_revenue: pot,
-                    agent_commission: pot * rule.agent_share,
-                    franchise_commission: pot * rule.franchise_share,
-                    hq_royalty: pot * rule.hq_share,
+                    total_revenue: split.pot,
+                    agent_commission: split.agent_commission,
+                    franchise_profit: split.franchise_profit,
+                    hq_royalty: split.hq_royalty,
                     status: 'pending',
                 }, { onConflict: 'proposal_id', ignoreDuplicates: true });
             }

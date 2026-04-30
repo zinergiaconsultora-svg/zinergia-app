@@ -10,15 +10,18 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
     "supabase:verify": "node scripts/verify-supabase.js",
     "supabase:check": "node scripts/check-setup.js"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.49.0",
     "@react-pdf/renderer": "^4.3.2",
     "@sentry/nextjs": "^10.49.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.90.1",
-    "@types/leaflet": "^1.9.21",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
@@ -43,6 +46,7 @@
     "tailwind-merge": "^3.4.0",
     "web-push": "^3.6.7",
     "xlsx": "^0.18.5",
+    "pino": "^10.3.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -52,6 +56,7 @@
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
     "@types/canvas-confetti": "^1.9.0",
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
