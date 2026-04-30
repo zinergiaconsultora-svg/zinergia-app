@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { AletheiaEngine } from '@/lib/aletheia/engine';
 import { Normalizer } from '@/lib/aletheia/normalizer';
-import { AletheiaResult, InvoiceData, TariffCandidate } from '@/lib/aletheia/types';
+import { AletheiaResult, TariffCandidate } from '@/lib/aletheia/types';
 import { Result, ok, err } from '@/lib/result';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

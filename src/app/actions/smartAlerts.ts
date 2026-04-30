@@ -32,6 +32,8 @@ export async function getSmartAlertsAction(): Promise<SmartAlert[]> {
         { count: expiringCount },
         { data: newClients },
         { data: recentJobs },
+        { count: expiringContractsCount },
+        { count: expiredContractsCount },
     ] = await Promise.all([
         // 1. Seguimientos URGENTES: propuestas enviadas >7 días sin respuesta
         supabase
@@ -78,6 +80,25 @@ export async function getSmartAlertsAction(): Promise<SmartAlert[]> {
             .eq('status', 'completed')
             .gte('created_at', daysAgo(14))
             .not('extracted_data', 'is', null),
+
+        // 6. Contratos activos que expiran en 30 días
+        supabase
+            .from('contracts')
+            .select('id', { count: 'exact', head: true })
+            .eq('agent_id', user.id)
+            .eq('status', 'active')
+            .not('end_date', 'is', null)
+            .lte('end_date', daysFromNow(30))
+            .gte('end_date', now.toISOString().split('T')[0]),
+
+        // 7. Contratos activos cuya fecha fin ya pasó
+        supabase
+            .from('contracts')
+            .select('id', { count: 'exact', head: true })
+            .eq('agent_id', user.id)
+            .eq('status', 'active')
+            .not('end_date', 'is', null)
+            .lt('end_date', now.toISOString().split('T')[0]),
     ]);
 
     // ── 1. Urgent followups ──
@@ -171,6 +192,32 @@ export async function getSmartAlertsAction(): Promise<SmartAlert[]> {
                 cta: 'Comparar tarifa',
             });
         }
+    }
+
+    // ── 6. Contracts expiring within 30 days ──
+    if (expiringContractsCount && expiringContractsCount > 0) {
+        alerts.push({
+            id: 'contracts_expiring',
+            severity: 'warning',
+            title: 'Contratos por vencer',
+            description: `${expiringContractsCount} contrato${expiringContractsCount > 1 ? 's' : ''} vence${expiringContractsCount === 1 ? '' : 'n'} en menos de 30 días.`,
+            count: expiringContractsCount,
+            href: '/dashboard/clients',
+            cta: 'Renegociar',
+        });
+    }
+
+    // ── 7. Contracts already expired ──
+    if (expiredContractsCount && expiredContractsCount > 0) {
+        alerts.push({
+            id: 'contracts_expired',
+            severity: 'critical',
+            title: 'Contratos expirados',
+            description: `${expiredContractsCount} contrato${expiredContractsCount > 1 ? 's' : ''} activo${expiredContractsCount > 1 ? 's' : ''} con fecha de fin pasada.`,
+            count: expiredContractsCount,
+            href: '/dashboard/clients',
+            cta: 'Renegociar ahora',
+        });
     }
 
     // Sort: critical → warning → info, then by count desc

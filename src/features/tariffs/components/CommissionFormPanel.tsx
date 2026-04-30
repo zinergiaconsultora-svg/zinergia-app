@@ -45,7 +45,7 @@ export function CommissionFormPanel({ data, onClose, onSaved }: Props) {
             <div className="bg-white/95 backdrop-blur-xl border border-white/60 rounded-[2rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] w-full max-w-lg max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100/50">
                     <h2 className="font-black text-slate-900 text-lg">{form.id ? 'Editar Regla de Comisión' : 'Nueva Regla'}</h2>
-                    <button type="button" onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-colors"><X size={18} /></button>
+                    <button type="button" onClick={onClose} aria-label="Cerrar panel" className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-colors"><X size={18} /></button>
                 </div>
                 <div className="p-6 grid grid-cols-2 gap-5">
                     <Field label="Compañía">

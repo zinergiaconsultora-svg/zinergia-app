@@ -59,8 +59,11 @@ export function MagneticCard({ children, className = "", onClick }: MagneticCard
             onMouseMove={handleMouseMove}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
+            onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+            role={onClick ? 'button' : undefined}
+            tabIndex={onClick ? 0 : undefined}
             onClick={onClick}
-            className={`relative overflow-hidden cursor-pointer ${className}`}
+            className={`relative overflow-hidden ${onClick ? 'cursor-pointer' : ''} ${className}`}
         >
             {/* Contenido principal */}
             <div className="relative z-10 w-full h-full pointer-events-none">

@@ -149,7 +149,6 @@ export function AnomalyPanel({ anomalies, compact = false }: AnomalyPanelProps) 
             <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
                 {anomalies.map(anomaly => {
                     const cfg = SEVERITY_CONFIG[anomaly.severity];
-                    const Icon = cfg.icon;
                     const isOpen = expandedId === anomaly.id;
 
                     return (

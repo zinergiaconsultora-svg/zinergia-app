@@ -167,6 +167,9 @@ export default {
                 },
             },
             boxShadow: {
+                'card': '0 2px 10px -3px rgba(0, 0, 0, 0.05)',
+                'dropdown': '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+                'button': '0 2px 4px rgba(0, 0, 0, 0.05)',
                 'floating': '0 20px 40px -10px rgba(0, 0, 0, 0.04)',
                 'interaction': '0 8px 20px -5px rgba(0, 0, 0, 0.03)',
             },

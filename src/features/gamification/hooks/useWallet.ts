@@ -1,19 +1,27 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { crmService } from '@/services/crmService';
 import { simulateSaleAction } from '@/app/actions/demo';
-import { Commission } from '@/types/crm';
+import { Commission, WithdrawalRequest, WithdrawalGrowth } from '@/types/crm';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
+import {
+    createWithdrawalRequestAction,
+    getWithdrawalHistoryAction,
+    getWithdrawalGrowthAction,
+} from '@/app/actions/withdrawals';
 
 export function useWallet() {
     const [commissions, setCommissions] = useState<Commission[]>([]);
+    const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
+    const [growth, setGrowth] = useState<WithdrawalGrowth>({ current_month_earned: 0, previous_month_earned: 0, growth_percent: 0 });
+    const [iban, setIban] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [userRole, setUserRole] = useState<'agent' | 'franchise'>('agent');
     const [userId, setUserId] = useState<string>('');
 
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         try {
             setLoading(true);
             const supabase = createClient();
@@ -21,27 +29,31 @@ export function useWallet() {
 
             if (user) {
                 setUserId(user.id);
-                // Move direct DB call to service in a real app, but for now we encapsulate it here
-                // or better yet, add getUserRole to crmService? 
-                // Let's stick to the pattern: component shouldn't know about tables.
-                // We'll trust crmService.ensureProfile handles this or we add a helper.
-                // For this refactor, we just move existing logic to the hook first.
-                const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-                if (profile) setUserRole(profile.role as 'agent' | 'franchise');
+                const { data: profile } = await supabase.from('profiles').select('role, iban').eq('id', user.id).single();
+                if (profile) {
+                    setUserRole(profile.role as 'agent' | 'franchise');
+                    setIban(profile.iban ?? null);
+                }
             }
 
-            const data = await crmService.getNetworkCommissions();
+            const [data, withdrawalData, growthData] = await Promise.all([
+                crmService.getNetworkCommissions(),
+                getWithdrawalHistoryAction(),
+                getWithdrawalGrowthAction(),
+            ]);
             setCommissions(data as Commission[]);
+            setWithdrawals(withdrawalData);
+            setGrowth(growthData);
         } catch (error) {
-            console.error('Error loading commissions:', error);
+            console.error('Error loading wallet:', error);
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [loadData]);
 
     const calculateTotal = (comms: Commission[]) => {
         return comms.reduce((sum, c) => {
@@ -49,8 +61,7 @@ export function useWallet() {
             if (userRole === 'agent') {
                 val += (c.agent_commission || 0);
             } else {
-                // Franchise Logic
-                val += (c.franchise_profit || 0);
+                val += (c.franchise_commission || 0);
                 if (c.agent_id === userId) {
                     val += (c.agent_commission || 0);
                 }
@@ -60,7 +71,7 @@ export function useWallet() {
     };
 
     const handleSimulateSale = async () => {
-        if (confirm('¿Simular una venta de 2.500€ de ahorro? Esto generará comisiones y puntos.')) {
+        if (confirm('Simular una venta de 2.500 euros de ahorro?')) {
             setLoading(true);
             try {
                 await simulateSaleAction(2500);
@@ -71,34 +82,58 @@ export function useWallet() {
                     origin: { y: 0.6 },
                     colors: ['#ea580c', '#10b981', '#f59e0b']
                 });
-            } catch (e) {
-                console.error(e);
-                toast.error('Error en simulación');
+            } catch {
+                toast.error('Error en simulacion');
             } finally {
                 setLoading(false);
             }
         }
     };
 
-    const pendingBalance = calculateTotal(commissions.filter(c => c.status === 'pending'));
-    const availableBalance = calculateTotal(commissions.filter(c => c.status === 'cleared' || c.status === 'paid'));
-    const totalEarned = calculateTotal(commissions);
+    const handleWithdraw = async (amount: number, commissionIds: string[]) => {
+        const result = await createWithdrawalRequestAction(amount, commissionIds);
+        if (result.success) {
+            toast.success('Solicitud de retiro creada');
+            await loadData();
+        } else {
+            toast.error(result.error || 'Error al crear solicitud');
+        }
+        return result;
+    };
 
-    // Breakdown for Franchise
-    const franchisePersonal = userRole === 'franchise' ? commissions.filter(c => c.agent_id === userId).reduce((sum, c) => sum + (c.agent_commission || 0), 0) : 0;
-    const franchiseNetwork = userRole === 'franchise' ? commissions.reduce((sum, c) => sum + (c.franchise_profit || 0), 0) : 0;
+    const pendingBalance = calculateTotal(commissions.filter(c => c.status === 'pending'));
+    const availableBalance = calculateTotal(commissions.filter(c => c.status === 'cleared'));
+    const totalEarned = calculateTotal(commissions);
+    const totalWithdrawn = withdrawals
+        .filter(w => w.status === 'paid')
+        .reduce((sum, w) => sum + (w.amount || 0), 0);
+
+    const franchisePersonal = userRole === 'franchise'
+        ? commissions.filter(c => c.agent_id === userId).reduce((sum, c) => sum + (c.agent_commission || 0), 0)
+        : 0;
+    const franchiseNetwork = userRole === 'franchise'
+        ? commissions.reduce((sum, c) => sum + (c.franchise_commission || 0), 0)
+        : 0;
+
+    const clearedCommissions = commissions.filter(c => c.status === 'cleared');
 
     return {
         commissions,
+        withdrawals,
+        growth,
+        iban,
         loading,
         userRole,
         userId,
         pendingBalance,
         availableBalance,
         totalEarned,
+        totalWithdrawn,
         franchisePersonal,
         franchiseNetwork,
+        clearedCommissions,
         handleSimulateSale,
+        handleWithdraw,
         reloadCommissions: loadData,
     };
 }

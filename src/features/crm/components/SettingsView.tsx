@@ -25,6 +25,7 @@ import { crmService } from '@/services/crmService';
 import { saveCommissionRule } from '@/app/actions/commissionRules';
 import { saveProfileSettingsAction, getProfileSettingsAction } from '@/app/actions/profile';
 import { CommissionRule, NetworkUser } from '@/types/crm';
+import { FiscalProfileForm } from './FiscalProfileForm';
 
 interface SettingsViewProps {
     canManageCommissions?: boolean;
@@ -41,7 +42,7 @@ export default function SettingsView({
     const [loading, setLoading] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'profile' | 'commercial' | 'network' | 'commissions'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'fiscal' | 'commercial' | 'network' | 'commissions'>('profile');
 
     const [settings, setSettings] = useState({
         companyName: '',
@@ -214,6 +215,16 @@ export default function SettingsView({
                             >
                                 <FileText size={16} />
                                 Operativa
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('fiscal')}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'fiscal'
+                                    ? 'bg-white text-energy-600 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                                    }`}
+                            >
+                                <CreditCard size={16} />
+                                Datos Fiscales
                             </button>
                             <button
                                 onClick={() => setActiveTab('network')}
@@ -500,6 +511,23 @@ export default function SettingsView({
                                 />
                             </DashboardCard>
                         </div>
+                    </motion.div>
+                )}
+
+                {/* TAB 2.5: DATOS FISCALES */}
+                {activeTab === 'fiscal' && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="space-y-6"
+                    >
+                        <DashboardCard
+                            title="Datos Fiscales para Facturación"
+                            subtitle="Completa tus datos fiscales para poder emitir facturas de tus comisiones"
+                            icon={CreditCard}
+                        >
+                            <FiscalProfileForm />
+                        </DashboardCard>
                     </motion.div>
                 )}
 

@@ -206,6 +206,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ node, onClose, onSaved })
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 8 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Editar usuario"
                 className="bg-white rounded-3xl shadow-2xl shadow-slate-900/20 w-full max-w-sm overflow-hidden"
                 onClick={e => e.stopPropagation()}
             >

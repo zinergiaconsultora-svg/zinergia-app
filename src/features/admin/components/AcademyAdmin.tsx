@@ -164,7 +164,7 @@ export default function AcademyAdmin({ initialResources }: Props) {
                             <h3 className="text-base font-semibold text-white">
                                 {editingId ? 'Editar recurso' : 'Nuevo recurso'}
                             </h3>
-                            <button type="button" onClick={resetForm} className="text-slate-400 hover:text-white">
+                            <button type="button" onClick={resetForm} aria-label="Cerrar" className="text-slate-400 hover:text-white">
                                 <X size={18} />
                             </button>
                         </div>

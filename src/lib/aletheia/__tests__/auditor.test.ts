@@ -2,7 +2,6 @@
 import { describe, it, expect } from 'vitest';
 import { Auditor } from '../auditor';
 import { InvoiceData } from '../types';
-import { THRESHOLDS } from '../config';
 
 // Mock minimal invoice data
 const mockInvoice = (overrides?: Partial<InvoiceData>): InvoiceData => ({

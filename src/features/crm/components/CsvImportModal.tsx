@@ -181,7 +181,7 @@ export default function CsvImportModal({ onClose, onSuccess }: Props) {
                         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Importar clientes</h2>
                         <p className="text-xs text-slate-500 mt-0.5">Sube un CSV con tu lista de clientes</p>
                     </div>
-                    <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                    <button type="button" onClick={onClose} aria-label="Cerrar" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
                         <X size={20} />
                     </button>
                 </div>

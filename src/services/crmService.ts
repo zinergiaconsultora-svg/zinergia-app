@@ -10,10 +10,15 @@ import { proposalService } from './crm/proposals';
 import { networkService } from './crm/network';
 import { gamificationService } from './crm/gamification';
 import { dashboardService } from './crm/dashboard';
+import { activitiesService } from './crm/activities';
+import { tasksService } from './crm/tasks';
+import { documentsService } from './crm/documents';
+import { contractsService } from './crm/contracts';
+import { analyticsService } from './crm/analytics';
 import { ensureProfile, getFranchiseId } from './crm/shared';
 
 // Re-export atomic services for direct use (tree-shakeable)
-export { clientService, proposalService, networkService, gamificationService, dashboardService };
+export { clientService, proposalService, networkService, gamificationService, dashboardService, activitiesService, tasksService, documentsService, contractsService, analyticsService };
 
 /**
  * CRM SERVICE FACADE (v2.0 - Pragmatic Split)

@@ -48,11 +48,9 @@ export default function BillingHistoryPanel({ franchiseId, canManage }: BillingH
 
     if (loading) {
         return (
-            <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-sm border border-white/60 p-8 relative z-10">
-                <div className="flex items-center justify-center gap-3 text-slate-400">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-energy-600" />
-                    <span className="text-sm">Cargando liquidaciones...</span>
-                </div>
+            <div className="bg-white rounded-xl shadow-card border border-slate-200 flex items-center justify-center gap-3 text-slate-400 p-8">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-energy-600" />
+                <span className="text-sm">Cargando liquidaciones...</span>
             </div>
         );
     }
@@ -62,7 +60,7 @@ export default function BillingHistoryPanel({ franchiseId, canManage }: BillingH
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-sm border border-white/60 overflow-hidden relative z-10"
+            className="bg-white rounded-xl shadow-card border border-slate-200 overflow-hidden"
         >
             {/* Header */}
             <button
@@ -191,6 +189,7 @@ export default function BillingHistoryPanel({ franchiseId, canManage }: BillingH
                                                     URL.revokeObjectURL(url);
                                                 }}
                                                 className="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                                                aria-label="Descargar snapshot"
                                             >
                                                 <Download size={14} className="text-slate-600" />
                                             </button>
@@ -209,6 +208,7 @@ export default function BillingHistoryPanel({ franchiseId, canManage }: BillingH
                                                             }}
                                                             disabled={isPending}
                                                             className="px-2 py-1 bg-red-600 text-white text-[10px] font-bold rounded-lg disabled:opacity-50"
+                                                        aria-label="Confirmar anulación"
                                                         >
                                                             Confirmar
                                                         </button>
@@ -216,6 +216,7 @@ export default function BillingHistoryPanel({ franchiseId, canManage }: BillingH
                                                             type="button"
                                                             onClick={() => setConfirmVoid(null)}
                                                             className="px-2 py-1 bg-slate-200 text-slate-600 text-[10px] font-bold rounded-lg"
+                                                            aria-label="Cancelar anulación"
                                                         >
                                                             No
                                                         </button>

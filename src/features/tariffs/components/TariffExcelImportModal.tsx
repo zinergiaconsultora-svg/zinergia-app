@@ -151,7 +151,7 @@ export function TariffExcelImportModal({ supplyType, onClose, onSuccess }: Props
                         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Importar tarifas · {supplyLabel}</h2>
                         <p className="text-xs text-slate-500 mt-0.5">Excel (.xlsx) o CSV con columnas estándar</p>
                     </div>
-                    <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+                    <button type="button" onClick={onClose} aria-label="Cerrar" className="text-slate-400 hover:text-slate-600 transition-colors">
                         <X size={20} />
                     </button>
                 </div>
