@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useScroll, useTransform } from 'framer-motion';
 import {
     LayoutDashboard,
@@ -42,6 +42,7 @@ const navItems = [
 
 export const NavigationTop = () => {
     const pathname = usePathname();
+    const router = useRouter();
     const [gamification, setGamification] = useState<{ level: number; xp: number; nextLevelXp: number } | null>(null);
     const [hoveredItem, setHoveredItem] = useState<string | null>(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -66,6 +67,11 @@ export const NavigationTop = () => {
     }, []);
 
     const handleLogout = useCallback(() => logout(), []);
+    const handleMobileNavigation = useCallback((event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+        event.preventDefault();
+        setIsMobileMenuOpen(false);
+        router.push(href);
+    }, [router]);
 
     const { scrollY } = useScroll();
     const headerOpacity = useTransform(scrollY, [0, 50], [0.8, 1]);
@@ -239,19 +245,19 @@ export const NavigationTop = () => {
                                     {isAdmin ? (
                                         /* Admin: solo sus herramientas */
                                         <>
-                                            <a href="/admin" onClick={() => setIsMobileMenuOpen(false)} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/admin') ? 'bg-white text-indigo-600 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
+                                            <Link href="/admin" onClick={(event) => handleMobileNavigation(event, '/admin')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/admin') ? 'bg-white text-indigo-600 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
                                                 <Shield size={22} strokeWidth={1.5} />
                                                 <span className="text-[11px] font-medium">Admin</span>
-                                            </a>
-                                            <Link href="/dashboard/tariffs" onClick={() => setIsMobileMenuOpen(false)} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/dashboard/tariffs') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
+                                            </Link>
+                                            <Link href="/dashboard/tariffs" onClick={(event) => handleMobileNavigation(event, '/dashboard/tariffs')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/dashboard/tariffs') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
                                                 <Receipt size={22} strokeWidth={1.5} />
                                                 <span className="text-[11px] font-medium">Tarifas</span>
                                             </Link>
-                                            <Link href="/dashboard/network" onClick={() => setIsMobileMenuOpen(false)} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/dashboard/network') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
+                                            <Link href="/dashboard/network" onClick={(event) => handleMobileNavigation(event, '/dashboard/network')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/dashboard/network') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
                                                 <Network size={22} strokeWidth={1.5} />
                                                 <span className="text-[11px] font-medium">Red</span>
                                             </Link>
-                                            <Link href="/dashboard/settings" onClick={() => setIsMobileMenuOpen(false)} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/dashboard/settings') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
+                                            <Link href="/dashboard/settings" onClick={(event) => handleMobileNavigation(event, '/dashboard/settings')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/dashboard/settings') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
                                                 <Settings size={22} strokeWidth={1.5} />
                                                 <span className="text-[11px] font-medium">Ajustes</span>
                                             </Link>
@@ -263,13 +269,13 @@ export const NavigationTop = () => {
                                                 const Icon = item.icon;
                                                 const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
                                                 return (
-                                                    <Link key={item.name} href={item.href} onClick={() => setIsMobileMenuOpen(false)} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${isActive ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
+                                                    <Link key={item.name} href={item.href} onClick={(event) => handleMobileNavigation(event, item.href)} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${isActive ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
                                                         <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
                                                         <span className="text-[11px] font-medium">{item.name}</span>
                                                     </Link>
                                                 );
                                             })}
-                                            <Link href="/dashboard/tariffs" onClick={() => setIsMobileMenuOpen(false)} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/dashboard/tariffs') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
+                                            <Link href="/dashboard/tariffs" onClick={(event) => handleMobileNavigation(event, '/dashboard/tariffs')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/dashboard/tariffs') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
                                                 <Receipt size={22} strokeWidth={1.5} />
                                                 <span className="text-[11px] font-medium">Tarifas</span>
                                             </Link>
@@ -289,19 +295,19 @@ export const NavigationTop = () => {
                     {isAdmin ? (
                         /* Admin: tabs simplificados */
                         <>
-                            <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)} className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors">
+                            <Link href="/admin" onClick={(event) => handleMobileNavigation(event, '/admin')} className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors">
                                 <Shield size={24} strokeWidth={pathname.startsWith('/admin') ? 2 : 1.5} className={pathname.startsWith('/admin') ? 'text-indigo-600' : 'text-[#8e8e93]'} />
                                 <span className={`text-[10px] font-medium ${pathname.startsWith('/admin') ? 'text-indigo-600' : 'text-[#8e8e93]'}`}>Admin</span>
                             </Link>
-                            <Link href="/dashboard/tariffs" onClick={() => setIsMobileMenuOpen(false)} className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors">
+                            <Link href="/dashboard/tariffs" onClick={(event) => handleMobileNavigation(event, '/dashboard/tariffs')} className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors">
                                 <Receipt size={24} strokeWidth={pathname.startsWith('/dashboard/tariffs') ? 2 : 1.5} className={pathname.startsWith('/dashboard/tariffs') ? 'text-energy-500' : 'text-[#8e8e93]'} />
                                 <span className={`text-[10px] font-medium ${pathname.startsWith('/dashboard/tariffs') ? 'text-energy-500' : 'text-[#8e8e93]'}`}>Tarifas</span>
                             </Link>
-                            <Link href="/dashboard/network" onClick={() => setIsMobileMenuOpen(false)} className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors">
+                            <Link href="/dashboard/network" onClick={(event) => handleMobileNavigation(event, '/dashboard/network')} className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors">
                                 <Network size={24} strokeWidth={pathname.startsWith('/dashboard/network') ? 2 : 1.5} className={pathname.startsWith('/dashboard/network') ? 'text-energy-500' : 'text-[#8e8e93]'} />
                                 <span className={`text-[10px] font-medium ${pathname.startsWith('/dashboard/network') ? 'text-energy-500' : 'text-[#8e8e93]'}`}>Red</span>
                             </Link>
-                            <Link href="/dashboard/settings" onClick={() => setIsMobileMenuOpen(false)} className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors">
+                            <Link href="/dashboard/settings" onClick={(event) => handleMobileNavigation(event, '/dashboard/settings')} className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors">
                                 <Settings size={24} strokeWidth={pathname.startsWith('/dashboard/settings') ? 2 : 1.5} className={pathname.startsWith('/dashboard/settings') ? 'text-energy-500' : 'text-[#8e8e93]'} />
                                 <span className={`text-[10px] font-medium ${pathname.startsWith('/dashboard/settings') ? 'text-energy-500' : 'text-[#8e8e93]'}`}>Ajustes</span>
                             </Link>
@@ -315,7 +321,7 @@ export const NavigationTop = () => {
                             <Link
                                 key={item.name}
                                 href={item.href}
-                                onClick={() => setIsMobileMenuOpen(false)}
+                                onClick={(event) => handleMobileNavigation(event, item.href)}
                                 className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors"
                             >
                                 <Icon size={24} strokeWidth={isActive ? 2 : 1.5} className={isActive ? 'text-energy-500' : 'text-[#8e8e93]'} />
