@@ -1,0 +1,1337 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Flujos operativos · Zinergia</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  /* ==== Sistema visual editorial ==== */
+  :root{
+    --ink:#111827;
+    --ink-2:#263244;
+    --muted:#536174;
+    --soft:#718096;
+    --line:#d8e0ea;
+    --line-strong:#a9b6c7;
+    --paper:#ffffff;
+    --canvas:#eef3f7;
+    --panel:#f8fafc;
+    --accent:#0f766e;
+    --accent-2:#1d4ed8;
+    --warm:#b45309;
+    --danger:#b91c1c;
+    --ok:#15803d;
+    --violet:#6d28d9;
+    --bg-code:#101827;
+    --bg-blue:#e8f0ff;
+    --bg-yellow:#fff7d6;
+    --bg-green:#e8f7ee;
+    --bg-red:#ffebeb;
+    --bg-violet:#f0eafd;
+    --shadow:0 22px 60px rgba(16,24,40,.13);
+    --shadow-soft:0 10px 24px rgba(16,24,40,.08);
+  }
+  *{box-sizing:border-box}
+  html{background:var(--canvas)}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;line-height:1.58;font-size:14px}
+  body{background:
+    linear-gradient(90deg,rgba(15,118,110,.08) 0 1px,transparent 1px 72px),
+    linear-gradient(180deg,#f7fafc 0%,#eef3f7 44%,#f8fafc 100%)}
+  main{max-width:1060px;margin:28px auto 64px;padding:0 48px 76px;background:var(--paper);box-shadow:var(--shadow);border:1px solid rgba(169,182,199,.55);position:relative}
+
+  main::before{content:"";position:absolute;left:0;top:0;bottom:0;width:8px;background:linear-gradient(180deg,var(--accent),var(--accent-2) 42%,var(--warm) 76%,var(--danger));}
+
+  h1{font-size:46px;margin:0;line-height:1.02;letter-spacing:0;max-width:760px}
+  h2{font-size:25px;margin:2.2em 0 .75em;padding:0 0 .45em;border-bottom:2px solid var(--line);letter-spacing:0;display:flex;align-items:center;gap:10px}
+  h2::before{content:"";width:10px;height:28px;border-radius:2px;background:var(--accent);display:inline-block;flex:0 0 auto}
+  h3{font-size:18px;margin:1.55em 0 .55em;color:var(--ink-2);letter-spacing:0}
+  h4{font-size:13px;margin:1.2em 0 .35em;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+
+  p{margin:.62em 0}
+  a{color:var(--accent-2);text-decoration:none;border-bottom:1px solid rgba(29,78,216,.25)}
+  code{background:#edf2f7;color:#1f2937;padding:2px 6px;border-radius:6px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em;border:1px solid #dde6f0}
+  pre{background:var(--bg-code);color:#e5edf7;padding:16px 18px;border-radius:10px;overflow-x:auto;font-size:12px;line-height:1.48;border:1px solid #1f2a3a;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  pre code{background:none;color:inherit;padding:0;border:0}
+
+  blockquote{margin:1em 0;padding:1em 1.15em;background:linear-gradient(90deg,#ecfdf5,#f8fafc);border:1px solid #bde8d6;border-left:5px solid var(--accent);border-radius:10px;color:var(--ink-2);box-shadow:var(--shadow-soft)}
+  blockquote p{margin:.25em 0}
+
+  ul,ol{padding-left:1.4em;margin:.55em 0}
+  li{margin:.22em 0}
+
+  table{border-collapse:separate;border-spacing:0;width:100%;margin:1em 0;font-size:12.7px;border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:0 1px 0 rgba(17,24,39,.03)}
+  th,td{border:0;border-bottom:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  th{background:#172033;color:#fff;font-weight:700}
+  tbody tr:nth-child(even){background:#f8fafc}
+  tbody tr:hover{background:#f1f8f7}
+  td.center,th.center{text-align:center}
+
+  hr{border:none;border-top:1px solid var(--line);margin:2.4em 0}
+
+  /* ==== Componentes ==== */
+  .cover{margin:0 -48px 28px;padding:56px 56px 38px;color:#fff;background:
+    linear-gradient(135deg,#0b1220 0%,#11253a 42%,#0f3d3a 100%);border-bottom:0;position:relative;overflow:hidden}
+  .cover::after{content:"";position:absolute;left:56px;right:56px;bottom:0;height:5px;background:linear-gradient(90deg,var(--accent),#22c55e,var(--warm),#ef4444)}
+  .cover .sub{color:#c7d2df;font-size:15px;margin-top:12px}
+  .cover h3{color:#f8fafc;margin-top:28px}
+  .cover b{color:#fff}
+  .cover .legend-row{color:#dce6ef}
+  .cover .legend-row .k{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);border-radius:8px}
+  .cover-summary{display:grid;grid-template-columns:1.2fr .8fr;gap:24px;margin-top:28px;align-items:stretch}
+  .cover-copy{color:#dce6ef;max-width:690px;font-size:15px}
+  .impact-panel{border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:16px;background:rgba(255,255,255,.08);box-shadow:0 12px 40px rgba(0,0,0,.18)}
+  .impact-panel strong{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#9ee6da;margin-bottom:10px}
+  .impact-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .impact-item{padding:10px;border-radius:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12)}
+  .impact-item b{display:block;font-size:22px;line-height:1}
+  .impact-item span{display:block;color:#cbd5e1;font-size:11px;margin-top:6px}
+  .review-priority{margin-top:16px;border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:14px;background:rgba(255,255,255,.08)}
+  .review-priority h3{margin:0 0 10px;color:#f8fafc;font-size:14px}
+  .priority-list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0;padding:0;list-style:none}
+  .priority-list li{margin:0;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px;background:rgba(255,255,255,.08);font-size:12px;color:#dce6ef}
+  .priority-list b{display:block;margin-bottom:4px}
+
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:750;letter-spacing:0;background:#f4f7fb;color:var(--muted);border:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+  .cover .badge{background:rgba(255,255,255,.1);color:#f8fafc;border-color:rgba(255,255,255,.18)}
+  .badge.role{background:var(--bg-blue);color:#1e3a8a;border-color:#bfdbfe}
+  .badge.risk-l{background:var(--bg-green);color:#14532d;border-color:#bbf7d0}
+  .badge.risk-m{background:var(--bg-yellow);color:#713f12;border-color:#fde68a}
+  .badge.risk-h{background:var(--bg-red);color:#7f1d1d;border-color:#fecaca}
+
+  .card{border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:16px 0;background:#fff;page-break-inside:avoid;break-inside:avoid;box-shadow:var(--shadow-soft);position:relative}
+  .card::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:#cbd5e1}
+  .card:has(.risk-h)::before{background:var(--danger)}
+  .card:has(.risk-m)::before{background:var(--warm)}
+  .card:has(.risk-l)::before{background:var(--ok)}
+  .card h3{margin-top:0}
+  .card .meta{font-size:12px;color:var(--soft);margin-bottom:10px;display:flex;gap:7px;flex-wrap:wrap}
+
+  .legend{display:grid;grid-template-columns:repeat(2,1fr);gap:9px 24px;margin:10px 0}
+  .legend-row{display:flex;gap:9px;align-items:center}
+  .legend-row .k{font-size:18px;width:30px;height:30px;display:inline-grid;place-items:center;text-align:center}
+
+  .toc{columns:2;column-gap:34px;font-size:12.5px;border:1px solid var(--line);border-radius:12px;padding:18px 20px;background:#fbfdff;box-shadow:var(--shadow-soft)}
+  .toc ol{margin:0;padding-left:1.2em}
+  .toc li{break-inside:avoid;margin:.12em 0}
+
+  .pill{display:inline-block;padding:2px 8px;border-radius:7px;font-size:11px;font-weight:700;background:#f4f7fb;border:1px solid var(--line);color:var(--muted)}
+
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+
+  /* Mermaid */
+  .mermaid{background:#fbfdff;border:1px solid var(--line);border-radius:12px;padding:14px;margin:14px 0;text-align:center;page-break-inside:avoid;break-inside:avoid;box-shadow:0 1px 0 rgba(17,24,39,.04);overflow:visible}
+  .mermaid::before{display:none}
+  .mermaid svg{display:block;max-width:100% !important;width:100% !important;height:auto !important;overflow:visible}
+  .mermaid svg .nodeLabel,
+  .mermaid svg .edgeLabel,
+  .mermaid svg text{font-size:12px !important;line-height:1.25}
+  .mermaid svg foreignObject{overflow:visible}
+
+  .flow-board{border:1px solid var(--line);border-radius:14px;background:#fbfdff;padding:18px;margin:16px 0;box-shadow:0 1px 0 rgba(17,24,39,.04)}
+  .flow-band{border-radius:12px;border:1px solid #d9e2ee;background:#fff;padding:14px;margin:0 0 12px}
+  .flow-band:last-child{margin-bottom:0}
+  .flow-band-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:10px}
+  .flow-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:stretch}
+  .flow-row.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .flow-step{min-height:64px;border:1px solid #b7c6d8;border-radius:10px;background:linear-gradient(180deg,#ffffff,#f4f8fb);padding:10px 12px;display:flex;gap:9px;align-items:center;font-weight:750;color:#172033}
+  .flow-step strong{display:block;font-size:13px;line-height:1.2}
+  .flow-step span{display:block;font-size:11px;color:var(--muted);font-weight:600;margin-top:3px}
+  .flow-icon{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:#e8f7ee;border:1px solid #bde8d6;flex:0 0 auto}
+  .flow-step.hot .flow-icon{background:#ffebeb;border-color:#fecaca}
+  .flow-step.money .flow-icon{background:#fff7d6;border-color:#fde68a}
+  .flow-connector{display:flex;align-items:center;justify-content:center;color:#718096;font-size:18px;font-weight:800}
+  .screen-map{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:14px;border:1px solid var(--line);border-radius:14px;background:#fbfdff;padding:18px;margin:16px 0}
+  .screen-column{border:1px solid #d9e2ee;border-radius:12px;background:#fff;padding:14px}
+  .screen-column h3{margin:0 0 10px;font-size:15px}
+  .screen-list{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+  .screen-list li{border:1px solid #dce5ef;background:#f8fafc;border-radius:9px;padding:8px 10px;font-size:12px;font-weight:700}
+  .screen-list small{display:block;color:var(--muted);font-weight:600;margin-top:2px}
+  .screen-path{margin-top:12px;padding:9px 10px;border-radius:9px;background:#ecfdf5;border:1px solid #bde8d6;color:#0f513f;font-size:12px;font-weight:750}
+  .state-board{border:1px solid var(--line);border-radius:14px;background:#fbfdff;padding:16px;margin:14px 0}
+  .state-flow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .state-node{border:1px solid #b7c6d8;border-radius:999px;background:#fff;padding:9px 13px;font-size:13px;font-weight:800;color:#172033;min-width:112px;text-align:center}
+  .state-node.start{min-width:42px;background:#172033;color:#fff}
+  .state-node.ok{background:#e8f7ee;border-color:#bde8d6;color:#0f513f}
+  .state-node.warn{background:#fff7d6;border-color:#fde68a;color:#713f12}
+  .state-node.bad{background:#ffebeb;border-color:#fecaca;color:#7f1d1d}
+  .state-arrow{color:#718096;font-size:18px;font-weight:900}
+  .state-note{margin-top:10px;color:var(--muted);font-size:12px}
+  .audience-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:16px 0}
+  .audience-card{border:1px solid var(--line);border-radius:12px;padding:16px;background:#fff;box-shadow:var(--shadow-soft)}
+  .audience-card h3{margin:0 0 8px;font-size:16px}
+  .audience-card ul{margin:.4em 0 0;padding-left:1.1em}
+  .fact-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0}
+  .fact{border:1px solid #dce5ef;border-radius:9px;background:#f8fafc;padding:8px 9px}
+  .fact b{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:3px}
+  .fact span{display:block;font-size:12px;font-weight:750;color:#172033}
+  .print-checklist{border:2px solid #111827;border-radius:14px;padding:18px;background:#fff;margin:18px 0}
+  .print-checklist h3{margin-top:0}
+  .check-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 18px}
+  .check-row{display:grid;grid-template-columns:24px 1fr 88px;gap:8px;align-items:center;border-bottom:1px solid #e5eaf0;padding:7px 0;font-size:12px}
+  .check-box{width:16px;height:16px;border:2px solid #111827;border-radius:3px}
+  .check-status{color:#64748b;text-align:right}
+  .screenshot-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+  .shot-card{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden;box-shadow:var(--shadow-soft)}
+  .shot-card img{display:block;width:100%;height:auto;background:#f8fafc}
+  .shot-caption{padding:10px 12px;font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
+  .shot-caption b{color:#172033}
+
+  /* ==== Impresión A4 ==== */
+  @page{
+    size: A4;
+    margin: 16mm 14mm 18mm 14mm;
+    @bottom-center{ content: "Flujos operativos · Zinergia · pág. " counter(page) " / " counter(pages); font-family:sans-serif; font-size:10px; color:#64748b; }
+    @top-right{ content: "v1.0 · 2026-05-05"; font-family:sans-serif; font-size:10px; color:#94a3b8; }
+  }
+  @media print{
+    html,body{background:#fff}
+    body{font-size:11.4pt;line-height:1.45}
+    main{max-width:none;margin:0;padding:0;box-shadow:none;border:0}
+    main::before{display:none}
+    h1{font-size:24pt}
+    h2{font-size:16pt;page-break-before:always;break-before:page}
+    h2::before{height:20px}
+    h2.no-break{page-break-before:auto;break-before:auto}
+    h3{font-size:13pt}
+    .card,.mermaid,table,pre,blockquote{page-break-inside:avoid;break-inside:avoid}
+    .card,.toc,.mermaid,blockquote{box-shadow:none}
+    .mermaid{margin:12px 0;padding:12px;overflow:visible;text-align:center}
+    .mermaid::before{display:none}
+    .mermaid svg{min-width:0;max-width:100% !important;width:100% !important}
+    .mermaid svg .nodeLabel,
+    .mermaid svg .edgeLabel,
+    .mermaid svg text{font-size:12px !important}
+    a{color:inherit;text-decoration:none}
+    .no-print{display:none !important}
+    .cover{margin:0;padding:28px 0 20px;color:#111827;background:#fff;border-bottom:4px solid #111827;page-break-after:always;break-after:page}
+    .cover::after{display:none}
+    .cover .sub,.cover-copy,.cover .legend-row,.impact-item span{color:#475569}
+    .cover h3,.cover b,.impact-item b{color:#111827}
+    .impact-panel,.impact-item{background:#fff;border-color:#d8e0ea;box-shadow:none}
+    .impact-panel strong{color:#0f766e}
+    .review-priority{background:#fff;border-color:#d8e0ea}
+    .review-priority h3,.priority-list b{color:#111827}
+    .priority-list li{background:#fff;border-color:#d8e0ea;color:#475569}
+    .cover .badge{background:#f8fafc;color:#475569;border-color:#d8e0ea}
+  }
+  /* Ayuda en pantalla */
+  .help{position:fixed;right:18px;bottom:18px;background:#0b1220;color:#fff;font-size:12px;padding:10px 14px;border-radius:999px;box-shadow:0 14px 35px rgba(0,0,0,.24);z-index:99;border:1px solid rgba(255,255,255,.12)}
+  .help b{color:#fde68a}
+
+  @media screen and (max-width:760px){
+    main{margin:0;padding:0 22px 52px;border:0}
+    main::before{width:5px}
+    .cover{margin:0 -22px 24px;padding:34px 28px 28px}
+    h1{font-size:34px}
+    h2{font-size:22px}
+    .cover-summary,.grid-2,.grid-3{grid-template-columns:1fr}
+    .legend{grid-template-columns:1fr}
+    .toc{columns:1}
+    .flow-row,.flow-row.three,.screen-map,.audience-grid,.fact-strip,.check-grid,.screenshot-grid{grid-template-columns:1fr}
+    .state-flow{display:grid;grid-template-columns:1fr}
+    .state-arrow{transform:rotate(90deg);justify-self:center}
+    .flow-step{min-height:58px}
+    table{font-size:12px}
+  }
+</style>
+</head>
+<body>
+<main>
+
+<!-- ===================== CUBIERTA ===================== -->
+<section class="cover">
+  <h1>📘 Flujos operativos de la app Zinergia</h1>
+  <div class="sub">Guía didáctica · pantalla a pantalla · roles · pruebas · runbook · SQL</div>
+  <div style="margin-top:18px;display:flex;gap:8px;flex-wrap:wrap">
+    <span class="badge">Versión 1.0</span>
+    <span class="badge">2026-05-05</span>
+    <span class="badge role">Stack: Next.js · Supabase</span>
+    <span class="badge risk-h">Riesgos · seguridad de datos</span>
+  </div>
+  <div class="cover-summary">
+    <div class="cover-copy">
+      Este documento explica cómo funciona la aplicación de extremo a extremo: roles, recorridos típicos,
+      pantalla por pantalla, máquinas de estado, APIs en segundo plano, datos sensibles,
+      pruebas E2E, runbook de incidencias y queries SQL de verificación.
+    </div>
+    <aside class="impact-panel" aria-label="Resumen ejecutivo">
+      <strong>Resumen ejecutivo</strong>
+      <div class="impact-grid">
+        <div class="impact-item"><b>25+</b><span>pantallas y rutas revisables</span></div>
+        <div class="impact-item"><b>3</b><span>roles operativos principales</span></div>
+        <div class="impact-item"><b>5</b><span>flujos E2E recomendados</span></div>
+        <div class="impact-item"><b>🔴</b><span>foco en PII, dinero y accesos</span></div>
+      </div>
+    </aside>
+  </div>
+  <div class="review-priority">
+    <h3>Qué revisar primero</h3>
+    <ul class="priority-list">
+      <li><b>1 · Flujo crítico</b>Factura → OCR → propuesta → firma → comisión.</li>
+      <li><b>2 · Riesgo de datos</b>PII, PDF, OCR training, RGPD y logs.</li>
+      <li><b>3 · Riesgo de dinero</b>Wallet, comisiones, retiradas e idempotencia.</li>
+    </ul>
+  </div>
+
+  <h3 class="no-break">Convenciones visuales</h3>
+  <div class="legend">
+    <div class="legend-row"><span class="k">👑</span><div><b>Admin</b> — equipo interno, permisos globales</div></div>
+    <div class="legend-row"><span class="k">🏢</span><div><b>Franquicia</b> — su red de agentes</div></div>
+    <div class="legend-row"><span class="k">👤</span><div><b>Agente</b> — su propia cartera</div></div>
+    <div class="legend-row"><span class="k">🧾</span><div><b>Cliente final</b> — sin login, solo firma</div></div>
+    <div class="legend-row"><span class="k">✅</span><div>Camino feliz</div></div>
+    <div class="legend-row"><span class="k">❌</span><div>Error de usuario controlado</div></div>
+    <div class="legend-row"><span class="k">🔒</span><div>Caso de seguridad</div></div>
+    <div class="legend-row"><span class="k">⚠️</span><div>Riesgo conocido</div></div>
+    <div class="legend-row"><span class="k">🟢</span><div>Riesgo bajo</div></div>
+    <div class="legend-row"><span class="k">🟡</span><div>Riesgo medio</div></div>
+    <div class="legend-row"><span class="k">🔴</span><div>Riesgo alto</div></div>
+    <div class="legend-row"><span class="k">⏳</span><div>Pendiente</div></div>
+  </div>
+</section>
+
+<!-- ===================== ÍNDICE ===================== -->
+<h2 class="no-break">Índice</h2>
+<div class="toc">
+  <ol>
+    <li>Glosario rápido</li>
+    <li>Visión general del negocio</li>
+    <li>Mapa de pantallas</li>
+    <li>Arquitectura técnica</li>
+    <li>Roles y matriz de permisos</li>
+    <li>Máquinas de estado clave</li>
+    <li>Recorrido recomendado</li>
+    <li>Pantallas públicas
+      <ol>
+        <li>/ — Login</li>
+        <li>/join/[code] — Invitación</li>
+        <li>/p/[token] — Firma cliente</li>
+      </ol>
+    </li>
+    <li>Dashboard agente / franquicia
+      <ol>
+        <li>/dashboard</li>
+        <li>/dashboard/clients</li>
+        <li>/dashboard/clients/[id]</li>
+        <li>/dashboard/simulator</li>
+        <li>/dashboard/comparar-multiple</li>
+        <li>/dashboard/proposals</li>
+        <li>/dashboard/proposals/[id]</li>
+        <li>/dashboard/wallet</li>
+        <li>/dashboard/invoicing</li>
+        <li>/dashboard/network</li>
+        <li>/dashboard/tariffs</li>
+        <li>/dashboard/tasks</li>
+        <li>/dashboard/academy</li>
+        <li>/dashboard/analytics</li>
+        <li>/dashboard/forecast</li>
+        <li>/dashboard/settings</li>
+      </ol>
+    </li>
+    <li>Panel de administración</li>
+    <li>APIs y procesos en segundo plano</li>
+    <li>Datos sensibles y reglas transversales</li>
+    <li>Checklist universal</li>
+    <li>Pruebas E2E recomendadas</li>
+    <li>Pendientes de validación</li>
+    <li>Anexo A — Queries SQL</li>
+    <li>Anexo B — Runbook</li>
+    <li>Anexo C — Capturas</li>
+  </ol>
+</div>
+
+<h2 class="no-break">Guía por perfil</h2>
+<div class="audience-grid">
+  <div class="audience-card">
+    <h3>Negocio</h3>
+    <p>Lee el recorrido principal, roles y pantallas clave para entender cómo se vende y cómo se cobra.</p>
+    <ul>
+      <li>Secciones 2, 3, 7, 9.4 y 9.8.</li>
+      <li>Objetivo: validar que la operativa tiene sentido.</li>
+    </ul>
+  </div>
+  <div class="audience-card">
+    <h3>QA / Operaciones</h3>
+    <p>Usa las pruebas por pantalla, checklist universal y E2E recomendados.</p>
+    <ul>
+      <li>Secciones 8, 9, 13 y 14.</li>
+      <li>Objetivo: detectar bloqueos funcionales.</li>
+    </ul>
+  </div>
+  <div class="audience-card">
+    <h3>Dev / Seguridad</h3>
+    <p>Revisa rutas, RLS, PII, Server Actions, crons, SQL y runbook.</p>
+    <ul>
+      <li>Secciones 10, 11, 12 y anexos A/B.</li>
+      <li>Objetivo: cerrar fugas y errores de datos.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===================== 1 GLOSARIO ===================== -->
+<h2>1 · Glosario rápido</h2>
+<table>
+  <thead><tr><th>Término</th><th>Significado</th></tr></thead>
+  <tbody>
+    <tr><td><b>CUPS</b></td><td>Código Universal del Punto de Suministro. Identifica un suministro eléctrico/gas. Dato sensible.</td></tr>
+    <tr><td><b>OCR job</b></td><td>Trabajo asíncrono que extrae datos de una factura PDF.</td></tr>
+    <tr><td><b>Propuesta</b></td><td>Documento comercial generado tras la simulación, firmable por el cliente.</td></tr>
+    <tr><td><b>Token público</b></td><td>URL <code>/p/[token]</code> que el cliente abre sin loguearse.</td></tr>
+    <tr><td><b>Comisión</b></td><td>Importe que gana un agente/franquicia por una propuesta firmada.</td></tr>
+    <tr><td><b>Retirada</b></td><td>Solicitud para cobrar comisiones acumuladas.</td></tr>
+    <tr><td><b>RLS</b></td><td>Row Level Security de Supabase.</td></tr>
+    <tr><td><b>Server Action</b></td><td>Función Next.js ejecutada en servidor desde un componente cliente.</td></tr>
+    <tr><td><b>PII</b></td><td>Personally Identifiable Information (nombre, email, DNI…).</td></tr>
+    <tr><td><b>Idempotente</b></td><td>Operación que ejecutada N veces produce el mismo resultado que en una.</td></tr>
+  </tbody>
+</table>
+
+<!-- ===================== 2 VISIÓN ===================== -->
+<h2>2 · Visión general del negocio</h2>
+<p>Zinergia es una plataforma B2B de <b>consultoría energética</b>. El ciclo de vida natural:</p>
+<div class="flow-board">
+  <div class="flow-band">
+    <div class="flow-band-title">1 · Captación y lectura de factura</div>
+    <div class="flow-row">
+      <div class="flow-step"><div class="flow-icon">👤</div><div><strong>Login agente</strong><span>entra en su dashboard</span></div></div>
+      <div class="flow-step"><div class="flow-icon">📇</div><div><strong>Captar cliente</strong><span>alta o selección del cliente</span></div></div>
+      <div class="flow-step"><div class="flow-icon">📄</div><div><strong>Subir factura</strong><span>PDF eléctrico o gas</span></div></div>
+      <div class="flow-step hot"><div class="flow-icon">🤖</div><div><strong>OCR</strong><span>extrae datos y puede fallar</span></div></div>
+    </div>
+  </div>
+  <div class="flow-band">
+    <div class="flow-band-title">2 · Comparativa y propuesta comercial</div>
+    <div class="flow-row">
+      <div class="flow-step hot"><div class="flow-icon">✍️</div><div><strong>Revisar datos</strong><span>corregir antes de calcular</span></div></div>
+      <div class="flow-step"><div class="flow-icon">📊</div><div><strong>Comparar tarifas</strong><span>ahorro estimado</span></div></div>
+      <div class="flow-step"><div class="flow-icon">💾</div><div><strong>Guardar propuesta</strong><span>queda asociada al cliente</span></div></div>
+      <div class="flow-step"><div class="flow-icon">🔗</div><div><strong>Compartir enlace</strong><span>pantalla pública /p/token</span></div></div>
+    </div>
+  </div>
+  <div class="flow-band">
+    <div class="flow-band-title">3 · Firma, comisión y cobro</div>
+    <div class="flow-row three">
+      <div class="flow-step hot"><div class="flow-icon">🧾</div><div><strong>Cliente firma</strong><span>sin login, desde enlace</span></div></div>
+      <div class="flow-step money"><div class="flow-icon">💰</div><div><strong>Comisión generada</strong><span>impacta en wallet</span></div></div>
+      <div class="flow-step money"><div class="flow-icon">🏦</div><div><strong>Retirada y pago</strong><span>franquicia/admin aprueba</span></div></div>
+    </div>
+  </div>
+</div>
+<p>En paralelo, <b>👑 Admin</b> opera tarifas, red, RGPD, auditoría, formación y reporting.</p>
+
+<!-- ===================== 3 MAPA ===================== -->
+<h2>3 · Mapa de pantallas</h2>
+<div class="screen-map">
+  <div class="screen-column">
+    <h3>🌐 Público</h3>
+    <ul class="screen-list">
+      <li>/<small>Login</small></li>
+      <li>/join/[code]<small>alta por invitación</small></li>
+      <li>/p/[token]<small>firma de propuesta</small></li>
+    </ul>
+    <div class="screen-path">Punto delicado: cualquiera con enlace puede entrar.</div>
+  </div>
+  <div class="screen-column">
+    <h3>🏠 Dashboard</h3>
+    <ul class="screen-list">
+      <li>Inicio<small>/dashboard</small></li>
+      <li>CRM<small>clientes · ficha · tareas</small></li>
+      <li>Venta<small>simulador · comparador · propuestas</small></li>
+      <li>Dinero<small>wallet · comisiones · facturación</small></li>
+      <li>Gestión<small>red · tarifas · academy · ajustes</small></li>
+    </ul>
+    <div class="screen-path">Flujo clave: cliente → simulador → propuesta → firma → comisión.</div>
+  </div>
+  <div class="screen-column">
+    <h3>👑 Admin</h3>
+    <ul class="screen-list">
+      <li>/admin<small>panel central</small></li>
+      <li>Agentes<small>franquicias · asignaciones</small></li>
+      <li>Reporting<small>métricas · negocio</small></li>
+      <li>Control<small>RGPD · auditoría · academy</small></li>
+    </ul>
+    <div class="screen-path">Punto delicado: solo rol admin debe acceder.</div>
+  </div>
+</div>
+
+<!-- ===================== 4 ARQUITECTURA ===================== -->
+<h2>4 · Arquitectura técnica</h2>
+<div class="mermaid">
+flowchart LR
+    UI["🖥 Next.js<br/>App Router"] -->|fetch| SA["⚙️ Server<br/>Actions"]
+    UI -->|REST| API["🔌 Rutas API"]
+    SA --> DB[("🗄 Supabase<br/>Postgres + RLS")]
+    API --> DB
+    UI <-->|realtime| RT["📡 Supabase<br/>Realtime"]
+    API -->|webhook| OCR["🤖 Servicio<br/>OCR externo"]
+    OCR -.->|callback| API
+    CRON["⏰ Cron jobs"] --> API
+    P["🧾 /p/[token]"] --> API
+</div>
+<table>
+  <thead><tr><th>Capa</th><th>Tecnología</th><th>Responsabilidad</th></tr></thead>
+  <tbody>
+    <tr><td>🖥 UI</td><td>Next.js App Router</td><td>Pantallas y rutas API</td></tr>
+    <tr><td>🔐 Auth + datos</td><td>Supabase</td><td>Login, BD, RLS, storage, realtime</td></tr>
+    <tr><td>🤖 OCR</td><td>Servicio externo + webhook</td><td>Extracción de datos</td></tr>
+    <tr><td>⚙️ Negocio</td><td>Server Actions</td><td>Mutaciones</td></tr>
+    <tr><td>⏰ Automatización</td><td><code>/api/cron/*</code></td><td>Renovaciones, follow-ups, purgas</td></tr>
+    <tr><td>🌐 Cliente final</td><td><code>/p/[token]</code></td><td>Firma sin login</td></tr>
+  </tbody>
+</table>
+
+<!-- ===================== 5 ROLES ===================== -->
+<h2>5 · Roles y matriz de permisos</h2>
+<table>
+  <thead><tr><th>Capacidad</th><th class="center">👑 Admin</th><th class="center">🏢 Franquicia</th><th class="center">👤 Agente</th></tr></thead>
+  <tbody>
+    <tr><td>Login y dashboard</td><td class="center">✅ /admin</td><td class="center">✅ /dashboard</td><td class="center">✅ /dashboard</td></tr>
+    <tr><td>Crear/importar clientes</td><td class="center">—</td><td class="center">(de su red)</td><td class="center">✅</td></tr>
+    <tr><td>Subir factura · simular</td><td class="center">—</td><td class="center">(según config)</td><td class="center">✅</td></tr>
+    <tr><td>Generar propuestas</td><td class="center">—</td><td class="center">(según config)</td><td class="center">✅</td></tr>
+    <tr><td>Ver propuestas de terceros</td><td class="center">✅ global</td><td class="center">✅ su red</td><td class="center">❌</td></tr>
+    <tr><td>Configurar tarifas globales</td><td class="center">✅</td><td class="center">❌</td><td class="center">❌</td></tr>
+    <tr><td>Invitar agentes</td><td class="center">✅</td><td class="center">✅ a su red</td><td class="center">❌</td></tr>
+    <tr><td>Aprobar/pagar retiradas</td><td class="center">✅</td><td class="center">✅ su red</td><td class="center">❌</td></tr>
+    <tr><td>Auditoría / RGPD</td><td class="center">✅</td><td class="center">❌</td><td class="center">❌</td></tr>
+    <tr><td>Reporting global</td><td class="center">✅</td><td class="center">parcial</td><td class="center">❌</td></tr>
+  </tbody>
+</table>
+<blockquote>🔴 <b>Regla de oro.</b> Ningún rol debe ver datos fuera de su ámbito ni siquiera escribiendo la URL a mano. Validar en UI <b>y</b> en RLS <b>y</b> en Server Actions.</blockquote>
+
+<!-- ===================== 6 ESTADOS ===================== -->
+<h2>6 · Máquinas de estado clave</h2>
+
+<h3>6.1 Trabajo OCR</h3>
+<div class="state-board">
+  <div class="state-flow">
+    <div class="state-node start">Inicio</div>
+    <div class="state-arrow">→</div>
+    <div class="state-node">Pendiente</div>
+    <div class="state-arrow">→</div>
+    <div class="state-node warn">Analizando</div>
+    <div class="state-arrow">→</div>
+    <div class="state-node ok">Completado</div>
+    <div class="state-arrow">→</div>
+    <div class="state-node start">Fin</div>
+  </div>
+  <div class="state-note">Si el OCR falla o tarda demasiado: <b>Analizando → Error → Reintento</b>. Validar que no quedan trabajos zombis.</div>
+</div>
+
+<h3>6.2 Propuesta</h3>
+<div class="state-board">
+  <div class="state-flow">
+    <div class="state-node start">Inicio</div>
+    <div class="state-arrow">→</div>
+    <div class="state-node">Borrador</div>
+    <div class="state-arrow">→</div>
+    <div class="state-node warn">Enviada</div>
+    <div class="state-arrow">→</div>
+    <div class="state-node ok">Firmada</div>
+    <div class="state-arrow">→</div>
+    <div class="state-node ok">Activa</div>
+  </div>
+  <div class="state-note">Rama alternativa: <b>Enviada → Caducada</b> cuando el token expira. El paso crítico es <b>Enviada → Firmada</b>.</div>
+</div>
+
+<h3>6.3 Comisión y retirada</h3>
+<div class="state-board">
+  <div class="state-flow">
+    <div class="state-node">Comisión pendiente</div>
+    <div class="state-arrow">→</div>
+    <div class="state-node ok">Disponible</div>
+    <div class="state-arrow">→</div>
+    <div class="state-node warn">Retirada solicitada</div>
+    <div class="state-arrow">→</div>
+    <div class="state-node ok">Aprobada</div>
+    <div class="state-arrow">→</div>
+    <div class="state-node ok">Pagada</div>
+  </div>
+  <div class="state-note">Rama alternativa: <b>Solicitada → Rechazada</b>. Validar idempotencia para evitar doble retirada o doble pago.</div>
+</div>
+
+<h3>6.4 Invitación</h3>
+<div class="state-board">
+  <div class="state-flow">
+    <div class="state-node start">Inicio</div>
+    <div class="state-arrow">→</div>
+    <div class="state-node warn">Generada</div>
+    <div class="state-arrow">→</div>
+    <div class="state-node ok">Usada</div>
+    <div class="state-arrow">→</div>
+    <div class="state-node start">Fin</div>
+  </div>
+  <div class="state-note">Ramas alternativas: <b>Generada → Caducada</b> o <b>Generada → Revocada</b>. Un código usado no debe reutilizarse.</div>
+</div>
+
+<!-- ===================== 7 RECORRIDO ===================== -->
+<h2>7 · Recorrido recomendado</h2>
+
+<h3>7.1 👤 Camino comercial principal</h3>
+<ol>
+  <li>Login agente en <code>/</code>.</li>
+  <li>Crear cliente en <code>/dashboard/clients</code>.</li>
+  <li>Abrir su ficha <code>/dashboard/clients/[id]</code>.</li>
+  <li>Lanzar simulación en <code>/dashboard/simulator</code>.</li>
+  <li>Subir factura PDF y esperar OCR.</li>
+  <li>Revisar y corregir datos.</li>
+  <li>Ver comparativa y guardar propuesta.</li>
+  <li>Abrir la propuesta en <code>/dashboard/proposals/[id]</code>.</li>
+  <li>Generar PDF y crear enlace público.</li>
+  <li>Abrir <code>/p/[token]</code> en otro navegador y firmar.</li>
+  <li>Verificar estado actualizado y comisión en <code>/dashboard/wallet</code>.</li>
+</ol>
+
+<h3>7.2 🏢 Camino de franquicia</h3>
+<ol>
+  <li>Login franquicia → vista agregada de su red.</li>
+  <li><code>/dashboard/network</code> → invitar agente.</li>
+  <li>Validar alta enganchada a la franquicia.</li>
+  <li>Intentar acceder a otra franquicia → 🔒 bloqueo.</li>
+</ol>
+
+<h3>7.3 👑 Camino admin</h3>
+<ol>
+  <li>Login admin → redirige a <code>/admin</code>.</li>
+  <li>Revisar métricas, agentes, reporting, tarifas, auditoría, RGPD.</li>
+  <li>Aprobar una retirada pendiente.</li>
+  <li>Confirmar que las acciones sensibles exigen rol admin.</li>
+</ol>
+
+<!-- ===================== 8 PÚBLICAS ===================== -->
+<h2>8 · Pantallas públicas</h2>
+
+<div class="card">
+  <h3>8.1 / — Login</h3>
+  <div class="meta"><span class="badge">📍 /</span> <span class="badge role">👥 todos</span> <span class="badge risk-m">🟡 medio</span></div>
+  <p><b>🎯 Objetivo.</b> Autenticar y enviar al panel correcto según rol.</p>
+  <p><b>👁 Qué se ve.</b> Email, password, botón de inicio, mensajes de error.</p>
+  <div class="mermaid">
+sequenceDiagram
+    actor U as Usuario
+    participant W as / (login)
+    participant SA as Server Action
+    participant SB as Supabase Auth
+    participant P as Perfiles
+    U->>W: email + password
+    W->>SA: submit
+    SA->>SB: signInWithPassword
+    SB-->>SA: sesión
+    SA->>P: fetch rol
+    P-->>SA: role
+    alt admin
+        SA-->>U: redirect /admin
+    else franchise / agent
+        SA-->>U: redirect /dashboard
+    end
+  </div>
+  <table>
+    <thead><tr><th>Caso</th><th>Esperado</th></tr></thead>
+    <tbody>
+      <tr><td>✅ Login admin/franquicia/agente</td><td>Redirige al panel correcto</td></tr>
+      <tr><td>❌ Password incorrecto</td><td>Mensaje genérico, sin filtrar internals</td></tr>
+      <tr><td>🔒 Sin sesión, abrir <code>/dashboard</code> o <code>/admin</code></td><td>Redirección a <code>/</code></td></tr>
+      <tr><td>🔒 Email inexistente vs password incorrecto</td><td>Mismo mensaje (evita enumeración)</td></tr>
+    </tbody>
+  </table>
+  <p><b>⚠️ Riesgos.</b> Enumeración de cuentas; loop de redirección si el perfil no tiene rol.</p>
+</div>
+
+<div class="card">
+  <h3>8.2 /join/[code] — Registro por invitación</h3>
+  <div class="meta"><span class="badge">📍 /join/[code]</span> <span class="badge role">👥 invitado</span> <span class="badge risk-m">🟡</span></div>
+  <p><b>🎯 Objetivo.</b> Que un invitado cree cuenta vinculada a su franquicia/agente padre.</p>
+  <div class="mermaid">
+flowchart LR
+    A[Abrir enlace<br/>con code] --> B{Validar code}
+    B -->|✓| C[Form registro]
+    B -->|✗ caducado/usado| X[Error claro]
+    C --> D[Crear cuenta]
+    D --> E[Asociar a invitador]
+    E --> F[Marcar code usado]
+  </div>
+  <table>
+    <thead><tr><th>Caso</th><th>Esperado</th></tr></thead>
+    <tbody>
+      <tr><td>✅ Code válido</td><td>Registro + asociación correcta</td></tr>
+      <tr><td>❌ Inválido / caducado / usado</td><td>Mensaje claro</td></tr>
+      <tr><td>🔒 Reusar code tras alta</td><td>Rechazado</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>8.3 /p/[token] — Propuesta pública para cliente final</h3>
+  <div class="meta"><span class="badge">📍 /p/[token]</span> <span class="badge role">🧾 sin login</span> <span class="badge risk-h">🔴 alto</span></div>
+  <div class="fact-strip">
+    <div class="fact"><b>Ruta</b><span>/p/[token]</span></div>
+    <div class="fact"><b>Rol</b><span>Cliente final</span></div>
+    <div class="fact"><b>Riesgo</b><span>Alto</span></div>
+    <div class="fact"><b>Datos</b><span>Propuesta + firma</span></div>
+    <div class="fact"><b>No debe pasar</b><span>reutilizar token</span></div>
+  </div>
+  <p><b>🎯 Objetivo.</b> Que el cliente final vea y <b>firme</b> una propuesta sin loguearse.</p>
+  <div class="mermaid">
+sequenceDiagram
+    actor C as 🧾 Cliente
+    participant W as /p/[token]
+    participant API as API firma
+    participant DB as Propuestas
+    participant AU as Audit log
+    C->>W: abrir enlace
+    W->>API: validar token
+    API->>DB: buscar propuesta
+    DB-->>API: datos, estado
+    API-->>W: render propuesta
+    C->>W: firmar (nombre + trazo)
+    W->>API: POST firma
+    API->>API: validar tamaño/formato
+    API->>DB: estado = Firmada
+    API->>AU: registrar evento
+    API-->>C: confirmación
+  </div>
+  <table>
+    <thead><tr><th>Caso</th><th>Esperado</th></tr></thead>
+    <tbody>
+      <tr><td>✅ Token válido + firma</td><td>Estado pasa a <i>Firmada</i></td></tr>
+      <tr><td>❌ Token inválido / caducado</td><td>Error sin filtrar internals</td></tr>
+      <tr><td>🔒 Doble firma</td><td>La segunda no sobrescribe silenciosa</td></tr>
+      <tr><td>🔒 Firma vacía o gigante</td><td>Rechazo claro</td></tr>
+      <tr><td>🔒 Enumerar otros tokens</td><td>Imposible (token opaco, rate-limit)</td></tr>
+    </tbody>
+  </table>
+  <p><b>⚠️ Riesgos.</b> Payloads gigantes (DoS); token reutilizado fuera de TTL.</p>
+</div>
+
+<!-- ===================== 9 DASHBOARD ===================== -->
+<h2>9 · Dashboard agente / franquicia</h2>
+<blockquote>Layout común con barra superior. Sesión obligatoria, menú según rol, URLs no autorizadas → bloqueadas.</blockquote>
+
+<div class="card">
+  <h3>9.1 /dashboard — Inicio operativo</h3>
+  <div class="meta"><span class="badge">👥 🏢 👤</span> <span class="badge risk-l">🟢</span></div>
+  <table>
+    <thead><tr><th>Rol</th><th>Vista</th></tr></thead>
+    <tbody>
+      <tr><td>👑 Admin</td><td><b>Redirección automática a /admin</b></td></tr>
+      <tr><td>🏢 Franquicia</td><td>KPIs agregados de su red, conversión, comisiones pendientes</td></tr>
+      <tr><td>👤 Agente</td><td>KPIs propios, alertas, OCR jobs, pipeline, acciones</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>9.2 /dashboard/clients — Clientes</h3>
+  <div class="meta"><span class="badge">👥 🏢 👤</span> <span class="badge risk-m">🟡 PII</span></div>
+  <div class="fact-strip">
+    <div class="fact"><b>Ruta</b><span>/dashboard/clients</span></div>
+    <div class="fact"><b>Rol</b><span>Agente/franquicia</span></div>
+    <div class="fact"><b>Riesgo</b><span>PII</span></div>
+    <div class="fact"><b>Datos</b><span>Clientes + CUPS</span></div>
+    <div class="fact"><b>No debe pasar</b><span>ver ajenos</span></div>
+  </div>
+  <p><b>👁 Qué se ve.</b> Listado, buscador, filtros por estado, vista lista/pipeline, KPIs, importación CSV, acciones masivas.</p>
+  <div class="flow-board">
+    <div class="flow-band">
+      <div class="flow-band-title">Alta manual</div>
+      <div class="flow-row">
+        <div class="flow-step"><div class="flow-icon">➕</div><div><strong>Nuevo cliente</strong><span>abre modal</span></div></div>
+        <div class="flow-step"><div class="flow-icon">📝</div><div><strong>Datos básicos</strong><span>nombre, contacto, CUPS</span></div></div>
+        <div class="flow-step"><div class="flow-icon">💾</div><div><strong>Guardar</strong><span>valida y persiste</span></div></div>
+        <div class="flow-step"><div class="flow-icon">📋</div><div><strong>Listado</strong><span>aparece filtrable</span></div></div>
+      </div>
+    </div>
+    <div class="flow-band">
+      <div class="flow-band-title">Importación CSV</div>
+      <div class="flow-row">
+        <div class="flow-step"><div class="flow-icon">📤</div><div><strong>Subir CSV</strong><span>archivo de clientes</span></div></div>
+        <div class="flow-step hot"><div class="flow-icon">🔎</div><div><strong>Validar filas</strong><span>columnas y formato</span></div></div>
+        <div class="flow-step"><div class="flow-icon">✅</div><div><strong>Crear válidos</strong><span>clientes correctos</span></div></div>
+        <div class="flow-step hot"><div class="flow-icon">⚠️</div><div><strong>Reportar errores</strong><span>por fila inválida</span></div></div>
+      </div>
+    </div>
+  </div>
+  <p><b>💾 Datos sensibles.</b> Nombre, email, teléfono, dirección, <b>CUPS</b>, <b>DNI/CIF</b>. 🔒 Cifrado/hash según reglas del proyecto.</p>
+  <table>
+    <thead><tr><th>Caso</th><th>Esperado</th></tr></thead>
+    <tbody>
+      <tr><td>✅ Crear con mínimos / completos</td><td>Aparece en listado</td></tr>
+      <tr><td>✅ CSV válido / con errores</td><td>Crea válidos + reporta erróneos</td></tr>
+      <tr><td>🔒 Agente A vs cliente de B</td><td>Bloqueo</td></tr>
+      <tr><td>🔒 Errores técnicos</td><td>Sin CUPS/DNI expuestos</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>9.3 /dashboard/clients/[id] — Ficha de cliente</h3>
+  <div class="meta"><span class="badge">👥 🏢 👤</span> <span class="badge risk-m">🟡</span></div>
+  <p><b>🎯 Vista 360°.</b> Cabecera, contacto, estado, propuestas, facturas, timeline, tareas, documentos, contratos.</p>
+  <table>
+    <thead><tr><th>Acción</th><th>Resultado</th></tr></thead>
+    <tbody>
+      <tr><td>✏️ Editar</td><td>Guardar → refresco</td></tr>
+      <tr><td>🚀 Simular</td><td>Precarga cliente → /dashboard/simulator</td></tr>
+      <tr><td>🗑 Eliminar</td><td>Confirmación; sin huérfanos incoherentes</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>9.4 /dashboard/simulator — Simulador OCR</h3>
+  <div class="meta"><span class="badge">👥 👤</span> <span class="badge risk-h">🔴 núcleo</span></div>
+  <div class="fact-strip">
+    <div class="fact"><b>Ruta</b><span>/dashboard/simulator</span></div>
+    <div class="fact"><b>Rol</b><span>Agente</span></div>
+    <div class="fact"><b>Riesgo</b><span>Alto</span></div>
+    <div class="fact"><b>Datos</b><span>Factura + OCR</span></div>
+    <div class="fact"><b>No debe pasar</b><span>PII en logs</span></div>
+  </div>
+  <p><b>🎯 El corazón de la app.</b> Convierte una factura en datos, propone tarifas mejores y guarda la propuesta.</p>
+  <div class="flow-board">
+    <div class="flow-row">
+      <div class="flow-step"><div class="flow-icon">1</div><div><strong>Subida</strong><span>PDF válido</span></div></div>
+      <div class="flow-step hot"><div class="flow-icon">2</div><div><strong>OCR</strong><span>asíncrono</span></div></div>
+      <div class="flow-step hot"><div class="flow-icon">3</div><div><strong>Revisión</strong><span>corregir datos</span></div></div>
+      <div class="flow-step"><div class="flow-icon">4</div><div><strong>Comparativa</strong><span>ahorro y tarifas</span></div></div>
+    </div>
+    <div class="flow-row three" style="margin-top:10px">
+      <div class="flow-step"><div class="flow-icon">5</div><div><strong>Guardar</strong><span>propuesta</span></div></div>
+      <div class="flow-step"><div class="flow-icon">🔗</div><div><strong>Compartir</strong><span>enlace público</span></div></div>
+      <div class="flow-step money"><div class="flow-icon">💰</div><div><strong>Comisión</strong><span>si firma</span></div></div>
+    </div>
+  </div>
+  <h4>Etapa 2 · OCR</h4>
+  <div class="mermaid">
+sequenceDiagram
+    participant UI as Simulador
+    participant API as /api/ocr
+    participant OCR as OCR externo
+    participant DB as Jobs
+    UI->>API: subir factura
+    API->>DB: crear job (Pendiente)
+    API->>OCR: enviar PDF
+    UI-->>UI: estado "Analizando"
+    OCR-->>API: callback
+    API->>DB: Completado + campos
+    DB-->>UI: realtime
+  </div>
+  <h4>Etapa 3 · Revisión</h4>
+  <p>Campos: titular · CUPS · dirección · potencia · consumo · tarifa · periodos · importe · contrato. PDF original lado a lado, alertas en sospechosos.</p>
+  <h4>Pruebas</h4>
+  <table>
+    <thead><tr><th>Caso</th><th>Esperado</th></tr></thead>
+    <tbody>
+      <tr><td>✅ PDF correcto</td><td>OCR completa</td></tr>
+      <tr><td>❌ Archivo inválido</td><td>Error claro</td></tr>
+      <tr><td>❌ Callback nunca llega</td><td>Estado de error legible</td></tr>
+      <tr><td>🔒 Ejemplos de entrenamiento</td><td>Sanitizados sin PII</td></tr>
+      <tr><td>🔒 Doble clic en "Guardar"</td><td>No duplica</td></tr>
+      <tr><td>🔒 Logs</td><td>Sin PII</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>9.5 /dashboard/comparar-multiple — Comparador múltiple</h3>
+  <div class="meta"><span class="badge">👥 👤</span> <span class="badge risk-m">🟡</span></div>
+  <p>Comparar hasta 3 facturas. Estados por factura: <code>Pendiente → Analizando → Analizada → Comparando → Completada | Error</code>.</p>
+  <ul>
+    <li>✅ 1 y 3 facturas; superar el límite → rechazo.</li>
+    <li>✅ Error en una factura no rompe las demás.</li>
+    <li>🔒 Cada resultado corresponde a su archivo.</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>9.6 /dashboard/proposals — Listado de propuestas</h3>
+  <div class="meta"><span class="badge">👥 todos</span> <span class="badge risk-m">🟡</span></div>
+  <ul>
+    <li>🔒 Agente solo propias · 🏢 solo de su red · 👑 las necesarias.</li>
+    <li>✅ Filtros + paginación + estado vacío conviven sin romperse.</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>9.7 /dashboard/proposals/[id] — Detalle</h3>
+  <div class="meta"><span class="badge">👥 todos</span> <span class="badge risk-h">🔴 PDF con PII</span></div>
+  <div class="fact-strip">
+    <div class="fact"><b>Ruta</b><span>/dashboard/proposals/[id]</span></div>
+    <div class="fact"><b>Rol</b><span>Todos acotado</span></div>
+    <div class="fact"><b>Riesgo</b><span>PDF + PII</span></div>
+    <div class="fact"><b>Datos</b><span>Propuesta</span></div>
+    <div class="fact"><b>No debe pasar</b><span>PDF ajeno</span></div>
+  </div>
+  <p>Revisar datos · ahorro · descargar/generar PDF · compartir enlace público · consultar firma.</p>
+  <p><b>Ruta API:</b> <code>/api/proposal/[id]/pdf</code></p>
+  <blockquote>🔒 Validar ownership en la ruta, no solo RLS.</blockquote>
+  <table>
+    <thead><tr><th>Caso</th><th>Esperado</th></tr></thead>
+    <tbody>
+      <tr><td>✅ Descarga propia</td><td>OK</td></tr>
+      <tr><td>🔒 Forzar URL con UUID ajeno</td><td>Bloqueo</td></tr>
+      <tr><td>🔒 PDF cruzado</td><td>Imposible</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>9.8 /dashboard/wallet — Cartera, comisiones y retiradas</h3>
+  <div class="meta"><span class="badge">👥 todos</span> <span class="badge risk-h">🔴 dinero</span></div>
+  <div class="fact-strip">
+    <div class="fact"><b>Ruta</b><span>/dashboard/wallet</span></div>
+    <div class="fact"><b>Rol</b><span>Todos acotado</span></div>
+    <div class="fact"><b>Riesgo</b><span>Dinero</span></div>
+    <div class="fact"><b>Datos</b><span>Comisiones</span></div>
+    <div class="fact"><b>No debe pasar</b><span>doble pago</span></div>
+  </div>
+  <div class="mermaid">
+sequenceDiagram
+    actor A as 👤 Agente
+    actor F as 🏢/👑 Gestor
+    participant W as Wallet
+    participant RPC as RPC retirada
+    A->>W: solicitar (con IBAN)
+    W->>RPC: createWithdrawal (idempotente)
+    RPC-->>W: Solicitada
+    F->>W: revisar
+    alt aprobar
+        F->>RPC: approve
+        RPC-->>F: Aprobada
+        F->>RPC: markPaid
+        RPC-->>F: Pagada
+    else rechazar
+        F->>RPC: reject(motivo)
+        RPC-->>F: Rechazada
+    end
+  </div>
+  <p><b>🔒 Reglas.</b> 👤 solo sus retiradas · 🏢 solo de su red · 👑 global. RPC <b>idempotente</b>.</p>
+  <table>
+    <thead><tr><th>Caso</th><th>Esperado</th></tr></thead>
+    <tbody>
+      <tr><td>✅ Solicitar como agente</td><td>Aparece en pendientes</td></tr>
+      <tr><td>🔒 Retiradas ajenas</td><td>Invisibles</td></tr>
+      <tr><td>✅ Aprobar/rechazar</td><td>Estado cambia</td></tr>
+      <tr><td>🔒 Marcar pagada sin aprobar</td><td>Bloqueado si exige</td></tr>
+      <tr><td>🔒 Doble click solicitar</td><td>Una sola retirada</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>9.9 /dashboard/invoicing · 9.10 /dashboard/network · 9.11 /dashboard/tariffs</h3>
+  <div class="meta"><span class="badge risk-m">🟡</span></div>
+  <ul>
+    <li><b>Invoicing.</b> Listar · emitir · cancelar · marcar pagada · generar desde comisiones. 🔒 Permisos por rol.</li>
+    <li><b>Network.</b> Árbol jerárquico, invitaciones. 🔒 🏢 no invita fuera de su ámbito; árbol no mezcla franquicias.</li>
+    <li><b>Tariffs.</b> Eléctricas/gas, comisiones, importar Excel. 🔒 👤 no modifica; 👑 sí; cambios afectan nuevas simulaciones.</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>9.12-9.16 Tasks · Academy · Analytics · Forecast · Settings</h3>
+  <div class="meta"><span class="badge risk-l">🟢/🟡</span></div>
+  <ul>
+    <li><b>Tasks.</b> CRM ligero. 🔒 No aparecen tareas ajenas.</li>
+    <li><b>Academy.</b> Formación. ✅ Estado vacío legible; ❌ enlaces rotos.</li>
+    <li><b>Analytics.</b> Funnel, mensuales, tendencias. ✅ Coherencia con /dashboard.</li>
+    <li><b>Forecast.</b> Previsión. ✅ Cálculos no rompen sin históricos.</li>
+    <li><b>Settings.</b> Perfil/comercial/comisiones/red. 🔒 Permisos por rol.</li>
+  </ul>
+</div>
+
+<!-- ===================== 10 ADMIN ===================== -->
+<h2>10 · Panel de administración</h2>
+<blockquote><b>📍 /admin/*</b> · 👥 👑 · 🔴 Cualquier otro rol → bloqueo o redirección.</blockquote>
+<table>
+  <thead><tr><th>Ruta</th><th>Objetivo</th><th>Verificar</th></tr></thead>
+  <tbody>
+    <tr><td><code>/admin</code></td><td>Resumen global, franquicias, KPIs</td><td>Solo 👑; estados vacíos OK</td></tr>
+    <tr><td><code>/admin/agents</code></td><td>Gestión y asignaciones</td><td>Cambios; sin PII innecesaria</td></tr>
+    <tr><td><code>/admin/reporting</code></td><td>Informes, gráficos, rankings, export</td><td>Filtros de fecha; coherencia</td></tr>
+    <tr><td><code>/admin/academy</code></td><td>Contenido formativo</td><td>Crear/editar/publicar</td></tr>
+    <tr><td><code>/admin/audit</code></td><td>Eventos sensibles</td><td>No PII completa; filtros</td></tr>
+    <tr><td><code>/admin/business-metrics</code></td><td>Métricas avanzadas</td><td>Consistencia con reporting</td></tr>
+    <tr><td><code>/admin/rgpd</code></td><td>Exportar/borrar PII</td><td>Flujo dedicado ↓</td></tr>
+  </tbody>
+</table>
+
+<h3>10.1 Flujo RGPD</h3>
+<div class="mermaid">
+flowchart LR
+    A[Buscar sujeto] --> B[Exportar mínimo]
+    B --> C[Solicitar borrado]
+    C --> D[Registrar evento<br/>auditoría sin PII]
+    D --> E{Verificar no recuperable}
+    E -->|✓| F([Cerrado])
+    E -->|✗| G[Investigar relacionados]
+    style F fill:#dcfce7
+    style G fill:#fee2e2
+</div>
+
+<!-- ===================== 11 APIs ===================== -->
+<h2>11 · APIs y procesos en segundo plano</h2>
+<table>
+  <thead><tr><th>Ruta</th><th>Riesgo</th><th>Reglas</th></tr></thead>
+  <tbody>
+    <tr><td><code>/api/webhooks/ocr/callback</code></td><td>🔴</td><td>Validar firma · sanitizar ejemplos · sin PII en logs · resiliencia ante payloads incompletos</td></tr>
+    <tr><td><code>/api/ocr/examples</code></td><td>🟡</td><td>Rol permitido · datos sanitizados</td></tr>
+    <tr><td><code>/api/proposal/[id]/pdf</code></td><td>🔴</td><td>Auth + ownership; no depender solo de RLS</td></tr>
+    <tr><td><code>/api/push/subscribe</code></td><td>🟡</td><td>Asociar suscripción al usuario correcto</td></tr>
+    <tr><td><code>/api/cron/*</code></td><td>🔴</td><td>Secreto cron · idempotente · alcance limitado · sin PII</td></tr>
+  </tbody>
+</table>
+<p><b>Crons.</b> <code>detect-renewals</code> · <code>generate-actions</code> · <code>proposal-followup</code> · <code>purge-expired-clients</code> · <code>weekly-summary</code>.</p>
+
+<!-- ===================== 12 DATOS ===================== -->
+<h2>12 · Datos sensibles y reglas transversales</h2>
+<table>
+  <thead><tr><th class="center">#</th><th>Regla</th></tr></thead>
+  <tbody>
+    <tr><td class="center">1</td><td>Todo acceso a BD pasa por RLS</td></tr>
+    <tr><td class="center">2</td><td>Server Actions mutantes validan rol antes de escribir</td></tr>
+    <tr><td class="center">3</td><td>CUPS y DNI/CIF cifrados; consultas por hash</td></tr>
+    <tr><td class="center">4</td><td>Logs sin PII, ni en errores ni métricas</td></tr>
+    <tr><td class="center">5</td><td><code>database.types.ts</code> regenerado tras cada migración</td></tr>
+    <tr><td class="center">6</td><td>Toda modificación de esquema vive en <code>supabase/migrations/</code></td></tr>
+  </tbody>
+</table>
+
+<!-- ===================== 13 CHECKLIST ===================== -->
+<h2>13 · Checklist universal por pantalla</h2>
+<div class="grid-3">
+  <div class="card" style="background:#eff6ff">
+    <h4>🟦 Funcional</h4>
+    <ul>
+      <li>☐ Carga con datos</li>
+      <li>☐ Estado vacío legible</li>
+      <li>☐ Acciones funcionan</li>
+      <li>☐ Cambios persisten</li>
+      <li>☐ Navegación lógica</li>
+    </ul>
+  </div>
+  <div class="card" style="background:#fef2f2">
+    <h4>🟥 Seguridad</h4>
+    <ul>
+      <li>☐ Rol correcto entra</li>
+      <li>☐ Rol incorrecto NO</li>
+      <li>☐ Sin datos cruzados</li>
+      <li>☐ Sin doble envío</li>
+      <li>☐ Errores sin PII</li>
+    </ul>
+  </div>
+  <div class="card" style="background:#fefce8">
+    <h4>🟨 UX</h4>
+    <ul>
+      <li>☐ Errores claros</li>
+      <li>☐ Móvil OK</li>
+      <li>☐ Vacíos no parecen rotos</li>
+      <li>☐ Foco/teclado</li>
+      <li>☐ Texto contraste</li>
+    </ul>
+  </div>
+</div>
+
+<h2>13.1 · Checklist imprimible de una página</h2>
+<div class="print-checklist">
+  <h3>Revisión operativa rápida</h3>
+  <p>Usar durante una sesión de QA o una demo interna. Marcar OK solo cuando el flujo se haya probado con datos reales o de staging.</p>
+  <div class="check-grid">
+    <div>
+      <div class="check-row"><span class="check-box"></span><span>Login con rol agente</span><span class="check-status">OK / KO</span></div>
+      <div class="check-row"><span class="check-box"></span><span>Login con rol franquicia</span><span class="check-status">OK / KO</span></div>
+      <div class="check-row"><span class="check-box"></span><span>Login con rol admin</span><span class="check-status">OK / KO</span></div>
+      <div class="check-row"><span class="check-box"></span><span>Crear cliente</span><span class="check-status">OK / KO</span></div>
+      <div class="check-row"><span class="check-box"></span><span>Importar CSV</span><span class="check-status">OK / KO</span></div>
+      <div class="check-row"><span class="check-box"></span><span>Subir factura PDF</span><span class="check-status">OK / KO</span></div>
+      <div class="check-row"><span class="check-box"></span><span>OCR completa o falla con mensaje claro</span><span class="check-status">OK / KO</span></div>
+      <div class="check-row"><span class="check-box"></span><span>Corregir datos OCR</span><span class="check-status">OK / KO</span></div>
+    </div>
+    <div>
+      <div class="check-row"><span class="check-box"></span><span>Guardar propuesta</span><span class="check-status">OK / KO</span></div>
+      <div class="check-row"><span class="check-box"></span><span>Generar PDF de propuesta</span><span class="check-status">OK / KO</span></div>
+      <div class="check-row"><span class="check-box"></span><span>Firmar propuesta pública</span><span class="check-status">OK / KO</span></div>
+      <div class="check-row"><span class="check-box"></span><span>Comisión aparece en wallet</span><span class="check-status">OK / KO</span></div>
+      <div class="check-row"><span class="check-box"></span><span>Solicitar retirada</span><span class="check-status">OK / KO</span></div>
+      <div class="check-row"><span class="check-box"></span><span>Aprobar/rechazar retirada</span><span class="check-status">OK / KO</span></div>
+      <div class="check-row"><span class="check-box"></span><span>Accesos cruzados bloqueados</span><span class="check-status">OK / KO</span></div>
+      <div class="check-row"><span class="check-box"></span><span>Sin PII en errores/logs visibles</span><span class="check-status">OK / KO</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 14 E2E ===================== -->
+<h2>14 · Pruebas E2E recomendadas</h2>
+<div class="grid-2">
+  <div class="card"><h4>🥇 E2E 1 · Propuesta completa</h4>
+    <p>Login agente → cliente → factura → OCR → guardar → PDF → compartir → firmar → verificar.</p></div>
+  <div class="card"><h4>🥈 E2E 2 · Red franquicia</h4>
+    <p>Login 🏢 → invitación → registro → ver red → confirmar bloqueo de otra franquicia.</p></div>
+  <div class="card"><h4>🥉 E2E 3 · Retirada</h4>
+    <p>Comisión disponible → solicitar → 🏢/👑 aprobar → marcar pagada → histórico.</p></div>
+  <div class="card"><h4>🛡 E2E 4 · RGPD</h4>
+    <p>Login 👑 → buscar → exportar → borrar → confirmar no recuperación → audit log.</p></div>
+  <div class="card" style="grid-column:1/-1"><h4>🚨 E2E 5 · Accesos cruzados</h4>
+    <p>Crear A y B → A genera datos → entrar como B → forzar URLs → debe bloquear clientes, propuestas, PDFs, comisiones, retiradas.</p></div>
+</div>
+
+<!-- ===================== 15 PENDIENTES ===================== -->
+<h2>15 · Pendientes de validación</h2>
+<ul>
+  <li>⏳ Ejecutar E2E con credenciales de staging.</li>
+  <li>⏳ Confirmar responsive móvil (clientes, simulador, red, wallet, admin).</li>
+  <li>⏳ Idempotencia real de los cron en producción.</li>
+  <li>⏳ Formato comercial final de PDFs.</li>
+  <li>⏳ Cerrar con negocio estados exactos de propuesta, comisión y retirada.</li>
+  <li>⏳ Decidir cifrado de nombre completo y dirección.</li>
+</ul>
+
+<!-- ===================== ANEXO A ===================== -->
+<h2>Anexo A · Queries SQL de verificación</h2>
+<blockquote>Solo lectura. Sustituye <code>:agent_id</code>, <code>:franchise_id</code>, etc. Confirma antes que el esquema remoto coincide con <code>src/types/database.types.ts</code>.</blockquote>
+
+<h3>A.1 Salud general</h3>
+<pre><code>SELECT 'profiles' AS tabla, count(*) FROM profiles
+UNION ALL SELECT 'clients',     count(*) FROM clients
+UNION ALL SELECT 'proposals',   count(*) FROM proposals
+UNION ALL SELECT 'ocr_jobs',    count(*) FROM ocr_jobs
+UNION ALL SELECT 'network_commissions', count(*) FROM network_commissions
+UNION ALL SELECT 'withdrawal_requests', count(*) FROM withdrawal_requests
+UNION ALL SELECT 'invitations', count(*) FROM invitations
+ORDER BY tabla;</code></pre>
+
+<h3>A.2 Roles y onboarding</h3>
+<pre><code>SELECT role, count(*) FROM profiles GROUP BY role;
+SELECT id, email FROM profiles WHERE role IS NULL;
+SELECT id, email FROM profiles WHERE role='agent' AND franchise_id IS NULL;</code></pre>
+
+<h3>A.3 Aislamiento por agente / franquicia</h3>
+<pre><code>SELECT count(*) FROM clients WHERE owner_id = :agent_id;
+
+-- 🔒 Fuga: clientes visibles para B que pertenecen a A
+SELECT c.id FROM clients c
+WHERE c.owner_id = :agent_a_id
+  AND c.id IN (SELECT id FROM clients WHERE owner_id = :agent_b_id);
+
+-- Propuestas de una franquicia
+SELECT id, status, created_at
+FROM proposals
+WHERE franchise_id = :franchise_id
+ORDER BY created_at DESC;</code></pre>
+
+<h3>A.4 Pipeline OCR</h3>
+<pre><code>-- Por estado, últimas 24h
+SELECT status, count(*) FROM ocr_jobs
+WHERE created_at &gt; now() - interval '24 hours'
+GROUP BY status;
+
+-- 🟥 Jobs zombi
+SELECT id, created_at, updated_at FROM ocr_jobs
+WHERE status='analyzing' AND updated_at &lt; now() - interval '10 minutes';
+
+-- 🔒 PII en ejemplos
+SELECT id, created_at FROM ocr_training_examples
+WHERE raw_fields::text ~* '(ES[0-9A-Z]{16,20})'
+   OR extracted_fields::text ~* '(ES[0-9A-Z]{16,20})'
+   OR corrected_fields::text ~* '(ES[0-9A-Z]{16,20})'
+   OR raw_text_sample ~* '(ES[0-9A-Z]{16,20})';</code></pre>
+
+<h3>A.5 Comisiones y retiradas</h3>
+<pre><code>SELECT agent_id, sum(agent_commission) AS disponible
+FROM network_commissions
+WHERE status='available'
+GROUP BY agent_id
+ORDER BY disponible DESC;
+
+SELECT w.id, w.amount, w.created_at, p.email
+FROM withdrawal_requests w
+JOIN profiles p ON p.id = w.user_id
+WHERE w.status='requested'
+ORDER BY w.created_at;
+
+-- 🔒 Duplicados
+SELECT user_id, amount, count(*)
+FROM withdrawal_requests
+WHERE created_at &gt; now() - interval '5 minutes'
+GROUP BY user_id, amount HAVING count(*)&gt;1;</code></pre>
+
+<h3>A.6 Propuestas y firma</h3>
+<pre><code>SELECT status, count(*) FROM proposals
+WHERE created_at &gt; now() - interval '7 days' GROUP BY status;
+
+-- PENDIENTE: confirmar en remoto si estas columnas public_* ya están aplicadas.
+SELECT id, public_token, public_expires_at FROM proposals
+WHERE public_token IS NOT NULL
+  AND (public_expires_at IS NULL OR public_expires_at &gt; now());
+
+SELECT id, public_accepted_at, signed_at, signed_name
+FROM proposals
+WHERE public_accepted_at IS NOT NULL
+ORDER BY public_accepted_at DESC;</code></pre>
+
+<h3>A.7 Auditoría y RGPD</h3>
+<pre><code>SELECT action, count(*) FROM audit_logs
+WHERE created_at &gt; now() - interval '1 day'
+GROUP BY action;
+
+-- 🔒 PII en audit log
+SELECT id, action, created_at FROM audit_logs
+WHERE old_data::text ~* '@'
+   OR new_data::text ~* '@'
+   OR old_data::text ~* '\m[0-9]{8}[A-Z]\M'
+   OR new_data::text ~* '\m[0-9]{8}[A-Z]\M';</code></pre>
+
+<!-- ===================== ANEXO B ===================== -->
+<h2>Anexo B · Runbook</h2>
+
+<div class="card">
+  <h3>B.1 🔴 OCR no completa</h3>
+  <p><b>Síntoma.</b> Simulador en "Analizando" indefinidamente.</p>
+  <p><b>Diagnóstico.</b> Jobs en <code>analyzing</code> &gt; 10 min · logs del callback · disponibilidad del OCR externo.</p>
+  <table>
+    <thead><tr><th>Caso</th><th>Acción</th></tr></thead>
+    <tbody>
+      <tr><td>OCR caído</td><td>Avisar usuarios; reintentar</td></tr>
+      <tr><td>Firma inválida</td><td>Rotar/sincronizar secret</td></tr>
+      <tr><td>Job bloqueado</td><td><code>UPDATE ocr_jobs SET status='error' WHERE id=…</code></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>B.2 🔴 Cliente firma y no se actualiza el estado</h3>
+  <p><b>Diagnóstico.</b> Revisar la fila de <code>proposals</code>: estado, <code>public_accepted_at</code>, <code>signed_at</code>, <code>signed_name</code> y <code>signature_data</code> si esas columnas existen en el entorno. Revisar logs y canal Realtime.</p>
+  <p><b>Mitigación.</b> Si la firma existe pero el estado no cambió: transición manual + audit log. Si no existe: revisar tamaño/formato.</p>
+</div>
+
+<div class="card">
+  <h3>B.3 🔴 Doble retirada</h3>
+  <p><b>Diagnóstico.</b> Query A.5 de duplicados. Verificar idempotencia de la RPC (debe usar <code>request_id</code>).</p>
+  <p><b>Mitigación.</b> Cancelar el duplicado más reciente; abrir incidencia técnica.</p>
+</div>
+
+<div class="card" style="border-color:#fecaca;background:#fef2f2">
+  <h3>B.4 🔴 Acceso cruzado entre agentes</h3>
+  <p><b>🚨 STOP.</b> No empujar más cambios hasta cerrar la fuga.</p>
+  <ul>
+    <li>Ejecutar query 🔒 de A.3.</li>
+    <li>Auditar logs por <code>client_id</code> afectado.</li>
+    <li>Notificar a Seguridad/RGPD si hubo lectura efectiva.</li>
+    <li>Endurecer RLS y añadir test de regresión.</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>B.5 🟡 PDF cruzado o vacío</h3>
+  <p>Verificar ownership en la ruta API; añadir <code>Cache-Control: private, no-store</code>; invalidar caché.</p>
+</div>
+
+<div class="card">
+  <h3>B.6 🟡 Cron ejecutado dos veces</h3>
+  <p>Añadir advisory lock o columna <code>idempotency_key</code>; limpiar duplicados con cuidado.</p>
+</div>
+
+<div class="card">
+  <h3>B.7 🟡 Login en bucle</h3>
+  <p>Query A.2 de perfiles huérfanos. Asignar rol manualmente y revisar el alta.</p>
+</div>
+
+<div class="card">
+  <h3>B.8 🟢 Estados vacíos parecen errores</h3>
+  <p>Cada listado debe tener estado vacío explícito con icono + texto + CTA.</p>
+</div>
+
+<!-- ===================== ANEXO C ===================== -->
+<h2>Anexo C · Capturas de pantalla</h2>
+<p>Capturas reales disponibles en este repositorio. Las pantallas privadas requieren sesión de prueba por rol; por eso quedan marcadas como pendientes hasta ejecutar E2E con credenciales de staging.</p>
+<div class="screenshot-grid">
+  <div class="shot-card">
+    <img src="FLUJOS_OPERATIVOS_LOGIN.png" alt="Pantalla de login de Zinergia">
+    <div class="shot-caption"><b>Login `/`</b> · captura real generada desde `http://localhost:3001`.</div>
+  </div>
+  <div class="shot-card">
+    <div style="min-height:220px;display:grid;place-items:center;background:#f8fafc;color:#64748b;padding:20px;text-align:center">
+      Pendiente de capturas autenticadas<br><small>dashboard, clientes, simulador, propuestas, wallet y admin</small>
+    </div>
+    <div class="shot-caption"><b>Pantallas privadas</b> · requieren credenciales de staging por rol.</div>
+  </div>
+</div>
+<table>
+  <thead><tr><th>Pantalla</th><th>Fichero</th><th class="center">Estado</th></tr></thead>
+  <tbody>
+    <tr><td>Login /</td><td><code>FLUJOS_OPERATIVOS_LOGIN.png</code></td><td class="center">✅ real</td></tr>
+    <tr><td>Dashboard agente</td><td><code>docs/screens/dashboard-agent.png</code></td><td class="center">☐</td></tr>
+    <tr><td>Dashboard franquicia</td><td><code>docs/screens/dashboard-franchise.png</code></td><td class="center">☐</td></tr>
+    <tr><td>Listado clientes</td><td><code>docs/screens/clients-list.png</code></td><td class="center">☐</td></tr>
+    <tr><td>Ficha cliente</td><td><code>docs/screens/client-detail.png</code></td><td class="center">☐</td></tr>
+    <tr><td>Simulador subida</td><td><code>docs/screens/sim-1-upload.png</code></td><td class="center">☐</td></tr>
+    <tr><td>Simulador OCR</td><td><code>docs/screens/sim-2-ocr.png</code></td><td class="center">☐</td></tr>
+    <tr><td>Simulador revisión</td><td><code>docs/screens/sim-3-review.png</code></td><td class="center">☐</td></tr>
+    <tr><td>Simulador comparativa</td><td><code>docs/screens/sim-4-compare.png</code></td><td class="center">☐</td></tr>
+    <tr><td>Detalle propuesta</td><td><code>docs/screens/proposal-detail.png</code></td><td class="center">☐</td></tr>
+    <tr><td>Firma cliente</td><td><code>docs/screens/p-token-sign.png</code></td><td class="center">☐</td></tr>
+    <tr><td>Wallet agente</td><td><code>docs/screens/wallet-agent.png</code></td><td class="center">☐</td></tr>
+    <tr><td>Wallet aprobación</td><td><code>docs/screens/wallet-approve.png</code></td><td class="center">☐</td></tr>
+    <tr><td>Red comercial</td><td><code>docs/screens/network-tree.png</code></td><td class="center">☐</td></tr>
+    <tr><td>Admin panel</td><td><code>docs/screens/admin-home.png</code></td><td class="center">☐</td></tr>
+    <tr><td>Admin RGPD</td><td><code>docs/screens/admin-rgpd.png</code></td><td class="center">☐</td></tr>
+  </tbody>
+</table>
+<p>Resoluciones recomendadas: ≈1280×800 desktop, 390×844 móvil.</p>
+
+</main>
+
+<!-- ===================== Mermaid + ayuda imprimir ===================== -->
+<div class="help no-print">📄 Para PDF: <b>Ctrl+P</b> → A4 · márgenes mínimos · gráficos de fondo</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    flowchart: {
+      htmlLabels: true,
+      curve: 'basis',
+      useMaxWidth: false,
+      nodeSpacing: 42,
+      rankSpacing: 58,
+      padding: 18
+    },
+    sequence: {
+      useMaxWidth: false,
+      diagramMarginX: 34,
+      diagramMarginY: 18,
+      boxMargin: 12,
+      messageMargin: 44
+    },
+    state: {
+      useMaxWidth: false
+    },
+    journey: {
+      useMaxWidth: false
+    },
+    securityLevel: 'loose',
+    themeVariables: {
+      fontFamily: 'inherit',
+      fontSize: '15px',
+      primaryColor: '#e8f7ee',
+      primaryTextColor: '#111827',
+      primaryBorderColor: '#0f766e',
+      lineColor: '#718096',
+      secondaryColor: '#e8f0ff',
+      tertiaryColor: '#fff7d6',
+      noteBkgColor: '#fff7d6',
+      noteTextColor: '#111827',
+      actorBkg: '#e8f0ff',
+      actorBorder: '#1d4ed8',
+      actorTextColor: '#111827',
+      signalColor: '#536174',
+      signalTextColor: '#111827',
+      labelBoxBkgColor: '#ffffff',
+      labelBoxBorderColor: '#d8e0ea'
+    }
+  });
+</script>
+</body>
+</html>

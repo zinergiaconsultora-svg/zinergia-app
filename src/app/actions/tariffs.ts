@@ -66,7 +66,7 @@ export async function getTarifas(supplyType?: 'electricity' | 'gas', activeOnly 
     if (activeOnly) query = query.eq('is_active', true)
 
     const { data, error } = await query
-    if (error) throw error
+    if (error) throw new Error('Error al cargar las tarifas')
     return (data ?? []) as TarifaRow[]
 }
 
@@ -81,7 +81,7 @@ export async function upsertTarifa(data: Partial<TarifaRow>): Promise<TarifaRow>
         ? await supabase.from('lv_zinergia_tarifas').update(payload).eq('id', data.id).select().single()
         : await supabase.from('lv_zinergia_tarifas').insert(payload).select().single()
 
-    if (error) throw error
+    if (error) throw new Error('Error al guardar la tarifa')
     revalidatePath('/dashboard/tariffs')
     return row as TarifaRow
 }
@@ -93,7 +93,7 @@ export async function toggleTarifaActive(id: string, isActive: boolean): Promise
         .from('lv_zinergia_tarifas')
         .update({ is_active: isActive, updated_at: new Date().toISOString() })
         .eq('id', id)
-    if (error) throw error
+    if (error) throw new Error('Error al cambiar el estado de la tarifa')
     revalidatePath('/dashboard/tariffs')
 }
 
@@ -101,7 +101,7 @@ export async function deleteTarifa(id: string): Promise<void> {
     await requireServerRole(['admin'])
     const supabase = await createClient()
     const { error } = await supabase.from('lv_zinergia_tarifas').delete().eq('id', id)
-    if (error) throw error
+    if (error) throw new Error('Error al eliminar la tarifa')
     revalidatePath('/dashboard/tariffs')
 }
 
@@ -187,7 +187,7 @@ export async function getTariffCommissions(): Promise<TariffCommissionRow[]> {
         .order('company', { ascending: true })
         .order('modelo', { ascending: true })
         .order('consumption_min_mwh', { ascending: true })
-    if (error) throw error
+    if (error) throw new Error('Error al cargar las comisiones')
     return (data ?? []) as TariffCommissionRow[]
 }
 
@@ -201,7 +201,7 @@ export async function upsertTariffCommission(data: Partial<TariffCommissionRow>)
         ? await supabase.from('tariff_commissions').update(payload).eq('id', data.id).select().single()
         : await supabase.from('tariff_commissions').insert(payload).select().single()
 
-    if (error) throw error
+    if (error) throw new Error('Error al guardar la comisión')
     revalidatePath('/dashboard/tariffs')
     return row as TariffCommissionRow
 }
@@ -210,7 +210,7 @@ export async function deleteTariffCommission(id: string): Promise<void> {
     await requireServerRole(['admin'])
     const supabase = await createClient()
     const { error } = await supabase.from('tariff_commissions').delete().eq('id', id)
-    if (error) throw error
+    if (error) throw new Error('Error al eliminar la comisión')
     revalidatePath('/dashboard/tariffs')
 }
 
@@ -236,6 +236,6 @@ export async function saveCollaboratorPct(pct: number): Promise<void> {
         .from('commission_rules')
         .update({ collaborator_pct: pct })
         .eq('is_active', true)
-    if (error) throw error
+    if (error) throw new Error('Error al guardar el porcentaje de colaborador')
     revalidatePath('/dashboard/tariffs')
 }

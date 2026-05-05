@@ -44,9 +44,12 @@ yarn-error.log*
 
 # irrelevant folders
 opencode
+.claude/
 scripts
 docs
 resources
+!supabase/scripts/
+!supabase/scripts/**
 
 
 # typescript
@@ -59,6 +62,8 @@ opencode
 scripts
 docs
 resources
+!supabase/scripts/
+!supabase/scripts/**
 
 nul
 

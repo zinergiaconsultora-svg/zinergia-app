@@ -9,6 +9,7 @@ interface RpcResult {
     accepted_count: number;
     total_count: number;
     month_savings: number;
+    monthly_goal: number;
     conversion_rate: number;
     recent_proposals: {
         id: string;
@@ -74,6 +75,7 @@ export const dashboardService = {
                 pipeline: rpc.pipeline ?? 0,
                 conversion_rate: conversionRate,
                 month_savings: rpc.month_savings ?? 0,
+                monthly_goal: rpc.monthly_goal ?? 10000,
             },
             recent: recentClients,
             recentProposals: rpc.recent_proposals ?? [],

@@ -3,7 +3,7 @@
 import React from 'react';
 import {
     TrendingDown, ArrowRight, Loader2, ShieldCheck, AlertTriangle,
-    Zap, CheckCircle2, Clock,
+    CheckCircle2, Clock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 

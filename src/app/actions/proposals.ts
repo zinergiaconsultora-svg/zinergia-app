@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { Proposal } from '@/types/crm'
 import { getActiveCommissionRule } from './commissionRules'
 import { createNotificationInternal } from './notifications'
+import { requireServerRole } from '@/lib/auth/permissions'
 import { calculateCommissionSplit, applyFranchiseOverride } from '@/lib/commissions/calculator'
 
 /**
@@ -37,6 +38,7 @@ export interface ProposalHistoryItem {
  * Used by the simulator's comparison feature.
  */
 export async function getProposalHistoryByCupsAction(cups: string): Promise<ProposalHistoryItem[]> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('No autenticado')
@@ -62,7 +64,7 @@ export async function getProposalHistoryByCupsAction(cups: string): Promise<Prop
     }
 
     const { data, error } = await query
-    if (error) throw error
+    if (error) return []
 
     // Filter by CUPS client-side (stored in JSONB calculation_data)
     return (data ?? []).filter(p => {
@@ -75,11 +77,11 @@ export async function updateProposalStatusAction(
     id: string,
     status: Proposal['status']
 ): Promise<Proposal> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
     const supabase = await createClient()
 
-    // Verificar autenticación y ownership antes de actualizar
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('No autenticado')
+    if (!user) throw new Error('No autenticado');
 
     const { data: profile } = await supabase
         .from('profiles')
@@ -87,7 +89,7 @@ export async function updateProposalStatusAction(
         .eq('id', user.id)
         .single()
 
-    if (!profile) throw new Error('Perfil no encontrado')
+    if (!profile) throw new Error('Perfil no encontrado');
 
     // 1. Update status — filtrar por agent_id excepto para admin/franchise
     const query = supabase
@@ -106,7 +108,7 @@ export async function updateProposalStatusAction(
         .select('id, client_id, franchise_id, created_at, status, offer_snapshot, calculation_data, current_annual_cost, offer_annual_cost, annual_savings, savings_percent, notes, optimization_result, aletheia_summary')
         .single()
 
-    if (error) throw error
+    if (error) throw new Error('Error al actualizar la propuesta');
 
     // 2. Trigger commission processing only on 'accepted'
     if (status === 'accepted') {
@@ -115,6 +117,36 @@ export async function updateProposalStatusAction(
 
     // 3. Create in-app notification for the agent
     await createStatusNotification(supabase, user.id, proposal as Proposal, status)
+
+    // 4. Log activity on the client timeline
+    await logProposalActivity(supabase, proposal as Proposal, user.id, status)
+
+    // 5. Auto-generate follow-up tasks & Contracts
+    if (proposal.client_id) {
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('franchise_id')
+            .eq('id', user.id)
+            .maybeSingle()
+
+        await generateFollowUpTasks(supabase, {
+            clientId: proposal.client_id,
+            proposalId: proposal.id,
+            franchiseId: profile?.franchise_id,
+            agentId: user.id,
+            status,
+        })
+
+        if (status === 'accepted') {
+            await autoCreateContract(supabase, {
+                clientId: proposal.client_id,
+                proposalId: proposal.id,
+                franchiseId: profile?.franchise_id,
+                agentId: user.id,
+                proposal: proposal as Proposal
+            })
+        }
+    }
 
     revalidatePath('/dashboard/proposals')
     revalidatePath(`/dashboard/proposals/${id}`)
@@ -238,5 +270,177 @@ async function processCommissions(
         // Commission failure must NOT roll back the proposal status change.
         // Log and continue — commissions can be reprocessed manually if needed.
         console.error('[updateProposalStatusAction] Commission processing failed:', err)
+    }
+}
+
+const PROPOSAL_ACTIVITY_MAP: Record<string, { type: string; description_template: string }> = {
+    sent: { type: 'proposal_sent', description_template: 'Propuesta enviada a {client}' },
+    accepted: { type: 'proposal_accepted', description_template: '¡Propuesta aceptada por {client}! Ahorro: {savings}€/año' },
+    rejected: { type: 'proposal_rejected', description_template: 'Propuesta rechazada por {client}' },
+}
+
+async function logProposalActivity(
+    supabase: Awaited<ReturnType<typeof createClient>>,
+    proposal: Proposal,
+    agentId: string,
+    status: Proposal['status']
+) {
+    const mapping = PROPOSAL_ACTIVITY_MAP[status]
+    if (!mapping || !proposal.client_id) return
+
+    const cd = proposal.calculation_data as { client_name?: string } | null
+    const clientName = cd?.client_name ?? 'Cliente'
+
+    const description = mapping.description_template
+        .replace('{client}', clientName)
+        .replace('{savings}', String(Math.round(proposal.annual_savings || 0)))
+
+    try {
+        await supabase.from('client_activities').insert({
+            client_id: proposal.client_id,
+            agent_id: agentId,
+            franchise_id: proposal.franchise_id,
+            type: mapping.type,
+            description,
+            metadata: {
+                proposal_id: proposal.id,
+                savings: proposal.annual_savings,
+                marketer: proposal.offer_snapshot?.marketer_name,
+            },
+        })
+    } catch {
+        // non-critical
+    }
+}
+
+async function generateFollowUpTasks(
+    supabase: Awaited<ReturnType<typeof createClient>>,
+    data: {
+        clientId: string;
+        proposalId: string;
+        franchiseId?: string;
+        agentId: string;
+        status: Proposal['status'];
+    }
+) {
+    if (!['sent', 'accepted'].includes(data.status)) return;
+
+    const tasks: Array<{
+        agent_id: string;
+        franchise_id?: string;
+        client_id: string;
+        proposal_id: string;
+        title: string;
+        description: string;
+        type: string;
+        priority: string;
+        due_date: string;
+        auto_generated: boolean;
+        status: string;
+    }> = [];
+
+    if (data.status === 'sent') {
+        const in3Days = new Date();
+        in3Days.setDate(in3Days.getDate() + 3);
+        const in7Days = new Date();
+        in7Days.setDate(in7Days.getDate() + 7);
+
+        tasks.push({
+            agent_id: data.agentId,
+            franchise_id: data.franchiseId,
+            client_id: data.clientId,
+            proposal_id: data.proposalId,
+            title: 'Seguimiento propuesta (3 días)',
+            description: 'Contactar cliente para conocer su opinión sobre la propuesta enviada.',
+            type: 'follow_up',
+            priority: 'high',
+            due_date: in3Days.toISOString().split('T')[0],
+            auto_generated: true,
+            status: 'pending',
+        });
+
+        tasks.push({
+            agent_id: data.agentId,
+            franchise_id: data.franchiseId,
+            client_id: data.clientId,
+            proposal_id: data.proposalId,
+            title: 'Seguimiento propuesta (7 días)',
+            description: 'Segundo intento de contacto si no hubo respuesta al primer seguimiento.',
+            type: 'follow_up',
+            priority: 'medium',
+            due_date: in7Days.toISOString().split('T')[0],
+            auto_generated: true,
+            status: 'pending',
+        });
+    }
+
+    if (data.status === 'accepted') {
+        tasks.push({
+            agent_id: data.agentId,
+            franchise_id: data.franchiseId,
+            client_id: data.clientId,
+            proposal_id: data.proposalId,
+            title: 'Recopilar documentación',
+            description: 'Solicitar al cliente la documentación necesaria para el cambio de comercializadora.',
+            type: 'documentation',
+            priority: 'high',
+            due_date: new Date().toISOString().split('T')[0],
+            auto_generated: true,
+            status: 'pending',
+        });
+    }
+
+    if (tasks.length === 0) return;
+
+    try {
+        await supabase.from('tasks').insert(tasks);
+    } catch {
+        // non-critical
+    }
+}
+
+async function autoCreateContract(
+    supabase: Awaited<ReturnType<typeof createClient>>,
+    data: {
+        clientId: string;
+        proposalId: string;
+        franchiseId?: string;
+        agentId: string;
+        proposal: Proposal;
+    }
+) {
+    // Evitar duplicados (idempotencia)
+    const { data: existing } = await supabase
+        .from('contracts')
+        .select('id')
+        .eq('proposal_id', data.proposalId)
+        .maybeSingle()
+
+    if (existing) return;
+
+    const marketerName = data.proposal.offer_snapshot?.marketer_name || 'Comercializadora Desconocida';
+    const tariffName = data.proposal.offer_snapshot?.tariff_name;
+    const cd = data.proposal.calculation_data as unknown as Record<string, unknown> | null;
+    const typeFromCalc = cd?.detected_tariff_type as string;
+    
+    // Inferir tipo de contrato (muy básico)
+    let contractType = 'electricidad';
+    if (typeFromCalc === 'gas' || tariffName?.toLowerCase().includes('gas')) contractType = 'gas';
+
+    try {
+        await supabase.from('contracts').insert({
+            client_id: data.clientId,
+            proposal_id: data.proposalId,
+            agent_id: data.agentId,
+            franchise_id: data.franchiseId,
+            marketer_name: marketerName,
+            tariff_name: tariffName,
+            contract_type: contractType,
+            status: 'pending_switch', // Inicia en trámite
+            annual_savings: data.proposal.annual_savings,
+            start_date: new Date().toISOString().split('T')[0],
+        })
+    } catch (err) {
+        console.error('[autoCreateContract] Error:', err);
     }
 }

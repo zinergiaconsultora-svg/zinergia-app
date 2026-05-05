@@ -28,6 +28,12 @@ const envSchema = z.object({
     APP_ENCRYPTION_KEY: z.string().min(1).optional(),
     APP_ENCRYPTION_PEPPER: z.string().min(1).optional(),
 
+    // CNMC SIPS API OAuth 1.0a credentials. Server-side only.
+    CNMC_OAUTH_CONSUMER_KEY: z.string().min(1).optional(),
+    CNMC_OAUTH_CONSUMER_SECRET: z.string().min(1).optional(),
+    CNMC_OAUTH_TOKEN: z.string().min(1).optional(),
+    CNMC_OAUTH_TOKEN_SECRET: z.string().min(1).optional(),
+
     // Sentry (optional — if not set, error tracking is disabled in dev)
     SENTRY_DSN: z.string().url().optional(),
     SENTRY_ORG: z.string().optional(),

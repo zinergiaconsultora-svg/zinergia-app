@@ -41,7 +41,7 @@ export async function middleware(request: NextRequest) {
         const { data: { user } } = await supabase.auth.getUser()
 
         // 4. Lógica de Redirección Proactiva
-        const isPublicRoute = pathname === '/' || pathname.startsWith('/join') || pathname.startsWith('/auth/callback')
+        const isPublicRoute = pathname === '/' || pathname.startsWith('/join') || pathname.startsWith('/p/') || pathname.startsWith('/auth/callback')
 
         // Caso A: No autenticado intentando entrar a ruta privada
         if (!user && !isPublicRoute) {
@@ -80,6 +80,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    // Excluye: todos los assets de Next.js, rutas /api, PWA assets (sw.js, manifest), favicon e imágenes
-    matcher: ['/((?!_next|api|favicon\\.ico|manifest\\.webmanifest|sw\\.js|icon|apple-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+    // Excluye: assets de Next.js, rutas /api, documentos públicos de auditoría, PWA assets, favicon e imágenes
+    matcher: ['/((?!_next|api|auditoria|favicon\\.ico|manifest\\.webmanifest|sw\\.js|icon|apple-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }

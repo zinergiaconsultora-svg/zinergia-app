@@ -184,10 +184,10 @@ h3 {
   max-width: 1536px;
 }
 
-/* Premium UI Utilities */
+/* Premium UI Utilities (Refactored to Solid SaaS Style) */
 .glass-premium {
-  @apply bg-white/60 dark:bg-[#1c1c1e]/65 backdrop-blur-[40px] saturate-120 border-b border-white/80 dark:border-white/10;
-  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.03);
+  @apply bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800;
+  box-shadow: none;
 }
 
 .animate-slide-up {
@@ -513,26 +513,25 @@ a, button, nav, header, img, svg {
 }
 
 /* ========================================
-   GLASSMORPHISM MEJORADO
+   GLASSMORPHISM MEJORADO (Refactored to Solid)
    ======================================== */
 .glass-premium {
-  background: rgba(255, 255, 255, 0.6);
-  -webkit-backdrop-filter: blur(40px) saturate(120%);
-  backdrop-filter: blur(40px) saturate(120%);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow:
-    0 10px 40px -10px rgba(0, 0, 0, 0.03),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  background: #ffffff;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-right: 1px solid #e2e8f0;
+  box-shadow: none;
+}
+
+.dark .glass-premium {
+  background: #0f172a;
+  border-right: 1px solid #1e293b;
 }
 
 .glass-dark {
-  background: rgba(28, 28, 30, 0.65);
-  -webkit-backdrop-filter: blur(40px) saturate(120%);
-  backdrop-filter: blur(40px) saturate(120%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow:
-    0 10px 40px -10px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 /* ========================================

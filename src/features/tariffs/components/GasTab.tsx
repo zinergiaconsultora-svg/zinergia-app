@@ -112,7 +112,7 @@ export function GasTab({ rows, commissions, isAdmin, onUpdate }: Props) {
                                 <td className="px-3 py-2.5 text-right font-mono text-slate-700">{row.variable_price_kwh_gas === 0 ? '—' : `${row.variable_price_kwh_gas.toFixed(6)} €`}</td>
                                 <td className="px-3 py-2.5 text-center">
                                     {isAdmin ? (
-                                        <button type="button" onClick={() => handleToggle(row)} disabled={pending} className="text-slate-400 hover:text-orange-600 transition-colors">
+                                        <button type="button" onClick={() => handleToggle(row)} disabled={pending} aria-label="Activar o desactivar tarifa" className="text-slate-400 hover:text-orange-600 transition-colors">
                                             {row.is_active ? <ToggleRight size={20} className="text-orange-500" /> : <ToggleLeft size={20} />}
                                         </button>
                                     ) : (

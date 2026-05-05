@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from 'next/navigation';
 import { crmService } from '@/services/crmService';
 import { Client } from '@/types/crm';
-import { getNotificationsAction, AppNotification } from '@/app/actions/notifications';
+import { useNotifications } from '@/contexts/NotificationContext';
 import {
     TrendingUp,
     Target,
@@ -82,6 +82,7 @@ interface DashboardStats {
         secured: number;
         conversion_rate: number;
         month_savings: number;
+        monthly_goal: number;
     };
 }
 
@@ -100,7 +101,8 @@ const DEFAULT_STATS: DashboardStats = {
         pipeline: 0,
         secured: 0,
         conversion_rate: 0,
-        month_savings: 0
+        month_savings: 0,
+        monthly_goal: 10000
     }
 };
 
@@ -121,21 +123,14 @@ const item = {
     show: { opacity: 1, y: 0 }
 };
 
-const MONTHLY_GOAL = 10000;
+const DEFAULT_MONTHLY_GOAL = 10000;
 
 export default function DashboardView() {
     const router = useRouter();
     const [stats, setStats] = useState<DashboardStats>(DEFAULT_STATS);
     const [loading, setLoading] = useState(true);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
-
-    const [notifications, setNotifications] = useState<AppNotification[]>([]);
-
-    useEffect(() => {
-        getNotificationsAction()
-            .then(data => setNotifications(data))
-            .catch(() => { /* non-fatal — bell stays empty */ });
-    }, []);
+    const { notifications, markRead, markAllRead } = useNotifications();
 
     useEffect(() => {
         async function loadStats() {
@@ -152,9 +147,11 @@ export default function DashboardView() {
     }, []);
 
     // Memoized calculations
+    const monthlyGoal = stats.financials.monthly_goal || DEFAULT_MONTHLY_GOAL;
+
     const goalProgress = useMemo(() =>
-        Math.min(Math.round((stats.financials.month_savings / MONTHLY_GOAL) * 100), 100),
-        [stats.financials.month_savings]
+        Math.min(Math.round((stats.financials.month_savings / monthlyGoal) * 100), 100),
+        [stats.financials.month_savings, monthlyGoal]
     );
 
     const firstName = useMemo(() =>
@@ -179,16 +176,16 @@ export default function DashboardView() {
 
     // Callbacks for notification handlers
     const handleMarkAsRead = useCallback((id: string) => {
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    }, []);
+        markRead(id);
+    }, [markRead]);
 
     const handleMarkAllAsRead = useCallback(() => {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    }, []);
+        markAllRead();
+    }, [markAllRead]);
 
-    const handleDismiss = useCallback((id: string) => {
-        setNotifications(prev => prev.filter(n => n.id !== id));
-    }, []);
+    const handleDismiss = useCallback((_id: string) => {
+        markRead(_id);
+    }, [markRead]);
 
     if (loading) return <DashboardSkeleton />;
 
@@ -213,7 +210,7 @@ export default function DashboardView() {
                         <h1 className="text-lg font-semibold text-slate-900">{firstName}</h1>
                     </div>
                     <div className="relative">
-                        <button type="button" className="p-2 text-[#8e8e93] relative active:bg-slate-100 rounded-xl transition-colors" onClick={() => setIsNotifOpen(!isNotifOpen)}>
+                        <button type="button" aria-label="Notificaciones" className="p-2 text-[#8e8e93] relative active:bg-slate-100 rounded-xl transition-colors" onClick={() => setIsNotifOpen(!isNotifOpen)}>
                             <Bell size={20} />
                             {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>}
                         </button>
@@ -263,7 +260,7 @@ export default function DashboardView() {
                                 {/* Sparkline animado superpuesto a la barra de progreso */}
                                 <AnimatedSparkline color="#ff5722" strokeWidth={1} className="absolute inset-0 opacity-50 mix-blend-multiply" delay={0.2} />
                             </div>
-                            <p className="text-xs text-slate-500"><AnimatedCounter value={MONTHLY_GOAL} suffix=" €" /></p>
+                            <p className="text-xs text-slate-500"><AnimatedCounter value={monthlyGoal} suffix=" €" /></p>
                         </MagneticCard>
                         <MagneticCard className="snap-start shrink-0 bg-white rounded-2xl border border-[#e5e5ea] px-4 py-3 min-w-[140px] shadow-sm" onClick={() => { if(typeof window !== 'undefined') { import('@/lib/utils/haptics').then(m => m.haptics.light()) } }}>
                             <p className="text-[11px] text-[#8e8e93] font-medium mb-1">Pipeline activo</p>
@@ -281,7 +278,7 @@ export default function DashboardView() {
                     {/* Desktop: original grid */}
                     <div className="hidden lg:grid grid-cols-4 gap-4">
                         <GlassKpiCard label="Ahorro Detectado" value={<AnimatedCounter value={stats.financials.total_detected} suffix=" €" />} icon={TrendingUp} delay={0.1} />
-                        <GlassKpiCard label="Objetivo Mensual" value={`${goalProgress}%`} subValue={<AnimatedCounter value={MONTHLY_GOAL} suffix=" €" />} icon={Target} progress={goalProgress} delay={0.2} />
+                        <GlassKpiCard label="Objetivo Mensual" value={`${goalProgress}%`} subValue={<AnimatedCounter value={monthlyGoal} suffix=" €" />} icon={Target} progress={goalProgress} delay={0.2} />
                         <GlassKpiCard label="Pipeline Activo" value={<AnimatedCounter value={stats.financials.pipeline} suffix=" €" />} icon={Layers} delay={0.3} />
                         <div
                             role="button"

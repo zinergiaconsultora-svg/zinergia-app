@@ -4,14 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 import { requireServerRole } from '@/lib/auth/permissions'
 import { revalidatePath } from 'next/cache'
 import { Commission } from '@/types/crm'
+import { createNotificationInternal } from './notifications'
+import { ActionResult, actionError, actionSuccess } from './helpers'
 import { uuidSchema } from '@/lib/validation/schemas'
 import { logAdminAction } from '@/lib/audit/logger'
 
-/**
- * Advances a commission to 'cleared' (pending → cleared).
- * Admin/franchise only — represents validation that the deal is confirmed.
- */
-export async function clearCommissionAction(id: string): Promise<Commission> {
+export async function clearCommissionAction(id: string): Promise<ActionResult<Commission>> {
     await requireServerRole(['admin', 'franchise'])
     const safeId = uuidSchema.parse(id)
     const supabase = await createClient()
@@ -20,22 +18,31 @@ export async function clearCommissionAction(id: string): Promise<Commission> {
         .from('network_commissions')
         .update({ status: 'cleared' })
         .eq('id', safeId)
-        .eq('status', 'pending')          // Guard: only transition from pending
-        .select()
+        .eq('status', 'pending')
+        .select('*, proposals(clients(name))')
         .single()
 
-    if (error) throw error
-    if (!data) throw new Error('Comisión no encontrada o ya procesada')
+    if (error) return actionError(error, 'Error al aprobar la comisión')
+    if (!data) return { success: false, error: 'Comisión no encontrada o ya procesada' }
+
+    try {
+        const clientName = (data.proposals as Record<string, unknown>)?.clients
+            ? ((data.proposals as Record<string, unknown>).clients as Record<string, string>)?.name || 'Cliente'
+            : 'Cliente'
+        await createNotificationInternal(supabase, data.agent_id, {
+            title: 'Comisión aprobada',
+            message: `Tu comisión de ${data.agent_commission.toFixed(2)}€ por ${clientName} ha sido aprobada.`,
+            type: 'commission_cleared',
+            link: '/dashboard/wallet',
+        })
+    } catch { /* non-critical */ }
+
     revalidatePath('/dashboard/wallet')
     logAdminAction('clear_commission', 'network_commissions', safeId).catch(() => {})
-    return data as Commission
+    return actionSuccess(data as Commission)
 }
 
-/**
- * Marks a commission as paid (cleared → paid).
- * Admin/franchise only — represents that the bank transfer has been made.
- */
-export async function payCommissionAction(id: string): Promise<Commission> {
+export async function payCommissionAction(id: string): Promise<ActionResult<Commission>> {
     await requireServerRole(['admin', 'franchise'])
     const safeId = uuidSchema.parse(id)
     const supabase = await createClient()
@@ -44,22 +51,31 @@ export async function payCommissionAction(id: string): Promise<Commission> {
         .from('network_commissions')
         .update({ status: 'paid' })
         .eq('id', safeId)
-        .eq('status', 'cleared')          // Guard: only transition from cleared
-        .select()
+        .eq('status', 'cleared')
+        .select('*, proposals(clients(name))')
         .single()
 
-    if (error) throw error
-    if (!data) throw new Error('Comisión no encontrada o ya pagada')
+    if (error) return actionError(error, 'Error al pagar la comisión')
+    if (!data) return { success: false, error: 'Comisión no encontrada o ya pagada' }
+
+    try {
+        const clientName = (data.proposals as Record<string, unknown>)?.clients
+            ? ((data.proposals as Record<string, unknown>).clients as Record<string, string>)?.name || 'Cliente'
+            : 'Cliente'
+        await createNotificationInternal(supabase, data.agent_id, {
+            title: 'Comisión pagada',
+            message: `Tu comisión de ${data.agent_commission.toFixed(2)}€ por ${clientName} ha sido pagada.`,
+            type: 'commission_earned',
+            link: '/dashboard/wallet',
+        })
+    } catch { /* non-critical */ }
+
     revalidatePath('/dashboard/wallet')
     logAdminAction('pay_commission', 'network_commissions', safeId).catch(() => {})
-    return data as Commission
+    return actionSuccess(data as Commission)
 }
 
-/**
- * Loads ALL commissions across all agents/franchises.
- * Admin/franchise only. Agents use getNetworkCommissions() from the service.
- */
-export async function getAllCommissionsAction(): Promise<Commission[]> {
+export async function getAllCommissionsAction(): Promise<ActionResult<Commission[]>> {
     await requireServerRole(['admin', 'franchise'])
     const supabase = await createClient()
 
@@ -75,6 +91,6 @@ export async function getAllCommissionsAction(): Promise<Commission[]> {
         `)
         .order('created_at', { ascending: false })
 
-    if (error) throw error
-    return (data || []) as Commission[]
+    if (error) return actionError(error, 'Error al cargar las comisiones')
+    return actionSuccess((data || []) as Commission[])
 }

@@ -18,6 +18,7 @@ export interface BatchItem {
 }
 
 const MAX_CONCURRENT = 2;
+const TERMINAL_STATUSES: BatchItemStatus[] = ['completed', 'failed', 'duplicate'];
 
 function makeLocalId() {
     return Math.random().toString(36).slice(2);
@@ -162,10 +163,9 @@ export function useBatchSimulator() {
         queueRef.current = queueRef.current.filter(it => it.localId !== localId);
     }, []);
 
-    const terminalStatuses: BatchItemStatus[] = ['completed', 'failed', 'duplicate'];
     const clearCompleted = useCallback(() => {
-        setItems(prev => prev.filter(it => !terminalStatuses.includes(it.status)));
-        queueRef.current = queueRef.current.filter(it => !terminalStatuses.includes(it.status));
+        setItems(prev => prev.filter(it => !TERMINAL_STATUSES.includes(it.status)));
+        queueRef.current = queueRef.current.filter(it => !TERMINAL_STATUSES.includes(it.status));
     }, []);
 
     const completedItems = items.filter(it => it.status === 'completed' && it.data);

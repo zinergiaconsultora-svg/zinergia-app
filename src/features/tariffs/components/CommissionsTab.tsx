@@ -89,6 +89,7 @@ export function CommissionsTab({ rows, collaboratorPct: initPct, isAdmin, onUpda
                                     type="number" min="0" max="100" step="1"
                                     value={pctEdit}
                                     onChange={e => setPctEdit(e.target.value)}
+                                    aria-label="Porcentaje de comisión"
                                     className="w-24 text-2xl font-black bg-white border border-slate-200 rounded-[1rem] px-3 py-2.5 text-slate-900 text-center outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all"
                                 />
                             </div>
@@ -104,7 +105,7 @@ export function CommissionsTab({ rows, collaboratorPct: initPct, isAdmin, onUpda
                                 <span className="text-base font-medium text-slate-400">%</span>
                             </div>
                             {isAdmin && (
-                                <button type="button" onClick={() => { setPctEdit(String(Math.round(pct * 100))); setEditingPct(true) }} className="p-2.5 bg-white border border-slate-200 rounded-[0.8rem] text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all active:scale-95 shadow-sm">
+                                <button type="button" onClick={() => { setPctEdit(String(Math.round(pct * 100))); setEditingPct(true) }} aria-label="Editar porcentaje" className="p-2.5 bg-white border border-slate-200 rounded-[0.8rem] text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all active:scale-95 shadow-sm">
                                     <Edit3 size={16} strokeWidth={2} />
                                 </button>
                             )}
@@ -174,8 +175,8 @@ export function CommissionsTab({ rows, collaboratorPct: initPct, isAdmin, onUpda
                                 {isAdmin && (
                                     <td className="px-3 py-3">
                                         <div className="flex items-center gap-0.5">
-                                            <button type="button" onClick={() => setFormData(row)} className="p-2 rounded-lg text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-90"><Edit3 size={14} /></button>
-                                            <button type="button" onClick={() => handleDelete(row.id)} className={`p-2 rounded-lg transition-all active:scale-90 ${deleteConfirm === row.id ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'}`}>
+                                            <button type="button" onClick={() => setFormData(row)} aria-label="Editar fila" className="p-2 rounded-lg text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-90"><Edit3 size={14} /></button>
+                                            <button type="button" onClick={() => handleDelete(row.id)} aria-label="Eliminar fila" className={`p-2 rounded-lg transition-all active:scale-90 ${deleteConfirm === row.id ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'}`}>
                                                 {deleteConfirm === row.id ? <span className="text-[9px] font-bold px-0.5">OK</span> : <Trash2 size={14} />}
                                             </button>
                                         </div>

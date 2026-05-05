@@ -149,7 +149,9 @@ describe('validateCommissionRule', () => {
     });
 
     it('errors when commission_rate is missing', () => {
-        const { commission_rate: _, ...partial } = DEFAULT_RULE;
+        const partial = Object.fromEntries(
+            Object.entries(DEFAULT_RULE).filter(([key]) => key !== 'commission_rate')
+        ) as Partial<typeof DEFAULT_RULE>;
         const errors = validateCommissionRule(partial);
         expect(errors.some(e => e.field === 'commission_rate')).toBe(true);
     });

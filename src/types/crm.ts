@@ -80,6 +80,21 @@ export interface InvoiceData {
     subtotal?: number;
     vat?: number;
     total_amount?: number;
+    bono_social?: number;
+    social_bonus_cost?: number;
+    rental_cost?: number;
+    distribution_excess_cost?: number;
+    excess_power_cost?: number;
+    reactive_energy_cost?: number;
+    reactive_cost?: number;
+    excluded_services_cost?: number;
+    services_cost?: number;
+    surplus_export_kwh?: number;
+    autoconsumo_excedentes_kwh?: number;
+    electricity_tax_rate?: number;
+    electricity_tax_percent?: number;
+    vat_rate?: number;
+    vat_percent?: number;
     rights_cost?: number; // Derechos de enganche
 
     // Optional Max Demand (Maxímetro) for Optimization
@@ -106,6 +121,7 @@ export interface InvoiceData {
     current_energy_price_p6?: number;
 
     detected_power_type?: string;
+    annual_consumption_kwh?: number;
     client_id?: string;
 }
 
@@ -123,10 +139,13 @@ export interface Offer {
     marketer_name: string;
     tariff_name: string;
     logo_color: string; // Hex code or Tailwind class precursor
+    logo_url?: string | null;
     type?: 'fixed' | 'indexed';
     power_price: TariffPrice;
     energy_price: TariffPrice;
     fixed_fee?: number; // Monthly fixed fee if any
+    surplus_compensation_price?: number;
+    estimated_agent_commission?: number | null;
     contract_duration: string;
 }
 
@@ -142,6 +161,7 @@ export interface SavingsResult {
         optimized_annual_fixed_cost: number;
         annual_optimization_savings: number;
     };
+    calculation_audit?: import('@/lib/comparison/invoice-simulator').InvoiceSimulationResult;
 }
 
 export type ProposalStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
@@ -190,6 +210,7 @@ export interface Proposal {
             priority: string;
         }[];
         recommendations: unknown[];
+        supervised_recommendation?: unknown;
     };
 }
 
@@ -240,7 +261,7 @@ export interface Commission {
     franchise_id: string;
     total_revenue: number;
     agent_commission: number;
-    franchise_profit: number;
+    franchise_commission: number;
     hq_royalty: number;
     status: 'pending' | 'cleared' | 'paid';
     created_at: string;
@@ -285,13 +306,285 @@ export interface BillingCycle {
     created_at: string;
 }
 
+export type WithdrawalStatus = 'pending' | 'approved' | 'rejected' | 'paid';
+
+export interface WithdrawalRequest {
+    id: string;
+    user_id: string;
+    amount: number;
+    status: WithdrawalStatus;
+    iban: string;
+    commission_ids: string[];
+    rejection_reason?: string;
+    reviewed_by?: string;
+    reviewed_at?: string;
+    paid_at?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface WithdrawalGrowth {
+    current_month_earned: number;
+    previous_month_earned: number;
+    growth_percent: number;
+}
+
 export interface WalletBalance {
     franchise_id: string;
-    balance_available: number;  // Comisiones cleared (listas para cobro)
-    balance_paid: number;       // Comisiones ya pagadas
-    balance_pending: number;    // Comisiones pendientes de aprobación
-    total_earned: number;       // Total histórico
+    balance_available: number;
+    balance_paid: number;
+    balance_pending: number;
+    total_earned: number;
     proposals_cleared: number;
     proposals_paid: number;
     proposals_pending: number;
+}
+
+// ========================================
+// PERFIL FISCAL
+// ========================================
+
+export type CompanyType = 'autonomo' | 'sociedad_limitada' | 'sociedad_anonima' | 'cooperativa' | 'otros';
+
+export interface FiscalProfile {
+    nif_cif?: string;
+    fiscal_address?: string;
+    fiscal_city?: string;
+    fiscal_province?: string;
+    fiscal_postal_code?: string;
+    fiscal_country?: string;
+    iban?: string;
+    company_name?: string;
+    company_type?: CompanyType;
+    invoice_prefix?: string;
+    invoice_next_number?: number;
+    retention_percent?: number;
+    fiscal_verified?: boolean;
+    fiscal_verified_at?: string;
+}
+
+export interface ProfileFiscalComplete extends NetworkUser, FiscalProfile {}
+
+export function isProfileReadyForInvoicing(profile: FiscalProfile): { ready: boolean; missing: string[] } {
+    const missing: string[] = [];
+    if (!profile.nif_cif) missing.push('NIF/CIF');
+    if (!profile.fiscal_address) missing.push('Dirección fiscal');
+    if (!profile.fiscal_city) missing.push('Ciudad');
+    if (!profile.fiscal_province) missing.push('Provincia');
+    if (!profile.fiscal_postal_code) missing.push('Código postal');
+    if (!profile.iban) missing.push('IBAN');
+    return { ready: missing.length === 0, missing };
+}
+
+// ========================================
+// FACTURACIÓN
+// ========================================
+
+export type InvoiceStatus = 'draft' | 'issued' | 'paid' | 'cancelled';
+export type PaymentMethod = 'transferencia' | 'bizum' | 'efectivo' | 'otros';
+
+export interface InvoiceLine {
+    description: string;
+    commission_id: string;
+    client_name: string;
+    proposal_id: string;
+    marketer_name: string;
+    base_amount: number;
+    retention: number;
+    total_line: number;
+}
+
+export interface Invoice {
+    id: string;
+    invoice_number: string;
+    agent_id: string;
+    franchise_id?: string;
+
+    issuer_name: string;
+    issuer_nif: string;
+    issuer_address?: string;
+    issuer_city?: string;
+    issuer_postal_code?: string;
+
+    recipient_name: string;
+    recipient_nif: string;
+    recipient_address?: string;
+    recipient_city?: string;
+    recipient_postal_code?: string;
+
+    issue_date: string;
+    due_date: string;
+    billing_period_start?: string;
+    billing_period_end?: string;
+
+    invoice_lines: InvoiceLine[];
+    subtotal: number;
+    retention_total: number;
+    retention_percent: number;
+    tax_base: number;
+    tax_type: string;
+    tax_percent: number;
+    tax_amount: number;
+    total: number;
+
+    status: InvoiceStatus;
+    paid_date?: string;
+    payment_method?: PaymentMethod;
+    payment_reference?: string;
+    notes?: string;
+    pdf_url?: string;
+
+    created_at: string;
+    updated_at: string;
+}
+
+export interface InvoiceWithAgent extends Invoice {
+    profiles?: {
+        full_name: string;
+        email: string;
+    };
+}
+
+// ========================================
+// ACTIVIDADES
+// ========================================
+
+export type ActivityType =
+    | 'client_created'
+    | 'client_updated'
+    | 'client_status_changed'
+    | 'simulation_completed'
+    | 'proposal_created'
+    | 'proposal_sent'
+    | 'proposal_accepted'
+    | 'proposal_rejected'
+    | 'note_added';
+
+export interface ClientActivity {
+    id: string;
+    client_id: string;
+    agent_id: string;
+    franchise_id?: string;
+    type: ActivityType;
+    description: string;
+    metadata?: Record<string, unknown>;
+    created_at: string;
+}
+
+// ========================================
+// TAREAS
+// ========================================
+
+export type TaskType = 'manual' | 'follow_up' | 'documentation' | 'contract_signature' | 'welcome_call';
+export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
+
+export interface Task {
+    id: string;
+    client_id?: string;
+    proposal_id?: string;
+    agent_id: string;
+    franchise_id?: string;
+    title: string;
+    description?: string;
+    type: TaskType;
+    priority: TaskPriority;
+    status: TaskStatus;
+    due_date?: string;
+    completed_at?: string;
+    auto_generated: boolean;
+    created_at: string;
+    updated_at: string;
+    clients?: { id: string; name: string };
+    proposals?: { id: string; offer_snapshot: { marketer_name: string } };
+}
+
+// ========================================
+// DOCUMENTOS
+// ========================================
+
+export type DocumentCategory = 'factura' | 'contrato' | 'dni' | 'escritura' | 'otro';
+
+export interface ClientDocument {
+    id: string;
+    client_id: string;
+    agent_id: string;
+    franchise_id?: string;
+    name: string;
+    file_path: string;
+    size_bytes: number;
+    file_type: string;
+    category: DocumentCategory;
+    created_at: string;
+    updated_at: string;
+}
+
+// ========================================
+// CONTRATOS
+// ========================================
+
+export type ContractType = 'electricidad' | 'gas' | 'dual';
+export type ContractStatus = 'active' | 'pending_switch' | 'cancelled' | 'expired';
+
+export interface Contract {
+    id: string;
+    client_id: string;
+    proposal_id?: string;
+    agent_id: string;
+    franchise_id?: string;
+    marketer_name: string;
+    tariff_name?: string;
+    contract_type: ContractType;
+    status: ContractStatus;
+    start_date: string;
+    end_date?: string;
+    notice_date?: string;
+    annual_savings?: number;
+    monthly_cost_estimate?: number;
+    notes?: string;
+    created_at: string;
+    updated_at: string;
+    clients?: { id: string; name: string };
+}
+
+export interface ExpiringContract {
+    id: string;
+    client_id: string;
+    client_name: string;
+    agent_id: string;
+    marketer_name: string;
+    tariff_name?: string;
+    end_date: string;
+    days_remaining: number;
+    annual_savings?: number;
+}
+
+// ========================================
+// ANALYTICS
+// ========================================
+
+export interface FunnelStep {
+    status: string;
+    count: number;
+    percentage: number;
+}
+
+export interface MonthlyMetric {
+    month: string;
+    new_clients: number;
+    won_clients: number;
+    lost_clients: number;
+    proposals_sent: number;
+    proposals_accepted: number;
+    total_savings: number;
+}
+
+export interface StatusTransition {
+    id: string;
+    client_id: string;
+    agent_id: string;
+    franchise_id?: string;
+    from_status?: string;
+    to_status: string;
+    created_at: string;
 }

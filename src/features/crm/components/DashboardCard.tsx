@@ -35,19 +35,15 @@ export const DashboardCard = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
             className={`
-                group relative bg-white/80 backdrop-blur-xl rounded-[1.5rem] 
-                border border-white/40 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.02)] 
-                hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.04)] hover:border-white/60 
-                hover:-translate-y-1 transition-all duration-300 ease-out 
+                group relative bg-white dark:bg-slate-900 rounded-xl 
+                border border-slate-200 dark:border-slate-800 shadow-card 
+                hover:shadow-dropdown transition-shadow duration-300 ease-out 
                 p-6 flex flex-col h-full overflow-hidden
                 ${onClick ? 'cursor-pointer active:scale-[0.98]' : ''} 
                 ${className}
             `}
             onClick={onClick}
         >
-            {/* Subtle Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white via-white/50 to-energy-50/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
             {/* Content Container */}
             <div className="relative z-10 flex flex-col h-full">
                 {/* Header */}

@@ -19,7 +19,11 @@ export type NotificationType =
     | 'proposal_sent'
     | 'followup_due'
     | 'commission_earned'
+    | 'commission_cleared'
     | 'tariff_update'
+    | 'withdrawal_status'
+    | 'client_created'
+    | 'task_due'
     | 'info';
 
 // ── Read ──────────────────────────────────────────────────────────────────────

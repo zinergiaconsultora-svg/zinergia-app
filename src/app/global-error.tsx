@@ -1,6 +1,7 @@
 'use client';
 
 import { ErrorState } from '@/components/ui/ErrorState';
+import { logger } from '@/lib/utils/logger';
 import { Inter } from 'next/font/google';
 import './globals.css';
 
@@ -13,8 +14,7 @@ export default function GlobalError({
     error: Error & { digest?: string };
     reset: () => void;
 }) {
-    // Log error for debugging
-    console.error('Global Error:', error);
+    logger.error('Global unhandled error', error, { digest: error.digest });
 
     return (
         <html lang="es">

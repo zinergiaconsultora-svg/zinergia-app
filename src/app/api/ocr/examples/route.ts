@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { env } from '@/lib/env';
 import { rateLimit, getClientKey } from '@/lib/rate-limit';
+import { redactOcrTextSample, sanitizeOcrTrainingData } from '@/lib/ocr/sanitizeTrainingData';
 
 // Defense-in-depth rate limit on top of x-api-key auth.
 // Shared across invocations within a warm Node/Edge container.
@@ -70,8 +71,8 @@ export async function GET(request: Request) {
         .from('ocr_training_examples')
         .select('extracted_fields, raw_text_sample, is_validated, confidence_avg, created_at', { count: 'exact' })
         .eq('company_name', company)
-        .order('is_validated', { ascending: false })   // validados primero
-        .order('confidence_avg', { ascending: false })  // mayor confianza primero
+        .order('is_validated', { ascending: false })
+        .order('confidence_avg', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(limit);
 
@@ -95,12 +96,13 @@ export async function GET(request: Request) {
     }
 
     // ── Construir prompt_hint listo para pegar en N8N ─────────────────────
-    const promptHint = buildPromptHint(company, examples as ExampleRow[]);
+    const safeExamples = (examples as ExampleRow[]).map(sanitizeExampleRow);
+    const promptHint = buildPromptHint(company, safeExamples);
 
     return NextResponse.json({
         company,
-        total: count ?? examples.length,
-        examples,
+        total: count ?? safeExamples.length,
+        examples: safeExamples,
         prompt_hint: promptHint,
     });
 }
@@ -112,6 +114,14 @@ interface ExampleRow {
     raw_text_sample: string | null;
     is_validated: boolean;
     confidence_avg: number | null;
+}
+
+function sanitizeExampleRow(example: ExampleRow): ExampleRow {
+    return {
+        ...example,
+        raw_text_sample: example.raw_text_sample ? redactOcrTextSample(example.raw_text_sample) : null,
+        extracted_fields: sanitizeOcrTrainingData(example.extracted_fields) as Record<string, unknown>,
+    };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
