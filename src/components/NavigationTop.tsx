@@ -225,7 +225,7 @@ export const NavigationTop = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="lg:hidden fixed inset-0 bg-black/30 z-[55]"
+                            className="lg:hidden fixed inset-0 bg-black/30 z-[55] pointer-events-auto"
                             onClick={() => setIsMobileMenuOpen(false)}
                         />
                         {/* Sheet */}
@@ -234,7 +234,7 @@ export const NavigationTop = () => {
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
                             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                            className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#f2f2f7] rounded-t-3xl z-[60] pb-safe overflow-hidden"
+                            className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#f2f2f7] rounded-t-3xl z-[60] pb-safe overflow-hidden pointer-events-auto"
                         >
                             {/* Handle bar */}
                             <div className="flex justify-center pt-3 pb-1">
