@@ -10,8 +10,6 @@ import {
 import type { AgentProfile, FranchiseWithAgents } from '@/app/actions/admin';
 import {
     updateAgentAdminAction,
-    assignAgentToFranchise,
-    removeAgentFromFranchise,
 } from '@/app/actions/admin';
 
 interface Props {
@@ -90,12 +88,8 @@ function AgentRow({
                 await updateAgentAdminAction(agent.id, {
                     full_name: edit.fullName.trim() || undefined,
                     role: edit.role,
+                    franchise_id: edit.franchiseId || null,
                 });
-                if (edit.franchiseId && edit.franchiseId !== agent.franchise_id) {
-                    await assignAgentToFranchise(agent.id, edit.franchiseId);
-                } else if (!edit.franchiseId && agent.franchise_id) {
-                    await removeAgentFromFranchise(agent.id);
-                }
                 setEditing(false);
                 onSaved();
             } catch (e) {
