@@ -7,11 +7,29 @@ import { TarifaRow, TariffCommissionRow, deleteTarifa, toggleTarifaActive } from
 import { MODELO_COLORS, fmt, blankTarifa } from './tariff-form-utils'
 import { TarifaFormPanel } from './TarifaFormPanel'
 import dynamic from 'next/dynamic'
+import { getMarketerLogo, normalizeMarketerName } from '@/lib/marketers/logos'
+import Image from 'next/image'
 
 const TariffExcelImportModal = dynamic(
     () => import('./TariffExcelImportModal').then(m => ({ default: m.TariffExcelImportModal })),
     { ssr: false }
 )
+
+const logoImageClass = (company: string) => {
+    switch (normalizeMarketerName(company)) {
+        case 'GANAENERGIA':
+            return 'scale-100'
+        case 'LOGOS':
+        case 'LOGOSENERGIA':
+            return 'scale-100'
+        case 'NATURGY':
+            return 'scale-[1.35]'
+        case 'PLENITUDE':
+            return 'scale-[1.45]'
+        default:
+            return 'scale-100'
+    }
+}
 
 interface Props {
     rows: TarifaRow[]
@@ -99,55 +117,107 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
 
             {/* Table */}
             <div className="bg-white/60 backdrop-blur-xl rounded-3xl border border-white shadow-xl shadow-slate-200/40 overflow-hidden">
-                <table className="w-full text-xs">
+                <table className="w-full table-fixed text-[11px]">
+                    <colgroup>
+                        <col className="w-[14%]" />
+                        <col className="w-[9%]" />
+                        <col className="w-[6%]" />
+                        <col className="w-[4%]" />
+                        <col className="w-[4.8%]" />
+                        <col className="w-[4.8%]" />
+                        <col className="w-[4.8%]" />
+                        <col className="w-[4.8%]" />
+                        <col className="w-[4.8%]" />
+                        <col className="w-[4.8%]" />
+                        <col className="w-[4.8%]" />
+                        <col className="w-[4.8%]" />
+                        <col className="w-[4.8%]" />
+                        <col className="w-[4.8%]" />
+                        <col className="w-[4.8%]" />
+                        <col className="w-[4.8%]" />
+                        <col className="w-[4.2%]" />
+                        {isAdmin && <col className="w-[5%]" />}
+                    </colgroup>
                     <thead>
                         <tr className="bg-slate-50/50 border-b border-white">
-                            <th className="text-left px-4 py-3 font-semibold text-slate-500">Compañía</th>
-                            <th className="text-left px-4 py-3 font-semibold text-slate-500">Producto</th>
-                            <th className="text-left px-3 py-3 font-semibold text-slate-500">Modelo</th>
-                            <th className="text-left px-3 py-3 font-semibold text-slate-500">ATR</th>
-                            <th className="text-right px-3 py-3 font-semibold text-slate-500">E.P1</th>
-                            <th className="text-right px-3 py-3 font-semibold text-slate-500">E.P2</th>
-                            <th className="text-right px-3 py-3 font-semibold text-slate-500">E.P3</th>
-                            <th className="text-right px-3 py-3 font-semibold text-slate-400">E.P4</th>
-                            <th className="text-right px-3 py-3 font-semibold text-slate-400">E.P5</th>
-                            <th className="text-right px-3 py-3 font-semibold text-slate-400">E.P6</th>
-                            <th className="text-right px-3 py-3 font-semibold text-slate-500">Pot. P1</th>
-                            <th className="text-center px-3 py-3 font-semibold text-slate-500">Activa</th>
-                            {isAdmin && <th className="px-3 py-3" />}
+                            <th className="text-left px-3 py-3 font-semibold text-slate-500">Compañía</th>
+                            <th className="text-left px-3 py-3 font-semibold text-slate-500">Producto</th>
+                            <th className="text-left px-2 py-3 font-semibold text-slate-500">Modelo</th>
+                            <th className="text-left px-2 py-3 font-semibold text-slate-500">ATR</th>
+                            <th className="text-right px-2 py-3 font-semibold text-slate-500" title="Energía P1">E.P1</th>
+                            <th className="text-right px-2 py-3 font-semibold text-slate-500" title="Energía P2">E.P2</th>
+                            <th className="text-right px-2 py-3 font-semibold text-slate-500" title="Energía P3">E.P3</th>
+                            <th className="text-right px-2 py-3 font-semibold text-slate-400" title="Energía P4">E.P4</th>
+                            <th className="text-right px-2 py-3 font-semibold text-slate-400" title="Energía P5">E.P5</th>
+                            <th className="text-right px-2 py-3 font-semibold text-slate-400" title="Energía P6">E.P6</th>
+                            <th className="text-right px-2 py-3 font-semibold text-slate-500" title="Potencia P1">kW P1</th>
+                            <th className="text-right px-2 py-3 font-semibold text-slate-500" title="Potencia P2">kW P2</th>
+                            <th className="text-right px-2 py-3 font-semibold text-slate-500" title="Potencia P3">kW P3</th>
+                            <th className="text-right px-2 py-3 font-semibold text-slate-500" title="Potencia P4">kW P4</th>
+                            <th className="text-right px-2 py-3 font-semibold text-slate-500" title="Potencia P5">kW P5</th>
+                            <th className="text-right px-2 py-3 font-semibold text-slate-500" title="Potencia P6">kW P6</th>
+                            <th className="text-center px-2 py-3 font-semibold text-slate-500">Activa</th>
+                            {isAdmin && <th className="px-2 py-3" />}
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100/50">
-                        {filtered.map(row => (
+                        {filtered.map(row => {
+                            const logo = getMarketerLogo(row.company)
+
+                            return (
                             <tr key={row.id} className={`hover:bg-white hover:shadow-sm hover:scale-[1.002] relative z-0 hover:z-10 transition-all duration-300 ${!row.is_active ? 'opacity-40 cursor-not-allowed' : ''}`}>
-                                <td className="px-4 py-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className={`w-7 h-7 rounded-lg shadow-sm flex items-center justify-center text-white text-[10px] font-black ${row.logo_color || 'bg-slate-600'}`}>
-                                            {row.company.slice(0, 2)}
-                                        </div>
-                                        <span className="font-bold text-slate-800">{row.company}</span>
-                                        {!companiesWithCommission.has(row.company) && (
-                                            <span title="Sin comisión configurada" className="text-amber-400/80">
-                                                <AlertTriangle size={13} strokeWidth={2.5} />
-                                            </span>
+                                <td className="px-3 py-2.5">
+                                    <div className="group/company flex min-w-0 items-center gap-2">
+                                        {logo ? (
+                                            <div className="relative h-9 w-16 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_8px_18px_rgba(15,23,42,0.08)] ring-1 ring-white transition-all duration-300 group-hover/company:-translate-y-0.5 group-hover/company:border-indigo-200 group-hover/company:shadow-[0_10px_24px_rgba(79,70,229,0.16)]">
+                                                <Image
+                                                    src={logo}
+                                                    alt={`Logo ${row.company}`}
+                                                    fill
+                                                    sizes="64px"
+                                                    className={`object-contain transition-transform duration-300 ${logoImageClass(row.company)}`}
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className={`flex h-9 w-14 shrink-0 items-center justify-center rounded-xl border border-white/70 shadow-sm ring-1 ring-slate-900/5 text-white text-xs font-black tracking-wide ${row.logo_color || 'bg-slate-600'}`}>
+                                                {row.company.slice(0, 2)}
+                                            </div>
                                         )}
+                                        <div className="min-w-0">
+                                            <div className="flex min-w-0 items-center gap-1.5">
+                                                <span className="truncate text-[11px] font-extrabold tracking-wide text-slate-800" title={row.company}>{row.company}</span>
+                                                {!companiesWithCommission.has(row.company) && (
+                                                    <span title="Sin comisión configurada" className="shrink-0 text-amber-400/80">
+                                                        <AlertTriangle size={13} strokeWidth={2.5} />
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span className={`mt-0.5 inline-flex rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide ${companiesWithCommission.has(row.company) ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100' : 'bg-amber-50 text-amber-700 ring-1 ring-amber-100'}`}>
+                                                {companiesWithCommission.has(row.company) ? 'Comisión OK' : 'Sin comisión'}
+                                            </span>
+                                        </div>
                                     </div>
                                 </td>
-                                <td className="px-4 py-3 text-slate-600 font-medium max-w-[180px] truncate">{row.tariff_name}</td>
-                                <td className="px-3 py-3">
+                                <td className="px-3 py-3 text-slate-600 font-medium truncate" title={row.tariff_name}>{row.tariff_name}</td>
+                                <td className="px-2 py-3">
                                     {row.modelo ? (
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${MODELO_COLORS[row.modelo] ?? 'bg-slate-100 text-slate-600'}`}>{row.modelo}</span>
+                                        <span className={`inline-block max-w-full truncate px-2 py-0.5 rounded-full text-[9px] font-bold ${MODELO_COLORS[row.modelo] ?? 'bg-slate-100 text-slate-600'}`}>{row.modelo}</span>
                                     ) : <span className="text-slate-300">—</span>}
                                 </td>
-                                <td className="px-3 py-2.5 font-mono text-slate-600">{row.tariff_type ?? '—'}</td>
-                                <td className="px-3 py-2.5 text-right font-mono text-slate-700">{fmt(row.energy_price_p1, 4)}</td>
-                                <td className="px-3 py-2.5 text-right font-mono text-slate-500">{fmt(row.energy_price_p2, 4)}</td>
-                                <td className="px-3 py-2.5 text-right font-mono text-slate-500">{fmt(row.energy_price_p3, 4)}</td>
-                                <td className="px-3 py-2.5 text-right font-mono text-slate-400">{fmt(row.energy_price_p4 ?? 0, 4)}</td>
-                                <td className="px-3 py-2.5 text-right font-mono text-slate-400">{fmt(row.energy_price_p5 ?? 0, 4)}</td>
-                                <td className="px-3 py-2.5 text-right font-mono text-slate-400">{fmt(row.energy_price_p6 ?? 0, 4)}</td>
-                                <td className="px-3 py-2.5 text-right font-mono text-slate-500">{fmt(row.power_price_p1, 4)}</td>
-                                <td className="px-3 py-2.5 text-center">
+                                <td className="px-2 py-2.5 font-mono text-slate-600 tabular-nums">{row.tariff_type ?? '—'}</td>
+                                <td className="px-2 py-2.5 text-right font-mono text-slate-700 tabular-nums">{fmt(row.energy_price_p1, 4)}</td>
+                                <td className="px-2 py-2.5 text-right font-mono text-slate-500 tabular-nums">{fmt(row.energy_price_p2, 4)}</td>
+                                <td className="px-2 py-2.5 text-right font-mono text-slate-500 tabular-nums">{fmt(row.energy_price_p3, 4)}</td>
+                                <td className="px-2 py-2.5 text-right font-mono text-slate-400 tabular-nums">{fmt(row.energy_price_p4 ?? 0, 4)}</td>
+                                <td className="px-2 py-2.5 text-right font-mono text-slate-400 tabular-nums">{fmt(row.energy_price_p5 ?? 0, 4)}</td>
+                                <td className="px-2 py-2.5 text-right font-mono text-slate-400 tabular-nums">{fmt(row.energy_price_p6 ?? 0, 4)}</td>
+                                <td className="px-2 py-2.5 text-right font-mono text-slate-600 tabular-nums">{fmt(row.power_price_p1, 4)}</td>
+                                <td className="px-2 py-2.5 text-right font-mono text-slate-600 tabular-nums">{fmt(row.power_price_p2, 4)}</td>
+                                <td className="px-2 py-2.5 text-right font-mono text-slate-600 tabular-nums">{fmt(row.power_price_p3, 4)}</td>
+                                <td className="px-2 py-2.5 text-right font-mono text-slate-500 tabular-nums">{fmt(row.power_price_p4 ?? 0, 4)}</td>
+                                <td className="px-2 py-2.5 text-right font-mono text-slate-500 tabular-nums">{fmt(row.power_price_p5 ?? 0, 4)}</td>
+                                <td className="px-2 py-2.5 text-right font-mono text-slate-500 tabular-nums">{fmt(row.power_price_p6 ?? 0, 4)}</td>
+                                <td className="px-2 py-2.5 text-center">
                                     {isAdmin ? (
                                         <button type="button" onClick={() => handleToggle(row)} disabled={pending} aria-label="Activar o desactivar tarifa" className="text-slate-400 hover:text-indigo-600 transition-colors">
                                             {row.is_active ? <ToggleRight size={20} className="text-indigo-500" /> : <ToggleLeft size={20} />}
@@ -157,8 +227,8 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
                                     )}
                                 </td>
                                 {isAdmin && (
-                                    <td className="px-3 py-2.5">
-                                        <div className="flex items-center gap-1">
+                                    <td className="px-2 py-2.5">
+                                        <div className="flex items-center justify-end gap-1">
                                             <button type="button" onClick={() => setFormData(row)} aria-label="Editar tarifa" className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"><Edit3 size={13} /></button>
                                             <button type="button" onClick={() => handleDelete(row.id)} aria-label="Eliminar tarifa" className={`p-1.5 rounded-lg transition-colors ${deleteConfirm === row.id ? 'bg-rose-600 text-white' : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'}`}>
                                                 {deleteConfirm === row.id ? <span className="text-[9px] font-bold px-0.5">OK</span> : <Trash2 size={13} />}
@@ -167,10 +237,11 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
                                     </td>
                                 )}
                             </tr>
-                        ))}
+                            )
+                        })}
                         {filtered.length === 0 && (
                             <tr>
-                                <td colSpan={13} className="py-24">
+                                <td colSpan={isAdmin ? 18 : 17} className="py-24">
                                     <div className="flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-bottom-2">
                                         <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-[1.5rem] flex items-center justify-center mb-5 rotate-3 shadow-sm">
                                             <Search size={22} className="text-slate-300" />
