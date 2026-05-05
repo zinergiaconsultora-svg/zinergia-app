@@ -3,8 +3,10 @@ import { InvoiceData, SavingsResult } from '@/types/crm';
 import { analyzeDocumentWithRetry as analyzeDocument, validateFile } from '@/services/simulatorService';
 import { crmService } from '@/services/crmService';
 import { OptimizationRecommendation, AuditOpportunity } from '@/lib/aletheia/types';
+import { SupervisedRecommendationResult } from '@/lib/supervised/recommender';
 import { createClient } from '@/lib/supabase/client';
 import { markOcrJobFailed, getOcrJobStatus } from '@/app/actions/ocr-jobs';
+import { getMarketerLogo } from '@/lib/marketers/logos';
 
 type Step = 1 | 2 | 3;
 
@@ -37,6 +39,7 @@ interface SimulatorState {
     optimizationRecommendations: OptimizationRecommendation[];
     opportunities: AuditOpportunity[];
     clientProfile?: { tags: string[]; sales_argument: string; };
+    supervisedRecommendation?: SupervisedRecommendationResult;
     pdfUrl: string | null;
     savedProposalId: string | null;
 
@@ -58,6 +61,7 @@ type SimulatorAction =
     | { type: 'SET_OPTIMIZATION_RECOMMENDATIONS'; payload: OptimizationRecommendation[] }
     | { type: 'SET_OPPORTUNITIES'; payload: AuditOpportunity[] }
     | { type: 'SET_CLIENT_PROFILE'; payload: { tags: string[]; sales_argument: string; } }
+    | { type: 'SET_SUPERVISED_RECOMMENDATION'; payload: SupervisedRecommendationResult | undefined }
     | { type: 'SET_PDF_URL'; payload: string | null }
     | { type: 'SET_SAVED_PROPOSAL_ID'; payload: string }
     | { type: 'SET_OCR_JOB_ID'; payload: string }
@@ -82,6 +86,7 @@ const initialState: SimulatorState = {
     optimizationRecommendations: [],
     opportunities: [],
     clientProfile: undefined,
+    supervisedRecommendation: undefined,
     pdfUrl: null,
     savedProposalId: null,
     ocrJobId: null,
@@ -133,6 +138,8 @@ function simulatorReducer(state: SimulatorState, action: SimulatorAction): Simul
             return { ...state, opportunities: action.payload };
         case 'SET_CLIENT_PROFILE':
             return { ...state, clientProfile: action.payload };
+        case 'SET_SUPERVISED_RECOMMENDATION':
+            return { ...state, supervisedRecommendation: action.payload };
         case 'SET_PDF_URL':
             return { ...state, pdfUrl: action.payload };
         case 'SET_SAVED_PROPOSAL_ID':
@@ -433,10 +440,13 @@ export function useSimulator() {
                     marketer_name: p.candidate.company,
                     tariff_name: p.candidate.name,
                     logo_color: p.candidate.logo_color || 'bg-blue-600',
+                    logo_url: getMarketerLogo(p.candidate.company),
                     type: p.candidate.type,
                     contract_duration: '12 meses', // Default or from candidate
                     power_price: p.candidate.power_price,
                     energy_price: p.candidate.energy_price,
+                    surplus_compensation_price: p.candidate.surplus_compensation_price,
+                    estimated_agent_commission: p.candidate.estimated_agent_commission,
                     fixed_fee: p.candidate.fixed_fee
                 };
 
@@ -448,6 +458,7 @@ export function useSimulator() {
                     savings_percent: aletheiaResult.current_status.annual_projected_cost > 0
                         ? (p.annual_savings / aletheiaResult.current_status.annual_projected_cost) * 100
                         : 0,
+                    calculation_audit: p.invoice_simulation,
                     // If we want to show optimization details, we can map them here from opportunities
                     optimization_result: undefined
                 };
@@ -459,6 +470,7 @@ export function useSimulator() {
             if (aletheiaResult.client_profile) {
                 dispatch({ type: 'SET_CLIENT_PROFILE', payload: aletheiaResult.client_profile });
             }
+            dispatch({ type: 'SET_SUPERVISED_RECOMMENDATION', payload: aletheiaResult.supervised_recommendation });
 
             dispatch({ type: 'SET_RESULTS', payload: mappedResults });
 
@@ -469,7 +481,12 @@ export function useSimulator() {
                     try {
                         // 1. Log the best result (creates client + 1st proposal)
                         const bestResult = mappedResults[0];
-                        const savedProposal = await crmService.logSimulation(state.invoiceData, bestResult, state.invoiceData.client_name);
+                        const savedProposal = await crmService.logSimulation(
+                            state.invoiceData,
+                            bestResult,
+                            state.invoiceData.client_name,
+                            aletheiaResult
+                        );
                         dispatch({ type: 'SET_SAVED_PROPOSAL_ID', payload: savedProposal.id });
 
                         // 2. Log the next two if they exist
@@ -485,7 +502,18 @@ export function useSimulator() {
                                     current_annual_cost: result.current_annual_cost,
                                     offer_annual_cost: result.offer_annual_cost,
                                     savings_percent: result.savings_percent,
-                                    optimization_result: result.optimization_result
+                                    optimization_result: result.optimization_result,
+                                    aletheia_summary: {
+                                        client_profile: aletheiaResult.client_profile,
+                                        opportunities: aletheiaResult.opportunities.map(o => ({
+                                            type: o.type,
+                                            description: o.description,
+                                            annual_savings: o.annual_savings,
+                                            priority: o.priority,
+                                        })),
+                                        recommendations: aletheiaResult.optimization_recommendations,
+                                        supervised_recommendation: aletheiaResult.supervised_recommendation,
+                                    }
                                 });
                             }
                         }

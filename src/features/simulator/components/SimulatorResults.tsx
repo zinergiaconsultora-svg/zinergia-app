@@ -16,6 +16,10 @@ import { AnomalyPanel } from '@/components/AnomalyPanel';
 import { OpportunityCard } from './Results/OpportunityCard';
 import { InvoiceData } from '@/types/crm';
 import dynamic from 'next/dynamic';
+import { CalculationAuditPanel } from './CalculationAuditPanel';
+import { SupervisedRecommendationPanel } from './SupervisedRecommendationPanel';
+import { SupervisedRecommendationResult } from '@/lib/supervised/recommender';
+import { SupervisedConfirmationPanel, SupervisedConfirmationState } from './SupervisedConfirmationPanel';
 
 const PresentationModal = dynamic(() => import('./PresentationModal'), { ssr: false });
 const CompareModal = dynamic(() => import('./CompareModal'), { ssr: false });
@@ -30,6 +34,7 @@ interface SimulatorResultsProps {
     clientProfile?: { tags: string[]; sales_argument: string; };
     invoiceData?: InvoiceData;
     savedProposalId?: string | null;
+    supervisedRecommendation?: SupervisedRecommendationResult;
 }
 
 export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
@@ -42,6 +47,7 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
     invoiceData,
     clientProfile,
     savedProposalId,
+    supervisedRecommendation,
 }) => {
     const [isPresenting, setIsPresenting] = React.useState(false);
     const [isComparing, setIsComparing] = React.useState(false);
@@ -55,6 +61,20 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
     const [showShareMenu, setShowShareMenu] = React.useState(false);
     const shareMenuRef = React.useRef<HTMLDivElement>(null);
     const [linkCopied, setLinkCopied] = React.useState(false);
+    const [supervisedConfirmation, setSupervisedConfirmation] = React.useState<SupervisedConfirmationState>({
+        savings: false,
+        commission: false,
+        sips: false,
+        alerts: false,
+        calculation: false,
+    });
+    const isSupervisedConfirmed = Object.values(supervisedConfirmation).every(Boolean);
+
+    const requireSupervisedConfirmation = (actionLabel: string) => {
+        if (isSupervisedConfirmed) return true;
+        toast.error(`Antes de ${actionLabel}, confirma la revisión supervisada.`);
+        return false;
+    };
 
     // Fetch energy history for contextual anomaly explanations
     React.useEffect(() => {
@@ -88,6 +108,7 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
     }, []);
 
     const handleGetShareUrl = async (): Promise<string | null> => {
+        if (!requireSupervisedConfirmation('compartir la propuesta')) return null;
         if (shareUrl) return shareUrl;
         if (!savedProposalId) return null;
         setIsGeneratingLink(true);
@@ -144,6 +165,7 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
 
     const handleExportPDF = async () => {
         if (!invoiceData || !results[0]) return;
+        if (!requireSupervisedConfirmation('exportar el PDF')) return;
         setIsExporting(true);
         try {
             const [{ pdf }, { ProposalPDFDocument }] = await Promise.all([
@@ -239,6 +261,7 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
 
     const handleSaveProposal = async () => {
         if (!invoiceData || !results[0]) return;
+        if (!requireSupervisedConfirmation('guardar la propuesta')) return;
         setIsSaving(true);
         try {
             // Dynamic import to avoid SSR issues with crmService if any
@@ -272,6 +295,7 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
 
     const handleSendEmail = async () => {
         if (!emailAddress || !invoiceData || !results[0]) return;
+        if (!requireSupervisedConfirmation('enviar la propuesta')) return;
         setIsSendingEmail(true);
         try {
             // Construct a temporary Proposal object for the PDF generator
@@ -629,6 +653,21 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                         <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
                     </motion.div>
                 )}
+
+                {results[0]?.calculation_audit && (
+                    <CalculationAuditPanel audit={results[0].calculation_audit} />
+                )}
+
+                {supervisedRecommendation && (
+                    <SupervisedRecommendationPanel recommendation={supervisedRecommendation} />
+                )}
+
+                <SupervisedConfirmationPanel
+                    value={supervisedConfirmation}
+                    onChange={setSupervisedConfirmation}
+                    recommendation={supervisedRecommendation}
+                    alertCount={results[0]?.calculation_audit?.alerts?.length || 0}
+                />
 
                 {/* Grid de resultados con stagger */}
                 <motion.div
