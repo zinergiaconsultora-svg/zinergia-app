@@ -41,7 +41,7 @@ export async function middleware(request: NextRequest) {
         const { data: { user } } = await supabase.auth.getUser()
 
         // 4. Lógica de Redirección Proactiva
-        const isPublicRoute = pathname === '/' || pathname.startsWith('/join') || pathname.startsWith('/auth/callback')
+        const isPublicRoute = pathname === '/' || pathname.startsWith('/join') || pathname.startsWith('/p/') || pathname.startsWith('/auth/callback')
 
         // Caso A: No autenticado intentando entrar a ruta privada
         if (!user && !isPublicRoute) {

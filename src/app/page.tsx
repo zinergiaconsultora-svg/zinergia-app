@@ -125,7 +125,7 @@ export default function LandingPage() {
                 <div className="flex justify-end pt-1">
                   <a
                     href="mailto:soporte@zinergia.com?subject=Recuperar%20contrase%C3%B1a"
-                    className="text-xs font-bold uppercase tracking-widest text-indigo-500 hover:text-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
+                    className="text-xs font-bold uppercase tracking-widest text-indigo-700 hover:text-indigo-800 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
                   >
                     ¿Olvidaste tu contraseña?
                   </a>
@@ -152,9 +152,9 @@ export default function LandingPage() {
           </form>
 
           <div className="pt-6 text-center">
-            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest leading-loose">
+            <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest leading-loose">
               ¿Problemas de acceso? <br />
-              <a href="mailto:soporte@zinergia.com" className="text-indigo-500 hover:underline focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded">
+              <a href="mailto:soporte@zinergia.com" className="text-indigo-700 hover:underline focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded">
                 Contactar a Soporte
               </a>
             </span>
