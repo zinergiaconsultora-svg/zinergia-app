@@ -4,7 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Upload, FileText, CheckCircle2, XCircle, Loader2,
-    X, ArrowRight, Layers, RotateCcw, Trash2, Copy,
+    X, ArrowRight, Layers, Trash2, Copy,
 } from 'lucide-react';
 import { useBatchSimulator, BatchItem } from '../hooks/useBatchSimulator';
 import { InvoiceData } from '@/types/crm';
