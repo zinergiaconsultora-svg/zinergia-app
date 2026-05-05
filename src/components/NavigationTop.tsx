@@ -22,12 +22,11 @@ import {
 } from 'lucide-react';
 import { ZinergiaLogo } from './ui/ZinergiaLogo';
 import { NotificationBell } from './ui/NotificationBell';
-import { ThemeToggle } from './ui/ThemeToggle';
-import { haptics } from "@/lib/utils/haptics";
 import { motion, AnimatePresence } from 'framer-motion';
 import { crmService } from '@/services/crmService';
 import { logout } from '@/app/auth/actions';
 import { createClient } from '@/lib/supabase/client';
+import { logger } from '@/lib/utils/logger';
 
 const navItems = [
     { name: 'Inicio',      href: '/dashboard',           icon: LayoutDashboard },
@@ -40,15 +39,10 @@ const navItems = [
     { name: 'Ajustes',     href: '/dashboard/settings',  icon: Settings        },
 ] as const;
 
-const DEFAULT_GAMIFICATION = {
-    level: 5,
-    xp: 2450,
-    nextLevelXp: 3000
-};
 
 export const NavigationTop = () => {
     const pathname = usePathname();
-    const [gamification, setGamification] = useState(DEFAULT_GAMIFICATION);
+    const [gamification, setGamification] = useState<{ level: number; xp: number; nextLevelXp: number } | null>(null);
     const [hoveredItem, setHoveredItem] = useState<string | null>(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
@@ -57,7 +51,7 @@ export const NavigationTop = () => {
         let mounted = true;
         crmService.getUserGamificationStats().then(data => {
             if (mounted && data) setGamification(data);
-        }).catch(() => { });
+        }).catch((e) => { logger.warn('Gamification stats unavailable', { error: String(e) }); });
 
         const supabase = createClient();
         supabase.auth.getUser().then(({ data: { user } }) => {
@@ -79,7 +73,9 @@ export const NavigationTop = () => {
     const headerScale = useTransform(scrollY, [0, 50], [1, 0.98]);
     const progressWidth = useTransform(scrollY, [0, 1000], ["0%", "100%"]);
 
-    const xpPercent = Math.min((gamification.xp / gamification.nextLevelXp) * 100, 100);
+    const xpPercent = gamification
+        ? Math.min((gamification.xp / gamification.nextLevelXp) * 100, 100)
+        : 0;
 
     return (
         <>
@@ -95,7 +91,6 @@ export const NavigationTop = () => {
                     <ZinergiaLogo className="w-24 mt-1" />
                 </Link>
                 <div className="flex items-center gap-1 mt-1">
-                    <ThemeToggle />
                     <NotificationBell />
                     <button
                         type="button"
@@ -165,16 +160,20 @@ export const NavigationTop = () => {
                                 animate={{ x: ["-100%", "100%"] }}
                                 transition={{ repeat: Infinity, duration: 4, ease: "linear", repeatDelay: 6 }}
                             />
-                            <div className="text-right">
-                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">NIVEL {gamification.level}</p>
-                                <div className="h-1 w-16 bg-slate-200 rounded-full mt-0.5 overflow-hidden">
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${xpPercent}%` }}
-                                        className="h-full bg-emerald-500"
-                                    />
+                            {gamification ? (
+                                <>
+                                    <div className="text-right">
+                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">NIVEL {gamification.level}</p>
+                                    <div className="h-1 w-16 bg-slate-200 rounded-full mt-0.5 overflow-hidden">
+                                        <motion.div
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${xpPercent}%` }}
+                                            className="h-full bg-emerald-500"
+                                        />
+                                    </div>
                                 </div>
-                            </div>
+                                </>
+                            ) : null}
                             <motion.div
                                 whileHover={{ scale: 1.1, rotate: -5 }}
                                 className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white shadow-md relative z-10"
@@ -185,9 +184,6 @@ export const NavigationTop = () => {
                                 />
                             </motion.div>
                         </div>
-
-                        {/* Theme Toggle */}
-                        <ThemeToggle />
 
                         {/* Notification Bell */}
                         <NotificationBell />

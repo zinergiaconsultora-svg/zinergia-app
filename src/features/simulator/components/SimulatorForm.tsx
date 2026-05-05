@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
-import { TrendingUp, TrendingDown, Sparkles } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { TrendingUp, TrendingDown } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { InvoiceData } from '@/types/crm';
 import { DemoModeAlert } from '@/components/ui/DemoModeAlert';
@@ -42,7 +42,7 @@ interface SimulatorFormProps {
 export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     data, onUpdate, onCompare, onBack, isAnalyzing, loadingMessage,
     powerType, onPowerTypeOverride, pdfUrl, isMockMode = false,
-    originalData: _originalData, ocrJobId: _ocrJobId, ocrDataConfirmed = false, onConfirmOcrData,
+    ocrDataConfirmed = false, onConfirmOcrData,
 }) => {
     const [isConfirming, setIsConfirming] = useState(false);
     const [localConfirmed, setLocalConfirmed] = useState(false);
@@ -65,7 +65,6 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
             }).catch(() => {});
         });
         return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data.company_name, isMockMode]);
 
     const applySuggestions = () => {
@@ -88,7 +87,6 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
             }).catch(() => {});
         });
         return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data.cups, data.invoice_date, isMockMode]);
 
     const totalEnergyNow = useMemo(() =>
@@ -123,7 +121,6 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
             }).catch(() => {});
         });
         return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data.cups, isMockMode]);
 
     // ── Sparkline histórico de consumo ────────────────────────────────────────
@@ -139,7 +136,6 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
             }).catch(() => {});
         });
         return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data.cups, isMockMode]);
 
     // ── Live tariff preview ───────────────────────────────────────────────────
@@ -196,7 +192,6 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
             }).catch(() => {});
         });
         return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data.company_name, isMockMode]);
 
     const getFieldStat = useCallback((field: string) =>

@@ -3,11 +3,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireServerRole } from '@/lib/auth/permissions'
 import { revalidatePath } from 'next/cache'
+import { Offer } from '@/types/crm'
+import { ActionResult, actionError, actionSuccess } from './helpers'
 import { offerSchema, uuidSchema } from '@/lib/validation/schemas'
-import type { Offer } from '@/types/crm'
 import { logAdminAction } from '@/lib/audit/logger'
 
-export async function saveOfferAction(offer: Partial<Offer>) {
+export async function saveOfferAction(offer: Partial<Offer>): Promise<ActionResult<Offer>> {
     await requireServerRole(['admin', 'franchise'])
 
     const parsed = offerSchema.safeParse(offer)
@@ -25,10 +26,10 @@ export async function saveOfferAction(offer: Partial<Offer>) {
             .eq('id', id)
             .select()
             .single()
-        if (error) throw error
+        if (error) return actionError(error, 'Error al actualizar la tarifa')
         revalidatePath('/dashboard/tariffs')
         logAdminAction('update_offer', 'lv_zinergia_tarifas', id, { nombre: parsed.data.nombre }).catch(() => {})
-        return data
+        return actionSuccess(data as Offer)
     }
 
     const { data, error } = await supabase
@@ -36,13 +37,13 @@ export async function saveOfferAction(offer: Partial<Offer>) {
         .insert(fields)
         .select()
         .single()
-    if (error) throw error
+    if (error) return actionError(error, 'Error al crear la tarifa')
     revalidatePath('/dashboard/tariffs')
     logAdminAction('create_offer', 'lv_zinergia_tarifas', (data as { id: string }).id, { nombre: parsed.data.nombre }).catch(() => {})
-    return data
+    return actionSuccess(data as Offer)
 }
 
-export async function deleteOfferAction(id: string) {
+export async function deleteOfferAction(id: string): Promise<ActionResult<void>> {
     await requireServerRole(['admin', 'franchise'])
 
     const parsedId = uuidSchema.safeParse(id)
@@ -50,7 +51,8 @@ export async function deleteOfferAction(id: string) {
 
     const supabase = await createClient()
     const { error } = await supabase.from('lv_zinergia_tarifas').delete().eq('id', parsedId.data)
-    if (error) throw error
+    if (error) return actionError(error, 'Error al eliminar la tarifa')
     revalidatePath('/dashboard/tariffs')
     logAdminAction('delete_offer', 'lv_zinergia_tarifas', parsedId.data).catch(() => {})
+    return actionSuccess(undefined)
 }

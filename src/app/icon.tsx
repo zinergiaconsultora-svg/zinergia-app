@@ -21,8 +21,8 @@ export default async function Icon() {
           backgroundColor: 'white',
         }}
       >
-        {/* @ts-expect-error Satori allows passing ArrayBuffer directly to src */}
-        <img src={logoData} alt="Zinergia Logo" width="80%" style={{ objectFit: 'contain' }} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={logoData as unknown as string} alt="Zinergia Logo" width="80%" style={{ objectFit: 'contain' }} />
       </div>
     ),
     { ...size }

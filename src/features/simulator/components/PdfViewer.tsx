@@ -41,10 +41,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url,
-).toString();
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -94,7 +91,7 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         const [highlightQuery, setHighlightQuery] = useState<string | null>(null);
         const [foundOnPage, setFoundOnPage] = useState<boolean | null>(null);
         // Portal solo disponible en cliente — isMounted derived from typeof window
-        const [portalMounted, setPortalMounted] = useState(typeof window !== 'undefined');
+        const [portalMounted] = useState(typeof window !== 'undefined');
         const [showConfPanel, setShowConfPanel] = useState(false);
 
         // Refs para medición de ancho

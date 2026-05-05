@@ -54,7 +54,7 @@ export async function closeMonthlyBilling(
 
     const clearedCommissions = (commissions || []) as Commission[]
     const totalCommissions = clearedCommissions.reduce(
-        (sum, c) => sum + (c.franchise_profit || 0), 0
+        (sum, c) => sum + (c.franchise_commission || 0), 0
     )
 
     // 3. Crear o actualizar el ciclo con snapshot
@@ -78,7 +78,7 @@ export async function closeMonthlyBilling(
             .eq('id', existing.id)
             .select()
             .single()
-        if (error) throw error
+        if (error) throw new Error('Error al actualizar el ciclo de facturación')
         cycle = data as BillingCycle
     } else {
         // Crear nuevo ciclo
@@ -87,7 +87,7 @@ export async function closeMonthlyBilling(
             .insert(cyclePayload)
             .select()
             .single()
-        if (error) throw error
+        if (error) throw new Error('Error al crear el ciclo de facturación')
         cycle = data as BillingCycle
     }
 
@@ -203,7 +203,7 @@ export async function getWalletBalance(franchiseId: string): Promise<WalletBalan
         .eq('franchise_id', franchiseId)
         .maybeSingle()
 
-    if (error) throw error
+    if (error) throw new Error('Error al obtener el balance')
 
     // Si no hay comisiones aún, retornar balance vacío
     if (!data) {
@@ -238,17 +238,21 @@ export async function getBillingHistory(franchiseId: string): Promise<BillingCyc
         .single()
 
     if (!profile) throw new Error('Perfil no encontrado')
-    if (profile.role !== 'admin' && profile.franchise_id !== franchiseId) {
-        throw new Error('No autorizado')
-    }
+
+    // Resolve the actual franchise_id: admins see what they request, others use their own
+    const targetFranchiseId = profile.role === 'admin'
+        ? franchiseId
+        : profile.franchise_id
+
+    if (!targetFranchiseId) return []
 
     const { data, error } = await supabase
         .from('billing_cycles')
         .select('*')
-        .eq('franchise_id', franchiseId)
+        .eq('franchise_id', targetFranchiseId)
         .order('month_year', { ascending: false })
 
-    if (error) throw error
+    if (error) throw new Error('Error al obtener los ciclos de facturación')
     return (data || []) as BillingCycle[]
 }
 

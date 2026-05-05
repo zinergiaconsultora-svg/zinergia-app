@@ -27,7 +27,7 @@ const STATUS_LABELS = {
     lost: 'Perdido',
 };
 
-export default function ClientCard({ client }: ClientCardProps) {
+export default React.memo(function ClientCard({ client }: ClientCardProps) {
     const router = useRouter();
 
     const handleClick = useCallback(() => {
@@ -53,7 +53,7 @@ export default function ClientCard({ client }: ClientCardProps) {
                         {client.type === 'company' ? <Building2 size={22} strokeWidth={1.5} /> : <User size={22} strokeWidth={1.5} />}
                     </div>
                     <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-slate-900 dark:text-white text-lg leading-tight truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        <h3 className="font-semibold text-slate-900 dark:text-white text-lg leading-tight break-words group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                             {client.name}
                         </h3>
                         <div className="flex items-center mt-1.5">
@@ -82,15 +82,15 @@ export default function ClientCard({ client }: ClientCardProps) {
                 ) : (
                     <div className="bg-slate-50/50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-700/50 flex flex-col justify-center">
                         <span className="text-[10px] text-slate-500 uppercase font-semibold mb-0.5">CUPS principal</span>
-                        <span className="text-sm font-mono text-slate-700 dark:text-slate-300 truncate">
-                            {client.cups ? client.cups.substring(0, 16) + '...' : 'Falta CUPS'}
+                        <span className="text-sm font-mono text-slate-700 dark:text-slate-300 break-all">
+                            {client.cups || 'Falta CUPS'}
                         </span>
                     </div>
                 )}
                 
                 <div className="bg-slate-50/50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-700/50 flex flex-col justify-center">
                     <span className="text-[10px] text-slate-500 uppercase font-semibold mb-0.5">Compañía actual</span>
-                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
+                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200 break-words">
                         {client.current_supplier || 'Desconocida'}
                     </span>
                 </div>
@@ -100,7 +100,7 @@ export default function ClientCard({ client }: ClientCardProps) {
             <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800 relative z-10">
                 <div className="flex items-center gap-2 text-slate-400">
                     <MapPin size={14} className="shrink-0" />
-                    <span className="text-xs font-light truncate max-w-[130px]">
+                    <span className="text-xs font-light break-words">
                         {client.address || 'Sin dirección'}
                     </span>
                 </div>
@@ -133,4 +133,4 @@ export default function ClientCard({ client }: ClientCardProps) {
             </div>
         </Card>
     );
-}
+});

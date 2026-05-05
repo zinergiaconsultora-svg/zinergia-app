@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { logger } from '@/lib/utils/logger';
 
 export default function DashboardError({
     error,
@@ -11,8 +12,7 @@ export default function DashboardError({
     reset: () => void;
 }) {
     useEffect(() => {
-        // Log the error to an error reporting service
-        console.error('Dashboard Error:', error);
+        logger.error('Dashboard error', error, { digest: error.digest });
     }, [error]);
 
     return (

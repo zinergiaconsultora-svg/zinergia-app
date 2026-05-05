@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import { RefreshCw, TrendingDown, Phone, X, ArrowRight, Zap } from 'lucide-react';
+import { RefreshCw, TrendingDown, Phone, X } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import {

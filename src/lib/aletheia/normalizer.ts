@@ -85,10 +85,6 @@ export class Normalizer {
         const warnings: string[] = [];
 
         // 1. Helper for safe float extraction
-        const getVal = (key: string): number => {
-            // Handle potential variations or typos in keys if necessary
-            return this.cleanFloat(raw[key]);
-        };
 
         // Helper to get from period structure
         const getP = (prefix: string, p: string) => {
@@ -146,6 +142,21 @@ export class Normalizer {
         const costReactive = this.cleanFloat(raw.importe_reactiva || raw.reactive_cost);
         const costRental = this.cleanFloat(raw.alquiler_equipos || raw.rental_cost || raw.equipment_cost);
         const subtotal = this.cleanFloat(raw.subtotal_sin_impuestos || raw.subtotal);
+        const totalAmount = this.cleanFloat(raw.total_amount || raw.total_factura || raw.importe_total);
+        const bonoSocial = this.cleanFloat(raw.bono_social || raw.financiacion_bono_social || raw.social_bonus_cost);
+        const distributionExcess = this.cleanFloat(raw.excesos_distribuidora || raw.distribution_excess_cost || raw.excess_power_cost);
+        const reactiveEnergy = this.cleanFloat(raw.energia_reactiva || raw.reactive_energy_cost || raw.reactive_cost || raw.importe_reactiva);
+        const excludedServices = this.cleanFloat(raw.servicios_comerciales || raw.excluded_services_cost || raw.services_cost);
+        const surplusExportKwh = this.cleanFloat(raw.excedentes_kwh || raw.surplus_export_kwh || raw.autoconsumo_excedentes_kwh);
+        const annualConsumptionKwh = this.cleanFloat(raw.annual_consumption_kwh || raw.sips_annual_consumption_kwh || raw.consumo_anual_kwh);
+        const electricityTaxRate = normalizeRate(
+            this.cleanFloat(raw.electricity_tax_rate || raw.impuesto_electrico_rate || raw.electricity_tax_percent || raw.impuesto_electrico_percent),
+            0.0511269632
+        );
+        const vatRate = normalizeRate(
+            this.cleanFloat(raw.vat_rate || raw.iva_rate || raw.vat_percent || raw.iva_percent),
+            0.21
+        );
 
         // Fallback: If breakdown is missing but we have subtotal, assign to Energy (heuristic)
         // This ensures "Current Annual Cost" is projected correctly in the Engine
@@ -197,7 +208,22 @@ export class Normalizer {
             current_cost_reactive: costReactive,
             current_cost_rental: costRental,
             current_total_tax_excluded: subtotal,
+            current_total_amount: totalAmount,
+            bono_social_cost: bonoSocial,
+            distribution_excess_cost: distributionExcess,
+            reactive_energy_cost: reactiveEnergy,
+            excluded_services_cost: excludedServices,
+            surplus_export_kwh: surplusExportKwh,
+            electricity_tax_rate: electricityTaxRate,
+            vat_rate: vatRate,
+            has_sips_annual_consumption: Boolean(raw.sips_annual_consumption_kwh),
+            annual_consumption_mwh: annualConsumptionKwh > 0 ? annualConsumptionKwh / 1000 : undefined,
             extra_services: raw.extra_services || []
         };
     }
+}
+
+function normalizeRate(value: number, fallback: number): number {
+    if (!value || value <= 0) return fallback;
+    return value > 1 ? value / 100 : value;
 }

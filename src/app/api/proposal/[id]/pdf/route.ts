@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateProposalPDF } from '@/lib/pdf/generate';
+import type { UserRole } from '@/types/crm';
 
 export async function GET(
     request: NextRequest,
@@ -19,12 +20,32 @@ export async function GET(
         const id = params.id;
         if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
 
-        // ── Fetch proposal scoped to the authenticated user's franchise ──────
-        const { data: proposal, error: proposalError } = await supabase
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role, franchise_id')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        const role = profile?.role as UserRole | undefined;
+        if (!role) {
+            return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+        }
+
+        let query = supabase
             .from('proposals')
             .select('*, clients(*), offer_snapshot, calculation_data')
-            .eq('id', id)
-            .single();
+            .eq('id', id);
+
+        if (role === 'agent') {
+            query = query.eq('agent_id', user.id);
+        } else if (role === 'franchise') {
+            if (!profile?.franchise_id) {
+                return NextResponse.json({ error: 'Propuesta no encontrada' }, { status: 404 });
+            }
+            query = query.eq('franchise_id', profile.franchise_id);
+        }
+
+        const { data: proposal, error: proposalError } = await query.single();
 
         if (proposalError || !proposal) {
             return NextResponse.json({ error: 'Propuesta no encontrada' }, { status: 404 });

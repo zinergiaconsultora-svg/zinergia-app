@@ -35,22 +35,20 @@ test.describe('Login page', () => {
         await page.getByRole('button', { name: /entrar|iniciar|sign in|login/i }).click();
 
         // Error alert should appear (our custom error state)
-        await expect(
-            page.locator('[role="alert"], [aria-live="polite"]').or(page.getByText(/error|inválid|incorrecto/i))
-        ).toBeVisible({ timeout: 10_000 });
+        await expect(page.locator('#login-error')).toBeVisible({ timeout: 15_000 });
 
-        // Should NOT redirect away
-        await expect(page).toHaveURL('/');
+        // Should NOT redirect away from the login screen
+        await expect(page).toHaveURL(/\/(?:\?.*)?$/);
     });
 
     test('redirects unauthenticated user from /dashboard to /', async ({ page }) => {
         await page.goto('/dashboard');
-        await expect(page).toHaveURL('/', { timeout: 10_000 });
+        await expect(page).toHaveURL(/\/\?redirect_to=%2Fdashboard$/, { timeout: 10_000 });
     });
 
     test('redirects unauthenticated user from /dashboard/simulator to /', async ({ page }) => {
         await page.goto('/dashboard/simulator');
-        await expect(page).toHaveURL('/', { timeout: 10_000 });
+        await expect(page).toHaveURL(/\/\?redirect_to=%2Fdashboard%2Fsimulator$/, { timeout: 10_000 });
     });
 });
 

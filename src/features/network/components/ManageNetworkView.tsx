@@ -8,6 +8,10 @@ import { crmService } from '@/services/crmService';
 import { NetworkUser } from '@/types/crm';
 import { UserPlus, RefreshCw, Layers, Map as MapIcon, GitBranch, BrainCircuit, Search, Building2, Users } from 'lucide-react';
 
+function flattenNodes(nodes: NetworkUser[]): NetworkUser[] {
+    return nodes.flatMap(n => [n, ...flattenNodes(n.children || [])]);
+}
+
 export const ManageNetworkView: React.FC = () => {
     const [hierarchy, setHierarchy] = useState<NetworkUser[]>([]);
     const [netStats, setNetStats] = useState({ totalVolumen: 0, monthlyGrowth: 0 });
@@ -38,10 +42,6 @@ export const ManageNetworkView: React.FC = () => {
     useEffect(() => {
         loadData();
     }, []);
-
-    // Flatten all nodes recursively for accurate counts
-    const flattenNodes = (nodes: NetworkUser[]): NetworkUser[] =>
-        nodes.flatMap(n => [n, ...flattenNodes(n.children || [])]);
 
     const stats = useMemo(() => {
         const all = flattenNodes(hierarchy);

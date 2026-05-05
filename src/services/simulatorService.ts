@@ -350,7 +350,7 @@ export async function exportResultsToPDF(
         doc.text('Recomendaciones de Optimización', 20, yPosition + 6);
         yPosition += 12;
 
-        optimizationRecommendations.slice(0, 3).forEach((rec, idx) => {
+        optimizationRecommendations.slice(0, 3).forEach((rec) => {
             if (yPosition > 220) {
                 doc.addPage();
                 yPosition = 20;

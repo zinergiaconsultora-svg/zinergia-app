@@ -114,7 +114,7 @@ export const gamificationService = {
                 franchise_id: profile.franchise_id,
                 total_revenue: pot,
                 agent_commission: pot * 0.30,
-                franchise_profit: pot * 0.50,
+                franchise_commission: pot * 0.50,
                 hq_royalty: pot * 0.20,
                 status: 'pending'
             });

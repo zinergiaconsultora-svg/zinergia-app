@@ -1,12 +1,14 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import { Proposal } from '@/types/crm';
+import { getMarketerLogo } from '@/lib/marketers/logos';
+import { existsSync, readFileSync } from 'fs';
+import path from 'path';
 
 // ─── Minimalist Brand Tokens ────────────────────────────────────────────────
 const BRAND_BLUE   = '#1b2641';
 const BRAND_ORANGE = '#ff5722';
 const EMERALD      = '#059669';
-const SLATE_50     = '#f8fafc';
 const SLATE_100    = '#f1f5f9';
 const SLATE_200    = '#e2e8f0';
 const SLATE_400    = '#94a3b8';
@@ -188,6 +190,66 @@ const s = StyleSheet.create({
         fontFamily: 'Helvetica-Bold',
         color: BRAND_ORANGE,
     },
+    marketerHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 14,
+    },
+    marketerLogo: {
+        width: 82,
+        height: 34,
+        objectFit: 'contain',
+    },
+    simulationBox: {
+        borderWidth: 1,
+        borderColor: SLATE_200,
+        borderRadius: 8,
+        padding: 14,
+        marginBottom: 30,
+    },
+    simulationCards: {
+        flexDirection: 'row',
+        gap: 10,
+        marginBottom: 12,
+    },
+    simulationCard: {
+        flex: 1,
+        backgroundColor: SLATE_100,
+        borderRadius: 6,
+        padding: 10,
+    },
+    simulationLabel: {
+        fontSize: 7,
+        color: SLATE_500,
+        textTransform: 'uppercase',
+        letterSpacing: 0.8,
+        marginBottom: 4,
+    },
+    simulationValue: {
+        fontSize: 13,
+        fontFamily: 'Helvetica-Bold',
+        color: SLATE_900,
+    },
+    simulationValueGreen: {
+        fontSize: 13,
+        fontFamily: 'Helvetica-Bold',
+        color: EMERALD,
+    },
+    priceGrid: {
+        flexDirection: 'row',
+        gap: 20,
+        marginTop: 8,
+    },
+    priceCol: {
+        flex: 1,
+    },
+    priceTitle: {
+        fontSize: 9,
+        fontFamily: 'Helvetica-Bold',
+        color: BRAND_BLUE,
+        marginBottom: 6,
+    },
 
     // ── Opportunity cards (Minimalist)
     oppCard: {
@@ -354,8 +416,27 @@ function euro(val: number): string {
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(val);
 }
 
+function euro2(val: number): string {
+    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
+}
+
 function pct(val: number): string {
     return `${val.toFixed(1)}%`;
+}
+
+function price(val?: number, unit = '€/kWh'): string {
+    return val && val > 0 ? `${val.toFixed(4)} ${unit}` : '—';
+}
+
+function getPdfLogoSource(marketer: string, snapshotLogo?: string | null): string | null {
+    const logoUrl = snapshotLogo || getMarketerLogo(marketer);
+    if (!logoUrl?.startsWith('/')) return logoUrl || null;
+
+    const filePath = path.join(process.cwd(), 'public', logoUrl.replace(/^\/+/, ''));
+    if (!existsSync(filePath)) return null;
+
+    const base64 = readFileSync(filePath).toString('base64');
+    return `data:image/jpeg;base64,${base64}`;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -376,6 +457,12 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
     const salesArg    = proposal.aletheia_summary?.client_profile?.sales_argument;
     const optSavings  = proposal.optimization_result?.annual_optimization_savings ?? 0;
     const totalSavings = savings + optSavings;
+    const periodDays = Math.max(1, proposal.calculation_data?.period_days || 30);
+    const currentInvoiceEstimate = (currentCost / 365) * periodDays;
+    const optimizedInvoiceEstimate = (newCost / 365) * periodDays;
+    const invoiceSavings = currentInvoiceEstimate - optimizedInvoiceEstimate;
+    const logoSource = getPdfLogoSource(marketer, proposal.offer_snapshot.logo_url);
+    const pricePeriods = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'] as const;
 
     // 5-year projection
     const projection = [1, 2, 3, 4, 5].map(yr => ({
@@ -421,6 +508,61 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
                         hemos detectado que <Text style={s.introHighlight}>estás pagando {euro(currentCost)} al año cuando podrías pagar {euro(newCost)}.</Text>
                         {' '}Esa diferencia representa capital inmovilizado que tu empresa podría reasignar a áreas estratégicas.
                     </Text>
+
+                    {/* Supervised invoice simulation */}
+                    <Text style={s.sectionTitle}>Simulación de Factura Optimizada</Text>
+                    <View style={s.simulationBox}>
+                        <View style={s.marketerHeader}>
+                            <View>
+                                <Text style={s.offerVal}>{marketer} — {tariff}</Text>
+                                <Text style={{ fontSize: 8, color: SLATE_500, marginTop: 4 }}>Período simulado: {periodDays} días</Text>
+                            </View>
+                            {logoSource && (
+                                // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf Image no expone prop alt.
+                                <Image src={logoSource} style={s.marketerLogo} />
+                            )}
+                        </View>
+
+                        <View style={s.simulationCards}>
+                            <View style={s.simulationCard}>
+                                <Text style={s.simulationLabel}>Factura actual</Text>
+                                <Text style={s.simulationValue}>{euro2(currentInvoiceEstimate)}</Text>
+                            </View>
+                            <View style={s.simulationCard}>
+                                <Text style={s.simulationLabel}>Factura optimizada</Text>
+                                <Text style={s.simulationValue}>{euro2(optimizedInvoiceEstimate)}</Text>
+                            </View>
+                            <View style={s.simulationCard}>
+                                <Text style={s.simulationLabel}>Ahorro factura</Text>
+                                <Text style={s.simulationValueGreen}>{euro2(invoiceSavings)} · {pct(savingsPct)}</Text>
+                            </View>
+                            <View style={s.simulationCard}>
+                                <Text style={s.simulationLabel}>Ahorro anual</Text>
+                                <Text style={s.simulationValueGreen}>{euro2(savings)}</Text>
+                            </View>
+                        </View>
+
+                        <View style={s.priceGrid}>
+                            <View style={s.priceCol}>
+                                <Text style={s.priceTitle}>Precios nuevos energía</Text>
+                                {pricePeriods.map(period => (
+                                    <View key={`energy-${period}`} style={s.offerRow}>
+                                        <Text style={s.offerKey}>{period.toUpperCase()}</Text>
+                                        <Text style={s.offerVal}>{price(proposal.offer_snapshot.energy_price?.[period])}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                            <View style={s.priceCol}>
+                                <Text style={s.priceTitle}>Precios nuevos potencia</Text>
+                                {pricePeriods.map(period => (
+                                    <View key={`power-${period}`} style={s.offerRow}>
+                                        <Text style={s.offerKey}>{period.toUpperCase()}</Text>
+                                        <Text style={s.offerVal}>{price(proposal.offer_snapshot.power_price?.[period], '€/kW día')}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        </View>
+                    </View>
 
                     {/* Comparison before / after */}
                     <View style={s.comparisonRow}>

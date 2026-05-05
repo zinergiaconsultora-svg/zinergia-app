@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/client';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Client } from '@/types/crm';
 import { getFranchiseId, getCached, setCache, invalidateCache, invalidateCacheByPrefix } from './shared';
+import { activitiesService } from './activities';
+import { logger } from '@/lib/utils/logger';
 
 export const clientService = {
     async getClients(serverClient?: SupabaseClient, limit = 20, offset = 0) {
@@ -9,7 +11,6 @@ export const clientService = {
         const franchiseId = await getFranchiseId(supabase);
         if (!franchiseId) return [];
 
-        const cacheKey = `clients_${franchiseId}_${offset}`;
         if (offset === 0) {
             const cached = getCached<Client[]>(`clients_${franchiseId}`);
             if (cached) return cached;
@@ -61,6 +62,14 @@ export const clientService = {
         invalidateCache(`clients_${franchiseId}`);
         invalidateCache(`clients_${franchiseId}_0`);
         invalidateCacheByPrefix('dashboard_stats_');
+
+        activitiesService.logActivity(
+            (data as Client).id,
+            'client_created',
+            `Cliente "${(data as Client).name}" creado`,
+            { name: (data as Client).name, type: client.type }
+        ).catch((e) => logger.error('Failed to log client_created activity', e));
+
         return data as Client;
     },
 
@@ -76,6 +85,23 @@ export const clientService = {
 
         if (error) throw error;
         if (franchiseId) { invalidateCache(`clients_${franchiseId}`); invalidateCache(`clients_${franchiseId}_0`); invalidateCacheByPrefix('dashboard_stats_'); }
+
+        if (updates.status && updates.status !== 'new') {
+            activitiesService.logActivity(
+                id,
+                'client_status_changed',
+                `Estado cambiado a "${updates.status}"`,
+                { new_status: updates.status }
+            ).catch((e) => logger.error('Failed to log client_status_changed', e));
+        } else if (Object.keys(updates).length > 0) {
+            activitiesService.logActivity(
+                id,
+                'client_updated',
+                `Datos del cliente actualizados`,
+                { fields: Object.keys(updates) }
+            ).catch((e) => logger.error('Failed to log client_updated', e));
+        }
+
         return data as Client;
     },
 

@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { requireServerRole } from '@/lib/auth/permissions';
 import { revalidatePath } from 'next/cache';
 import { uuidSchema, updateAgentSchema, createFranchiseSchema } from '@/lib/validation/schemas';
@@ -136,7 +137,7 @@ export async function assignAgentToFranchise(agentId: string, franchiseId: strin
     await requireServerRole(['admin']);
     const parsedAgentId = uuidSchema.parse(agentId);
     const parsedFranchiseId = uuidSchema.parse(franchiseId);
-    const supabase = await createClient();
+    const supabase = createServiceClient();
 
     const { error } = await supabase
         .from('profiles')
@@ -144,12 +145,15 @@ export async function assignAgentToFranchise(agentId: string, franchiseId: strin
         .eq('id', parsedAgentId);
 
     if (error) throw new Error(`Error asignando agente: ${error.message}`);
+    revalidatePath('/admin');
+    revalidatePath('/admin/agents');
+    logAdminAction('assign_agent_franchise', 'profiles', parsedAgentId, { franchise_id: parsedFranchiseId }).catch(() => {});
 }
 
 export async function removeAgentFromFranchise(agentId: string): Promise<void> {
     await requireServerRole(['admin']);
     const id = uuidSchema.parse(agentId);
-    const supabase = await createClient();
+    const supabase = createServiceClient();
 
     const { error } = await supabase
         .from('profiles')
@@ -203,7 +207,7 @@ export async function updateAgentAdminAction(
     await requireServerRole(['admin']);
     const id = uuidSchema.parse(agentId);
     const safeUpdates = updateAgentSchema.parse(updates);
-    const supabase = await createClient();
+    const supabase = createServiceClient();
 
     const { error } = await supabase
         .from('profiles')

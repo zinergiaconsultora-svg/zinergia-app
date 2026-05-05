@@ -1,4 +1,4 @@
-import { ClientProfile, InvoiceData, TariffPeriod } from './types';
+import { ClientProfile, InvoiceData } from './types';
 import { THRESHOLDS } from './config';
 
 export class Profiler {

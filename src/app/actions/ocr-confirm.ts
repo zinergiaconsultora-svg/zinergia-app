@@ -2,6 +2,7 @@
 
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { sanitizeOcrTrainingData } from '@/lib/ocr/sanitizeTrainingData';
 import { InvoiceData } from '@/types/crm';
 
 /**
@@ -37,7 +38,7 @@ export async function confirmOcrExtractionAction(
 
     // Calcular diff: campos que el agente modificó respecto al original
     const originalFields = (existing?.extracted_fields ?? {}) as Record<string, unknown>;
-    const correctedFields = correctedData as unknown as Record<string, unknown>;
+    const correctedFields = sanitizeOcrTrainingData(correctedData) as Record<string, unknown>;
     const changedFields = findChangedFields(originalFields, correctedFields);
 
     if (existing) {

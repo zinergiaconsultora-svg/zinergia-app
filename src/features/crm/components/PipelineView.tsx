@@ -189,8 +189,8 @@ export default function PipelineView({ clients, onStatusChange }: Props) {
                                             <div className="flex justify-between items-end gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
                                                 <div className="min-w-0 flex flex-col gap-0.5">
                                                     {client.cups ? (
-                                                        <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono tracking-wider truncate" title={client.cups}>
-                                                            {client.cups.substring(0, 14)}…
+                                                        <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono tracking-wider break-all" title={client.cups}>
+                                                            {client.cups}
                                                         </div>
                                                     ) : (
                                                         <div className="text-[10px] text-slate-300 dark:text-slate-600 italic">Sin CUPS</div>
