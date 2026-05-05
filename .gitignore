@@ -44,6 +44,7 @@ yarn-error.log*
 
 # irrelevant folders
 opencode
+.claude/
 scripts
 docs
 resources
