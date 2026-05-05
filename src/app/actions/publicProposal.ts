@@ -2,10 +2,12 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { Proposal } from '@/types/crm';
 import { getActiveCommissionRule } from './commissionRules';
 import { calculateCommissionSplit, applyFranchiseOverride } from '@/lib/commissions/calculator';
+import { rateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
 
 const uuidSchema = z.uuid();
@@ -13,6 +15,8 @@ const uuidSchema = z.uuid();
 const tokenSchema = z.string().min(32).max(64).regex(/^[A-Za-z0-9\-_]+$/);
 
 const LINK_TTL_DAYS = 30;
+const SIGNATURE_DATA_MAX_BYTES = 250_000;
+const acceptLimiter = rateLimit({ windowMs: 10 * 60_000, max: 10 });
 
 function generateToken(): string {
     // Token URL-safe de 32 bytes → 43 chars base64url
@@ -22,6 +26,22 @@ function generateToken(): string {
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
         .replace(/=+$/, '');
+}
+
+async function getServerActionClientKey(): Promise<string> {
+    try {
+        const h = await headers();
+        return h.get('x-forwarded-for')?.split(',')[0]?.trim()
+            || h.get('x-real-ip')?.trim()
+            || 'unknown';
+    } catch {
+        return 'unknown';
+    }
+}
+
+function isValidSignatureData(signatureData: string): boolean {
+    if (signatureData.length > SIGNATURE_DATA_MAX_BYTES) return false;
+    return /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(signatureData);
 }
 
 /**
@@ -99,8 +119,17 @@ export async function acceptPublicProposalAction(
     if (!tokenSchema.safeParse(token).success) {
         return { success: false, message: 'Enlace inválido.' };
     }
-    if (signedName !== undefined && signedName.length > 200) {
+    const rl = acceptLimiter.check(`${await getServerActionClientKey()}:${token}`);
+    if (!rl.allowed) {
+        return { success: false, message: 'Demasiados intentos. Espera unos minutos y vuelve a probar.' };
+    }
+
+    const cleanSignedName = signedName?.trim();
+    if (cleanSignedName !== undefined && cleanSignedName.length > 200) {
         return { success: false, message: 'Nombre demasiado largo.' };
+    }
+    if (signatureData !== undefined && !isValidSignatureData(signatureData)) {
+        return { success: false, message: 'Firma inválida o demasiado grande.' };
     }
 
     const adminClient = createServiceClient();
@@ -132,7 +161,7 @@ export async function acceptPublicProposalAction(
         signed_at: now,
     };
     if (signatureData) updatePayload.signature_data = signatureData;
-    if (signedName?.trim()) updatePayload.signed_name = signedName.trim();
+    if (cleanSignedName) updatePayload.signed_name = cleanSignedName;
 
     const { error } = await adminClient
         .from('proposals')
