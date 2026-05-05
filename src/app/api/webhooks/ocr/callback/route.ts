@@ -5,6 +5,7 @@ import { env } from '@/lib/env';
 import { sendPushToUser } from '@/lib/push/sendPush';
 import { encryptNullable, hashCups, hashDni } from '@/lib/crypto/pii';
 import { moduleLogger } from '@/lib/logger';
+import { redactOcrTextSample, sanitizeOcrTrainingData } from '@/lib/ocr/sanitizeTrainingData';
 
 const log = moduleLogger('ocr-callback');
 
@@ -236,7 +237,10 @@ export async function POST(request: Request) {
                 }
             } catch (clientErr) {
                 // No bloquear el flujo si falla la creación del cliente
-                log.warn({ err: clientErr }, 'Auto-client creation failed (non-blocking)');
+                log.warn({
+                    errorMessage: clientErr instanceof Error ? clientErr.message : 'unknown',
+                    jobId: job_id,
+                }, 'Auto-client creation failed (non-blocking)');
             }
         }
 
@@ -283,7 +287,9 @@ export async function POST(request: Request) {
                     }
 
                     // raw_text_sample: N8N puede enviarlo en el payload como `text_sample`
-                    const rawTextSample = (payload.text_sample as string | undefined)?.slice(0, 1500) ?? null;
+                    const rawTextSample = payload.text_sample
+                        ? redactOcrTextSample(String(payload.text_sample).slice(0, 1500))
+                        : null;
 
                     await supabaseAdmin
                         .from('ocr_training_examples')
@@ -291,8 +297,8 @@ export async function POST(request: Request) {
                             company_name: companyNormalized,
                             file_hash: fileHash,
                             raw_text_sample: rawTextSample,
-                            raw_fields: data ?? null,          // campos brutos de N8N antes de normalizar
-                            extracted_fields: invoiceData,
+                            raw_fields: sanitizeOcrTrainingData(data) ?? null,
+                            extracted_fields: sanitizeOcrTrainingData(invoiceData),
                             is_validated: false,
                             confidence_avg: confidenceAvg,
                             n8n_model: (payload.model as string | undefined) ?? null,

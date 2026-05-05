@@ -104,9 +104,8 @@ export async function eraseClientAction(
             new_data: {
                 reason: 'rgpd_art17_admin_erasure',
                 deleted_at: new Date().toISOString(),
-                client_name: client.name,
-                client_email: client.email,
                 client_status: client.status,
+                pii_retained: false,
             },
         });
 
@@ -126,7 +125,7 @@ export async function eraseClientAction(
 
     return {
         success: true,
-        message: `Cliente "${client.name}" eliminado. Registro de auditoría conservado.`,
+        message: 'Cliente eliminado. Registro de auditoría conservado sin PII directa.',
     };
 }
 
