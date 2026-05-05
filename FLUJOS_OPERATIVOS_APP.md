@@ -1142,6 +1142,102 @@ Hay cosas que pasan en la app **sin que nadie pulse un botón**:
 | 5 | `database.types.ts` **regenerado** tras cada migración | Para que el código siempre conozca el esquema actual |
 | 6 | Toda modificación de esquema vive en `supabase/migrations/` | Para tener historial y poder revertir si algo sale mal |
 
+## 12.1 Cambios recientes que ya forman parte del flujo
+
+Esta sección resume lo incorporado durante la última fase de trabajo para que quien revise la app entienda **cómo debe comportarse ahora** y qué debe comprobar.
+
+### Seguridad y datos
+
+| Cambio | Cómo afecta a la operativa | Qué probar |
+|---|---|---|
+| PDF de propuestas acotado por propietario/rol | Descargar `/api/proposal/[id]/pdf` ya no debe depender solo de que el usuario pertenezca a la misma franquicia. La ruta tiene que comprobar si la propuesta es del agente, de su red o de admin. | Un agente no puede descargar el PDF de otro agente aunque conozca el UUID. |
+| Retiradas acotadas por franquicia | Franquicia y admin pueden gestionar retiradas, pero una franquicia solo debe ver las solicitudes de usuarios de su propia red. | Entrar como franquicia A y confirmar que no aparecen retiradas de franquicia B. |
+| Ejemplos OCR sin PII | Los ejemplos usados para mejorar el OCR no deben guardar CUPS, DNI/CIF, direcciones completas ni nombres completos en claro. | Ejecutar la query A.4 y revisar que no aparecen CUPS visibles en `ocr_training_examples`. |
+| Cache SIPS protegida | El consumo anual cacheado por CUPS no debe poder ser modificado directamente por cualquier usuario autenticado. | Intentar insertar/actualizar cache SIPS desde cliente normal: debe fallar. |
+| Historial Supabase alineado | Las migraciones locales y remotas deben coincidir para poder usar `supabase db push` sin bloqueos. | `npx supabase migration list --linked` muestra local/remoto alineados. |
+
+### Comparativa de factura
+
+La comparativa debe calcularse como lo haría una persona revisando la factura a mano:
+
+1. **Potencia contratada:** multiplicar cada potencia contratada por su precio de potencia de la nueva tarifa y por los días facturados.
+2. **Energía consumida:** si la factura trae desglose por periodos, usar ese desglose. Si la tarifa nueva tiene precio único, usar el consumo total con ese precio único.
+3. **Cargos obligatorios copiados:** bono social, alquiler de equipos, excesos de distribuidora y conceptos equivalentes se copian tal cual cuando el usuario los marque como aplicables.
+4. **Servicios no obligatorios:** mantenimiento, GoClean, energía limpia u otros servicios comerciales se excluyen de la comparativa limpia salvo decisión manual.
+5. **Impuesto eléctrico:** recalcularlo sobre la suma de potencia + energía + conceptos que correspondan, usando el porcentaje indicado en la factura cuando esté disponible.
+6. **IVA:** recalcularlo sobre la base imponible simulada, usando el tipo indicado en la factura.
+7. **Ahorro:** comparar importe factura actual vs. importe optimizado. El ahorro anual se extrapola desde los días facturados.
+
+> Ejemplo: si una factura de 28 días tiene 2,3 kW en punta y valle, y 208 kWh consumidos, la simulación no copia el precio actual. Coge las cantidades de la factura y las multiplica por los precios de la comercializadora seleccionada.
+
+### SIPS y consumo anual
+
+El consumo anual es clave para elegir comisión. La regla operativa queda así:
+
+- Primero se intenta obtener el dato desde **SIPS/CNMC** usando el CUPS.
+- Si SIPS no está disponible, se usa como respaldo el dato de consumo anual que venga en la factura.
+- Si tampoco existe, se marca alerta y la comisión queda como estimada o pendiente de validación.
+- El consumo anual se expresa en **MWh** para clasificar tramos de comisión.
+
+### Tarifas y comisiones cargadas
+
+| Comercializadora | Qué se añadió | Reglas especiales |
+|---|---|---|
+| Plenitude | Tarifas eléctricas 3.0TD y 6.1TD de productos fijos: `FACIL`, `PERIODOS`, `FIJO`, con productos como `POWER +`, `POWER`, `ENERGY +`, `ENERGY`, `BASSIC`, `PRIME`, `CUSTOM`. | En energía se usa precio final con 15% dto.; en `PRIME` se usa precio sin descuento porque no aplica dto. Se omiten `INDEX 3.0TD` e `INDEX 6.1TD`. |
+| LOGOS | Tarifas eléctricas `FIJO PYME` para negocios, con productos `SIGMA`, `OMEGA`, `EPSILON`, `DELTA`, `GAMMA`, `BETA`. | Se omiten hogar, gas, indexado y `ALFA/ZEUS` por no estar funcional. |
+| Comisiones Plenitude | Tramos por consumo anual en MWh. | El tramo se decide con SIPS o respaldo de factura. |
+| Comisiones LOGOS | Comisiones negocios fijo 3.0 y fijo 6.1TD. | Se omiten fijo 2.0, hogar, gas e indexado. La celda 6.1TD tramo 1.200-2.500 para `EPSILON` es **12.276,50 €**. |
+
+### Comparativa supervisada
+
+Antes de enviar o compartir una propuesta, el colaborador debe pasar por un bloque de confirmación supervisada. El objetivo no es frenar la venta, sino evitar comparativas desequilibradas o mal calculadas.
+
+Debe confirmar:
+
+- Ahorro en factura y ahorro anual.
+- Comisión prevista y tramo aplicado.
+- Fuente del consumo anual: SIPS, factura o manual.
+- Alertas de calidad: periodos incompletos, P6 sin consumo leído, potencia con excesos, compensación de excedentes, servicios excluidos.
+- Que el equilibrio ahorro/comisión es defendible comercialmente.
+
+> Regla de negocio: siempre se prioriza ofrecer ahorro real al cliente. Entre opciones con ahorro similar, puede priorizarse mejor comisión para el colaborador si la propuesta sigue siendo equilibrada y explicable.
+
+### Propuesta y PDF comercial
+
+La propuesta debe mostrar de forma clara:
+
+- Logo de la comercializadora recomendada.
+- Importe factura actual vs. importe factura optimizada.
+- Desglose de potencia, energía, cargos obligatorios, impuesto eléctrico e IVA.
+- Ahorro en factura, ahorro anual y porcentaje.
+- Comisión prevista para el colaborador en vista interna, no como dato principal para el cliente.
+
+### `/dashboard/tariffs`
+
+La pantalla de tarifas se ajustó para revisar tarifas densas sin perder columnas:
+
+- Logos visibles por comercializadora en la columna compañía.
+- Vista más compacta para energía y potencias.
+- Sin depender de scroll horizontal en escritorio cuando hay espacio suficiente.
+- Etiqueta visual de comisión cargada cuando la tarifa tiene regla asociada.
+
+### Operativa local y Supabase
+
+Para este proyecto queda configurado el MCP local de Supabase en `.mcp.json` apuntando a `gmjgkzaxmkaggsyczwcm`. Los logs locales de Next (`.next-localhost.log`) quedan ignorados porque no son parte de la app.
+
+Comandos útiles:
+
+```bash
+npx supabase migration list --linked
+npx supabase db push --dry-run
+npx supabase db push
+npx supabase gen types typescript --project-id gmjgkzaxmkaggsyczwcm > src/types/database.types.ts
+npm run lint
+npx tsc --noEmit
+npm run test
+npm run build
+```
+
 ---
 
 # 13 · Checklist universal para cada pantalla

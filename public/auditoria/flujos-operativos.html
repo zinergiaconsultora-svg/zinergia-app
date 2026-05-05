@@ -999,6 +999,82 @@ flowchart LR
   </tbody>
 </table>
 
+<h3>12.1 Cambios recientes integrados en el flujo</h3>
+<div class="card">
+  <h4>Seguridad y datos</h4>
+  <table>
+    <thead><tr><th>Cambio</th><th>Operativa esperada</th><th>Qué probar</th></tr></thead>
+    <tbody>
+      <tr><td>PDF de propuestas</td><td><code>/api/proposal/[id]/pdf</code> comprueba propietario, franquicia o admin antes de generar el PDF.</td><td>Un agente no descarga PDFs de otro agente aunque conozca el UUID.</td></tr>
+      <tr><td>Retiradas</td><td>Franquicia solo gestiona solicitudes de usuarios de su propia red.</td><td>Franquicia A no ve retiradas de franquicia B.</td></tr>
+      <tr><td>OCR training</td><td>Los ejemplos para entrenar OCR se guardan sin CUPS, DNI/CIF, nombres ni direcciones completas en claro.</td><td>La query A.4 no devuelve CUPS visibles.</td></tr>
+      <tr><td>Cache SIPS</td><td>El consumo anual cacheado no puede mutarlo cualquier usuario autenticado desde cliente.</td><td>Insert/update desde cliente normal debe fallar.</td></tr>
+      <tr><td>Migraciones</td><td>Historial local y remoto de Supabase alineado.</td><td><code>npx supabase migration list --linked</code> muestra versiones coincidentes.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h4>Comparativa de factura</h4>
+    <ul>
+      <li>Potencia: kW contratados × precio nuevo × días facturados.</li>
+      <li>Energía: usar periodos P1/P2/P3/P4/P5/P6 si vienen desglosados; usar total solo si la nueva tarifa tiene precio único.</li>
+      <li>Bono social, alquiler, excesos de distribuidora y equivalentes se copian cuando apliquen.</li>
+      <li>Servicios comerciales no obligatorios se excluyen de la comparativa limpia.</li>
+      <li>Impuesto eléctrico e IVA se recalculan sobre la base simulada.</li>
+      <li>Ahorro = factura actual vs. factura optimizada; anualizado según días facturados.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>SIPS y consumo anual</h4>
+    <ul>
+      <li>Primero se intenta SIPS/CNMC con CUPS.</li>
+      <li>Si falla, se usa el consumo anual indicado en factura como respaldo.</li>
+      <li>Si falta el dato, la comisión queda estimada o pendiente.</li>
+      <li>El tramo de comisión se decide en MWh anuales.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card">
+  <h4>Tarifas y comisiones</h4>
+  <table>
+    <thead><tr><th>Comercializadora</th><th>Incluido</th><th>Reglas especiales</th></tr></thead>
+    <tbody>
+      <tr><td>Plenitude</td><td>3.0TD y 6.1TD fijas: FACIL, PERIODOS y FIJO; productos POWER +, POWER, ENERGY +, ENERGY, BASSIC, PRIME, CUSTOM.</td><td>Energía con precio final 15% dto.; PRIME usa precio sin descuento. Se omiten INDEX.</td></tr>
+      <tr><td>LOGOS</td><td>FIJO PYME electricidad: SIGMA, OMEGA, EPSILON, DELTA, GAMMA y BETA.</td><td>Se omiten hogar, gas, indexado y ALFA/ZEUS.</td></tr>
+      <tr><td>Comisiones</td><td>Plenitude y LOGOS por tramos de consumo anual en MWh.</td><td>LOGOS 6.1TD tramo 1.200-2.500 EPSILON: 12.276,50 €.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h4>Confirmación supervisada</h4>
+    <p>Antes de enviar o compartir propuesta, el colaborador confirma ahorro, comisión, fuente SIPS/factura/manual, alertas de calidad y equilibrio comercial.</p>
+    <p><b>Regla:</b> primero ahorro real para el cliente; entre opciones con ahorro similar, se puede priorizar mejor comisión si la propuesta sigue siendo defendible.</p>
+  </div>
+  <div class="card">
+    <h4>Propuesta, PDF y tarifas</h4>
+    <p>La propuesta debe mostrar logo, factura actual vs. optimizada, desglose de potencia/energía/cargos/impuestos/IVA, ahorro en factura, ahorro anual y porcentaje.</p>
+    <p><code>/dashboard/tariffs</code> muestra logos por compañía, columnas compactas de energía/potencia y etiqueta de comisión cargada.</p>
+  </div>
+</div>
+
+<div class="card">
+  <h4>Operativa local y Supabase</h4>
+  <p>El proyecto queda con MCP local de Supabase en <code>.mcp.json</code> para <code>gmjgkzaxmkaggsyczwcm</code>. El log local <code>.next-localhost.log</code> queda ignorado.</p>
+  <pre><code>npx supabase migration list --linked
+npx supabase db push --dry-run
+npx supabase db push
+npx supabase gen types typescript --project-id gmjgkzaxmkaggsyczwcm &gt; src/types/database.types.ts
+npm run lint
+npx tsc --noEmit
+npm run test
+npm run build</code></pre>
+</div>
+
 <!-- ===================== 13 CHECKLIST ===================== -->
 <h2>13 · Checklist universal por pantalla</h2>
 <div class="grid-3">
