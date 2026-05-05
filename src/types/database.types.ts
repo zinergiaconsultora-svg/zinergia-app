@@ -178,6 +178,198 @@ export type Database = {
           },
         ]
       }
+      client_activities: {
+        Row: {
+          agent_id: string
+          client_id: string
+          created_at: string | null
+          description: string
+          franchise_id: string | null
+          id: string
+          metadata: Json | null
+          type: string
+        }
+        Insert: {
+          agent_id: string
+          client_id: string
+          created_at?: string | null
+          description: string
+          franchise_id?: string | null
+          id?: string
+          metadata?: Json | null
+          type: string
+        }
+        Update: {
+          agent_id?: string
+          client_id?: string
+          created_at?: string | null
+          description?: string
+          franchise_id?: string | null
+          id?: string
+          metadata?: Json | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_activities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_activities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "client_activities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_activities_franchise_id_fkey"
+            columns: ["franchise_id"]
+            isOneToOne: false
+            referencedRelation: "franchises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_documents: {
+        Row: {
+          agent_id: string
+          category: string
+          client_id: string
+          created_at: string | null
+          file_path: string
+          file_type: string
+          franchise_id: string | null
+          id: string
+          name: string
+          size_bytes: number
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id: string
+          category?: string
+          client_id: string
+          created_at?: string | null
+          file_path: string
+          file_type: string
+          franchise_id?: string | null
+          id?: string
+          name: string
+          size_bytes: number
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string
+          category?: string
+          client_id?: string
+          created_at?: string | null
+          file_path?: string
+          file_type?: string
+          franchise_id?: string | null
+          id?: string
+          name?: string
+          size_bytes?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_documents_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_documents_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "client_documents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_documents_franchise_id_fkey"
+            columns: ["franchise_id"]
+            isOneToOne: false
+            referencedRelation: "franchises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_status_transitions: {
+        Row: {
+          agent_id: string
+          client_id: string
+          created_at: string | null
+          franchise_id: string | null
+          from_status: string | null
+          id: string
+          to_status: string
+        }
+        Insert: {
+          agent_id: string
+          client_id: string
+          created_at?: string | null
+          franchise_id?: string | null
+          from_status?: string | null
+          id?: string
+          to_status: string
+        }
+        Update: {
+          agent_id?: string
+          client_id?: string
+          created_at?: string | null
+          franchise_id?: string | null
+          from_status?: string | null
+          id?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_status_transitions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_status_transitions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "client_status_transitions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_status_transitions_franchise_id_fkey"
+            columns: ["franchise_id"]
+            isOneToOne: false
+            referencedRelation: "franchises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
@@ -186,8 +378,12 @@ export type Database = {
           contracted_power: Json | null
           created_at: string | null
           cups: string | null
+          cups_ciphertext: string | null
+          cups_hash: string | null
           current_supplier: string | null
           dni_cif: string | null
+          dni_cif_ciphertext: string | null
+          dni_cif_hash: string | null
           email: string | null
           franchise_id: string | null
           id: string
@@ -212,8 +408,12 @@ export type Database = {
           contracted_power?: Json | null
           created_at?: string | null
           cups?: string | null
+          cups_ciphertext?: string | null
+          cups_hash?: string | null
           current_supplier?: string | null
           dni_cif?: string | null
+          dni_cif_ciphertext?: string | null
+          dni_cif_hash?: string | null
           email?: string | null
           franchise_id?: string | null
           id?: string
@@ -238,8 +438,12 @@ export type Database = {
           contracted_power?: Json | null
           created_at?: string | null
           cups?: string | null
+          cups_ciphertext?: string | null
+          cups_hash?: string | null
           current_supplier?: string | null
           dni_cif?: string | null
+          dni_cif_ciphertext?: string | null
+          dni_cif_hash?: string | null
           email?: string | null
           franchise_id?: string | null
           id?: string
@@ -398,6 +602,102 @@ export type Database = {
           },
         ]
       }
+      contracts: {
+        Row: {
+          agent_id: string
+          annual_savings: number | null
+          client_id: string
+          contract_type: string
+          created_at: string | null
+          end_date: string | null
+          franchise_id: string | null
+          id: string
+          marketer_name: string
+          monthly_cost_estimate: number | null
+          notes: string | null
+          notice_date: string | null
+          proposal_id: string | null
+          start_date: string
+          status: string
+          tariff_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id: string
+          annual_savings?: number | null
+          client_id: string
+          contract_type?: string
+          created_at?: string | null
+          end_date?: string | null
+          franchise_id?: string | null
+          id?: string
+          marketer_name: string
+          monthly_cost_estimate?: number | null
+          notes?: string | null
+          notice_date?: string | null
+          proposal_id?: string | null
+          start_date?: string
+          status?: string
+          tariff_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string
+          annual_savings?: number | null
+          client_id?: string
+          contract_type?: string
+          created_at?: string | null
+          end_date?: string | null
+          franchise_id?: string | null
+          id?: string
+          marketer_name?: string
+          monthly_cost_estimate?: number | null
+          notes?: string | null
+          notice_date?: string | null
+          proposal_id?: string | null
+          start_date?: string
+          status?: string
+          tariff_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_franchise_id_fkey"
+            columns: ["franchise_id"]
+            isOneToOne: false
+            referencedRelation: "franchises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dashboard_preferences: {
         Row: {
           currency: string | null
@@ -448,6 +748,51 @@ export type Database = {
             referencedColumns: ["franchise_id"]
           },
         ]
+      }
+      empresas: {
+        Row: {
+          cert_password: string | null
+          cert_path: string | null
+          cp: string | null
+          created_at: string | null
+          direccion: string | null
+          municipio: string | null
+          nif: string
+          nombre: string
+          pais: string | null
+          provincia: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          cert_password?: string | null
+          cert_path?: string | null
+          cp?: string | null
+          created_at?: string | null
+          direccion?: string | null
+          municipio?: string | null
+          nif: string
+          nombre: string
+          pais?: string | null
+          provincia?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          cert_password?: string | null
+          cert_path?: string | null
+          cp?: string | null
+          created_at?: string | null
+          direccion?: string | null
+          municipio?: string | null
+          nif?: string
+          nombre?: string
+          pais?: string | null
+          provincia?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       franchise_config: {
         Row: {
@@ -518,6 +863,142 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+          agent_id: string
+          billing_period_end: string | null
+          billing_period_start: string | null
+          created_at: string | null
+          due_date: string
+          franchise_id: string | null
+          id: string
+          invoice_lines: Json
+          invoice_number: string
+          issue_date: string
+          issuer_address: string | null
+          issuer_city: string | null
+          issuer_name: string
+          issuer_nif: string
+          issuer_postal_code: string | null
+          notes: string | null
+          paid_date: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          pdf_url: string | null
+          recipient_address: string | null
+          recipient_city: string | null
+          recipient_name: string
+          recipient_nif: string
+          recipient_postal_code: string | null
+          retention_percent: number | null
+          retention_total: number | null
+          status: string | null
+          subtotal: number
+          tax_amount: number
+          tax_base: number
+          tax_percent: number | null
+          tax_type: string | null
+          total: number
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id: string
+          billing_period_end?: string | null
+          billing_period_start?: string | null
+          created_at?: string | null
+          due_date: string
+          franchise_id?: string | null
+          id?: string
+          invoice_lines?: Json
+          invoice_number: string
+          issue_date?: string
+          issuer_address?: string | null
+          issuer_city?: string | null
+          issuer_name: string
+          issuer_nif: string
+          issuer_postal_code?: string | null
+          notes?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          pdf_url?: string | null
+          recipient_address?: string | null
+          recipient_city?: string | null
+          recipient_name: string
+          recipient_nif: string
+          recipient_postal_code?: string | null
+          retention_percent?: number | null
+          retention_total?: number | null
+          status?: string | null
+          subtotal?: number
+          tax_amount?: number
+          tax_base?: number
+          tax_percent?: number | null
+          tax_type?: string | null
+          total?: number
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string
+          billing_period_end?: string | null
+          billing_period_start?: string | null
+          created_at?: string | null
+          due_date?: string
+          franchise_id?: string | null
+          id?: string
+          invoice_lines?: Json
+          invoice_number?: string
+          issue_date?: string
+          issuer_address?: string | null
+          issuer_city?: string | null
+          issuer_name?: string
+          issuer_nif?: string
+          issuer_postal_code?: string | null
+          notes?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          pdf_url?: string | null
+          recipient_address?: string | null
+          recipient_city?: string | null
+          recipient_name?: string
+          recipient_nif?: string
+          recipient_postal_code?: string | null
+          retention_percent?: number | null
+          retention_total?: number | null
+          status?: string | null
+          subtotal?: number
+          tax_amount?: number
+          tax_base?: number
+          tax_percent?: number | null
+          tax_type?: string | null
+          total?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "invoices_franchise_id_fkey"
+            columns: ["franchise_id"]
+            isOneToOne: false
+            referencedRelation: "franchises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lv_zinergia_tarifas: {
         Row: {
           codigo_producto: string | null
@@ -549,6 +1030,7 @@ export type Database = {
           power_price_p5: number
           power_price_p6: number
           supply_type: string
+          surplus_compensation_price: number
           tariff_name: string
           tariff_type: string | null
           tipo_cliente: string
@@ -585,6 +1067,7 @@ export type Database = {
           power_price_p5?: number
           power_price_p6?: number
           supply_type?: string
+          surplus_compensation_price?: number
           tariff_name: string
           tariff_type?: string | null
           tipo_cliente?: string
@@ -621,6 +1104,7 @@ export type Database = {
           power_price_p5?: number
           power_price_p6?: number
           supply_type?: string
+          surplus_compensation_price?: number
           tariff_name?: string
           tariff_type?: string | null
           tipo_cliente?: string
@@ -638,6 +1122,8 @@ export type Database = {
           franchise_commission: number
           franchise_id: string | null
           id: string
+          invoice_id: string | null
+          invoiced: boolean | null
           paid_date: string | null
           proposal_id: string | null
           status: string | null
@@ -650,6 +1136,8 @@ export type Database = {
           franchise_commission: number
           franchise_id?: string | null
           id?: string
+          invoice_id?: string | null
+          invoiced?: boolean | null
           paid_date?: string | null
           proposal_id?: string | null
           status?: string | null
@@ -662,6 +1150,8 @@ export type Database = {
           franchise_commission?: number
           franchise_id?: string | null
           id?: string
+          invoice_id?: string | null
+          invoiced?: boolean | null
           paid_date?: string | null
           proposal_id?: string | null
           status?: string | null
@@ -701,6 +1191,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_franchise_client_stats"
             referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "network_commissions_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "network_commissions_proposal_id_fkey"
@@ -756,6 +1253,75 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_franchise_client_stats"
             referencedColumns: ["franchise_id"]
+          },
+        ]
+      }
+      next_actions: {
+        Row: {
+          action_type: string
+          agent_id: string
+          client_id: string | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          franchise_id: string
+          id: string
+          metadata: Json | null
+          priority: string
+          proposal_id: string | null
+          reason: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          action_type: string
+          agent_id: string
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          franchise_id: string
+          id?: string
+          metadata?: Json | null
+          priority?: string
+          proposal_id?: string | null
+          reason?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          action_type?: string
+          agent_id?: string
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          franchise_id?: string
+          id?: string
+          metadata?: Json | null
+          priority?: string
+          proposal_id?: string | null
+          reason?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "next_actions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "next_actions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -816,8 +1382,10 @@ export type Database = {
           attempts: number
           client_id: string | null
           created_at: string
+          duplicate_of: string | null
           error_message: string | null
           extracted_data: Json | null
+          file_content_hash: string | null
           file_name: string
           file_path: string | null
           franchise_id: string | null
@@ -830,8 +1398,10 @@ export type Database = {
           attempts?: number
           client_id?: string | null
           created_at?: string
+          duplicate_of?: string | null
           error_message?: string | null
           extracted_data?: Json | null
+          file_content_hash?: string | null
           file_name: string
           file_path?: string | null
           franchise_id?: string | null
@@ -844,8 +1414,10 @@ export type Database = {
           attempts?: number
           client_id?: string | null
           created_at?: string
+          duplicate_of?: string | null
           error_message?: string | null
           extracted_data?: Json | null
+          file_content_hash?: string | null
           file_name?: string
           file_path?: string | null
           franchise_id?: string | null
@@ -862,10 +1434,80 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ocr_jobs_duplicate_of_fkey"
+            columns: ["duplicate_of"]
+            isOneToOne: false
+            referencedRelation: "ocr_jobs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ocr_jobs_franchise_id_fkey"
             columns: ["franchise_id"]
             isOneToOne: false
             referencedRelation: "franchises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ocr_training_examples: {
+        Row: {
+          company_name: string
+          confidence_avg: number | null
+          corrected_fields: Json | null
+          created_at: string
+          extracted_fields: Json
+          file_hash: string
+          franchise_id: string | null
+          id: string
+          is_validated: boolean
+          n8n_model: string | null
+          ocr_job_id: string | null
+          raw_fields: Json | null
+          raw_text_sample: string | null
+        }
+        Insert: {
+          company_name: string
+          confidence_avg?: number | null
+          corrected_fields?: Json | null
+          created_at?: string
+          extracted_fields: Json
+          file_hash: string
+          franchise_id?: string | null
+          id?: string
+          is_validated?: boolean
+          n8n_model?: string | null
+          ocr_job_id?: string | null
+          raw_fields?: Json | null
+          raw_text_sample?: string | null
+        }
+        Update: {
+          company_name?: string
+          confidence_avg?: number | null
+          corrected_fields?: Json | null
+          created_at?: string
+          extracted_fields?: Json
+          file_hash?: string
+          franchise_id?: string | null
+          id?: string
+          is_validated?: boolean
+          n8n_model?: string | null
+          ocr_job_id?: string | null
+          raw_fields?: Json | null
+          raw_text_sample?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ocr_training_examples_franchise_id_fkey"
+            columns: ["franchise_id"]
+            isOneToOne: false
+            referencedRelation: "franchises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocr_training_examples_ocr_job_id_fkey"
+            columns: ["ocr_job_id"]
+            isOneToOne: false
+            referencedRelation: "ocr_jobs"
             referencedColumns: ["id"]
           },
         ]
@@ -929,39 +1571,81 @@ export type Database = {
       profiles: {
         Row: {
           bio: string | null
+          company_name: string | null
+          company_type: string | null
           created_at: string | null
           email: string | null
+          fiscal_address: string | null
+          fiscal_city: string | null
+          fiscal_country: string | null
+          fiscal_postal_code: string | null
+          fiscal_province: string | null
+          fiscal_verified: boolean | null
+          fiscal_verified_at: string | null
           franchise_id: string | null
           full_name: string | null
+          iban: string | null
           id: string
+          invoice_next_number: number | null
+          invoice_prefix: string | null
+          nif_cif: string | null
           parent_id: string | null
           phone: string | null
+          retention_percent: number | null
           role: string | null
           timezone: string | null
           updated_at: string | null
         }
         Insert: {
           bio?: string | null
+          company_name?: string | null
+          company_type?: string | null
           created_at?: string | null
           email?: string | null
+          fiscal_address?: string | null
+          fiscal_city?: string | null
+          fiscal_country?: string | null
+          fiscal_postal_code?: string | null
+          fiscal_province?: string | null
+          fiscal_verified?: boolean | null
+          fiscal_verified_at?: string | null
           franchise_id?: string | null
           full_name?: string | null
+          iban?: string | null
           id: string
+          invoice_next_number?: number | null
+          invoice_prefix?: string | null
+          nif_cif?: string | null
           parent_id?: string | null
           phone?: string | null
+          retention_percent?: number | null
           role?: string | null
           timezone?: string | null
           updated_at?: string | null
         }
         Update: {
           bio?: string | null
+          company_name?: string | null
+          company_type?: string | null
           created_at?: string | null
           email?: string | null
+          fiscal_address?: string | null
+          fiscal_city?: string | null
+          fiscal_country?: string | null
+          fiscal_postal_code?: string | null
+          fiscal_province?: string | null
+          fiscal_verified?: boolean | null
+          fiscal_verified_at?: string | null
           franchise_id?: string | null
           full_name?: string | null
+          iban?: string | null
           id?: string
+          invoice_next_number?: number | null
+          invoice_prefix?: string | null
+          nif_cif?: string | null
           parent_id?: string | null
           phone?: string | null
+          retention_percent?: number | null
           role?: string | null
           timezone?: string | null
           updated_at?: string | null
@@ -991,6 +1675,7 @@ export type Database = {
           annual_savings: number
           calculation_data: Json
           client_id: string
+          close_probability: number | null
           created_at: string | null
           current_annual_cost: number
           followup_3d_at: string | null
@@ -1015,6 +1700,7 @@ export type Database = {
           annual_savings: number
           calculation_data: Json
           client_id: string
+          close_probability?: number | null
           created_at?: string | null
           current_annual_cost: number
           followup_3d_at?: string | null
@@ -1039,6 +1725,7 @@ export type Database = {
           annual_savings?: number
           calculation_data?: Json
           client_id?: string
+          close_probability?: number | null
           created_at?: string | null
           current_annual_cost?: number
           followup_3d_at?: string | null
@@ -1106,6 +1793,200 @@ export type Database = {
         }
         Relationships: []
       }
+      renewal_opportunities: {
+        Row: {
+          agent_id: string
+          best_marketer: string | null
+          best_new_annual_cost: number
+          best_tariff_id: string | null
+          best_tariff_name: string | null
+          client_id: string
+          contacted_at: string | null
+          created_at: string
+          current_annual_cost: number
+          detected_at: string
+          expires_at: string | null
+          franchise_id: string
+          id: string
+          original_proposal_id: string | null
+          potential_savings: number
+          priority_score: number
+          reason: string
+          savings_percent: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          best_marketer?: string | null
+          best_new_annual_cost?: number
+          best_tariff_id?: string | null
+          best_tariff_name?: string | null
+          client_id: string
+          contacted_at?: string | null
+          created_at?: string
+          current_annual_cost?: number
+          detected_at?: string
+          expires_at?: string | null
+          franchise_id: string
+          id?: string
+          original_proposal_id?: string | null
+          potential_savings?: number
+          priority_score?: number
+          reason?: string
+          savings_percent?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          best_marketer?: string | null
+          best_new_annual_cost?: number
+          best_tariff_id?: string | null
+          best_tariff_name?: string | null
+          client_id?: string
+          contacted_at?: string | null
+          created_at?: string
+          current_annual_cost?: number
+          detected_at?: string
+          expires_at?: string | null
+          franchise_id?: string
+          id?: string
+          original_proposal_id?: string | null
+          potential_savings?: number
+          priority_score?: number
+          reason?: string
+          savings_percent?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renewal_opportunities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renewal_opportunities_original_proposal_id_fkey"
+            columns: ["original_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sips_consents: {
+        Row: {
+          client_id: string | null
+          consent_at: string
+          consent_source: string
+          created_at: string
+          cups_hash: string
+          id: string
+          notes: string | null
+          revoked_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          consent_at?: string
+          consent_source?: string
+          created_at?: string
+          cups_hash: string
+          id?: string
+          notes?: string | null
+          revoked_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          consent_at?: string
+          consent_source?: string
+          created_at?: string
+          cups_hash?: string
+          id?: string
+          notes?: string | null
+          revoked_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sips_consents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sips_consumption_cache: {
+        Row: {
+          annual_consumption_kwh: number
+          annual_consumption_mwh: number
+          created_at: string
+          cups_hash: string
+          expires_at: string
+          fetched_at: string
+          id: string
+          rows_count: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          annual_consumption_kwh?: number
+          annual_consumption_mwh?: number
+          created_at?: string
+          cups_hash: string
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          rows_count?: number
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          annual_consumption_kwh?: number
+          annual_consumption_mwh?: number
+          created_at?: string
+          cups_hash?: string
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          rows_count?: number
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sips_query_audit: {
+        Row: {
+          created_at: string
+          cups_hash: string
+          error_message: string | null
+          id: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          cups_hash: string
+          error_message?: string | null
+          id?: string
+          status: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          cups_hash?: string
+          error_message?: string | null
+          id?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       tariff_commissions: {
         Row: {
           commission_fixed_eur: number
@@ -1159,6 +2040,96 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      tasks: {
+        Row: {
+          agent_id: string
+          auto_generated: boolean | null
+          client_id: string | null
+          completed_at: string | null
+          created_at: string | null
+          description: string | null
+          due_date: string | null
+          franchise_id: string | null
+          id: string
+          priority: string
+          proposal_id: string | null
+          status: string
+          title: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id: string
+          auto_generated?: boolean | null
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          franchise_id?: string | null
+          id?: string
+          priority?: string
+          proposal_id?: string | null
+          status?: string
+          title: string
+          type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string
+          auto_generated?: boolean | null
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          franchise_id?: string | null
+          id?: string
+          priority?: string
+          proposal_id?: string | null
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_franchise_id_fkey"
+            columns: ["franchise_id"]
+            isOneToOne: false
+            referencedRelation: "franchises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tax_parameters: {
         Row: {
@@ -1227,6 +2198,116 @@ export type Database = {
             foreignKeyName: "user_points_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+        ]
+      }
+      verifactu_invoices: {
+        Row: {
+          created_at: string | null
+          ejercicio: number
+          estado: string | null
+          fecha_generacion: string | null
+          huella: string | null
+          id: string
+          periodo: number
+          user_id: string
+          xml_generado: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          ejercicio: number
+          estado?: string | null
+          fecha_generacion?: string | null
+          huella?: string | null
+          id?: string
+          periodo: number
+          user_id: string
+          xml_generado?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          ejercicio?: number
+          estado?: string | null
+          fecha_generacion?: string | null
+          huella?: string | null
+          id?: string
+          periodo?: number
+          user_id?: string
+          xml_generado?: string | null
+        }
+        Relationships: []
+      }
+      withdrawal_requests: {
+        Row: {
+          amount: number
+          commission_ids: Json
+          created_at: string
+          iban: string
+          id: string
+          paid_at: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          commission_ids?: Json
+          created_at?: string
+          iban: string
+          id?: string
+          paid_at?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          commission_ids?: Json
+          created_at?: string
+          iban?: string
+          id?: string
+          paid_at?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawal_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "withdrawal_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "withdrawal_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "withdrawal_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "v_franchise_client_stats"
             referencedColumns: ["franchise_id"]
           },
@@ -1373,9 +2454,52 @@ export type Database = {
       }
     }
     Functions: {
+      generate_invoice_number: { Args: { p_agent_id: string }; Returns: string }
+      get_conversion_funnel: {
+        Args: { p_agent_id?: string }
+        Returns: {
+          count: number
+          percentage: number
+          status: string
+        }[]
+      }
       get_dashboard_stats: { Args: { p_franchise_id: string }; Returns: Json }
+      get_expiring_contracts: {
+        Args: { p_days_threshold?: number }
+        Returns: {
+          agent_id: string
+          annual_savings: number
+          client_id: string
+          client_name: string
+          days_remaining: number
+          end_date: string
+          id: string
+          marketer_name: string
+          tariff_name: string
+        }[]
+      }
+      get_monthly_metrics: {
+        Args: { p_months?: number }
+        Returns: {
+          lost_clients: number
+          month: string
+          new_clients: number
+          proposals_accepted: number
+          proposals_sent: number
+          total_savings: number
+          won_clients: number
+        }[]
+      }
       get_my_franchise_id: { Args: never; Returns: string }
       get_my_parent_id: { Args: never; Returns: string }
+      get_withdrawal_growth: {
+        Args: { p_user_id: string }
+        Returns: {
+          current_month_earned: number
+          growth_percent: number
+          previous_month_earned: number
+        }[]
+      }
       is_admin: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
     }

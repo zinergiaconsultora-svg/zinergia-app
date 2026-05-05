@@ -1,5 +1,5 @@
 import React from 'react';
-import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer';
+import { Document, Page, View, Text, StyleSheet, Image } from '@react-pdf/renderer';
 import { InvoiceData, SavingsResult } from '@/types/crm';
 import { OptimizationRecommendation, AuditOpportunity } from '@/lib/aletheia/types';
 
@@ -19,6 +19,10 @@ const fmtEur = (n: number) =>
     n.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' €';
 
 const fmtPct = (n: number) => n.toFixed(1) + '%';
+const fmtEur2 = (n: number) =>
+    n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+const fmtPrice = (n?: number) => n && n > 0 ? n.toFixed(4) + ' €/kWh' : '—';
+const fmtPowerPrice = (n?: number) => n && n > 0 ? n.toFixed(4) + ' €/kW día' : '—';
 
 const today = new Date().toLocaleDateString('es-ES', {
     day: 'numeric', month: 'long', year: 'numeric',
@@ -173,6 +177,31 @@ const s = StyleSheet.create({
     detailLabel: { fontSize: 7, color: C.slate500 },
     detailValue: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: C.slate700 },
 
+    // ── Optimized invoice simulation
+    optimizedBox: {
+        borderWidth: 1,
+        borderColor: C.slate200,
+        borderRadius: 8,
+        padding: 10,
+        marginTop: 6,
+        marginBottom: 12,
+    },
+    optimizedHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    marketerLogo: { width: 70, height: 30, objectFit: 'contain' },
+    miniCards: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+    miniCard: { flex: 1, borderRadius: 6, padding: 8, backgroundColor: C.slate100 },
+    miniLabel: { fontSize: 6.5, color: C.slate500, textTransform: 'uppercase', letterSpacing: 0.5 },
+    miniValue: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: C.slate900, marginTop: 2 },
+    miniValueGood: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: C.emerald, marginTop: 2 },
+    priceGrid: { flexDirection: 'row', gap: 8, marginTop: 8 },
+    priceCol: { flex: 1 },
+    priceTitle: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: C.slate700, marginBottom: 3 },
+
     // ── Opportunities
     oppCard: {
         backgroundColor: '#fffbeb',
@@ -217,6 +246,11 @@ export function ProposalPDFDocument({
 
     const cups = invoiceData.cups ?? '—';
     const clientName = invoiceData.client_name ?? 'Cliente';
+    const audit = best.calculation_audit;
+    const periodSavings = audit?.periodSavings ?? (best.annual_savings / 365) * (invoiceData.period_days || 30);
+    const currentInvoice = audit?.currentInvoiceTotal ?? (best.current_annual_cost / 365) * (invoiceData.period_days || 30);
+    const optimizedInvoice = audit?.simulatedInvoiceTotal ?? (best.offer_annual_cost / 365) * (invoiceData.period_days || 30);
+    const pricePeriods = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'] as const;
 
     return (
         <Document>
@@ -274,6 +308,88 @@ export function ProposalPDFDocument({
                         </Text>
                     </View>
                 )}
+
+                {/* Optimized invoice simulation */}
+                <Text style={s.sectionTitle}>Simulación de Factura Optimizada</Text>
+                <View style={s.optimizedBox}>
+                    <View style={s.optimizedHeader}>
+                        <View>
+                            <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: C.slate900 }}>
+                                {best.offer.marketer_name} · {best.offer.tariff_name}
+                            </Text>
+                            <Text style={{ fontSize: 7, color: C.slate500, marginTop: 2 }}>
+                                Período simulado: {invoiceData.period_days || 30} días
+                            </Text>
+                        </View>
+                        {best.offer.logo_url && (
+                            // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf Image no expone prop alt.
+                            <Image src={best.offer.logo_url} style={s.marketerLogo} />
+                        )}
+                    </View>
+
+                    <View style={s.miniCards}>
+                        <View style={s.miniCard}>
+                            <Text style={s.miniLabel}>Factura actual comparable</Text>
+                            <Text style={s.miniValue}>{fmtEur2(currentInvoice)}</Text>
+                        </View>
+                        <View style={s.miniCard}>
+                            <Text style={s.miniLabel}>Factura optimizada</Text>
+                            <Text style={s.miniValue}>{fmtEur2(optimizedInvoice)}</Text>
+                        </View>
+                        <View style={s.miniCard}>
+                            <Text style={s.miniLabel}>Ahorro factura</Text>
+                            <Text style={s.miniValueGood}>{fmtEur2(periodSavings)} · {fmtPct(best.savings_percent)}</Text>
+                        </View>
+                        <View style={s.miniCard}>
+                            <Text style={s.miniLabel}>Ahorro anual</Text>
+                            <Text style={s.miniValueGood}>{fmtEur2(best.annual_savings)}</Text>
+                        </View>
+                    </View>
+
+                    {audit && (
+                        <>
+                            {audit.lines.filter(line => Math.abs(line.amount) > 0.005).map(line => (
+                                <View key={line.label} style={s.detailRow}>
+                                    <Text style={s.detailLabel}>{line.label}</Text>
+                                    <Text style={s.detailValue}>{fmtEur2(line.amount)}</Text>
+                                </View>
+                            ))}
+                            <View style={s.detailRow}>
+                                <Text style={s.detailLabel}>Subtotal antes de impuesto eléctrico</Text>
+                                <Text style={s.detailValue}>{fmtEur2(audit.subtotalBeforeTax)}</Text>
+                            </View>
+                            <View style={s.detailRow}>
+                                <Text style={s.detailLabel}>Impuesto eléctrico</Text>
+                                <Text style={s.detailValue}>{fmtEur2(audit.electricityTax)}</Text>
+                            </View>
+                            <View style={s.detailRow}>
+                                <Text style={s.detailLabel}>IVA</Text>
+                                <Text style={s.detailValue}>{fmtEur2(audit.vat)}</Text>
+                            </View>
+                        </>
+                    )}
+
+                    <View style={s.priceGrid}>
+                        <View style={s.priceCol}>
+                            <Text style={s.priceTitle}>Precios nuevos de energía</Text>
+                            {pricePeriods.map(period => (
+                                <View key={`e-${period}`} style={s.detailRow}>
+                                    <Text style={s.detailLabel}>{period.toUpperCase()}</Text>
+                                    <Text style={s.detailValue}>{fmtPrice(best.offer.energy_price[period])}</Text>
+                                </View>
+                            ))}
+                        </View>
+                        <View style={s.priceCol}>
+                            <Text style={s.priceTitle}>Precios nuevos de potencia</Text>
+                            {pricePeriods.map(period => (
+                                <View key={`p-${period}`} style={s.detailRow}>
+                                    <Text style={s.detailLabel}>{period.toUpperCase()}</Text>
+                                    <Text style={s.detailValue}>{fmtPowerPrice(best.offer.power_price[period])}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+                </View>
 
                 {/* Comparison table */}
                 <Text style={s.sectionTitle}>Comparativa de Ofertas</Text>

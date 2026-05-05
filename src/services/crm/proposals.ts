@@ -106,7 +106,8 @@ export const proposalService = {
                     annual_savings: o.annual_savings,
                     priority: o.priority
                 })),
-                recommendations: aletheiaResult.optimization_recommendations || []
+                recommendations: aletheiaResult.optimization_recommendations || [],
+                supervised_recommendation: aletheiaResult.supervised_recommendation,
             } : undefined
         };
 

@@ -1,3 +1,5 @@
+import { SupervisedRecommendationResult } from '@/lib/supervised/recommender';
+
 export type TariffPeriod = 'p1' | 'p2' | 'p3' | 'p4' | 'p5' | 'p6';
 
 export interface InvoiceData {
@@ -21,6 +23,16 @@ export interface InvoiceData {
     current_cost_reactive: number; // Penalty
     current_cost_rental: number;   // Meter rental
     current_total_tax_excluded: number;
+    current_total_amount?: number; // Full invoice total, VAT included when OCR detects it
+    bono_social_cost?: number;
+    distribution_excess_cost?: number;
+    reactive_energy_cost?: number;
+    excluded_services_cost?: number;
+    surplus_export_kwh?: number;
+    electricity_tax_rate?: number;
+    vat_rate?: number;
+    has_sips_annual_consumption?: boolean;
+    annual_consumption_mwh?: number;
 
     // Detected "Bad" Services
     extra_services?: {
@@ -34,6 +46,7 @@ export interface TariffCandidate {
     name: string;
     company: string;
     type: 'fixed' | 'indexed';
+    tariff_type?: '2.0TD' | '3.0TD' | '6.1TD' | string;
     logo_color?: string;
     permanence_months: number;
 
@@ -41,6 +54,10 @@ export interface TariffCandidate {
     power_price: Record<TariffPeriod, number>; // €/kW/day
     energy_price: Record<TariffPeriod, number>; // €/kWh
     fixed_fee: number; // €/month
+    surplus_compensation_price?: number; // €/kWh for autoconsumo excedentes
+    modelo?: string | null;
+    estimated_agent_commission?: number | null;
+    commission_source?: 'tariff_commissions' | 'missing';
 }
 
 export interface AuditOpportunity {
@@ -80,6 +97,7 @@ export interface SimulationResult {
     annual_savings: number;
     score: number; // Weighted score (savings - permanence_penalty)
     is_best_value: boolean;
+    invoice_simulation?: import('@/lib/comparison/invoice-simulator').InvoiceSimulationResult;
 }
 
 export interface AletheiaResult {
@@ -97,4 +115,5 @@ export interface AletheiaResult {
     optimization_recommendations: OptimizationRecommendation[]; // New field
     client_profile: ClientProfile;
     top_proposals: SimulationResult[];
+    supervised_recommendation?: SupervisedRecommendationResult;
 }

@@ -80,6 +80,21 @@ export interface InvoiceData {
     subtotal?: number;
     vat?: number;
     total_amount?: number;
+    bono_social?: number;
+    social_bonus_cost?: number;
+    rental_cost?: number;
+    distribution_excess_cost?: number;
+    excess_power_cost?: number;
+    reactive_energy_cost?: number;
+    reactive_cost?: number;
+    excluded_services_cost?: number;
+    services_cost?: number;
+    surplus_export_kwh?: number;
+    autoconsumo_excedentes_kwh?: number;
+    electricity_tax_rate?: number;
+    electricity_tax_percent?: number;
+    vat_rate?: number;
+    vat_percent?: number;
     rights_cost?: number; // Derechos de enganche
 
     // Optional Max Demand (Maxímetro) for Optimization
@@ -106,6 +121,7 @@ export interface InvoiceData {
     current_energy_price_p6?: number;
 
     detected_power_type?: string;
+    annual_consumption_kwh?: number;
     client_id?: string;
 }
 
@@ -123,10 +139,13 @@ export interface Offer {
     marketer_name: string;
     tariff_name: string;
     logo_color: string; // Hex code or Tailwind class precursor
+    logo_url?: string | null;
     type?: 'fixed' | 'indexed';
     power_price: TariffPrice;
     energy_price: TariffPrice;
     fixed_fee?: number; // Monthly fixed fee if any
+    surplus_compensation_price?: number;
+    estimated_agent_commission?: number | null;
     contract_duration: string;
 }
 
@@ -142,6 +161,7 @@ export interface SavingsResult {
         optimized_annual_fixed_cost: number;
         annual_optimization_savings: number;
     };
+    calculation_audit?: import('@/lib/comparison/invoice-simulator').InvoiceSimulationResult;
 }
 
 export type ProposalStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
@@ -190,6 +210,7 @@ export interface Proposal {
             priority: string;
         }[];
         recommendations: unknown[];
+        supervised_recommendation?: unknown;
     };
 }
 

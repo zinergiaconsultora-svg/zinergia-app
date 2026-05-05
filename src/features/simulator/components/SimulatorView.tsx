@@ -30,6 +30,7 @@ export const SimulatorView = () => {
         loadingMessage,
         optimizationRecommendations,
         opportunities,
+        supervisedRecommendation,
         handleFileUpload,
         handleDrop,
         handleDragOver,
@@ -169,6 +170,7 @@ export const SimulatorView = () => {
                             invoiceData={invoiceData}
                             clientProfile={clientProfile}
                             savedProposalId={savedProposalId}
+                            supervisedRecommendation={supervisedRecommendation}
                         />
                     )}
 
