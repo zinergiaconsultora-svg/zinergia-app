@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { getElectricityAnnualConsumption, isValidCups, normalizeCups } from '@/lib/cnmc/sips';
 import { hashCups } from '@/lib/crypto/pii';
 import { rateLimit, getClientKey } from '@/lib/rate-limit';
@@ -38,9 +39,10 @@ export async function POST(request: Request) {
     }
 
     const cupsHash = hashCups(cups);
-    const cached = await getCachedConsumption(supabase, cupsHash);
+    const service = createServiceClient();
+    const cached = await getCachedConsumption(service, cupsHash);
     if (cached) {
-        await logSipsQuery(supabase, user.id, cupsHash, 'cache_hit', null);
+        await logSipsQuery(service, user.id, cupsHash, 'cache_hit', null);
         return NextResponse.json({
             annual_kwh: cached.annual_consumption_kwh,
             annual_mwh: cached.annual_consumption_mwh,
@@ -53,13 +55,13 @@ export async function POST(request: Request) {
 
     try {
         const result = await getElectricityAnnualConsumption(cups);
-        await upsertCachedConsumption(supabase, {
+        await upsertCachedConsumption(service, {
             cupsHash,
             annualKwh: result.annualKwh,
             annualMwh: result.annualMwh,
             rows: result.rows,
         });
-        await logSipsQuery(supabase, user.id, cupsHash, 'success', null);
+        await logSipsQuery(service, user.id, cupsHash, 'success', null);
         return NextResponse.json({
             annual_kwh: result.annualKwh,
             annual_mwh: result.annualMwh,
@@ -70,12 +72,12 @@ export async function POST(request: Request) {
     } catch (error) {
         const message = error instanceof Error ? error.message : 'CNMC SIPS request failed';
         const status = message.includes('Missing CNMC OAuth') ? 503 : 502;
-        await logSipsQuery(supabase, user.id, cupsHash, 'error', message);
+        await logSipsQuery(service, user.id, cupsHash, 'error', message);
         return NextResponse.json({ error: message }, { status });
     }
 }
 
-type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+type SupabaseServiceClient = ReturnType<typeof createServiceClient>;
 
 interface CachedConsumptionRow {
     annual_consumption_kwh: number;
@@ -84,7 +86,7 @@ interface CachedConsumptionRow {
     fetched_at: string;
 }
 
-async function getCachedConsumption(supabase: SupabaseServerClient, cupsHash: string): Promise<CachedConsumptionRow | null> {
+async function getCachedConsumption(supabase: SupabaseServiceClient, cupsHash: string): Promise<CachedConsumptionRow | null> {
     const validAfter = new Date(Date.now() - CACHE_TTL_DAYS * 86_400_000).toISOString();
     const { data, error } = await supabase
         .from('sips_consumption_cache')
@@ -98,7 +100,7 @@ async function getCachedConsumption(supabase: SupabaseServerClient, cupsHash: st
 }
 
 async function upsertCachedConsumption(
-    supabase: SupabaseServerClient,
+    supabase: SupabaseServiceClient,
     row: { cupsHash: string; annualKwh: number; annualMwh: number; rows: number },
 ) {
     await supabase
@@ -115,7 +117,7 @@ async function upsertCachedConsumption(
 }
 
 async function logSipsQuery(
-    supabase: SupabaseServerClient,
+    supabase: SupabaseServiceClient,
     userId: string,
     cupsHash: string,
     status: 'success' | 'cache_hit' | 'error',

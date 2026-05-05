@@ -46,26 +46,24 @@ ALTER TABLE public.sips_consents ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Authenticated users can read SIPS cache" ON public.sips_consumption_cache;
 DROP POLICY IF EXISTS "Authenticated users can manage SIPS cache" ON public.sips_consumption_cache;
-CREATE POLICY "Authenticated users can read SIPS cache"
-    ON public.sips_consumption_cache FOR SELECT
-    TO authenticated
-    USING (true);
-CREATE POLICY "Authenticated users can manage SIPS cache"
+DROP POLICY IF EXISTS "Service role can manage SIPS cache" ON public.sips_consumption_cache;
+CREATE POLICY "Service role can manage SIPS cache"
     ON public.sips_consumption_cache FOR ALL
-    TO authenticated
+    TO service_role
     USING (true)
     WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Users can read own SIPS audit" ON public.sips_query_audit;
 DROP POLICY IF EXISTS "Users can insert own SIPS audit" ON public.sips_query_audit;
+DROP POLICY IF EXISTS "Service role can insert SIPS audit" ON public.sips_query_audit;
 CREATE POLICY "Users can read own SIPS audit"
     ON public.sips_query_audit FOR SELECT
     TO authenticated
     USING (user_id = auth.uid());
-CREATE POLICY "Users can insert own SIPS audit"
+CREATE POLICY "Service role can insert SIPS audit"
     ON public.sips_query_audit FOR INSERT
-    TO authenticated
-    WITH CHECK (user_id = auth.uid());
+    TO service_role
+    WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Users can manage own SIPS consents" ON public.sips_consents;
 CREATE POLICY "Users can manage own SIPS consents"
