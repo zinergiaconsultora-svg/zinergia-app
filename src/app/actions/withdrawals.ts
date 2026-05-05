@@ -4,7 +4,47 @@ import { createClient } from '@/lib/supabase/server';
 import { requireServerRole } from '@/lib/auth/permissions';
 import { revalidatePath } from 'next/cache';
 import { createNotificationInternal } from './notifications';
-import { WithdrawalRequest, WithdrawalGrowth } from '@/types/crm';
+import { UserRole, WithdrawalRequest, WithdrawalGrowth } from '@/types/crm';
+
+interface WithdrawalActor {
+    id: string;
+    role: UserRole;
+    franchiseId: string | null;
+}
+
+type WithdrawalProfileRelation = { franchise_id?: string | null } | { franchise_id?: string | null }[] | null | undefined;
+
+async function getWithdrawalActor(
+    supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<WithdrawalActor | null> {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) return null;
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, franchise_id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+    const role = profile?.role as UserRole | undefined;
+    if (!role) return null;
+
+    return {
+        id: user.id,
+        role,
+        franchiseId: profile?.franchise_id ?? null,
+    };
+}
+
+function getWithdrawalOwnerFranchiseId(profiles: WithdrawalProfileRelation): string | null {
+    const profile = Array.isArray(profiles) ? profiles[0] : profiles;
+    return profile?.franchise_id ?? null;
+}
+
+function canManageWithdrawal(actor: WithdrawalActor, withdrawal: { profiles?: WithdrawalProfileRelation }) {
+    if (actor.role === 'admin') return true;
+    return !!actor.franchiseId && getWithdrawalOwnerFranchiseId(withdrawal.profiles) === actor.franchiseId;
+}
 
 function validateSpanishIBAN(iban: string): boolean {
     const cleaned = iban.replace(/\s/g, '').toUpperCase();
@@ -128,11 +168,20 @@ export async function getWithdrawalHistoryAction(): Promise<WithdrawalRequest[]>
 export async function getAllWithdrawalsAction(): Promise<(WithdrawalRequest & { profiles?: { full_name: string; email: string } })[]> {
     await requireServerRole(['admin', 'franchise']);
     const supabase = await createClient();
+    const actor = await getWithdrawalActor(supabase);
+    if (!actor) return [];
 
-    const { data, error } = await supabase
+    let query = supabase
         .from('withdrawal_requests')
-        .select('*, profiles(full_name, email)')
+        .select('*, profiles!inner(full_name, email, franchise_id)')
         .order('created_at', { ascending: false });
+
+    if (actor.role === 'franchise') {
+        if (!actor.franchiseId) return [];
+        query = query.eq('profiles.franchise_id', actor.franchiseId);
+    }
+
+    const { data, error } = await query;
 
     if (error) return [];
     return data as (WithdrawalRequest & { profiles?: { full_name: string; email: string } })[];
@@ -146,11 +195,13 @@ export async function approveWithdrawalAction(id: string): Promise<{ success: bo
 
     const { data: withdrawal, error: fetchError } = await supabase
         .from('withdrawal_requests')
-        .select('status, commission_ids, user_id, amount')
+        .select('status, commission_ids, user_id, amount, profiles!inner(franchise_id)')
         .eq('id', id)
         .single();
 
     if (fetchError || !withdrawal) return { success: false, error: 'Solicitud no encontrada' };
+    const actor = await getWithdrawalActor(supabase);
+    if (!actor || !canManageWithdrawal(actor, withdrawal)) return { success: false, error: 'Solicitud no encontrada' };
     if (withdrawal.status !== 'pending') return { success: false, error: 'La solicitud ya fue procesada' };
 
     const { error: updateError } = await supabase
@@ -186,9 +237,12 @@ export async function rejectWithdrawalAction(id: string, reason: string): Promis
 
     const { data: wr } = await supabase
         .from('withdrawal_requests')
-        .select('user_id, amount')
+        .select('user_id, amount, profiles!inner(franchise_id)')
         .eq('id', id)
         .single();
+
+    const actor = await getWithdrawalActor(supabase);
+    if (!actor || !wr || !canManageWithdrawal(actor, wr)) return { success: false, error: 'Solicitud no encontrada' };
 
     const { error } = await supabase
         .from('withdrawal_requests')
@@ -224,11 +278,13 @@ export async function markWithdrawalPaidAction(id: string): Promise<{ success: b
 
     const { data: withdrawal } = await supabase
         .from('withdrawal_requests')
-        .select('status, commission_ids, user_id, amount')
+        .select('status, commission_ids, user_id, amount, profiles!inner(franchise_id)')
         .eq('id', id)
         .single();
 
     if (!withdrawal) return { success: false, error: 'Solicitud no encontrada' };
+    const actor = await getWithdrawalActor(supabase);
+    if (!actor || !canManageWithdrawal(actor, withdrawal)) return { success: false, error: 'Solicitud no encontrada' };
     if (withdrawal.status !== 'approved') return { success: false, error: 'Solo se pueden pagar solicitudes aprobadas' };
 
     const commissionIds = withdrawal.commission_ids as string[];
