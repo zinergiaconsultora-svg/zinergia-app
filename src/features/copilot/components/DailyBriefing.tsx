@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import {
     Zap, Phone, Send, Clock, CheckCircle2, AlertTriangle,
-    TrendingUp, Users, FileSignature, RefreshCw, Target,
+    Users, FileSignature, RefreshCw, Target,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';

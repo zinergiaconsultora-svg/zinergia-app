@@ -5,9 +5,9 @@ import { crmService } from '@/services/crmService';
 import { Proposal, ProposalStatus } from '@/types/crm';
 import {
     Plus, Clock, CheckCircle2, FileText, XCircle, Zap,
-    Search, TrendingUp, Bell, AlertTriangle, Trash2, X,
-    Building2, MoreHorizontal, Send, Ban, RotateCcw,
-    ArrowUpRight, ChevronDown, LayoutGrid, List, SlidersHorizontal,
+    Search, TrendingUp, Bell, Trash2, X,
+    MoreHorizontal, Send, Ban, RotateCcw,
+    ArrowUpRight, LayoutGrid, List, SlidersHorizontal,
     CheckSquare, Square, ArrowUpDown, Download,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -41,14 +41,6 @@ const STATUS_TABS: { value: StatusFilter; label: string; icon: React.ReactNode }
     { value: 'draft',    label: 'Borradores', icon: <Zap size={12} /> },
     { value: 'rejected', label: 'Rechazadas', icon: <XCircle size={12} /> },
 ];
-
-const SORT_LABELS: Record<SortKey, string> = {
-    created_at: 'Fecha',
-    annual_savings: 'Ahorro',
-    client_name: 'Cliente',
-    status: 'Estado',
-    savings_percent: '% Ahorro',
-};
 
 const FC = (v: number) =>
     new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);

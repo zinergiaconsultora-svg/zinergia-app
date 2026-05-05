@@ -9,10 +9,9 @@ import { NetworkUser } from '@/types/crm';
 
 export function SettingsNetworkTab() {
     const [networkNodes, setNetworkNodes] = useState<NetworkUser[]>([]);
-    const [networkLoading, setNetworkLoading] = useState(false);
+    const [networkLoading, setNetworkLoading] = useState(true);
 
     useEffect(() => {
-        setNetworkLoading(true);
         crmService.getNetworkHierarchy()
             .then(tree => {
                 // Flatten tree: root nodes + their direct children

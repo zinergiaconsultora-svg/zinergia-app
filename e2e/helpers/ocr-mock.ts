@@ -47,7 +47,7 @@ export const SAMPLE_INVOICE: MockInvoiceData = {
  * trigger the callback route if needed.
  */
 export async function interceptOcrWebhook(page: Page): Promise<{ jobId: () => string | null }> {
-    let capturedJobId: string | null = null;
+    const capturedJobId: string | null = null;
 
     await page.route('**/api/webhooks/ocr**', async (route: Route) => {
         // Let internal callback routes pass through
