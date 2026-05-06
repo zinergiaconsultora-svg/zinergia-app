@@ -23,9 +23,9 @@ const logoImageClass = (company: string) => {
         case 'LOGOSENERGIA':
             return 'scale-100'
         case 'NATURGY':
-            return 'scale-[1.35]'
+            return 'scale-100 sm:scale-[1.35]'
         case 'PLENITUDE':
-            return 'scale-[1.45]'
+            return 'scale-100 sm:scale-[1.45]'
         default:
             return 'scale-100'
     }
@@ -119,7 +119,7 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
             <div className="bg-white/60 backdrop-blur-xl rounded-3xl border border-white shadow-xl shadow-slate-200/40 overflow-hidden">
                 <table className="w-full table-fixed text-[11px]">
                     <colgroup>
-                        <col className="w-[14%]" />
+                        <col className="w-[18%] sm:w-[14%]" />
                         <col className="w-[9%]" />
                         <col className="w-[6%]" />
                         <col className="w-[4%]" />
@@ -140,7 +140,7 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
                     </colgroup>
                     <thead>
                         <tr className="bg-slate-50/50 border-b border-white">
-                            <th className="text-left px-3 py-3 font-semibold text-slate-500">Compañía</th>
+                            <th className="text-left px-1.5 py-3 font-semibold text-slate-500 sm:px-3">Compañía</th>
                             <th className="text-left px-3 py-3 font-semibold text-slate-500">Producto</th>
                             <th className="text-left px-2 py-3 font-semibold text-slate-500">Modelo</th>
                             <th className="text-left px-2 py-3 font-semibold text-slate-500">ATR</th>
@@ -166,24 +166,24 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
 
                             return (
                             <tr key={row.id} className={`hover:bg-white hover:shadow-sm hover:scale-[1.002] relative z-0 hover:z-10 transition-all duration-300 ${!row.is_active ? 'opacity-40 cursor-not-allowed' : ''}`}>
-                                <td className="px-3 py-2.5">
-                                    <div className="group/company flex min-w-0 items-center gap-2">
+                                <td className="px-1.5 py-2.5 sm:px-3">
+                                    <div className="group/company flex min-w-0 items-center justify-center gap-1 sm:justify-start sm:gap-2">
                                         {logo ? (
-                                            <div className="relative h-9 w-16 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_8px_18px_rgba(15,23,42,0.08)] ring-1 ring-white transition-all duration-300 group-hover/company:-translate-y-0.5 group-hover/company:border-indigo-200 group-hover/company:shadow-[0_10px_24px_rgba(79,70,229,0.16)]">
+                                            <div className="relative h-8 w-10 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_8px_18px_rgba(15,23,42,0.08)] ring-1 ring-white transition-all duration-300 group-hover/company:-translate-y-0.5 group-hover/company:border-indigo-200 group-hover/company:shadow-[0_10px_24px_rgba(79,70,229,0.16)] sm:h-9 sm:w-16 sm:rounded-xl">
                                                 <Image
                                                     src={logo}
                                                     alt={`Logo ${row.company}`}
                                                     fill
-                                                    sizes="64px"
+                                                    sizes="(max-width: 640px) 40px, 64px"
                                                     className={`object-contain transition-transform duration-300 ${logoImageClass(row.company)}`}
                                                 />
                                             </div>
                                         ) : (
-                                            <div className={`flex h-9 w-14 shrink-0 items-center justify-center rounded-xl border border-white/70 shadow-sm ring-1 ring-slate-900/5 text-white text-xs font-black tracking-wide ${row.logo_color || 'bg-slate-600'}`}>
+                                            <div className={`flex h-8 w-10 shrink-0 items-center justify-center rounded-lg border border-white/70 shadow-sm ring-1 ring-slate-900/5 text-white text-[10px] font-black tracking-wide sm:h-9 sm:w-14 sm:rounded-xl sm:text-xs ${row.logo_color || 'bg-slate-600'}`}>
                                                 {row.company.slice(0, 2)}
                                             </div>
                                         )}
-                                        <div className="min-w-0">
+                                        <div className="hidden min-w-0 sm:block">
                                             <div className="flex min-w-0 items-center gap-1.5">
                                                 <span className="truncate text-[11px] font-extrabold tracking-wide text-slate-800" title={row.company}>{row.company}</span>
                                                 {!companiesWithCommission.has(row.company) && (
