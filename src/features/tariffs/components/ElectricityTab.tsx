@@ -7,28 +7,12 @@ import { TarifaRow, TariffCommissionRow, deleteTarifa, toggleTarifaActive } from
 import { MODELO_COLORS, fmt, blankTarifa } from './tariff-form-utils'
 import { TarifaFormPanel } from './TarifaFormPanel'
 import dynamic from 'next/dynamic'
-import { getMarketerLogo, normalizeMarketerName } from '@/lib/marketers/logos'
+import { CompanyCell } from './CompanyCell'
 
 const TariffExcelImportModal = dynamic(
     () => import('./TariffExcelImportModal').then(m => ({ default: m.TariffExcelImportModal })),
     { ssr: false }
 )
-
-const logoImageClass = (company: string) => {
-    switch (normalizeMarketerName(company)) {
-        case 'GANAENERGIA':
-            return 'scale-100'
-        case 'LOGOS':
-        case 'LOGOSENERGIA':
-            return 'scale-100'
-        case 'NATURGY':
-            return 'scale-100 sm:scale-[1.35]'
-        case 'PLENITUDE':
-            return 'scale-100 sm:scale-[1.45]'
-        default:
-            return 'scale-100'
-    }
-}
 
 interface Props {
     rows: TarifaRow[]
@@ -160,27 +144,11 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100/50">
-                        {filtered.map(row => {
-                            const logo = getMarketerLogo(row.company)
-
-                            return (
+                        {filtered.map(row => (
                             <tr key={row.id} className={`hover:bg-white hover:shadow-sm hover:scale-[1.002] relative z-0 hover:z-10 transition-all duration-300 ${!row.is_active ? 'opacity-40 cursor-not-allowed' : ''}`}>
                                 <td className="px-1.5 py-2.5 sm:px-3">
                                     <div className="group/company flex min-w-0 items-center justify-center gap-1 sm:justify-start sm:gap-2">
-                                        {logo ? (
-                                            <div className="relative h-8 w-10 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_8px_18px_rgba(15,23,42,0.08)] ring-1 ring-white transition-all duration-300 group-hover/company:-translate-y-0.5 group-hover/company:border-indigo-200 group-hover/company:shadow-[0_10px_24px_rgba(79,70,229,0.16)] sm:h-9 sm:w-16 sm:rounded-xl">
-                                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                <img
-                                                    src={logo}
-                                                    alt={`Logo ${row.company}`}
-                                                    className={`h-full w-full object-contain p-1 transition-transform duration-300 ${logoImageClass(row.company)}`}
-                                                />
-                                            </div>
-                                        ) : (
-                                            <div className={`flex h-8 w-10 shrink-0 items-center justify-center rounded-lg border border-white/70 shadow-sm ring-1 ring-slate-900/5 text-white text-[10px] font-black tracking-wide sm:h-9 sm:w-14 sm:rounded-xl sm:text-xs ${row.logo_color || 'bg-slate-600'}`}>
-                                                {row.company.slice(0, 2)}
-                                            </div>
-                                        )}
+                                        <CompanyCell company={row.company} logoColor={row.logo_color} size="md" showName={false} />
                                         <div className="hidden min-w-0 sm:block">
                                             <div className="flex min-w-0 items-center gap-1.5">
                                                 <span className="truncate text-[11px] font-extrabold tracking-wide text-slate-800" title={row.company}>{row.company}</span>
@@ -235,8 +203,7 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
                                     </td>
                                 )}
                             </tr>
-                            )
-                        })}
+                        ))}
                         {filtered.length === 0 && (
                             <tr>
                                 <td colSpan={isAdmin ? 18 : 17} className="py-24">
