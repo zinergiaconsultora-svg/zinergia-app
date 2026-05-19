@@ -69,9 +69,13 @@ export interface InvoiceSimulationResult {
 }
 
 const PERIODS: ComparisonPeriod[] = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];
-const DEFAULT_ELECTRICITY_TAX_RATE = 0.0511269632;
+// Tipo simplificado del impuesto electrico que usa el comparador manual de Zinergia (5.11%).
+const DEFAULT_ELECTRICITY_TAX_RATE = 0.0511;
 const DEFAULT_VAT_RATE = 0.21;
 const ACCOUNTING_MONTH_DAYS = 30.4167;
+// Factor de anualizacion fijo del Excel manual (asume facturas de ~32 dias).
+// 11.3 = 365/32 aproximadamente. Mantener constante para que los totales anuales coincidan con la herramienta manual.
+const ANNUAL_FACTOR_EXCEL = 11.3;
 const MONEY_EPSILON = 0.005;
 
 export function activePeriodsForTariffType(tariffType?: TariffAccessType): ComparisonPeriod[] {
@@ -131,8 +135,9 @@ export function simulateInvoiceComparison(
     const simulatedInvoiceTotal = taxableBase + vat;
     const currentInvoiceTotal = getCurrentInvoiceTotal(invoice, days);
     const periodSavings = currentInvoiceTotal - simulatedInvoiceTotal;
-    const annualCost = (simulatedInvoiceTotal / days) * 365;
-    const annualSavings = (periodSavings / days) * 365;
+    // Factor 11.3 fijo (Excel Zinergia). Asume facturas mensuales de ~32 dias; revisar si el periodo difiere mucho.
+    const annualCost = simulatedInvoiceTotal * ANNUAL_FACTOR_EXCEL;
+    const annualSavings = periodSavings * ANNUAL_FACTOR_EXCEL;
     const savingsPercent = currentInvoiceTotal > 0 ? (periodSavings / currentInvoiceTotal) * 100 : 0;
 
     return {
