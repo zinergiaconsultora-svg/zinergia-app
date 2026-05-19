@@ -512,12 +512,13 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         : 'Alta Tensión 3.1TD';
 
     // ── Keyboard navigation ──────────────────────────────────────────────────
+    const canCompare = hasEnergyValues && hasPowerValues && !isAnalyzing;
     const { showHelp, setShowHelp } = useKeyboardNav({
         onConfirm: handleConfirm,
         onCompare: onCompare,
         onTogglePdf: () => setShowPdf(v => !v),
         canConfirm: !isConfirming && !ocrDataConfirmed && !localConfirmed,
-        canCompare: hasEnergyValues && hasPowerValues && !isAnalyzing,
+        canCompare,
     });
 
     // ── OCR Score ring ────────────────────────────────────────────────────────
@@ -650,6 +651,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                         livePreviewLoading={livePreviewLoading}
                         isAnalyzing={isAnalyzing}
                         loadingMessage={loadingMessage}
+                        canCompare={canCompare}
                         onCompare={onCompare}
                     />
                 </div>
