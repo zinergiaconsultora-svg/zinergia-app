@@ -305,7 +305,10 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                 created_at: new Date().toISOString(),
                 status: 'draft',
                 offer_snapshot: results[0].offer,
-                calculation_data: invoiceData,
+                calculation_data: {
+                    ...invoiceData,
+                    calculation_audit: results[0].calculation_audit,
+                } as InvoiceData,
                 current_annual_cost: results[0].current_annual_cost,
                 offer_annual_cost: results[0].offer_annual_cost,
                 annual_savings: results[0].annual_savings,
@@ -687,6 +690,7 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                                 result={idx === 0 ? result : { ...result, optimization_result: undefined }}
                                 title={idx === 0 ? "Mejor Opción Ahorro" : `Alternativa ${idx}`}
                                 isSecondary={idx > 0}
+                                invoiceData={invoiceData}
                                 onReset={onReset}
                                 onEmail={() => setShowEmailModal(true)}
                             />

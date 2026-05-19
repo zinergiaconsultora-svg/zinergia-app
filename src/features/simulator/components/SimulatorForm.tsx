@@ -17,6 +17,7 @@ import SimulatorHeroValue from './SimulatorHeroValue';
 import PreviousInvoiceDiff from './PreviousInvoiceDiff';
 import { KeyboardHelpOverlay, KeyboardHint } from './KeyboardHelpOverlay';
 import { useKeyboardNav } from '../hooks/useKeyboardNav';
+import { getVisibleInvoicePeriods, inferInvoicePowerType, validateNormalizedInvoice } from '@/lib/invoices/normalization';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -241,6 +242,19 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         return Object.values(conf).filter((v): v is number => typeof v === 'number' && v < 0.7).length;
     }, [data]);
 
+    const ocrQuality = useMemo(() => {
+        const raw = (data as unknown as Record<string, unknown>)._ocr_quality;
+        if (!raw || typeof raw !== 'object') return null;
+        const quality = raw as { alerts?: unknown; corrections?: unknown };
+        const alerts = Array.isArray(quality.alerts)
+            ? quality.alerts.filter((item): item is string => typeof item === 'string')
+            : [];
+        const corrections = quality.corrections && typeof quality.corrections === 'object'
+            ? Object.keys(quality.corrections as Record<string, unknown>)
+            : [];
+        return { alerts, corrections };
+    }, [data]);
+
     // ── Validaciones cruzadas (smart business rules) ───────────────────────────
     interface CrossFieldIssue {
         severity: 'error' | 'warning';
@@ -283,8 +297,15 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         // Tariff ↔ P4-P6 coherence
         const hasP456Energy = [4, 5, 6].some(p => (data[`energy_p${p}` as keyof InvoiceData] as number) > 0);
         const hasP456Power  = [4, 5, 6].some(p => (data[`power_p${p}` as keyof InvoiceData] as number) > 0);
+        const inferredType = inferInvoicePowerType(data);
+        if (powerType === '2.0' && inferredType !== '2.0') {
+            issues.push({
+                severity: 'error',
+                message: 'El OCR clasificó como 2.0TD, pero la factura tiene señales de 3.0/6.1. Revisa P4-P6 antes de comparar.',
+            });
+        }
         if (powerType === '2.0' && (hasP456Energy || hasP456Power)) {
-            issues.push({ severity: 'warning', message: 'Tarifa 2.0TD con valores en P4-P6 — posible error OCR' });
+            issues.push({ severity: 'error', message: 'Tarifa 2.0TD con valores en P4-P6 — no se debe ocultar ni comparar como doméstica' });
         }
 
         // Period length
@@ -295,8 +316,9 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         }
 
         // Power ↔ consumption coherence
-        const totalPower = [1, 2, 3].reduce((s, p) => s + ((data[`power_p${p}` as keyof InvoiceData] as number) || 0), 0);
-        const avgPower = totalPower / 3;
+        const populatedPowerPeriods = [1, 2, 3, 4, 5, 6].filter(p => ((data[`power_p${p}` as keyof InvoiceData] as number) || 0) > 0);
+        const totalPower = populatedPowerPeriods.reduce((s, p) => s + ((data[`power_p${p}` as keyof InvoiceData] as number) || 0), 0);
+        const avgPower = populatedPowerPeriods.length > 0 ? totalPower / populatedPowerPeriods.length : 0;
         const annualizedEnergy = data.period_days > 0 ? (totalEnergyNow / data.period_days) * 365 : 0;
         if (avgPower > 0 && annualizedEnergy > 0) {
             const hoursAtFull = annualizedEnergy / avgPower;
@@ -325,6 +347,13 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
             });
         }
 
+        for (const message of validateNormalizedInvoice(data)) {
+            issues.push({
+                severity: message.includes('incompleta') || message.includes('No hay') ? 'error' : 'warning',
+                message,
+            });
+        }
+
         // Consumption jump vs previous invoice
         if (prevInvoice && totalEnergyNow > 0 && prevInvoice.totalEnergyKwh > 0) {
             const delta = totalEnergyNow - prevInvoice.totalEnergyKwh;
@@ -341,10 +370,9 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     }, [data, powerType, totalEnergyNow, prevInvoice]);
 
     // ── Periodos visibles ─────────────────────────────────────────────────────
-    const visibleEnergyPeriods = useMemo(() =>
-        [1, 2, 3, 4, 5, 6].filter(p => powerType === '2.0' ? p <= 3 : true), [powerType]);
-    const visiblePowerPeriods = useMemo(() =>
-        [1, 2, 3, 4, 5, 6].filter(p => powerType === '2.0' ? p <= 2 : true), [powerType]);
+    const visiblePeriods = useMemo(() => getVisibleInvoicePeriods(data, powerType), [data, powerType]);
+    const visibleEnergyPeriods = visiblePeriods.energy;
+    const visiblePowerPeriods = visiblePeriods.power;
 
     const isCupsValid = data.cups?.length === 20 || data.cups?.length === 22;
     const hasEnergyValues = [1,2,3,4,5,6].some(p => (data[`energy_p${p}` as keyof InvoiceData] as number) > 0);
@@ -421,6 +449,19 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
             });
         }
 
+        if (ocrQuality && (ocrQuality.alerts.length > 0 || ocrQuality.corrections.length > 0)) {
+            list.push({
+                type: ocrQuality.alerts.length > 0 ? 'warning' : 'success',
+                message: (
+                    <span>
+                        <span className="font-bold">Control antifallos OCR</span>
+                        {ocrQuality.corrections.length > 0 && <> — {ocrQuality.corrections.length} campo{ocrQuality.corrections.length > 1 ? 's' : ''} corregido{ocrQuality.corrections.length > 1 ? 's' : ''} automáticamente</>}
+                        {ocrQuality.alerts.length > 0 && <> · {ocrQuality.alerts[0]}</>}
+                    </span>
+                ),
+            });
+        }
+
         for (const issue of crossFieldIssues) {
             list.push({
                 type: issue.severity === 'error' ? 'error' : 'warning',
@@ -441,7 +482,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
 
         return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [prevInvoice, totalEnergyNow, suggestions, suggestionsApplied, duplicateInfo, lowConfidenceCount, crossFieldIssues, data.company_name]);
+    }, [prevInvoice, totalEnergyNow, suggestions, suggestionsApplied, duplicateInfo, lowConfidenceCount, ocrQuality, crossFieldIssues, data.company_name]);
 
     // ── Confidence fields para el panel del PDF ──────────────────────────────
     const confidenceFieldsForPdf = useMemo((): ConfidenceField[] => {
@@ -465,10 +506,17 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
 
     // ── Validation summary for Hero ─────────────────────────────────────────
     const validationSummary = useMemo(() => {
-        const CRITICAL_FIELDS = ['cups', 'power_p1', 'power_p2', 'energy_p1', 'energy_p2', 'company_name', 'tariff_name'];
+        const pymeMode = inferInvoicePowerType(data) !== '2.0';
+        const CRITICAL_FIELDS = [
+            'cups', 'company_name', 'tariff_name', 'period_days',
+            ...(pymeMode
+                ? ['power_p1', 'power_p2', 'power_p3', 'power_p4', 'power_p5', 'power_p6', 'energy_p6']
+                : ['power_p1', 'power_p2', 'energy_p1', 'energy_p2']),
+        ];
         const ALL_FIELDS = ['cups', 'client_name', 'dni_cif', 'company_name', 'invoice_number',
             'tariff_name', 'supply_address', 'invoice_date',
-            'power_p1', 'power_p2', 'power_p3', 'energy_p1', 'energy_p2', 'energy_p3'];
+            'power_p1', 'power_p2', 'power_p3', 'power_p4', 'power_p5', 'power_p6',
+            'energy_p1', 'energy_p2', 'energy_p3', 'energy_p4', 'energy_p5', 'energy_p6'];
         const conf = (data as unknown as Record<string, unknown>)._confidence as Record<string, number> | undefined;
         let green = 0, yellow = 0, red = 0;
         for (const f of ALL_FIELDS) {
@@ -507,6 +555,16 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         return null;
     }, [data.total_amount, data.period_days]);
 
+    const hasBlockingErrors = validationSummary.errorCount > 0;
+    const canCompareInvoice = hasEnergyValues && hasPowerValues && !isAnalyzing && !hasBlockingErrors;
+    const compareBlockReason = !hasEnergyValues
+        ? 'No se puede comparar hasta detectar o introducir consumo.'
+        : !hasPowerValues
+            ? 'No se puede comparar hasta detectar o introducir potencia contratada.'
+            : hasBlockingErrors
+                ? 'Hay errores críticos de OCR/coherencia. Corrige los periodos marcados antes de ejecutar la comparativa.'
+                : undefined;
+
     const tariffLabel = powerType === '2.0' ? 'Tensión Baja 2.0TD'
         : powerType === '3.0' ? 'Empresa 3.0TD'
         : 'Alta Tensión 3.1TD';
@@ -518,7 +576,7 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         onCompare: onCompare,
         onTogglePdf: () => setShowPdf(v => !v),
         canConfirm: !isConfirming && !ocrDataConfirmed && !localConfirmed,
-        canCompare,
+        canCompare: canCompareInvoice,
     });
 
     // ── OCR Score ring ────────────────────────────────────────────────────────
@@ -651,7 +709,8 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                         livePreviewLoading={livePreviewLoading}
                         isAnalyzing={isAnalyzing}
                         loadingMessage={loadingMessage}
-                        canCompare={canCompare}
+                        canCompare={canCompareInvoice}
+                        compareBlockReason={compareBlockReason}
                         onCompare={onCompare}
                     />
                 </div>
