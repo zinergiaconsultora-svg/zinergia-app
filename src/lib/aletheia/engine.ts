@@ -162,7 +162,7 @@ export class AletheiaEngine {
             opportunities: opportunities,
             optimization_recommendations: optimizationRecommendations,
             client_profile: profile,
-            top_proposals: sorted.slice(0, 3), // Return Top 3
+            top_proposals: sorted.filter(p => p.annual_savings > 0),
             supervised_recommendation: supervisedRecommendation,
         };
     }

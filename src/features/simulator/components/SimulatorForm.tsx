@@ -157,12 +157,14 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
                 const result = await calculateSavingsAction(data);
                 const offers = result?.offers ?? [];
                 if (offers.length === 0) { setLivePreview(null); return; }
-                const best = offers.reduce((a: { annual_saving?: number; name?: string }, b: { annual_saving?: number; name?: string }) =>
-                    (b.annual_saving ?? 0) > (a.annual_saving ?? 0) ? b : a
-                );
+                const currentCost: number = result?.current_annual_cost ?? 0;
+                type OfferShape = { annual_saving?: number; annual_cost?: number; name?: string; tariff_name?: string };
+                const getSaving = (o: OfferShape) =>
+                    (o.annual_saving ?? 0) > 0 ? (o.annual_saving ?? 0) : Math.max(0, currentCost - (o.annual_cost ?? 0));
+                const best = (offers as OfferShape[]).reduce((a, b) => getSaving(b) > getSaving(a) ? b : a);
                 setLivePreview({
-                    bestName: best.name ?? 'Mejor tarifa',
-                    annualSaving: best.annual_saving ?? 0,
+                    bestName: best.tariff_name ?? best.name ?? 'Mejor tarifa',
+                    annualSaving: getSaving(best),
                 });
             } catch {
                 setLivePreview(null);
