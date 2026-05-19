@@ -676,7 +676,7 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                     transition={{ delay: 0.2, duration: 0.6 }}
                     className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start"
                 >
-                    {results.slice(0, 3).map((result, idx) => (
+                    {results.filter(r => r.annual_savings > 0).map((result, idx) => (
                         <motion.div
                             key={result.offer.id}
                             initial={{ opacity: 0, y: 30 }}
@@ -685,7 +685,7 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                         >
                             <DigitalProposalCard
                                 result={idx === 0 ? result : { ...result, optimization_result: undefined }}
-                                title={idx === 0 ? "Mejor Opción Ahorro" : "Alternativa Competitiva"}
+                                title={idx === 0 ? "Mejor Opción Ahorro" : `Alternativa ${idx}`}
                                 isSecondary={idx > 0}
                                 onReset={onReset}
                                 onEmail={() => setShowEmailModal(true)}
