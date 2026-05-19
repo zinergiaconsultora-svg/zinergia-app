@@ -570,7 +570,6 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         : 'Alta Tensión 3.1TD';
 
     // ── Keyboard navigation ──────────────────────────────────────────────────
-    const canCompare = hasEnergyValues && hasPowerValues && !isAnalyzing;
     const { showHelp, setShowHelp } = useKeyboardNav({
         onConfirm: handleConfirm,
         onCompare: onCompare,
