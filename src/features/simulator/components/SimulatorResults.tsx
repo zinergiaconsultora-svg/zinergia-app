@@ -677,14 +677,14 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2, duration: 0.6 }}
-                    className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start"
+                    className="flex flex-col gap-2"
                 >
                     {results.filter(r => r.annual_savings > 0).map((result, idx) => (
                         <motion.div
                             key={result.offer.id}
-                            initial={{ opacity: 0, y: 30 }}
+                            initial={{ opacity: 0, y: 15 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.15, duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+                            transition={{ delay: idx * 0.06, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
                         >
                             <DigitalProposalCard
                                 result={idx === 0 ? result : { ...result, optimization_result: undefined }}
