@@ -7,6 +7,7 @@ import { TarifaRow, TariffCommissionRow, deleteTarifa, toggleTarifaActive } from
 import { fmtEur, blankTarifa } from './tariff-form-utils'
 import { TarifaFormPanel } from './TarifaFormPanel'
 import dynamic from 'next/dynamic'
+import { CompanyCell } from './CompanyCell'
 
 const TariffExcelImportModal = dynamic(
     () => import('./TariffExcelImportModal').then(m => ({ default: m.TariffExcelImportModal })),
@@ -92,10 +93,7 @@ export function GasTab({ rows, commissions, isAdmin, onUpdate }: Props) {
                             <tr key={row.id} className={`hover:bg-white hover:shadow-sm hover:scale-[1.002] relative z-0 hover:z-10 transition-all duration-300 ${!row.is_active ? 'opacity-40 cursor-not-allowed' : ''}`}>
                                 <td className="px-4 py-3">
                                     <div className="flex items-center gap-2">
-                                        <div className={`w-7 h-7 rounded-lg shadow-sm flex items-center justify-center text-white text-[10px] font-black ${row.logo_color || 'bg-orange-500'}`}>
-                                            {row.company.slice(0, 2)}
-                                        </div>
-                                        <span className="font-bold text-slate-800">{row.company}</span>
+                                        <CompanyCell company={row.company} logoColor={row.logo_color} showName />
                                         {!companiesWithCommission.has(row.company) && (
                                             <span title="Sin comisión configurada" className="text-amber-400">
                                                 <AlertTriangle size={12} />

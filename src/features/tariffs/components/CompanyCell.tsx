@@ -21,14 +21,18 @@ interface CompanyCellProps {
 export function CompanyCell({ company, logoColor, size = 'sm', showName = true }: CompanyCellProps) {
     const logo = getMarketerLogo(company)
 
-    const dim = size === 'md'
-        ? 'h-8 w-10 sm:h-9 sm:w-16 sm:rounded-xl'
-        : 'w-7 h-7'
+    const imgContainer = size === 'md'
+        ? 'h-8 w-10 sm:h-9 sm:w-16 sm:rounded-xl shadow-[0_8px_18px_rgba(15,23,42,0.08)] ring-1 ring-white transition-all duration-300 group-hover/company:-translate-y-0.5 group-hover/company:border-indigo-200 group-hover/company:shadow-[0_10px_24px_rgba(79,70,229,0.16)]'
+        : 'w-7 h-7 shadow-sm'
+
+    const fallbackContainer = size === 'md'
+        ? 'h-8 w-10 sm:h-9 sm:w-14 sm:rounded-xl sm:text-xs font-black tracking-wide border border-white/70 ring-1 ring-slate-900/5'
+        : 'w-7 h-7 font-bold'
 
     return (
         <div className="flex items-center gap-2">
             {logo ? (
-                <div className={`relative shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm ${dim}`}>
+                <div className={`relative shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white ${imgContainer}`}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                         src={logo}
@@ -37,7 +41,7 @@ export function CompanyCell({ company, logoColor, size = 'sm', showName = true }
                     />
                 </div>
             ) : (
-                <div className={`rounded-lg flex items-center justify-center text-white text-[10px] font-bold shrink-0 ${dim} ${logoColor || 'bg-slate-600'}`}>
+                <div className={`rounded-lg flex items-center justify-center text-white text-[10px] shrink-0 ${fallbackContainer} ${logoColor || 'bg-slate-600'}`}>
                     {company.slice(0, 2)}
                 </div>
             )}

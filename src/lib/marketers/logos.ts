@@ -7,17 +7,17 @@ const LOGOS: Record<string, string> = {
     PLENITUDE: '/marketers/plenitude.jpeg',
 };
 
+// Unicode combining diacritical marks range
+const DIACRITICS_RE = new RegExp('[̀-ͯ]', 'g');
+
 export function normalizeMarketerName(name?: string | null): string {
     return (name || '')
         .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '')
+        .replace(DIACRITICS_RE, '')
         .replace(/[^a-zA-Z0-9]/g, '')
         .toUpperCase();
 }
 
 export function getMarketerLogo(name?: string | null): string | null {
-    const normalized = normalizeMarketerName(name);
-    return LOGOS[normalized] ||
-        Object.entries(LOGOS).find(([key]) => normalized.includes(key) || key.includes(normalized))?.[1] ||
-        null;
+    return LOGOS[normalizeMarketerName(name)] ?? null;
 }
