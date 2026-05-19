@@ -6,6 +6,7 @@ import { sendPushToUser } from '@/lib/push/sendPush';
 import { encryptNullable, hashCups, hashDni } from '@/lib/crypto/pii';
 import { moduleLogger } from '@/lib/logger';
 import { redactOcrTextSample, sanitizeOcrTrainingData } from '@/lib/ocr/sanitizeTrainingData';
+import { normalizeInvoiceData, parseInvoiceNumber } from '@/lib/invoices/normalization';
 
 const log = moduleLogger('ocr-callback');
 
@@ -58,15 +59,7 @@ export async function POST(request: Request) {
         if (status === 'completed' && data) {
             const rawData = Array.isArray(data) ? data[0]?.output || data[0] : data?.output || data;
 
-            const parseNumber = (value: unknown) => {
-                if (value === undefined || value === null || value === '') return 0;
-                const strValue = String(value).trim().replace(/\s/g, '');
-                if (strValue.includes('.') && strValue.includes(',')) {
-                    return parseFloat(strValue.replace(/\./g, '').replace(',', '.'));
-                }
-                if (strValue.includes(',')) return parseFloat(strValue.replace(',', '.'));
-                return parseFloat(strValue) || 0;
-            };
+            const parseNumber = parseInvoiceNumber;
 
             const rawTariff = (rawData.tariff_name || rawData.TARIFA || rawData.tarifa || rawData.ACCESO || '').toUpperCase();
 
@@ -104,6 +97,15 @@ export async function POST(request: Request) {
                 vat: parseNumber(rawData.iva || rawData.IVA),
                 total_amount: parseNumber(rawData.importe_total || rawData.IMPORTE_TOTAL || rawData.total || rawData.TOTAL || rawData.TOTAL_FACTURA || rawData.importe || rawData.IMPORTE),
                 rights_cost: parseNumber(rawData.derechos_enganche || rawData.DERECHOS),
+                bono_social: parseNumber(rawData.bono_social || rawData.financiacion_bono_social || rawData.social_bonus_cost || rawData.BONO_SOCIAL),
+                rental_cost: parseNumber(rawData.rental_cost || rawData.alquiler_equipos || rawData.alquiler_equipo_medida || rawData.ALQUILER_EQUIPOS),
+                distribution_excess_cost: parseNumber(rawData.distribution_excess_cost || rawData.excesos_distribuidora || rawData.exceso_potencia || rawData.excess_power_cost),
+                reactive_energy_cost: parseNumber(rawData.reactive_energy_cost || rawData.energia_reactiva_coste || rawData.importe_reactiva || rawData.reactive_cost),
+                excluded_services_cost: parseNumber(rawData.excluded_services_cost || rawData.servicios_comerciales || rawData.services_cost || rawData.importe_servicios),
+                surplus_export_kwh: parseNumber(rawData.surplus_export_kwh || rawData.excedentes_kwh || rawData.autoconsumo_excedentes_kwh),
+                annual_consumption_kwh: parseNumber(rawData.annual_consumption_kwh || rawData.sips_annual_consumption_kwh || rawData.consumo_anual_kwh || rawData.consumo_ultimos_12_meses_kwh),
+                electricity_tax_percent: parseNumber(rawData.electricity_tax_percent || rawData.impuesto_electrico_percent || rawData.impuesto_electricidad_percent),
+                vat_percent: parseNumber(rawData.vat_percent || rawData.iva_percent),
                 power_p1: parseNumber(rawData.power_p1 || rawData.POTENCIA_P1 || rawData.potencia_p1),
                 power_p2: parseNumber(rawData.power_p2 || rawData.POTENCIA_P2 || rawData.potencia_p2),
                 power_p3: parseNumber(rawData.power_p3 || rawData.POTENCIA_P3 || rawData.potencia_p3),
@@ -119,9 +121,19 @@ export async function POST(request: Request) {
                 detected_power_type: detectedPowerType,
 
                 // Precios actuales de energía (si N8N los extrae de la factura)
+                current_power_price_p1: parseNumber(rawData.current_power_price_p1 || rawData.precio_potencia_p1 || rawData.PRECIO_POTENCIA_P1 || 0) || undefined,
+                current_power_price_p2: parseNumber(rawData.current_power_price_p2 || rawData.precio_potencia_p2 || rawData.PRECIO_POTENCIA_P2 || 0) || undefined,
+                current_power_price_p3: parseNumber(rawData.current_power_price_p3 || rawData.precio_potencia_p3 || rawData.PRECIO_POTENCIA_P3 || 0) || undefined,
+                current_power_price_p4: parseNumber(rawData.current_power_price_p4 || rawData.precio_potencia_p4 || rawData.PRECIO_POTENCIA_P4 || 0) || undefined,
+                current_power_price_p5: parseNumber(rawData.current_power_price_p5 || rawData.precio_potencia_p5 || rawData.PRECIO_POTENCIA_P5 || 0) || undefined,
+                current_power_price_p6: parseNumber(rawData.current_power_price_p6 || rawData.precio_potencia_p6 || rawData.PRECIO_POTENCIA_P6 || 0) || undefined,
+
                 current_energy_price_p1: parseNumber(rawData.current_energy_price_p1 || rawData.precio_energia_p1 || rawData.PRECIO_ENERGIA_P1 || 0) || undefined,
                 current_energy_price_p2: parseNumber(rawData.current_energy_price_p2 || rawData.precio_energia_p2 || rawData.PRECIO_ENERGIA_P2 || 0) || undefined,
                 current_energy_price_p3: parseNumber(rawData.current_energy_price_p3 || rawData.precio_energia_p3 || rawData.PRECIO_ENERGIA_P3 || 0) || undefined,
+                current_energy_price_p4: parseNumber(rawData.current_energy_price_p4 || rawData.precio_energia_p4 || rawData.PRECIO_ENERGIA_P4 || 0) || undefined,
+                current_energy_price_p5: parseNumber(rawData.current_energy_price_p5 || rawData.precio_energia_p5 || rawData.PRECIO_ENERGIA_P5 || 0) || undefined,
+                current_energy_price_p6: parseNumber(rawData.current_energy_price_p6 || rawData.precio_energia_p6 || rawData.PRECIO_ENERGIA_P6 || 0) || undefined,
 
                 // Datos forenses — penalización reactiva, tipo acceso tarifa, etc.
                 forensic_details: (() => {
@@ -141,6 +153,26 @@ export async function POST(request: Request) {
                 // Confidence scores embebidos — usados en la UI para resaltar campos dudosos
                 // NOTA: extractInvoiceData() en useSimulator los elimina antes de pasar al motor de cálculo
                 _confidence: Object.keys(confidenceScores).length > 0 ? confidenceScores : null,
+            };
+
+            const rawText = String(
+                payload.raw_text ||
+                payload.full_text ||
+                payload.text ||
+                payload.text_sample ||
+                rawData.raw_text ||
+                rawData.full_text ||
+                rawData.text ||
+                '',
+            );
+            const normalized = normalizeInvoiceData(invoiceData, { rawText });
+            invoiceData = {
+                ...normalized.invoice,
+                _confidence: invoiceData._confidence,
+                _ocr_quality: {
+                    alerts: normalized.alerts,
+                    corrections: normalized.corrections,
+                },
             };
         }
 

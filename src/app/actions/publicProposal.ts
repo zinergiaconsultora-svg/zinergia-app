@@ -9,6 +9,7 @@ import { getActiveCommissionRule } from './commissionRules';
 import { calculateCommissionSplit, applyFranchiseOverride } from '@/lib/commissions/calculator';
 import { rateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
+import { requireServerRole } from '@/lib/auth/permissions';
 
 const uuidSchema = z.uuid();
 // Token URL-safe base64: 43 chars (32 bytes → btoa → replace)
@@ -17,6 +18,7 @@ const tokenSchema = z.string().min(32).max(64).regex(/^[A-Za-z0-9\-_]+$/);
 const LINK_TTL_DAYS = 30;
 const SIGNATURE_DATA_MAX_BYTES = 250_000;
 const acceptLimiter = rateLimit({ windowMs: 10 * 60_000, max: 10 });
+const viewLimiter = rateLimit({ windowMs: 60_000, max: 20 });
 
 function generateToken(): string {
     // Token URL-safe de 32 bytes → 43 chars base64url
@@ -49,6 +51,8 @@ function isValidSignatureData(signatureData: string): boolean {
  * Solo el agente propietario puede llamar esto.
  */
 export async function generatePublicLinkAction(proposalId: string): Promise<{ token: string; url: string; expiresAt: string }> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+
     const idResult = uuidSchema.safeParse(proposalId);
     if (!idResult.success) throw new Error('ID de propuesta inválido');
 
@@ -64,6 +68,7 @@ export async function generatePublicLinkAction(proposalId: string): Promise<{ to
         .update({
             public_token: token,
             public_expires_at: expiresAt,
+            sent_date: new Date().toISOString(),
             status: 'sent', // Al generar el link, la propuesta pasa a enviada
         })
         .eq('id', proposalId)
@@ -105,6 +110,62 @@ export async function getPublicProposalAction(token: string): Promise<Proposal &
         ...data,
         client_name: (data.clients as unknown as { name: string } | null)?.name,
     } as unknown as Proposal & { client_name?: string };
+}
+
+/**
+ * Registra una apertura del portal público sin guardar IP ni user-agent.
+ * Es best-effort: nunca debe bloquear la lectura ni revelar si el token existe.
+ */
+export async function trackPublicProposalViewAction(token: string): Promise<void> {
+    if (!tokenSchema.safeParse(token).success) return;
+
+    const rl = viewLimiter.check(`${await getServerActionClientKey()}:${token}`);
+    if (!rl.allowed) return;
+
+    const adminClient = createServiceClient();
+    const { data: proposal } = await adminClient
+        .from('proposals')
+        .select('id, client_id, agent_id, franchise_id, status, public_expires_at, public_accepted_at, annual_savings')
+        .eq('public_token', token)
+        .maybeSingle();
+
+    if (!proposal || proposal.status !== 'sent' || proposal.public_accepted_at) return;
+    if (proposal.public_expires_at && new Date(proposal.public_expires_at) < new Date()) return;
+    if (!proposal.client_id || !proposal.agent_id) return;
+
+    const recentCutoff = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+    const { data: recentView } = await adminClient
+        .from('client_activities')
+        .select('id')
+        .eq('client_id', proposal.client_id)
+        .eq('type', 'proposal_public_view')
+        .contains('metadata', { proposal_id: proposal.id })
+        .gte('created_at', recentCutoff)
+        .maybeSingle();
+
+    if (recentView) return;
+
+    await adminClient.from('client_activities').insert({
+        client_id: proposal.client_id,
+        agent_id: proposal.agent_id,
+        franchise_id: proposal.franchise_id,
+        type: 'proposal_public_view',
+        description: 'El cliente ha abierto la propuesta publica.',
+        metadata: {
+            proposal_id: proposal.id,
+            source: 'public_portal',
+        },
+    });
+
+    await adminClient.from('notifications').insert({
+        user_id: proposal.agent_id,
+        title: 'Propuesta abierta',
+        message: `El cliente ha abierto la propuesta de ${Math.round(Number(proposal.annual_savings || 0))} €/año.`,
+        type: 'info',
+        link: '/dashboard/proposals',
+        read: false,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    });
 }
 
 /**

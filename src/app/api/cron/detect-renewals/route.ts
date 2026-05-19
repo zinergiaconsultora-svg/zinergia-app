@@ -5,6 +5,8 @@ import { AletheiaEngine } from '@/lib/aletheia/engine';
 import { Normalizer } from '@/lib/aletheia/normalizer';
 import type { TariffCandidate } from '@/lib/aletheia/types';
 import { moduleLogger } from '@/lib/logger';
+import { sendPushToUser } from '@/lib/push/sendPush';
+import { buildRenewalAutomationPlan } from '@/lib/renewals/automation';
 
 const log = moduleLogger('cron:detect-renewals');
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -20,7 +22,7 @@ export async function GET(request: Request) {
 
         const { data: proposals } = await supabase
             .from('proposals')
-            .select('id, client_id, agent_id, franchise_id, current_annual_cost, offer_annual_cost, calculation_data, offer_snapshot')
+            .select('id, client_id, agent_id, franchise_id, current_annual_cost, offer_annual_cost, calculation_data, offer_snapshot, clients(name)')
             .eq('status', 'accepted')
             .gt('current_annual_cost', 0);
 
@@ -61,6 +63,9 @@ export async function GET(request: Request) {
         }));
 
         let detected = 0;
+        let tasksCreated = 0;
+        let notificationsSent = 0;
+        let pushesSent = 0;
 
         for (const prop of proposals) {
             const calcData = prop.calculation_data as Record<string, unknown> | null;
@@ -88,7 +93,7 @@ export async function GET(request: Request) {
                     (savings > 2000 ? 30 : savings > 1000 ? 20 : savings > 500 ? 10 : 0)
                 );
 
-                await supabase
+                const { data: opportunity, error: opportunityError } = await supabase
                     .from('renewal_opportunities')
                     .upsert({
                         client_id: prop.client_id,
@@ -106,20 +111,94 @@ export async function GET(request: Request) {
                         reason: 'better_tariff',
                         status: 'open',
                         detected_at: new Date().toISOString(),
-                    }, { onConflict: 'client_id', ignoreDuplicates: false });
+                    }, { onConflict: 'client_id', ignoreDuplicates: false })
+                    .select('id')
+                    .single();
+
+                if (opportunityError) {
+                    log.warn({ err: opportunityError, proposalId: prop.id }, 'Renewal opportunity upsert failed');
+                    continue;
+                }
+
+                const { data: existingTask } = await supabase
+                    .from('tasks')
+                    .select('id')
+                    .eq('client_id', prop.client_id)
+                    .eq('proposal_id', prop.id)
+                    .eq('agent_id', prop.agent_id)
+                    .eq('type', 'follow_up')
+                    .eq('auto_generated', true)
+                    .in('status', ['pending', 'in_progress'])
+                    .maybeSingle();
+
+                const clientName = getClientName(prop.clients);
+                const automation = buildRenewalAutomationPlan({
+                    clientId: prop.client_id,
+                    clientName,
+                    proposalId: prop.id,
+                    agentId: prop.agent_id,
+                    franchiseId: prop.franchise_id,
+                    marketer: best.company,
+                    tariffName: best.tariff_name,
+                    annualSavings: savings,
+                    savingsPercent: savingsPct,
+                    existingTaskId: existingTask?.id ?? null,
+                });
+
+                if (automation.shouldCreateTask && automation.task) {
+                    const { error: taskError } = await supabase
+                        .from('tasks')
+                        .insert(automation.task);
+
+                    if (taskError) {
+                        log.warn({ err: taskError, opportunityId: opportunity?.id }, 'Renewal task creation failed');
+                    } else {
+                        tasksCreated++;
+                    }
+
+                    const { error: notificationError } = await supabase
+                        .from('notifications')
+                        .insert(automation.notification);
+
+                    if (notificationError) {
+                        log.warn({ err: notificationError, opportunityId: opportunity?.id }, 'Renewal notification creation failed');
+                    } else {
+                        notificationsSent++;
+                    }
+
+                    try {
+                        await sendPushToUser(prop.agent_id, automation.push);
+                        pushesSent++;
+                    } catch (pushError) {
+                        log.warn({ err: pushError, opportunityId: opportunity?.id }, 'Renewal push failed');
+                    }
+                }
 
                 detected++;
-            } catch {
+            } catch (proposalError) {
+                log.warn({ err: proposalError, proposalId: prop.id }, 'Renewal proposal processing failed');
                 continue;
             }
         }
 
-        log.info({ detected }, 'Renewal detection complete');
-        return NextResponse.json({ detected });
+        log.info({ detected, tasksCreated, notificationsSent, pushesSent }, 'Renewal detection complete');
+        return NextResponse.json({ detected, tasksCreated, notificationsSent, pushesSent });
 
     } catch (error) {
         Sentry.captureException(error);
         log.error({ err: error }, 'Renewal detection cron failed');
         return NextResponse.json({ error: 'Internal error' }, { status: 500 });
     }
+}
+
+function getClientName(clients: unknown): string | null {
+    if (Array.isArray(clients)) {
+        const first = clients[0] as { name?: unknown } | undefined;
+        return typeof first?.name === 'string' ? first.name : null;
+    }
+    if (clients && typeof clients === 'object') {
+        const client = clients as { name?: unknown };
+        return typeof client.name === 'string' ? client.name : null;
+    }
+    return null;
 }

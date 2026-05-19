@@ -21,6 +21,7 @@ import { generatePublicLinkAction } from '@/app/actions/publicProposal';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DigitalProposalCard } from '@/features/comparator/components/DigitalProposalCard';
+import type { InvoiceSimulationResult } from '@/lib/comparison/invoice-simulator';
 
 interface ProposalViewProps {
     initialProposal?: Proposal;
@@ -47,6 +48,9 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
 
     useEffect(() => {
         if (initialProposal) {
+            const calculationData = initialProposal.calculation_data as InvoiceData & {
+                calculation_audit?: InvoiceSimulationResult;
+            };
             setData({
                 result: {
                     offer: initialProposal.offer_snapshot,
@@ -55,8 +59,9 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
                     offer_annual_cost: initialProposal.offer_annual_cost,
                     savings_percent: initialProposal.savings_percent,
                     optimization_result: initialProposal.optimization_result || undefined,
+                    calculation_audit: calculationData.calculation_audit,
                 },
-                invoice: initialProposal.calculation_data
+                invoice: calculationData
             });
             setLoading(false);
             return;
@@ -98,7 +103,10 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
                 client_id: selectedClient.id,
                 status: 'draft' as ProposalStatus,
                 offer_snapshot: data.result.offer,
-                calculation_data: data.invoice,
+                calculation_data: {
+                    ...data.invoice,
+                    calculation_audit: data.result.calculation_audit,
+                } as InvoiceData,
                 annual_savings: data.result.annual_savings,
                 current_annual_cost: data.result.current_annual_cost,
                 offer_annual_cost: data.result.offer_annual_cost,
@@ -316,6 +324,7 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
             <div className="max-w-4xl mx-auto pt-4 px-4">
                 <DigitalProposalCard
                     result={result}
+                    invoiceData={data.invoice}
                     initialNotes={notes}
                     onNotesChange={setNotes}
                     onReset={() => router.push('/dashboard/simulator')}

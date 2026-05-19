@@ -7,6 +7,7 @@ import { SupervisedRecommendationResult } from '@/lib/supervised/recommender';
 import { createClient } from '@/lib/supabase/client';
 import { markOcrJobFailed, getOcrJobStatus } from '@/app/actions/ocr-jobs';
 import { getMarketerLogo } from '@/lib/marketers/logos';
+import { normalizeInvoiceData } from '@/lib/invoices/normalization';
 
 type Step = 1 | 2 | 3;
 
@@ -19,12 +20,10 @@ interface OcrJobRow {
     error_message: string | null;
 }
 
-// Extrae InvoiceData de extracted_data eliminando el campo interno _confidence
+// Extrae y revalida InvoiceData de extracted_data antes de pintar o calcular.
 function extractInvoiceData(raw: Record<string, unknown> | null): InvoiceData | null {
     if (!raw) return null;
-    const { _confidence: _c, ...rest } = raw;
-    void _c;
-    return rest as unknown as InvoiceData;
+    return normalizeInvoiceData(raw).invoice;
 }
 
 interface SimulatorState {
@@ -497,7 +496,10 @@ export function useSimulator() {
                                     client_id: savedProposal.client_id,
                                     status: 'draft',
                                     offer_snapshot: result.offer,
-                                    calculation_data: state.invoiceData,
+                                    calculation_data: {
+                                        ...state.invoiceData,
+                                        calculation_audit: result.calculation_audit,
+                                    } as InvoiceData,
                                     annual_savings: result.annual_savings,
                                     current_annual_cost: result.current_annual_cost,
                                     offer_annual_cost: result.offer_annual_cost,

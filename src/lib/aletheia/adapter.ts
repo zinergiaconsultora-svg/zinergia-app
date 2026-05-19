@@ -7,16 +7,16 @@
 
 import { InvoiceData as CrmInvoiceData, Offer } from '@/types/crm';
 import { AletheiaResult, InvoiceData as AletheiaInvoiceData, TariffCandidate, TariffPeriod } from './types';
+import { inferInvoicePowerType } from '@/lib/invoices/normalization';
 
 const PERIODS: TariffPeriod[] = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];
 
 // ── Tariff type detection ────────────────────────────────────────────────────
 
 function detectTariffType(inv: CrmInvoiceData): '2.0TD' | '3.0TD' | '6.1TD' {
-    const hint = (inv.detected_power_type || '').toLowerCase();
-    if (hint.includes('6.1')) return '6.1TD';
-    if (hint.includes('3.0')) return '3.0TD';
-    if (hint.includes('2.0')) return '2.0TD';
+    const inferred = inferInvoicePowerType(inv);
+    if (inferred === '3.1') return '6.1TD';
+    if (inferred === '3.0') return '3.0TD';
 
     // Fallback: count non-zero contracted power periods
     const powers = [

@@ -21,6 +21,8 @@ interface SimulatorEnergyFieldsProps {
     livePreviewLoading: boolean;
     isAnalyzing: boolean;
     loadingMessage: string;
+    canCompare: boolean;
+    compareBlockReason?: string;
     onCompare: () => void;
 }
 
@@ -29,7 +31,7 @@ interface SimulatorEnergyFieldsProps {
 const SimulatorEnergyFields: React.FC<SimulatorEnergyFieldsProps> = ({
     data, onUpdate, visibleEnergyPeriods, visiblePowerPeriods,
     hasEnergyValues, hasPowerValues, livePreview, livePreviewLoading,
-    isAnalyzing, loadingMessage, onCompare,
+    isAnalyzing, loadingMessage, canCompare, compareBlockReason, onCompare,
 }) => (
     <div className="space-y-5">
 
@@ -104,7 +106,7 @@ const SimulatorEnergyFields: React.FC<SimulatorEnergyFieldsProps> = ({
         <motion.button
             whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
             onClick={onCompare}
-            disabled={isAnalyzing || !hasEnergyValues || !hasPowerValues}
+            disabled={!canCompare}
             className="w-full relative bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-5 px-6 rounded-2xl font-bold text-base shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:grayscale transition-all overflow-hidden group"
         >
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
@@ -121,6 +123,11 @@ const SimulatorEnergyFields: React.FC<SimulatorEnergyFieldsProps> = ({
                 </>
             )}
         </motion.button>
+        {compareBlockReason && (
+            <p className="text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                {compareBlockReason}
+            </p>
+        )}
     </div>
 );
 

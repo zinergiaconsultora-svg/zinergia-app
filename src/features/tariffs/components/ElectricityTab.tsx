@@ -8,7 +8,6 @@ import { MODELO_COLORS, fmt, blankTarifa } from './tariff-form-utils'
 import { TarifaFormPanel } from './TarifaFormPanel'
 import dynamic from 'next/dynamic'
 import { getMarketerLogo, normalizeMarketerName } from '@/lib/marketers/logos'
-import Image from 'next/image'
 
 const TariffExcelImportModal = dynamic(
     () => import('./TariffExcelImportModal').then(m => ({ default: m.TariffExcelImportModal })),
@@ -170,12 +169,11 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
                                     <div className="group/company flex min-w-0 items-center justify-center gap-1 sm:justify-start sm:gap-2">
                                         {logo ? (
                                             <div className="relative h-8 w-10 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_8px_18px_rgba(15,23,42,0.08)] ring-1 ring-white transition-all duration-300 group-hover/company:-translate-y-0.5 group-hover/company:border-indigo-200 group-hover/company:shadow-[0_10px_24px_rgba(79,70,229,0.16)] sm:h-9 sm:w-16 sm:rounded-xl">
-                                                <Image
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                <img
                                                     src={logo}
                                                     alt={`Logo ${row.company}`}
-                                                    fill
-                                                    sizes="(max-width: 640px) 40px, 64px"
-                                                    className={`object-contain transition-transform duration-300 ${logoImageClass(row.company)}`}
+                                                    className={`h-full w-full object-contain p-1 transition-transform duration-300 ${logoImageClass(row.company)}`}
                                                 />
                                             </div>
                                         ) : (

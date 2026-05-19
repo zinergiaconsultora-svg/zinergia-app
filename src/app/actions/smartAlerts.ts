@@ -34,6 +34,7 @@ export async function getSmartAlertsAction(): Promise<SmartAlert[]> {
         { data: recentJobs },
         { count: expiringContractsCount },
         { count: expiredContractsCount },
+        { data: renewalOpportunities },
     ] = await Promise.all([
         // 1. Seguimientos URGENTES: propuestas enviadas >7 días sin respuesta
         supabase
@@ -99,6 +100,16 @@ export async function getSmartAlertsAction(): Promise<SmartAlert[]> {
             .eq('status', 'active')
             .not('end_date', 'is', null)
             .lt('end_date', now.toISOString().split('T')[0]),
+
+        // 8. Renovaciones detectadas por Aletheia pendientes de acción
+        supabase
+            .from('renewal_opportunities')
+            .select('id, potential_savings, savings_percent, priority_score')
+            .eq('agent_id', user.id)
+            .eq('status', 'open')
+            .gte('detected_at', daysAgo(30))
+            .order('priority_score', { ascending: false })
+            .limit(10),
     ]);
 
     // ── 1. Urgent followups ──
@@ -217,6 +228,21 @@ export async function getSmartAlertsAction(): Promise<SmartAlert[]> {
             count: expiredContractsCount,
             href: '/dashboard/clients',
             cta: 'Renegociar ahora',
+        });
+    }
+
+    // ── 8. Renewal opportunities ──
+    if (renewalOpportunities && renewalOpportunities.length > 0) {
+        const totalSavings = renewalOpportunities.reduce((sum, item) => sum + Number(item.potential_savings || 0), 0);
+        const maxPct = Math.max(...renewalOpportunities.map(item => Number(item.savings_percent || 0)));
+        alerts.push({
+            id: 'renewal_opportunities',
+            severity: maxPct >= 10 || totalSavings >= 1000 ? 'critical' : 'warning',
+            title: 'Renovaciones con ahorro',
+            description: `${renewalOpportunities.length} cliente${renewalOpportunities.length > 1 ? 's' : ''} con ${totalSavings.toFixed(0)} €/año de ahorro potencial.`,
+            count: renewalOpportunities.length,
+            href: '/dashboard#renewals',
+            cta: 'Revisar renovaciones',
         });
     }
 

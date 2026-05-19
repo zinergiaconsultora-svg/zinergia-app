@@ -2,6 +2,7 @@ import React from 'react';
 import { Document, Page, View, Text, StyleSheet, Image } from '@react-pdf/renderer';
 import { InvoiceData, SavingsResult } from '@/types/crm';
 import { OptimizationRecommendation, AuditOpportunity } from '@/lib/aletheia/types';
+import { getMarketerLogo } from '@/lib/marketers/logos';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -23,6 +24,14 @@ const fmtEur2 = (n: number) =>
     n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 const fmtPrice = (n?: number) => n && n > 0 ? n.toFixed(4) + ' €/kWh' : '—';
 const fmtPowerPrice = (n?: number) => n && n > 0 ? n.toFixed(4) + ' €/kW día' : '—';
+
+function resolveLogoUrl(marketerName?: string | null, explicitLogo?: string | null): string | null {
+    const logoUrl = explicitLogo || getMarketerLogo(marketerName);
+    if (!logoUrl) return null;
+    if (!logoUrl.startsWith('/')) return logoUrl;
+    if (typeof window === 'undefined') return logoUrl;
+    return `${window.location.origin}${logoUrl}`;
+}
 
 const today = new Date().toLocaleDateString('es-ES', {
     day: 'numeric', month: 'long', year: 'numeric',
@@ -251,6 +260,12 @@ export function ProposalPDFDocument({
     const currentInvoice = audit?.currentInvoiceTotal ?? (best.current_annual_cost / 365) * (invoiceData.period_days || 30);
     const optimizedInvoice = audit?.simulatedInvoiceTotal ?? (best.offer_annual_cost / 365) * (invoiceData.period_days || 30);
     const pricePeriods = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'] as const;
+    const logoSource = resolveLogoUrl(best.offer.marketer_name, best.offer.logo_url);
+    const invoicePeriods = [1, 2, 3, 4, 5, 6].map(period => {
+        const energy = Number(invoiceData[`energy_p${period}` as keyof InvoiceData] || 0);
+        const power = Number(invoiceData[`power_p${period}` as keyof InvoiceData] || 0);
+        return { period, energy, power };
+    });
 
     return (
         <Document>
@@ -321,9 +336,9 @@ export function ProposalPDFDocument({
                                 Período simulado: {invoiceData.period_days || 30} días
                             </Text>
                         </View>
-                        {best.offer.logo_url && (
+                        {logoSource && (
                             // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf Image no expone prop alt.
-                            <Image src={best.offer.logo_url} style={s.marketerLogo} />
+                            <Image src={logoSource} style={s.marketerLogo} />
                         )}
                     </View>
 
@@ -453,15 +468,16 @@ export function ProposalPDFDocument({
                         ))}
                     </View>
                     <View style={s.detailCol}>
-                        {[
-                            ['Energía P1 (kWh)', String(invoiceData.energy_p1 || 0)],
-                            ['Energía P2 (kWh)', String(invoiceData.energy_p2 || 0)],
-                            ['Energía P3 (kWh)', String(invoiceData.energy_p3 || 0)],
-                            ['Potencia P1 (kW)', String(invoiceData.power_p1 || 0)],
-                        ].map(([label, value]) => (
-                            <View key={label} style={s.detailRow}>
-                                <Text style={s.detailLabel}>{label}</Text>
-                                <Text style={s.detailValue}>{value}</Text>
+                        <View style={s.detailRow}>
+                            <Text style={s.detailLabel}>Periodo</Text>
+                            <Text style={s.detailValue}>Energía · Potencia</Text>
+                        </View>
+                        {invoicePeriods.map(({ period, energy, power }) => (
+                            <View key={period} style={s.detailRow}>
+                                <Text style={s.detailLabel}>P{period}</Text>
+                                <Text style={s.detailValue}>
+                                    {energy.toLocaleString('es-ES', { maximumFractionDigits: 2 })} kWh · {power.toLocaleString('es-ES', { maximumFractionDigits: 3 })} kW
+                                </Text>
                             </View>
                         ))}
                     </View>

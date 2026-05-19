@@ -5,6 +5,7 @@ import { AletheiaEngine } from '@/lib/aletheia/engine';
 import { Normalizer } from '@/lib/aletheia/normalizer';
 import { AletheiaResult, TariffCandidate } from '@/lib/aletheia/types';
 import { Result, ok, err } from '@/lib/result';
+import { normalizeInvoiceData } from '@/lib/invoices/normalization';
 
 interface TariffRow {
     id: string;
@@ -79,23 +80,24 @@ export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: R
             return err('No hay tarifas activas configuradas en el sistema.');
         }
 
+        const safeOcrData = normalizeInvoiceData(ocrData).invoice;
         const normalizedInvoice = Normalizer.process({
-            ...ocrData,
+            ...safeOcrData,
             // Bridge CRM InvoiceData field names → Normalizer Spanish field names
-            periodo_facturacion: ocrData.period_days,
-            alquiler_equipos: ocrData.rental_cost || ocrData.forensic_details?.power_rental_cost,
-            bono_social: ocrData.bono_social || ocrData.social_bonus_cost,
-            excesos_distribuidora: ocrData.distribution_excess_cost || ocrData.excess_power_cost,
-            energia_reactiva: ocrData.reactive_energy_cost || ocrData.reactive_cost,
-            servicios_comerciales: ocrData.excluded_services_cost || ocrData.services_cost,
-            excedentes_kwh: ocrData.surplus_export_kwh || ocrData.autoconsumo_excedentes_kwh,
+            periodo_facturacion: safeOcrData.period_days,
+            alquiler_equipos: safeOcrData.rental_cost || safeOcrData.forensic_details?.power_rental_cost,
+            bono_social: safeOcrData.bono_social || safeOcrData.social_bonus_cost,
+            excesos_distribuidora: safeOcrData.distribution_excess_cost || safeOcrData.excess_power_cost,
+            energia_reactiva: safeOcrData.reactive_energy_cost || safeOcrData.reactive_cost,
+            servicios_comerciales: safeOcrData.excluded_services_cost || safeOcrData.services_cost,
+            excedentes_kwh: safeOcrData.surplus_export_kwh || safeOcrData.autoconsumo_excedentes_kwh,
             // If manual Max Demand is provided, override it
-            max_demand_p1: manualMaxDemand?.p1 || ocrData.max_demand_p1,
-            max_demand_p2: manualMaxDemand?.p2 || ocrData.max_demand_p2,
-            max_demand_p3: manualMaxDemand?.p3 || ocrData.max_demand_p3,
-            max_demand_p4: manualMaxDemand?.p4 || ocrData.max_demand_p4,
-            max_demand_p5: manualMaxDemand?.p5 || ocrData.max_demand_p5,
-            max_demand_p6: manualMaxDemand?.p6 || ocrData.max_demand_p6,
+            max_demand_p1: manualMaxDemand?.p1 || safeOcrData.max_demand_p1,
+            max_demand_p2: manualMaxDemand?.p2 || safeOcrData.max_demand_p2,
+            max_demand_p3: manualMaxDemand?.p3 || safeOcrData.max_demand_p3,
+            max_demand_p4: manualMaxDemand?.p4 || safeOcrData.max_demand_p4,
+            max_demand_p5: manualMaxDemand?.p5 || safeOcrData.max_demand_p5,
+            max_demand_p6: manualMaxDemand?.p6 || safeOcrData.max_demand_p6,
         });
 
         const commissionRows = await fetchCommissionRows(supabase, normalizedInvoice.annual_consumption_mwh);

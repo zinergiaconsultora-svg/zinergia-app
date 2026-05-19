@@ -67,6 +67,7 @@ export async function getRenewalOpportunitiesAction(): Promise<RenewalOpportunit
 }
 
 export async function dismissRenewalAction(id: string): Promise<void> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('No autenticado');
@@ -78,6 +79,7 @@ export async function dismissRenewalAction(id: string): Promise<void> {
 }
 
 export async function markRenewalContactedAction(id: string): Promise<void> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('No autenticado');
