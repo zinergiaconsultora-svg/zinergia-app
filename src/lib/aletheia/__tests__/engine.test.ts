@@ -26,8 +26,8 @@ describe('Aletheia Engine (Integration)', () => {
         company: 'Zinergia Power',
         type: 'fixed',
         permanence_months: 0,
-        power_price: { p1: 0.1, p2: 0.1, p3: 0.05, p4: 0, p5: 0, p6: 0 }, // per kW/day
-        energy_price: { p1: 0.15, p2: 0.15, p3: 0.10, p4: 0, p5: 0, p6: 0 }, // per kWh
+        power_price: { p1: 0.05, p2: 0.05, p3: 0.02, p4: 0, p5: 0, p6: 0 }, // per kW/day — cheaper than current
+        energy_price: { p1: 0.10, p2: 0.10, p3: 0.08, p4: 0, p5: 0, p6: 0 }, // per kWh — cheaper than current
         fixed_fee: 0
     };
 
