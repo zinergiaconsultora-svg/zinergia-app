@@ -689,6 +689,7 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                                 isSecondary={idx > 0}
                                 onReset={onReset}
                                 onEmail={() => setShowEmailModal(true)}
+                                invoiceData={invoiceData}
                             />
                         </motion.div>
                     ))}
