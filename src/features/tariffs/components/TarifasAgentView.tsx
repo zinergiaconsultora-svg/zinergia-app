@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { Zap, Flame, Euro, Info, Search, Building2, Users, TrendingUp, Calculator, ChevronDown, ChevronUp } from 'lucide-react'
 import type { TarifaRow, TariffCommissionRow } from '@/app/actions/tariffs'
-import { getMarketerLogo } from '@/lib/marketers/logos'
+import { CompanyCell } from './CompanyCell'
 
 interface Props {
     electricity: TarifaRow[]
@@ -81,25 +81,6 @@ function CommBadge({ info }: { info: CommissionInfo }) {
                     {info.variable.toFixed(2)} <span className="font-normal text-slate-400">/MWh {info.threshold ? `(+${info.threshold} MWh)` : ''}</span>
                 </span>
             )}
-        </div>
-    )
-}
-
-function CompanyCell({ company, logoColor }: { company: string; logoColor?: string | null }) {
-    const logo = getMarketerLogo(company)
-    return (
-        <div className="flex items-center gap-2">
-            {logo ? (
-                <div className="relative w-7 h-7 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={logo} alt={`Logo ${company}`} className="h-full w-full object-contain p-0.5" />
-                </div>
-            ) : (
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-white text-[10px] font-bold ${logoColor || 'bg-slate-600'}`}>
-                    {company.slice(0, 2)}
-                </div>
-            )}
-            <span className="font-semibold text-slate-800">{company}</span>
         </div>
     )
 }
