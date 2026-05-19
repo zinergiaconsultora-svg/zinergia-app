@@ -27,7 +27,8 @@ export interface SupervisedRecommendationResult {
     guardrails: string[];
 }
 
-const MIN_SAVINGS_FOR_COMMERCIAL_RECOMMENDATION = 0;
+const MIN_SAVINGS_FOR_COMMERCIAL_RECOMMENDATION = 50;
+const MIN_SAVINGS_RATIO_FOR_COMMERCIAL_RECOMMENDATION = 0.01;
 const BALANCED_MIN_SAVINGS_RATIO = 0.8;
 const COMMISSION_MIN_SAVINGS_RATIO = 0.65;
 
@@ -35,13 +36,13 @@ export function buildSupervisedRecommendations(
     candidates: SupervisedCandidate[],
 ): SupervisedRecommendationResult {
     const viable = candidates
-        .filter(candidate => candidate.annualSavings > MIN_SAVINGS_FOR_COMMERCIAL_RECOMMENDATION)
+        .filter(isCommerciallyDefensible)
         .sort((a, b) => b.annualSavings - a.annualSavings);
 
     if (viable.length === 0) {
         return {
             recommendations: [],
-            guardrails: ['No hay ninguna tarifa con ahorro positivo. No se debe recomendar propuesta comercial.'],
+            guardrails: ['No hay ninguna tarifa con ahorro comercialmente defendible. No se debe recomendar propuesta comercial.'],
         };
     }
 
@@ -114,6 +115,15 @@ function pickBestByScore(
     )[0];
 }
 
+function isCommerciallyDefensible(candidate: SupervisedCandidate): boolean {
+    if (candidate.annualSavings < MIN_SAVINGS_FOR_COMMERCIAL_RECOMMENDATION) return false;
+
+    const estimatedCurrentAnnual = candidate.annualCost + candidate.annualSavings;
+    if (estimatedCurrentAnnual <= 0) return false;
+
+    return (candidate.annualSavings / estimatedCurrentAnnual) >= MIN_SAVINGS_RATIO_FOR_COMMERCIAL_RECOMMENDATION;
+}
+
 function scoreCandidate(
     candidate: SupervisedCandidate,
     bestSavings: number,
@@ -159,7 +169,7 @@ function dedupeRecommendations(
 
     for (const recommendation of recommendations) {
         if (!recommendation) continue;
-        const key = `${recommendation.kind}:${recommendation.candidate.id}`;
+        const key = recommendation.candidate.id;
         if (seen.has(key)) continue;
         seen.add(key);
         result.push(recommendation);

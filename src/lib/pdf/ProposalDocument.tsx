@@ -2,6 +2,7 @@ import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import { Proposal } from '@/types/crm';
 import { getMarketerLogo } from '@/lib/marketers/logos';
+import type { InvoiceSimulationResult } from '@/lib/comparison/invoice-simulator';
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 
@@ -458,9 +459,12 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
     const optSavings  = proposal.optimization_result?.annual_optimization_savings ?? 0;
     const totalSavings = savings + optSavings;
     const periodDays = Math.max(1, proposal.calculation_data?.period_days || 30);
-    const currentInvoiceEstimate = (currentCost / 365) * periodDays;
-    const optimizedInvoiceEstimate = (newCost / 365) * periodDays;
-    const invoiceSavings = currentInvoiceEstimate - optimizedInvoiceEstimate;
+    const calculationAudit = (proposal.calculation_data as Proposal['calculation_data'] & {
+        calculation_audit?: InvoiceSimulationResult;
+    })?.calculation_audit;
+    const currentInvoiceEstimate = calculationAudit?.currentInvoiceTotal ?? (currentCost / 365) * periodDays;
+    const optimizedInvoiceEstimate = calculationAudit?.simulatedInvoiceTotal ?? (newCost / 365) * periodDays;
+    const invoiceSavings = calculationAudit?.periodSavings ?? (currentInvoiceEstimate - optimizedInvoiceEstimate);
     const logoSource = getPdfLogoSource(marketer, proposal.offer_snapshot.logo_url);
     const pricePeriods = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'] as const;
 
@@ -541,6 +545,29 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
                                 <Text style={s.simulationValueGreen}>{euro2(savings)}</Text>
                             </View>
                         </View>
+
+                        {calculationAudit && (
+                            <View style={{ marginBottom: 10 }}>
+                                {calculationAudit.lines.filter(line => Math.abs(line.amount) > 0.005).map(line => (
+                                    <View key={line.label} style={s.offerRow}>
+                                        <Text style={s.offerKey}>{line.label}</Text>
+                                        <Text style={s.offerVal}>{euro2(line.amount)}</Text>
+                                    </View>
+                                ))}
+                                <View style={s.offerRow}>
+                                    <Text style={s.offerKey}>Subtotal antes de impuesto eléctrico</Text>
+                                    <Text style={s.offerVal}>{euro2(calculationAudit.subtotalBeforeTax)}</Text>
+                                </View>
+                                <View style={s.offerRow}>
+                                    <Text style={s.offerKey}>Impuesto eléctrico</Text>
+                                    <Text style={s.offerVal}>{euro2(calculationAudit.electricityTax)}</Text>
+                                </View>
+                                <View style={s.offerRow}>
+                                    <Text style={s.offerKey}>IVA</Text>
+                                    <Text style={s.offerVal}>{euro2(calculationAudit.vat)}</Text>
+                                </View>
+                            </View>
+                        )}
 
                         <View style={s.priceGrid}>
                             <View style={s.priceCol}>

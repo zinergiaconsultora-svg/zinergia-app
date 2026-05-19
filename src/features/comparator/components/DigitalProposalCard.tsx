@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
-import { SavingsResult } from '../../../types/crm';
+import { InvoiceData, SavingsResult } from '../../../types/crm';
 import { toast } from 'sonner';
 import { Download, Mail, Zap, Loader2, FileText, Lightbulb } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/format';
@@ -13,6 +13,7 @@ interface DigitalProposalCardProps {
     isSecondary?: boolean;
     initialNotes?: string;
     onNotesChange?: (notes: string) => void;
+    invoiceData?: InvoiceData;
 }
 
 export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
@@ -21,7 +22,8 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
     title = "Recomendación Principal",
     isSecondary = false,
     initialNotes,
-    onNotesChange
+    onNotesChange,
+    invoiceData,
 }) => {
     const cardRef = useRef<HTMLDivElement>(null);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -51,6 +53,39 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
     };
 
     const handleDownloadPdf = async () => {
+        if (invoiceData) {
+            setIsGeneratingPdf(true);
+            try {
+                const [{ pdf }, { ProposalPDFDocument }] = await Promise.all([
+                    import('@react-pdf/renderer'),
+                    import('@/features/proposal/components/ProposalPDFDocument'),
+                ]);
+
+                const element = React.createElement(ProposalPDFDocument, {
+                    invoiceData,
+                    results: [result],
+                    clientProfile: advisorNotes ? { tags: [], sales_argument: advisorNotes } : undefined,
+                });
+
+                // @react-pdf/renderer pdf() accepts Document elements; cast needed as props differ
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const blob = await pdf(element as any).toBlob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `zinergia-propuesta-${(invoiceData.client_name ?? result.offer.tariff_name ?? 'borrador').replace(/\s+/g, '-')}.pdf`;
+                a.click();
+                URL.revokeObjectURL(url);
+                toast.success('PDF generado correctamente');
+            } catch (error) {
+                console.error('[PDF] Error:', error);
+                toast.error('Error al generar PDF.');
+            } finally {
+                setIsGeneratingPdf(false);
+            }
+            return;
+        }
+
         if (!cardRef.current) {
             console.error('[PDF] cardRef is null');
             return;

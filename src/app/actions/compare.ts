@@ -5,6 +5,7 @@ import { env } from '@/lib/env';
 import { createClient } from '@/lib/supabase/server';
 import { AletheiaEngine } from '@/lib/aletheia/engine';
 import { aletheiaResultToWebhookShape, crmToAletheiaInvoice, offerToTariffCandidate } from '@/lib/aletheia/adapter';
+import { inferInvoicePowerType } from '@/lib/invoices/normalization';
 
 const N8N_TIMEOUT_MS = Number(env.N8N_TIMEOUT_MS) || 10_000;
 
@@ -15,12 +16,12 @@ async function runAletheiaFallback(invoice: InvoiceData) {
 
     // Derivar tipo_cliente desde el tipo de acceso de la factura
     // 3.0TD / 3.1TD / 6.1TD → exclusivo PYME; 2.0TD → incluir ambos
-    const powerType = invoice.detected_power_type ?? '2.0';
+    const powerType = inferInvoicePowerType(invoice);
     const isPymeOnly = powerType === '3.0' || powerType === '3.1';
 
     let query = supabase
         .from('lv_zinergia_tarifas')
-        .select('id, company, tariff_name, logo_color, offer_type, fixed_fee, contract_duration, power_price_p1, power_price_p2, power_price_p3, energy_price_p1, energy_price_p2, energy_price_p3')
+        .select('id, company, tariff_name, logo_color, offer_type, fixed_fee, contract_duration, power_price_p1, power_price_p2, power_price_p3, power_price_p4, power_price_p5, power_price_p6, energy_price_p1, energy_price_p2, energy_price_p3, energy_price_p4, energy_price_p5, energy_price_p6')
         .eq('is_active', true)
         .eq('supply_type', 'electricity');
 
@@ -38,8 +39,8 @@ async function runAletheiaFallback(invoice: InvoiceData) {
         tariff_name: t.tariff_name,
         logo_color: t.logo_color ?? '#10b981',
         type: t.offer_type ?? 'fixed',
-        power_price: { p1: t.power_price_p1 ?? 0, p2: t.power_price_p2 ?? 0, p3: t.power_price_p3 ?? 0, p4: 0, p5: 0, p6: 0 },
-        energy_price: { p1: t.energy_price_p1 ?? 0, p2: t.energy_price_p2 ?? 0, p3: t.energy_price_p3 ?? 0, p4: 0, p5: 0, p6: 0 },
+        power_price: { p1: t.power_price_p1 ?? 0, p2: t.power_price_p2 ?? 0, p3: t.power_price_p3 ?? 0, p4: t.power_price_p4 ?? 0, p5: t.power_price_p5 ?? 0, p6: t.power_price_p6 ?? 0 },
+        energy_price: { p1: t.energy_price_p1 ?? 0, p2: t.energy_price_p2 ?? 0, p3: t.energy_price_p3 ?? 0, p4: t.energy_price_p4 ?? 0, p5: t.energy_price_p5 ?? 0, p6: t.energy_price_p6 ?? 0 },
         fixed_fee: t.fixed_fee ?? 0,
         contract_duration: t.contract_duration ?? 'Sin permanencia',
     }));

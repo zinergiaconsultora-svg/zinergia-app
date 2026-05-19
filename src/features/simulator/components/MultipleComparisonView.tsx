@@ -2,9 +2,51 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Upload, X, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Upload, X, FileText, AlertCircle, CheckCircle2, BadgeEuro, Scale, TrendingDown } from 'lucide-react';
 import { useMultipleComparison, ComparisonInvoice } from '../hooks/useMultipleComparison';
 import { DigitalProposalCard } from '@/features/comparator/components/DigitalProposalCard';
+import { buildSupervisedRecommendations, type SupervisedRecommendationKind } from '@/lib/supervised/recommender';
+import type { SavingsResult } from '@/types/crm';
+
+const RECOMMENDATION_LABELS: Record<SupervisedRecommendationKind, { label: string; icon: typeof TrendingDown; tone: string }> = {
+    max_savings: {
+        label: 'Mayor ahorro',
+        icon: TrendingDown,
+        tone: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    },
+    balanced: {
+        label: 'Mejor equilibrio',
+        icon: Scale,
+        tone: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    },
+    best_viable_commission: {
+        label: 'Comision viable',
+        icon: BadgeEuro,
+        tone: 'bg-amber-50 text-amber-700 border-amber-200',
+    },
+};
+
+function buildRecommendations(results: SavingsResult[]) {
+    return buildSupervisedRecommendations(results.map(result => ({
+        id: result.offer.id,
+        tariffName: result.offer.tariff_name,
+        company: result.offer.marketer_name,
+        annualSavings: result.annual_savings,
+        annualCost: result.offer_annual_cost,
+        estimatedAgentCommission: result.offer.estimated_agent_commission,
+        criticalAlerts: result.calculation_audit?.alerts.filter(alert => alert.level === 'critical').length || 0,
+        warningAlerts: result.calculation_audit?.alerts.filter(alert => alert.level === 'warning').length || 0,
+        hasMissingCommission: result.offer.estimated_agent_commission == null,
+    })));
+}
+
+function getRecommendationResult(results: SavingsResult[], tariffId: string): SavingsResult | undefined {
+    return results.find(result => result.offer.id === tariffId);
+}
+
+function formatEuro(value: number): string {
+    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value);
+}
 
 export const MultipleComparisonView = () => {
     const { invoices, isProcessing, addInvoice, removeInvoice, reset, canAddMore, isReady } = useMultipleComparison();
@@ -190,18 +232,12 @@ export const MultipleComparisonView = () => {
                                 </h3>
                                 
                                 {invoice.results && invoice.results.length > 0 && (
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                                        {invoice.results.slice(0, 3).map((result, idx) => (
-                                            <DigitalProposalCard
-                                                key={`${invoice.id}-${result.offer.id}`}
-                                                result={result}
-                                                title={idx === 0 ? 'Mejor Opción' : 'Alternativa'}
-                                                isSecondary={idx > 0}
-                                                onReset={reset}
-                                                onEmail={() => {}}
-                                            />
-                                        ))}
-                                    </div>
+                                    <InvoiceRecommendationBlock
+                                        invoiceId={invoice.id}
+                                        invoiceData={invoice.data}
+                                        results={invoice.results}
+                                        onReset={reset}
+                                    />
                                 )}
                             </div>
                         ))}
@@ -221,3 +257,114 @@ export const MultipleComparisonView = () => {
         </div>
     );
 };
+
+function InvoiceRecommendationBlock({
+    invoiceId,
+    invoiceData,
+    results,
+    onReset,
+}: {
+    invoiceId: string;
+    invoiceData?: import('@/types/crm').InvoiceData;
+    results: SavingsResult[];
+    onReset: () => void;
+}) {
+    const supervised = buildRecommendations(results);
+    const recommendedResults = supervised.recommendations
+        .map(recommendation => ({
+            recommendation,
+            result: getRecommendationResult(results, recommendation.candidate.id),
+        }))
+        .filter((item): item is {
+            recommendation: (typeof supervised.recommendations)[number];
+            result: SavingsResult;
+        } => Boolean(item.result));
+
+    const fallbackResults = results
+        .filter(result => !recommendedResults.some(item => item.result.offer.id === result.offer.id))
+        .slice(0, Math.max(0, 3 - recommendedResults.length))
+        .map((result, index) => ({
+            result,
+            title: index === 0 ? 'Alternativa por ahorro' : 'Alternativa',
+        }));
+
+    return (
+        <div className="space-y-4">
+            {recommendedResults.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {recommendedResults.map(({ recommendation, result }) => {
+                        const config = RECOMMENDATION_LABELS[recommendation.kind];
+                        const Icon = config.icon;
+                        return (
+                            <div
+                                key={`${invoiceId}-rec-${recommendation.kind}-${result.offer.id}`}
+                                className={`rounded-xl border p-4 ${config.tone}`}
+                            >
+                                <div className="flex items-center justify-between gap-3">
+                                    <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide">
+                                        <Icon size={14} />
+                                        {config.label}
+                                    </span>
+                                    <span className="text-[10px] font-bold uppercase">
+                                        {recommendation.confidence}
+                                    </span>
+                                </div>
+                                <p className="mt-2 text-sm font-bold text-slate-900">
+                                    {result.offer.marketer_name} · {result.offer.tariff_name}
+                                </p>
+                                <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                        <p className="opacity-70">Ahorro</p>
+                                        <p className="font-bold">{formatEuro(result.annual_savings)}/año</p>
+                                    </div>
+                                    <div>
+                                        <p className="opacity-70">Comision</p>
+                                        <p className="font-bold">
+                                            {result.offer.estimated_agent_commission != null
+                                                ? formatEuro(result.offer.estimated_agent_commission)
+                                                : 'Pendiente'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <p className="mt-2 text-xs leading-snug opacity-80">{recommendation.reason}</p>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {supervised.guardrails.length > 0 && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+                    {supervised.guardrails.map(guardrail => (
+                        <p key={guardrail}>{guardrail}</p>
+                    ))}
+                </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {recommendedResults.map(({ recommendation, result }) => (
+                    <DigitalProposalCard
+                        key={`${invoiceId}-${recommendation.kind}-${result.offer.id}`}
+                        result={result}
+                        title={RECOMMENDATION_LABELS[recommendation.kind].label}
+                        isSecondary={recommendation.kind !== 'balanced'}
+                        invoiceData={invoiceData}
+                        onReset={onReset}
+                        onEmail={() => {}}
+                    />
+                ))}
+                {fallbackResults.map(({ result, title }) => (
+                    <DigitalProposalCard
+                        key={`${invoiceId}-fallback-${result.offer.id}`}
+                        result={result}
+                        title={title}
+                        isSecondary
+                        invoiceData={invoiceData}
+                        onReset={onReset}
+                        onEmail={() => {}}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+}

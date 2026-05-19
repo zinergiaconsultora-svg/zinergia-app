@@ -90,7 +90,10 @@ export const proposalService = {
             agent_id: ownerId,
             status: 'draft',
             offer_snapshot: bestResult.offer,
-            calculation_data: invoiceData,
+            calculation_data: {
+                ...invoiceData,
+                calculation_audit: bestResult.calculation_audit,
+            } as Proposal['calculation_data'],
             current_annual_cost: bestResult.current_annual_cost,
             offer_annual_cost: bestResult.offer_annual_cost,
             annual_savings: bestResult.annual_savings,

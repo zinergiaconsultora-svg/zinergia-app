@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Proposal } from '@/types/crm';
-import { acceptPublicProposalAction } from '@/app/actions/publicProposal';
+import { acceptPublicProposalAction, trackPublicProposalViewAction } from '@/app/actions/publicProposal';
 import dynamic from 'next/dynamic';
 
 const SignaturePad = dynamic(
@@ -44,6 +44,12 @@ export default function PublicProposalClient({ proposal, token }: Props) {
 
     const monthlySavings = Math.round(proposal.annual_savings / 12);
     const savingsPercent = Math.round(proposal.savings_percent);
+
+    useEffect(() => {
+        trackPublicProposalViewAction(token).catch(() => {
+            // El tracking es auxiliar: la propuesta debe seguir visible aunque falle.
+        });
+    }, [token]);
 
     const handleAccept = async () => {
         if (!signatureData) return;

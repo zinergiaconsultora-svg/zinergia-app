@@ -24,7 +24,22 @@ describe('supervised recommender', () => {
 
         expect(result.recommendations.find(r => r.kind === 'max_savings')?.candidate.id).toBe('a');
         expect(result.recommendations.find(r => r.kind === 'balanced')?.candidate.id).toBe('b');
-        expect(result.recommendations.find(r => r.kind === 'best_viable_commission')?.candidate.id).toBe('b');
+        expect(result.recommendations.find(r => r.kind === 'best_viable_commission')?.candidate.id).toBeUndefined();
+    });
+
+    it('does not return the same tariff twice with different recommendation labels', () => {
+        const result = buildSupervisedRecommendations([
+            {
+                id: 'a',
+                tariffName: 'Mejor en todo',
+                company: 'A',
+                annualSavings: 1200,
+                annualCost: 5000,
+                estimatedAgentCommission: 300,
+            },
+        ]);
+
+        expect(result.recommendations.map(r => r.candidate.id)).toEqual(['a']);
     });
 
     it('does not recommend commission-only options with weak client savings', () => {
@@ -48,7 +63,7 @@ describe('supervised recommender', () => {
         ]);
 
         expect(result.recommendations.find(r => r.kind === 'best_viable_commission')?.candidate.id).not.toBe('b');
-        expect(result.recommendations.find(r => r.kind === 'best_viable_commission')?.candidate.id).toBe('a');
+        expect(result.recommendations.find(r => r.kind === 'best_viable_commission')?.candidate.id).toBeUndefined();
     });
 
     it('blocks commercial recommendation when there is no positive savings', () => {
@@ -64,6 +79,22 @@ describe('supervised recommender', () => {
         ]);
 
         expect(result.recommendations).toHaveLength(0);
-        expect(result.guardrails[0]).toContain('No hay ninguna tarifa con ahorro positivo');
+        expect(result.guardrails[0]).toContain('No hay ninguna tarifa con ahorro comercialmente defendible');
+    });
+
+    it('blocks symbolic savings even if commission exists', () => {
+        const result = buildSupervisedRecommendations([
+            {
+                id: 'a',
+                tariffName: 'Ahorro simbolico',
+                company: 'A',
+                annualSavings: 12,
+                annualCost: 5000,
+                estimatedAgentCommission: 400,
+            },
+        ]);
+
+        expect(result.recommendations).toHaveLength(0);
+        expect(result.guardrails[0]).toContain('comercialmente defendible');
     });
 });
