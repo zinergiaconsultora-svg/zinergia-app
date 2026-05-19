@@ -103,6 +103,9 @@ const SimulatorEnergyFields: React.FC<SimulatorEnergyFieldsProps> = ({
         </AnimatePresence>
 
         {/* CTA */}
+        {compareBlockReason && !isAnalyzing && (
+            <p className="text-xs text-red-500 text-center mb-1">{compareBlockReason}</p>
+        )}
         <motion.button
             whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
             onClick={onCompare}
