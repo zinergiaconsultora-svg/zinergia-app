@@ -28,7 +28,8 @@ describe('invoice simulator', () => {
 
         expect(result.energyPricingMode).toBe('single');
         expect(energyLine?.amount).toBeCloseTo(208 * 0.1335, 6);
-        expect(result.annualSavings).toBeCloseTo((result.periodSavings / 28) * 365, 6);
+        // Factor anual fijo 11.3 (alineado con Excel manual de Zinergia)
+        expect(result.annualSavings).toBeCloseTo(result.periodSavings * 11.3, 6);
     });
 
     it('uses period kWh when the target tariff has P1/P2/P3 prices', () => {

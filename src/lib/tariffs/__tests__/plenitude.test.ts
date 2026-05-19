@@ -79,7 +79,7 @@ describe('Plenitude electricity tariffs', () => {
 
         expect(proposal.company).toBe('Plenitude');
         expect(proposal.tariff_name).toBe('POWER +');
-        expect(proposal.annual_cost_power).toBeCloseTo(433.18, 2);
+        expect(proposal.annual_cost_power).toBeCloseTo(402.32, 2);
         expect(proposal.annual_cost_energy).toBeGreaterThan(0);
         expect(proposal.annual_cost_total).toBeGreaterThan(proposal.annual_cost_power);
     });
