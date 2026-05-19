@@ -1,8 +1,9 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { InvoiceData, SavingsResult } from '../../../types/crm';
 import { toast } from 'sonner';
-import { Download, Mail, Zap, Loader2, FileText, Lightbulb } from 'lucide-react';
+import { Download, Mail, Zap, Loader2, FileText, Lightbulb, TableProperties } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/format';
+import { ExcelBreakdownModal } from './ExcelBreakdownModal';
 
 
 interface DigitalProposalCardProps {
@@ -27,6 +28,7 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
 }) => {
     const cardRef = useRef<HTMLDivElement>(null);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+    const [showBreakdown, setShowBreakdown] = useState(false);
     const [advisorNotes, setAdvisorNotes] = useState(initialNotes || '');
     const [offerValidity] = useState('48 horas');
 
@@ -669,12 +671,29 @@ ${styles}
                                     {isGeneratingPdf ? <Loader2 size={14} className="animate-spin text-indigo-500" /> : <Download size={14} className="text-slate-400" />}
                                     <span>PDF</span>
                                 </button>
+                                <button
+                                    onClick={() => setShowBreakdown(true)}
+                                    className="flex-1 py-2 px-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl font-medium text-xs transition-colors flex items-center justify-center gap-1.5 active:scale-95 shadow-sm"
+                                    title="Ver desglose comparativo"
+                                >
+                                    <TableProperties size={14} className="text-slate-400" />
+                                    <span>Desglose</span>
+                                </button>
                             </div>
                         </div>
 
                     </div>
                 </div>
             </div>
+
+            {showBreakdown && (
+                <ExcelBreakdownModal
+                    isOpen={showBreakdown}
+                    onClose={() => setShowBreakdown(false)}
+                    result={result}
+                    invoiceData={invoiceData}
+                />
+            )}
         </div>
     );
 };
