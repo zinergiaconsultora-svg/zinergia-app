@@ -98,8 +98,10 @@ export class AletheiaEngine {
 
             const periodPowerCost = invoiceSimulation.lines.find(line => line.label === 'Potencia contratada')?.amount || 0;
             const periodEnergyCost = invoiceSimulation.lines.find(line => line.label === 'Energia consumida')?.amount || 0;
-            const annualPowerCost = (periodPowerCost / invoice.days_involced) * 365;
-            const annualEnergyCost = (periodEnergyCost / invoice.days_involced) * 365;
+            // Factor anual fijo 11.3 (alineado con Excel manual de Zinergia)
+            const ANNUAL_FACTOR = 11.3;
+            const annualPowerCost = periodPowerCost * ANNUAL_FACTOR;
+            const annualEnergyCost = periodEnergyCost * ANNUAL_FACTOR;
             const totalAnnualEst = invoiceSimulation.annualCost;
             const savings = invoiceSimulation.annualSavings;
 
