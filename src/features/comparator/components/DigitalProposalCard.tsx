@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { InvoiceData, SavingsResult } from '../../../types/crm';
 import { toast } from 'sonner';
-import { Download, Mail, Loader2, FileText, Lightbulb, TableProperties, ChevronDown, ChevronUp, Coins } from 'lucide-react';
+import { Download, Mail, Loader2, Lightbulb, TableProperties, ChevronDown, ChevronUp, Coins } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/format';
 import { ExcelBreakdownModal } from './ExcelBreakdownModal';
 import { getMarketerLogo } from '@/lib/marketers/logos';
