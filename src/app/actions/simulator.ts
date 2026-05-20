@@ -193,6 +193,10 @@ function estimateTariffCommission(
     return round2(Number(best.commission_fixed_eur || 0) + (annualMwh * Number(best.commission_variable_mwh || 0)));
 }
 
+function isGenericSupplyType(product: string): boolean {
+    return /^(ELECTRICIDAD|GAS|ELECTRICITY|LUZ)(_(FIJO|VARIABLE|INDEXADO))?$/.test(product);
+}
+
 function getCommissionMatchScore(row: TariffCommissionRow, tariffName: string, tariffModel: string): number {
     const product = normalize(row.producto_tipo);
     const model = normalize(row.modelo);
@@ -204,7 +208,9 @@ function getCommissionMatchScore(row: TariffCommissionRow, tariffName: string, t
     }
 
     if (product) {
-        if (tariffName === product || tariffName.includes(product) || product.includes(tariffName)) {
+        if (isGenericSupplyType(product)) {
+            score += 1;
+        } else if (tariffName === product || tariffName.includes(product) || product.includes(tariffName)) {
             score += 3;
         } else {
             return 0;
