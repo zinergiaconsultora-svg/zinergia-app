@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { formatCurrency } from '@/lib/utils/format';
 import { InvoiceData, SavingsResult } from '@/types/crm';
+import { ArrowRight, TrendingDown, Zap, Gauge, Receipt, Scale, Info } from 'lucide-react';
 
 interface ExcelBreakdownModalProps {
     isOpen: boolean;
@@ -24,6 +25,7 @@ interface BreakdownRow {
     amount: number | null;
     bold?: boolean;
     neg?: boolean;
+    type?: 'energy' | 'power' | 'tax' | 'total' | 'misc';
 }
 
 function fmt(value: number | null | undefined, digits = 2): string {
@@ -33,51 +35,36 @@ function fmt(value: number | null | undefined, digits = 2): string {
 
 function buildClientSide(invoice?: InvoiceData): { rows: BreakdownRow[]; subtotal: number; total: number } {
     const rows: BreakdownRow[] = [];
-    if (!invoice) {
-        return { rows, subtotal: 0, total: 0 };
-    }
+    if (!invoice) return { rows, subtotal: 0, total: 0 };
     const days = invoice.period_days || 0;
 
-    // Energía P1-P6
-    let energySum = 0;
     for (let p = 1; p <= 6; p++) {
         const kwh = (invoice[`energy_p${p}` as keyof InvoiceData] as number) || 0;
         if (kwh > 0) {
-            rows.push({ label: `Consumo P${p}`, qty: fmt(kwh, 0), unit: 'kWh', amount: null });
-            energySum += kwh;
+            rows.push({ label: `Energía P${p}`, qty: fmt(kwh, 0), unit: 'kWh', amount: null, type: 'energy' });
         }
     }
-    if (energySum === 0) rows.push({ label: 'Consumo total', qty: '0', unit: 'kWh', amount: null });
 
-    // Potencia P1-P6
     for (let p = 1; p <= 6; p++) {
         const kw = (invoice[`power_p${p}` as keyof InvoiceData] as number) || 0;
         if (kw > 0) {
-            rows.push({ label: `Potencia P${p}`, qty: `${fmt(kw, 2)} kW × ${days} días`, unit: '', amount: null });
+            rows.push({ label: `Potencia P${p}`, qty: `${fmt(kw, 2)} kW × ${days}d`, unit: '', amount: null, type: 'power' });
         }
     }
 
-    const bono = 0;
-    const excesos = 0;
-    const reactiva = 0;
-    const otros = 0;
-    const alquiler = 0;
+    rows.push({ label: 'Bono social', amount: 0, type: 'misc' });
+    rows.push({ label: 'Excesos potencia', amount: 0, type: 'misc' });
+    rows.push({ label: 'Energía reactiva', amount: 0, type: 'misc' });
+    rows.push({ label: 'Otros conceptos', amount: 0, type: 'misc' });
+    rows.push({ label: 'Alquiler equipos', amount: 0, type: 'misc' });
+
     const totalAmount = invoice.total_amount || 0;
-
-    rows.push({ label: 'Bono social', amount: bono });
-    rows.push({ label: 'Excesos potencia', amount: excesos });
-    rows.push({ label: 'Energía reactiva', amount: reactiva });
-    rows.push({ label: 'Otros conceptos', amount: otros });
-
-    // No reconstruimos el subtotal de la factura del cliente desde piezas (la factura solo nos da el total).
-    // Mostramos el TOTAL como dato real y dejamos vacíos los desgloses intermedios.
-    rows.push({ label: 'Alquiler equipos', amount: alquiler });
-    rows.push({ label: 'TOTAL FACTURA (real)', amount: totalAmount, bold: true });
+    rows.push({ label: 'TOTAL FACTURA', amount: totalAmount, bold: true, type: 'total' });
 
     return { rows, subtotal: 0, total: totalAmount };
 }
 
-function buildSimulationSide(result: SavingsResult, invoice?: InvoiceData): { rows: BreakdownRow[]; subtotal: number; total: number; tax: number; vat: number; base: number; } {
+function buildSimulationSide(result: SavingsResult, invoice?: InvoiceData): { rows: BreakdownRow[]; subtotal: number; total: number; tax: number; vat: number; base: number } {
     const rows: BreakdownRow[] = [];
     const audit = result.calculation_audit;
     if (!audit) {
@@ -85,49 +72,47 @@ function buildSimulationSide(result: SavingsResult, invoice?: InvoiceData): { ro
         return { rows, subtotal: 0, total: result.offer_annual_cost / ANNUAL_FACTOR, tax: 0, vat: 0, base: 0 };
     }
     const days = invoice?.period_days || 0;
-
-    // Líneas por periodo (consumo + potencia) — reconstruidas para mostrar cantidades y precios unitarios
     const tariff = result.offer;
     const periodKey = (p: number) => `p${p}` as keyof typeof tariff.energy_price;
+
     for (let p = 1; p <= 6; p++) {
         const kwh = (invoice?.[`energy_p${p}` as keyof InvoiceData] as number) || 0;
-        const price = tariff.energy_price[periodKey(p)] || 0;
+        const price = tariff.energy_price?.[periodKey(p)] || 0;
         if (kwh > 0) {
             rows.push({
-                label: `Consumo P${p}`,
+                label: `Energía P${p}`,
                 qty: fmt(kwh, 0),
                 unit: 'kWh',
                 price: `${fmt(price, 6)} €/kWh`,
                 amount: kwh * price,
+                type: 'energy',
             });
         }
     }
 
     for (let p = 1; p <= 6; p++) {
         const kw = (invoice?.[`power_p${p}` as keyof InvoiceData] as number) || 0;
-        const pricePerKwDay = tariff.power_price[periodKey(p)] || 0;
+        const pricePerKwDay = tariff.power_price?.[periodKey(p)] || 0;
         if (kw > 0) {
-            const amount = kw * days * pricePerKwDay;
             rows.push({
                 label: `Potencia P${p}`,
-                qty: `${fmt(kw, 2)} kW × ${days} días`,
+                qty: `${fmt(kw, 2)} kW × ${days}d`,
                 unit: '',
                 price: `${fmt(pricePerKwDay, 6)} €/kW·día`,
-                amount,
+                amount: kw * days * pricePerKwDay,
+                type: 'power',
             });
         }
     }
 
-    // Resumen línea por línea desde el motor (consistente con el cálculo real)
-    rows.push({ label: 'Bono social', amount: audit.lines.find(l => l.label.startsWith('Financiacion bono'))?.amount ?? 0 });
-    rows.push({ label: 'Compensación excedentes', amount: audit.lines.find(l => l.label.startsWith('Compensacion'))?.amount ?? 0, neg: true });
-
-    rows.push({ label: 'SUBTOTAL', amount: audit.subtotalBeforeTax, bold: true });
-    rows.push({ label: `Impuesto eléctrico (× ${(ELECTRICITY_TAX_RATE * 100).toFixed(2)}%)`, amount: audit.electricityTax });
-    rows.push({ label: 'Alquiler equipos', amount: invoice?.rental_cost ?? 0 });
-    rows.push({ label: 'BASE IMPONIBLE', amount: audit.taxableBase, bold: true });
-    rows.push({ label: `IVA (× ${(VAT_RATE * 100).toFixed(0)}%)`, amount: audit.vat });
-    rows.push({ label: 'TOTAL SIMULADO', amount: audit.simulatedInvoiceTotal, bold: true });
+    rows.push({ label: 'Bono social', amount: audit.lines.find(l => l.label.startsWith('Financiacion bono'))?.amount ?? 0, type: 'misc' });
+    rows.push({ label: 'Compensación excedentes', amount: audit.lines.find(l => l.label.startsWith('Compensacion'))?.amount ?? 0, neg: true, type: 'misc' });
+    rows.push({ label: 'SUBTOTAL', amount: audit.subtotalBeforeTax, bold: true, type: 'total' });
+    rows.push({ label: `Imp. eléctrico (${(ELECTRICITY_TAX_RATE * 100).toFixed(2)}%)`, amount: audit.electricityTax, type: 'tax' });
+    rows.push({ label: 'Alquiler equipos', amount: invoice?.rental_cost ?? 0, type: 'misc' });
+    rows.push({ label: 'BASE IMPONIBLE', amount: audit.taxableBase, bold: true, type: 'total' });
+    rows.push({ label: `IVA (${(VAT_RATE * 100).toFixed(0)}%)`, amount: audit.vat, type: 'tax' });
+    rows.push({ label: 'TOTAL SIMULADO', amount: audit.simulatedInvoiceTotal, bold: true, type: 'total' });
 
     return {
         rows,
@@ -139,6 +124,16 @@ function buildSimulationSide(result: SavingsResult, invoice?: InvoiceData): { ro
     };
 }
 
+function RowIcon({ type }: { type?: string }) {
+    const cls = 'shrink-0';
+    switch (type) {
+        case 'energy': return <Zap size={12} className={`${cls} text-amber-500`} />;
+        case 'power': return <Gauge size={12} className={`${cls} text-blue-500`} />;
+        case 'tax': return <Receipt size={12} className={`${cls} text-slate-400`} />;
+        default: return <div className="w-3" />;
+    }
+}
+
 export const ExcelBreakdownModal: React.FC<ExcelBreakdownModalProps> = ({ isOpen, onClose, result, invoiceData }) => {
     const clientSide = useMemo(() => buildClientSide(invoiceData), [invoiceData]);
     const simSide = useMemo(() => buildSimulationSide(result, invoiceData), [result, invoiceData]);
@@ -148,88 +143,139 @@ export const ExcelBreakdownModal: React.FC<ExcelBreakdownModalProps> = ({ isOpen
     const savingsPercent = clientSide.total > 0 ? (periodSavings / clientSide.total) * 100 : 0;
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Desglose comparativo — ${result.offer.tariff_name}`}>
-            <div className="space-y-4">
-                <p className="text-sm text-slate-600">
-                    Comparativa al detalle (formato Excel manual de Zinergia). Lado izquierdo = factura real del cliente.
-                    Lado derecho = simulación con los precios de <strong>{result.offer.marketer_name}</strong>.
-                </p>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {/* Cliente */}
-                    <section className="border border-slate-200 rounded-xl overflow-hidden">
-                        <header className="bg-slate-100 px-4 py-2 font-bold text-slate-700 text-sm">
-                            Factura actual del cliente
-                        </header>
-                        <table className="w-full text-xs">
-                            <tbody>
-                                {clientSide.rows.map((row, i) => (
-                                    <tr key={i} className={`border-t border-slate-100 ${row.bold ? 'bg-amber-50 font-bold' : ''}`}>
-                                        <td className="px-3 py-1.5 text-slate-700">{row.label}</td>
-                                        <td className="px-3 py-1.5 text-slate-500 text-right whitespace-nowrap">
-                                            {row.qty ? `${row.qty} ${row.unit || ''}` : ''}
-                                        </td>
-                                        <td className="px-3 py-1.5 text-slate-900 text-right whitespace-nowrap">
-                                            {row.amount !== null ? formatCurrency(row.amount) : ''}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </section>
-
-                    {/* Simulación */}
-                    <section className="border border-emerald-200 rounded-xl overflow-hidden">
-                        <header className="bg-emerald-50 px-4 py-2 font-bold text-emerald-700 text-sm">
-                            Simulación — {result.offer.marketer_name} {result.offer.tariff_name}
-                        </header>
-                        <table className="w-full text-xs">
-                            <tbody>
-                                {simSide.rows.map((row, i) => (
-                                    <tr key={i} className={`border-t border-emerald-50 ${row.bold ? 'bg-emerald-50 font-bold' : ''}`}>
-                                        <td className="px-3 py-1.5 text-slate-700">{row.label}</td>
-                                        <td className="px-3 py-1.5 text-slate-500 text-right whitespace-nowrap">
-                                            {row.qty ? `${row.qty} ${row.unit || ''}` : ''}
-                                            {row.price && <div className="text-[10px] text-slate-400">{row.price}</div>}
-                                        </td>
-                                        <td className={`px-3 py-1.5 text-right whitespace-nowrap ${row.neg ? 'text-rose-600' : 'text-slate-900'}`}>
-                                            {row.amount !== null ? (row.neg ? `−${formatCurrency(Math.abs(row.amount))}` : formatCurrency(row.amount)) : ''}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </section>
-                </div>
-
-                {/* Diferencia */}
-                <div className="rounded-xl border border-emerald-300 bg-emerald-50/60 px-5 py-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                        <div>
-                            <p className="text-slate-500">Diferencia este periodo</p>
-                            <p className={`text-xl font-bold ${periodSavings >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                                {periodSavings >= 0 ? '−' : '+'}{formatCurrency(Math.abs(periodSavings))}
-                            </p>
+        <Modal isOpen={isOpen} onClose={onClose} title={`Desglose — ${result.offer.marketer_name} · ${result.offer.tariff_name}`}>
+            <div className="space-y-5">
+                {/* Hero savings strip */}
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 p-4">
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.15),transparent_70%)]" />
+                    <div className="relative flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-6">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Factura actual</p>
+                                <p className="text-lg font-bold text-white/60 line-through tabular-nums">{formatCurrency(clientSide.total)}</p>
+                            </div>
+                            <ArrowRight size={16} className="text-emerald-400 shrink-0" />
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Simulada</p>
+                                <p className="text-lg font-bold text-white tabular-nums">{formatCurrency(simSide.total)}</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-slate-500">% ahorro</p>
-                            <p className={`text-xl font-bold ${savingsPercent >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                                {savingsPercent.toFixed(1)}%
-                            </p>
-                        </div>
-                        <div>
-                            <p className="text-slate-500">Ahorro anual estimado (× 11.3)</p>
-                            <p className={`text-xl font-bold ${annualSavings >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                                {annualSavings >= 0 ? '' : '−'}{formatCurrency(Math.abs(annualSavings))}
-                            </p>
+                        <div className="text-right">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">Ahorras</p>
+                            <p className="text-2xl font-black text-emerald-400 tabular-nums">{formatCurrency(Math.abs(periodSavings))}</p>
+                            <p className="text-xs font-bold text-emerald-300/80">{savingsPercent.toFixed(1)}% menos</p>
                         </div>
                     </div>
                 </div>
 
-                <p className="text-[11px] text-slate-400">
-                    El factor anual fijo 11.3 asume facturas mensuales de ~32 días. Si el periodo facturado difiere mucho,
-                    los totales anuales podrían sobreestimar/subestimar el ahorro real.
-                </p>
+                {/* Side-by-side tables */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    {/* Client invoice */}
+                    <div className="rounded-xl border border-slate-200 overflow-hidden">
+                        <div className="bg-slate-50 px-4 py-2.5 flex items-center gap-2 border-b border-slate-200">
+                            <div className="w-2 h-2 rounded-full bg-slate-400" />
+                            <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Factura actual</span>
+                            {invoiceData?.company_name && (
+                                <span className="text-[10px] text-slate-400 ml-auto">{invoiceData.company_name}</span>
+                            )}
+                        </div>
+                        <div className="divide-y divide-slate-100">
+                            {clientSide.rows.map((row, i) => (
+                                <div
+                                    key={i}
+                                    className={`flex items-center gap-2 px-3 py-1.5 text-xs ${
+                                        row.bold ? 'bg-slate-50 font-bold' : ''
+                                    } ${row.type === 'total' ? 'border-t-2 border-slate-200' : ''}`}
+                                >
+                                    <RowIcon type={row.type} />
+                                    <span className="flex-1 text-slate-700 truncate">{row.label}</span>
+                                    <span className="text-slate-400 tabular-nums whitespace-nowrap">
+                                        {row.qty ? `${row.qty} ${row.unit || ''}` : ''}
+                                    </span>
+                                    <span className="w-20 text-right font-semibold text-slate-900 tabular-nums">
+                                        {row.amount !== null ? formatCurrency(row.amount) : ''}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Simulation */}
+                    <div className="rounded-xl border border-emerald-200 overflow-hidden">
+                        <div className="bg-emerald-50 px-4 py-2.5 flex items-center gap-2 border-b border-emerald-200">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <span className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Simulación</span>
+                            <span className="text-[10px] text-emerald-500 ml-auto">{result.offer.marketer_name}</span>
+                        </div>
+                        <div className="divide-y divide-emerald-50">
+                            {simSide.rows.map((row, i) => (
+                                <div
+                                    key={i}
+                                    className={`flex items-center gap-2 px-3 py-1.5 text-xs ${
+                                        row.bold ? 'bg-emerald-50/70 font-bold' : ''
+                                    } ${row.type === 'total' ? 'border-t-2 border-emerald-200' : ''}`}
+                                >
+                                    <RowIcon type={row.type} />
+                                    <span className="flex-1 text-slate-700 truncate">{row.label}</span>
+                                    <span className="text-slate-400 tabular-nums whitespace-nowrap text-right">
+                                        {row.qty ? `${row.qty} ${row.unit || ''}` : ''}
+                                        {row.price && <span className="block text-[10px] text-emerald-500/70">{row.price}</span>}
+                                    </span>
+                                    <span className={`w-20 text-right font-semibold tabular-nums ${
+                                        row.neg ? 'text-rose-600' : row.bold ? 'text-emerald-700' : 'text-slate-900'
+                                    }`}>
+                                        {row.amount !== null ? (row.neg ? `−${formatCurrency(Math.abs(row.amount))}` : formatCurrency(row.amount)) : ''}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Annual projection */}
+                <div className="rounded-xl bg-gradient-to-r from-emerald-50 to-emerald-100/50 border border-emerald-200 p-4">
+                    <div className="flex items-start gap-3">
+                        <div className="p-2 rounded-lg bg-emerald-600 text-white shrink-0 mt-0.5">
+                            <Scale size={16} />
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                                <h4 className="text-sm font-bold text-slate-900">Proyección anual</h4>
+                                <TrendingDown size={14} className="text-emerald-600" />
+                            </div>
+                            <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Ahorro este periodo</p>
+                                    <p className={`text-xl font-black tabular-nums ${periodSavings >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                        {periodSavings >= 0 ? '−' : '+'}{formatCurrency(Math.abs(periodSavings))}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">% de mejora</p>
+                                    <p className={`text-xl font-black tabular-nums ${savingsPercent >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                        {savingsPercent.toFixed(1)}%
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Ahorro anual (× 11.3)</p>
+                                    <p className={`text-xl font-black tabular-nums ${annualSavings >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                        {annualSavings >= 0 ? '' : '−'}{formatCurrency(Math.abs(annualSavings))}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Didactic note */}
+                <div className="flex items-start gap-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+                    <Info size={13} className="text-slate-400 shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                        <strong className="text-slate-600">¿Cómo se calcula?</strong> Aplicamos los precios de la nueva tarifa a tu consumo real (kWh y kW contratados),
+                        sumamos impuestos y cargos obligatorios, y comparamos con tu factura actual.
+                        El factor ×11.3 estima el ahorro anual asumiendo ~32 días por periodo facturado.
+                    </p>
+                </div>
             </div>
         </Modal>
     );
