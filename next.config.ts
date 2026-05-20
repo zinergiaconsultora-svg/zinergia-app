@@ -1,5 +1,13 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+import { execSync } from "child_process";
+import pkg from "./package.json";
+
+const gitHash = (() => {
+  try { return execSync("git rev-parse --short HEAD").toString().trim(); }
+  catch { return "unknown"; }
+})();
+const APP_VERSION = `v${pkg.version}+${gitHash}`;
 
 const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
   ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).host
@@ -31,6 +39,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_APP_VERSION: APP_VERSION,
+  },
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
