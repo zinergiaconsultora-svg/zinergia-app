@@ -16,14 +16,22 @@ interface Props {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const fmtEur = (n: number) =>
-    n.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' €';
+const fmtEur = (n: number | null | undefined) => {
+    if (n == null || isNaN(n)) return '— €';
+    return Math.round(n).toLocaleString('es-ES') + ' €';
+};
 
-const fmtPct = (n: number) => n.toFixed(1) + '%';
-const fmtEur2 = (n: number) =>
-    n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
-const fmtPrice = (n?: number) => n && n > 0 ? n.toFixed(4) + ' €/kWh' : '—';
-const fmtPowerPrice = (n?: number) => n && n > 0 ? n.toFixed(4) + ' €/kW día' : '—';
+const fmtPct = (n: number | null | undefined) => {
+    if (n == null || isNaN(n)) return '—%';
+    return n.toFixed(1) + '%';
+};
+
+const fmtEur2 = (n: number | null | undefined) => {
+    if (n == null || isNaN(n)) return '— €';
+    return n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+};
+const fmtPrice = (n?: number | null) => n && n > 0 ? n.toFixed(4) + ' €/kWh' : '—';
+const fmtPowerPrice = (n?: number | null) => n && n > 0 ? n.toFixed(4) + ' €/kW día' : '—';
 
 function resolveLogoUrl(marketerName?: string | null, explicitLogo?: string | null): string | null {
     const logoUrl = explicitLogo || getMarketerLogo(marketerName);
@@ -260,6 +268,8 @@ export function ProposalPDFDocument({
     const currentInvoice = audit?.currentInvoiceTotal ?? (best.current_annual_cost / 365) * (invoiceData.period_days || 30);
     const optimizedInvoice = audit?.simulatedInvoiceTotal ?? (best.offer_annual_cost / 365) * (invoiceData.period_days || 30);
     const pricePeriods = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'] as const;
+    const energyPrices = best.offer.energy_price ?? {};
+    const powerPrices = best.offer.power_price ?? {};
     const logoSource = resolveLogoUrl(best.offer.marketer_name, best.offer.logo_url);
     const invoicePeriods = [1, 2, 3, 4, 5, 6].map(period => {
         const energy = Number(invoiceData[`energy_p${period}` as keyof InvoiceData] || 0);
@@ -361,9 +371,9 @@ export function ProposalPDFDocument({
                         </View>
                     </View>
 
-                    {audit && (
+                    {audit && audit.lines && (
                         <>
-                            {audit.lines.filter(line => Math.abs(line.amount) > 0.005).map(line => (
+                            {audit.lines.filter(line => line && Math.abs(line.amount ?? 0) > 0.005).map(line => (
                                 <View key={line.label} style={s.detailRow}>
                                     <Text style={s.detailLabel}>{line.label}</Text>
                                     <Text style={s.detailValue}>{fmtEur2(line.amount)}</Text>
@@ -390,7 +400,7 @@ export function ProposalPDFDocument({
                             {pricePeriods.map(period => (
                                 <View key={`e-${period}`} style={s.detailRow}>
                                     <Text style={s.detailLabel}>{period.toUpperCase()}</Text>
-                                    <Text style={s.detailValue}>{fmtPrice(best.offer.energy_price[period])}</Text>
+                                    <Text style={s.detailValue}>{fmtPrice(energyPrices[period])}</Text>
                                 </View>
                             ))}
                         </View>
@@ -399,7 +409,7 @@ export function ProposalPDFDocument({
                             {pricePeriods.map(period => (
                                 <View key={`p-${period}`} style={s.detailRow}>
                                     <Text style={s.detailLabel}>{period.toUpperCase()}</Text>
-                                    <Text style={s.detailValue}>{fmtPowerPrice(best.offer.power_price[period])}</Text>
+                                    <Text style={s.detailValue}>{fmtPowerPrice(powerPrices[period])}</Text>
                                 </View>
                             ))}
                         </View>
