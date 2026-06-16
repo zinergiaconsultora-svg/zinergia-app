@@ -4,9 +4,9 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { crmService } from '@/services/crmService';
 import { Proposal, ProposalStatus } from '@/types/crm';
 import {
-    Plus, Clock, CheckCircle2, FileText, XCircle, Zap,
+    Plus, CheckCircle2, FileText, XCircle,
     Search, TrendingUp, Bell, Trash2, X,
-    MoreHorizontal, Send, Ban, RotateCcw,
+    MoreHorizontal, Send, RotateCcw,
     ArrowUpRight, LayoutGrid, List, SlidersHorizontal,
     CheckSquare, Square, ArrowUpDown, Download,
 } from 'lucide-react';
@@ -14,36 +14,18 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const PAGE_SIZE = 60;
-
-type StatusFilter = 'all' | 'sent' | 'accepted' | 'draft' | 'rejected';
-type ViewMode = 'table' | 'list';
-type SortKey = 'created_at' | 'annual_savings' | 'client_name' | 'status' | 'savings_percent';
-type SortDir = 'asc' | 'desc';
-
-function getPendingDays(p: Proposal): number | null {
-    if (p.status !== 'sent') return null;
-    return Math.floor((Date.now() - new Date(p.updated_at || p.created_at).getTime()) / 86400000);
-}
-
-const STATUS_CFG: Record<string, { label: string; icon: React.ReactNode; cls: string }> = {
-    draft:    { label: 'Borrador',  icon: <FileText size={11} />,    cls: 'bg-slate-100 text-slate-600 border-slate-200' },
-    sent:     { label: 'Enviada',   icon: <Send size={11} />,        cls: 'bg-blue-50 text-blue-600 border-blue-200' },
-    accepted: { label: 'Firmada',   icon: <CheckCircle2 size={11} />, cls: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
-    rejected: { label: 'Rechazada', icon: <XCircle size={11} />,     cls: 'bg-red-50 text-red-500 border-red-200' },
-    expired:  { label: 'Expirada',  icon: <Ban size={11} />,         cls: 'bg-slate-50 text-slate-400 border-slate-200' },
-};
-
-const STATUS_TABS: { value: StatusFilter; label: string; icon: React.ReactNode }[] = [
-    { value: 'all',      label: 'Todas',      icon: <FileText size={12} /> },
-    { value: 'sent',     label: 'Enviadas',   icon: <Clock size={12} /> },
-    { value: 'accepted', label: 'Firmadas',   icon: <CheckCircle2 size={12} /> },
-    { value: 'draft',    label: 'Borradores', icon: <Zap size={12} /> },
-    { value: 'rejected', label: 'Rechazadas', icon: <XCircle size={12} /> },
-];
-
-const FC = (v: number) =>
-    new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
+import {
+    PAGE_SIZE,
+    getPendingDays,
+    STATUS_CFG,
+    STATUS_TABS,
+    FC,
+    type StatusFilter,
+    type ViewMode,
+    type SortKey,
+    type SortDir,
+} from './proposalsListShared';
+import { DeleteConfirmDialog, BulkActionDialog } from './ProposalConfirmDialogs';
 
 export default function ProposalsPage() {
     const [proposals, setProposals] = useState<Proposal[]>([]);
@@ -643,88 +625,22 @@ export default function ProposalsPage() {
                 </div>
             )}
 
-            {/* ── Delete Confirmation Modal ── */}
-            <AnimatePresence>
-                {deleteTarget && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => !isDeleting && setDeleteTarget(null)} />
-                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-                            role="dialog" aria-modal="true" aria-label="Eliminar propuesta"
-                            className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-                            <div className="p-6 text-center">
-                                <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center">
-                                    <Trash2 size={22} className="text-red-500" />
-                                </div>
-                                <h3 className="text-lg font-bold text-slate-900 mb-1">Eliminar propuesta</h3>
-                                <p className="text-sm text-slate-500">
-                                    Se eliminará la propuesta de <span className="font-semibold text-slate-700">{deleteTarget.clients?.name || deleteTarget.calculation_data?.client_name || 'este cliente'}</span>. Esta acción no se puede deshacer.
-                                </p>
-                            </div>
-                            <div className="flex gap-3 p-4 border-t border-slate-100 bg-slate-50/50">
-                                <button type="button" onClick={() => setDeleteTarget(null)} disabled={isDeleting}
-                                    className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors text-sm disabled:opacity-60">Cancelar</button>
-                                <button type="button" onClick={handleDelete} disabled={isDeleting}
-                                    className="flex-1 py-2.5 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-60">
-                                    {isDeleting ? <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Eliminando…</> : <><Trash2 size={14} /> Eliminar</>}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-
-            {/* ── Bulk Action Confirmation Modal ── */}
-            <AnimatePresence>
-                {bulkAction && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => !isBulkProcessing && setBulkAction(null)} />
-                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-                            role="dialog" aria-modal="true" aria-label="Acción masiva sobre propuestas"
-                            className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-                            <div className="p-6 text-center">
-                                <div className={`w-14 h-14 mx-auto mb-4 rounded-2xl border flex items-center justify-center ${
-                                    bulkAction === 'delete' ? 'bg-red-50 border-red-100' : 'bg-indigo-50 border-indigo-100'
-                                }`}>
-                                    {bulkAction === 'delete'
-                                        ? <Trash2 size={22} className="text-red-500" />
-                                        : <CheckCircle2 size={22} className="text-indigo-500" />}
-                                </div>
-                                <h3 className="text-lg font-bold text-slate-900 mb-1">
-                                    {bulkAction === 'delete' ? 'Eliminar propuestas' : 'Cambiar estado'}
-                                </h3>
-                                <p className="text-sm text-slate-500">
-                                    {selectedIds.size} propuesta{selectedIds.size > 1 ? 's' : ''} seleccionada{selectedIds.size > 1 ? 's' : ''}
-                                    {bulkAction === 'delete' ? ' se eliminarán permanentemente.' : '.'}
-                                </p>
-                                {bulkAction === 'status' && (
-                                    <select value={bulkStatus} onChange={e => setBulkStatus(e.target.value as ProposalStatus)}
-                                        aria-label="Cambiar estado"
-                                        className="mt-3 w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/20">
-                                        <option value="draft">Borrador</option>
-                                        <option value="sent">Enviada</option>
-                                        <option value="accepted">Firmada</option>
-                                        <option value="rejected">Rechazada</option>
-                                    </select>
-                                )}
-                            </div>
-                            <div className="flex gap-3 p-4 border-t border-slate-100 bg-slate-50/50">
-                                <button type="button" onClick={() => setBulkAction(null)} disabled={isBulkProcessing}
-                                    className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors text-sm disabled:opacity-60">Cancelar</button>
-                                <button type="button" onClick={bulkAction === 'delete' ? handleBulkDelete : handleBulkStatus} disabled={isBulkProcessing}
-                                    className={`flex-1 py-2.5 text-white font-semibold rounded-xl transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-60 ${
-                                        bulkAction === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'
-                                    }`}>
-                                    {isBulkProcessing
-                                        ? <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Procesando…</>
-                                        : bulkAction === 'delete' ? <><Trash2 size={14} /> Eliminar</> : <><CheckCircle2 size={14} /> Aplicar</>}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+            {/* ── Confirmation dialogs ── */}
+            <DeleteConfirmDialog
+                target={deleteTarget}
+                isDeleting={isDeleting}
+                onCancel={() => setDeleteTarget(null)}
+                onConfirm={handleDelete}
+            />
+            <BulkActionDialog
+                action={bulkAction}
+                count={selectedIds.size}
+                bulkStatus={bulkStatus}
+                isProcessing={isBulkProcessing}
+                onStatusChange={setBulkStatus}
+                onCancel={() => setBulkAction(null)}
+                onConfirm={bulkAction === 'delete' ? handleBulkDelete : handleBulkStatus}
+            />
         </div>
     );
 }
