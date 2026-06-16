@@ -2,7 +2,7 @@
  * Service layer for simulator using secure Server Actions
  */
 
-import { InvoiceData, SavingsResult } from '@/types/crm';
+import { InvoiceData, SavingsResult, ClientSegment } from '@/types/crm';
 import { createClient } from '@/lib/supabase/client';
 import { OptimizationRecommendation } from '@/lib/aletheia/types';
 
@@ -89,7 +89,7 @@ async function tryUploadToStorage(file: File): Promise<{ url: string; path: stri
 // WEBHOOK CALLS VIA SERVER ACTIONS
 // ============================================================================
 
-export async function analyzeDocumentWithRetry(file: File): Promise<{ jobId: string; isMock: boolean; data?: InvoiceData }> {
+export async function analyzeDocumentWithRetry(file: File, segment?: ClientSegment): Promise<{ jobId: string; isMock: boolean; data?: InvoiceData }> {
     // Step 1: Extract text from the PDF (works for digital/text-based PDFs only).
     // Run in parallel with the upload to avoid adding latency.
     const [storageResult, rawText] = await Promise.all([
@@ -110,6 +110,7 @@ export async function analyzeDocumentWithRetry(file: File): Promise<{ jobId: str
                 file.name,
                 file.type,
                 rawText ?? undefined,
+                segment,
             );
         } catch (e) {
             console.warn('[Simulator] URL-based action failed, falling back to binary upload:', e);
@@ -121,6 +122,7 @@ export async function analyzeDocumentWithRetry(file: File): Promise<{ jobId: str
     const formData = new FormData();
     formData.append('file', file);
     if (rawText) formData.append('raw_text', rawText);
+    if (segment) formData.append('segment', segment);
     return await analyzeDocumentAction(formData);
 }
 

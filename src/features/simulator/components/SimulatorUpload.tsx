@@ -3,9 +3,10 @@
 import React, { useState } from 'react';
 import {
     Upload, RefreshCw, Clock, WifiOff, FileX, AlertTriangle,
-    ShieldCheck, Brain, Zap, FileText, Layers,
+    ShieldCheck, Brain, Zap, FileText, Layers, Home, Building2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { ClientSegment } from '@/types/crm';
 
 // ── Error diagnosis ───────────────────────────────────────────────────────────
 
@@ -45,7 +46,14 @@ interface SimulatorUploadProps {
     isAnalyzing: boolean;
     uploadError: string | null;
     onBatchMode?: () => void;
+    segment?: ClientSegment;
+    onChangeSegment?: () => void;
 }
+
+const SEGMENT_LABEL: Record<ClientSegment, { label: string; icon: React.ElementType }> = {
+    RESIDENCIAL: { label: 'Residencial', icon: Home },
+    PYME: { label: 'PYME / Negocio', icon: Building2 },
+};
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -57,7 +65,7 @@ const FEATURES = [
 ];
 
 export const SimulatorUpload: React.FC<SimulatorUploadProps> = ({
-    onFileUpload, onDrop, onDragOver, isAnalyzing, uploadError, onBatchMode,
+    onFileUpload, onDrop, onDragOver, isAnalyzing, uploadError, onBatchMode, segment, onChangeSegment,
 }) => {
     const [isDragging, setIsDragging] = useState(false);
 
@@ -80,6 +88,25 @@ export const SimulatorUpload: React.FC<SimulatorUploadProps> = ({
             transition={{ duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
             className="max-w-3xl mx-auto"
         >
+            {/* Segment chip — tipo de cliente elegido en el Paso 0 */}
+            {segment && (
+                <div className="flex justify-center mb-4">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50/70 px-3 py-1.5 text-xs">
+                        {(() => { const I = SEGMENT_LABEL[segment].icon; return <I size={13} className="text-emerald-600" />; })()}
+                        <span className="font-bold text-emerald-700">{SEGMENT_LABEL[segment].label}</span>
+                        {onChangeSegment && (
+                            <button
+                                type="button"
+                                onClick={onChangeSegment}
+                                className="text-slate-400 hover:text-emerald-700 font-medium underline underline-offset-2 transition-colors"
+                            >
+                                cambiar
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+
             {/* Error card */}
             <AnimatePresence>
                 {uploadError && (
@@ -95,22 +122,22 @@ export const SimulatorUpload: React.FC<SimulatorUploadProps> = ({
                             const dx = diagnoseError(uploadError);
                             const DxIcon = dx.icon;
                             return (
-                                <div className="rounded-2xl border border-red-200 bg-red-50 p-4 flex gap-3.5">
-                                    <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
-                                        <DxIcon size={16} className="text-red-600" />
+                                <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 backdrop-blur-xl p-4 flex gap-3.5 shadow-xl shadow-rose-950/10">
+                                    <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
+                                        <DxIcon size={16} className="text-rose-400" />
                                     </div>
-                                    <div className="flex-1 min-w-0">
+                                    <div className="flex-1 min-w-0 text-left">
                                         <div className="flex items-center gap-2 mb-0.5">
-                                            <span className="text-sm font-bold text-red-800">{dx.title}</span>
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-red-500 bg-red-100 border border-red-200 px-1.5 py-px rounded">
+                                            <span className="text-sm font-bold text-rose-300">{dx.title}</span>
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-rose-400 bg-rose-500/10 border border-rose-500/20 px-1.5 py-px rounded">
                                                 {dx.badge}
                                             </span>
                                         </div>
-                                        <p className="text-xs text-red-500 font-mono truncate mb-1.5" title={dx.description}>
+                                        <p className="text-xs text-rose-300/70 font-mono truncate mb-1.5" title={dx.description}>
                                             {dx.description.length > 100 ? dx.description.slice(0, 97) + '…' : dx.description}
                                         </p>
-                                        <p className="text-xs text-red-700 font-medium flex items-center gap-1.5">
-                                            <RefreshCw size={10} className="shrink-0" />
+                                        <p className="text-xs text-rose-400 font-medium flex items-center gap-1.5">
+                                            <RefreshCw size={10} className="shrink-0 animate-spin" style={{ animationDuration: '3s' }} />
                                             {dx.suggestion}
                                         </p>
                                     </div>
@@ -211,19 +238,24 @@ export const SimulatorUpload: React.FC<SimulatorUploadProps> = ({
                                 const isRight = i % 2 !== 0;
                                 const isBottom = i >= 2;
                                 return (
-                                    <div
+                                    <motion.div
                                         key={i}
-                                        className={`flex flex-col items-center gap-1 px-3 py-4
+                                        whileHover={{ scale: 1.03, backgroundColor: 'rgba(240, 253, 244, 0.4)' }}
+                                        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                                        className={`flex flex-col items-center gap-1 px-3 py-4 cursor-default select-none transition-colors
                                             ${isRight ? 'border-l border-slate-100' : ''}
                                             ${isBottom ? 'border-t border-slate-100' : ''}
                                             sm:border-t-0 sm:border-l sm:first:border-l-0`}
                                     >
-                                        <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center mb-1">
-                                            <FIcon size={13} className="text-slate-500" />
-                                        </div>
+                                        <motion.div 
+                                            whileHover={{ rotate: 12, scale: 1.15 }}
+                                            className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-1"
+                                        >
+                                            <FIcon size={13} />
+                                        </motion.div>
                                         <span className="text-[10px] font-bold text-slate-700 text-center leading-tight">{f.label}</span>
                                         <span className="text-[9px] text-slate-400 text-center hidden sm:block">{f.desc}</span>
-                                    </div>
+                                    </motion.div>
                                 );
                             })}
                         </div>
