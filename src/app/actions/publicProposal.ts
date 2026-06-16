@@ -10,6 +10,10 @@ import { calculateCommissionSplit, applyFranchiseOverride } from '@/lib/commissi
 import { rateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
 import { requireServerRole } from '@/lib/auth/permissions';
+import { moduleLogger } from '@/lib/logger';
+import * as Sentry from '@sentry/nextjs';
+
+const log = moduleLogger('public-proposal');
 
 const uuidSchema = z.uuid();
 // Token URL-safe base64: 43 chars (32 bytes → btoa → replace)
@@ -231,7 +235,10 @@ export async function acceptPublicProposalAction(
 
     if (error) return { success: false, message: 'Error al procesar la aceptación.' };
 
-    // Notificar al agente y cliente (best-effort — no bloquear el flujo)
+    // Cargar contexto de la propuesta (necesario para comisión y notificaciones).
+    let propData: Record<string, unknown> | null = null;
+    let agentProfile: { id: string; email?: string; franchise_id?: string } | null = null;
+    let clientData: { name?: string; email?: string } | null = null;
     try {
         const { data: prop } = await adminClient
             .from('proposals')
@@ -243,11 +250,65 @@ export async function acceptPublicProposalAction(
             .eq('id', proposal.id)
             .maybeSingle();
 
-        const propData = prop as Record<string, unknown> | null;
-        const agentProfile = propData?.profiles as { id: string; email?: string; franchise_id?: string } | null;
-        const clientData = propData?.clients as { name?: string; email?: string } | null;
-        const clientName = clientData?.name ?? 'Cliente';
+        propData = prop as Record<string, unknown> | null;
+        agentProfile = propData?.profiles as { id: string; email?: string; franchise_id?: string } | null;
+        clientData = propData?.clients as { name?: string; email?: string } | null;
+    } catch (err) {
+        Sentry.captureException(err, { extra: { stage: 'accept-fetch-context', proposalId: proposal.id } });
+        log.error({ err, proposalId: proposal.id }, 'failed to load proposal context after accept');
+    }
 
+    const clientName = clientData?.name ?? 'Cliente';
+
+    // Comisión — NO es best-effort: debe registrarse. Si falla, se reporta a
+    // Sentry y se loguea (la propuesta ya está aceptada). Idempotente vía el
+    // UNIQUE constraint en proposal_id.
+    if (agentProfile?.id && agentProfile?.franchise_id && propData?.annual_savings) {
+        try {
+            const { data: existingComm } = await adminClient
+                .from('network_commissions')
+                .select('id')
+                .eq('proposal_id', proposal.id)
+                .maybeSingle();
+
+            if (!existingComm) {
+                const baseRule = await getActiveCommissionRule();
+
+                // Apply per-franchise royalty override if configured
+                const { data: franchiseCfg } = await adminClient
+                    .from('franchise_config')
+                    .select('royalty_percent')
+                    .eq('franchise_id', agentProfile.franchise_id)
+                    .eq('active', true)
+                    .maybeSingle();
+
+                const rule = applyFranchiseOverride(baseRule, franchiseCfg?.royalty_percent ?? null);
+                const split = calculateCommissionSplit(propData.annual_savings as number, rule);
+                // ignoreDuplicates: el UNIQUE constraint en proposal_id actúa como guardia atómica
+                const { error: commError } = await adminClient.from('network_commissions').upsert({
+                    proposal_id: proposal.id,
+                    agent_id: agentProfile.id,
+                    franchise_id: agentProfile.franchise_id,
+                    total_revenue: split.pot,
+                    agent_commission: split.agent_commission,
+                    franchise_profit: split.franchise_profit,
+                    hq_royalty: split.hq_royalty,
+                    status: 'pending',
+                }, { onConflict: 'proposal_id', ignoreDuplicates: true });
+                if (commError) throw commError;
+            }
+        } catch (err) {
+            // La propuesta ya está aceptada; no revertimos, pero NO lo silenciamos:
+            // la comisión es dinero del agente y debe poder reconciliarse.
+            Sentry.captureException(err, {
+                extra: { stage: 'accept-create-commission', proposalId: proposal.id, agentId: agentProfile.id },
+            });
+            log.error({ err, proposalId: proposal.id, agentId: agentProfile.id }, 'commission creation failed after proposal accept');
+        }
+    }
+
+    // Notificaciones (push + emails) — best-effort, seguro ignorar fallos.
+    try {
         // Push al agente
         if (agentProfile?.id) {
             const { sendPushToUser } = await import('@/lib/push/sendPush');
@@ -283,42 +344,9 @@ export async function acceptPublicProposalAction(
                 signedName,
             );
         }
-
-        // Crear registro de comisión — idempotente (mismo guard que processCommissions)
-        if (agentProfile?.id && agentProfile?.franchise_id && propData?.annual_savings) {
-            const { data: existingComm } = await adminClient
-                .from('network_commissions')
-                .select('id')
-                .eq('proposal_id', proposal.id)
-                .maybeSingle();
-
-            if (!existingComm) {
-                const baseRule = await getActiveCommissionRule();
-
-                // Apply per-franchise royalty override if configured
-                const { data: franchiseCfg } = await adminClient
-                    .from('franchise_config')
-                    .select('royalty_percent')
-                    .eq('franchise_id', agentProfile.franchise_id)
-                    .eq('active', true)
-                    .maybeSingle();
-
-                const rule = applyFranchiseOverride(baseRule, franchiseCfg?.royalty_percent ?? null);
-                const split = calculateCommissionSplit(propData.annual_savings as number, rule);
-                // ignoreDuplicates: el UNIQUE constraint en proposal_id actúa como guardia atómica
-                await adminClient.from('network_commissions').upsert({
-                    proposal_id: proposal.id,
-                    agent_id: agentProfile.id,
-                    franchise_id: agentProfile.franchise_id,
-                    total_revenue: split.pot,
-                    agent_commission: split.agent_commission,
-                    franchise_profit: split.franchise_profit,
-                    hq_royalty: split.hq_royalty,
-                    status: 'pending',
-                }, { onConflict: 'proposal_id', ignoreDuplicates: true });
-            }
-        }
-    } catch { /* no bloquear */ }
+    } catch (err) {
+        log.warn({ err, proposalId: proposal.id }, 'acceptance notifications failed (non-blocking)');
+    }
 
     return { success: true, message: '¡Propuesta aceptada! Tu asesor se pondrá en contacto contigo.' };
 }
