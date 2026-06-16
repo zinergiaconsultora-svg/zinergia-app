@@ -342,7 +342,9 @@ export async function POST(request: Request) {
             }
         }
 
-        // 6. Broadcast Realtime directo al cliente — sin RLS, entrega inmediata
+        // 6. Broadcast Realtime: SOLO una señal (sin PII). El canal broadcast no
+        //    aplica RLS, así que nunca debe llevar extracted_data. El cliente, al
+        //    recibir la señal, obtiene los datos vía getOcrJobStatus (autenticado).
         try {
             await new Promise<void>((resolve) => {
                 const broadcastChannel = supabaseAdmin.channel(`ocr_job_${job_id}`);
@@ -351,7 +353,7 @@ export async function POST(request: Request) {
                         broadcastChannel.send({
                             type: 'broadcast',
                             event: 'ocr_result',
-                            payload: { status, data: invoiceData, error_message: error ?? null },
+                            payload: { status, job_id, error_message: error ?? null },
                         }).then(() => {
                             supabaseAdmin.removeChannel(broadcastChannel);
                             resolve();
