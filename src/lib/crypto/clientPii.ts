@@ -37,12 +37,8 @@ const log = moduleLogger('client-pii');
 // Read side
 // ---------------------------------------------------------------------------
 
-/** Shape of the PII-bearing columns we may receive from a `clients` row. */
+/** Shape of the PII-bearing columns we receive from a `clients` row. */
 export interface ClientPiiRow {
-    /** Legacy plaintext column — present only during the transition. */
-    cups?: string | null;
-    /** Legacy plaintext column — present only during the transition. */
-    dni_cif?: string | null;
     cups_ciphertext?: string | null;
     dni_cif_ciphertext?: string | null;
 }
@@ -54,36 +50,31 @@ export interface ClientPiiPlain {
 }
 
 /**
- * Safely decrypt one ciphertext, falling back to a legacy plaintext value when
- * the ciphertext is absent or cannot be decrypted. Never throws — a corrupt
- * ciphertext degrades to the plaintext (if any) or null, and is logged.
+ * Safely decrypt one ciphertext column. Never throws — a corrupt / unreadable
+ * ciphertext (e.g. encrypted under a rotated key) degrades to null and is
+ * logged rather than breaking the whole read.
  */
 function decryptField(
     ciphertext: string | null | undefined,
-    plaintextFallback: string | null | undefined,
     field: 'cups' | 'dni_cif',
 ): string | null {
-    if (ciphertext) {
-        try {
-            return decryptNullable(ciphertext);
-        } catch (err) {
-            log.warn(
-                { field, errorMessage: err instanceof Error ? err.message : 'unknown' },
-                'Client PII decrypt failed; falling back to plaintext column',
-            );
-        }
+    if (!ciphertext) return null;
+    try {
+        return decryptNullable(ciphertext);
+    } catch (err) {
+        log.warn(
+            { field, errorMessage: err instanceof Error ? err.message : 'unknown' },
+            'Client PII decrypt failed',
+        );
+        return null;
     }
-    return plaintextFallback ?? null;
 }
 
-/**
- * Decrypt the PII of a single client row. Prefers the ciphertext columns and
- * falls back to the legacy plaintext columns during the transition.
- */
+/** Decrypt the PII of a single client row from its ciphertext columns. */
 export function decryptClientPii(row: ClientPiiRow): ClientPiiPlain {
     return {
-        cups: decryptField(row.cups_ciphertext, row.cups, 'cups'),
-        dni_cif: decryptField(row.dni_cif_ciphertext, row.dni_cif, 'dni_cif'),
+        cups: decryptField(row.cups_ciphertext, 'cups'),
+        dni_cif: decryptField(row.dni_cif_ciphertext, 'dni_cif'),
     };
 }
 
