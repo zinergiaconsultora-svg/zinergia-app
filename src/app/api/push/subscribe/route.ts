@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { rateLimit, getClientKey } from '@/lib/rate-limit';
+import { moduleLogger } from '@/lib/logger';
+
+const log = moduleLogger('push-subscribe');
 
 // Abuse prevention: 30 subscription upserts per IP per minute.
 // Legit clients subscribe once per device; this is far above the real-user
@@ -45,13 +48,13 @@ export async function POST(request: Request) {
             );
 
         if (error) {
-            console.error('[Push] Failed to save subscription:', error.message);
+            log.error({ err: error }, 'failed to save push subscription');
             return NextResponse.json({ error: 'DB error' }, { status: 500 });
         }
 
         return NextResponse.json({ success: true });
     } catch (e) {
-        console.error('[Push] Subscribe error:', e);
+        log.error({ err: e }, 'push subscribe error');
         return NextResponse.json({ error: 'Internal error' }, { status: 500 });
     }
 }

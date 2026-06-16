@@ -15,6 +15,9 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { moduleLogger } from '@/lib/logger';
+
+const auditLog = moduleLogger('audit');
 
 export interface AuditContext {
     /** Actor user ID (resolved automatically if omitted). */
@@ -101,7 +104,7 @@ export async function logAdminAction(
             user_agent: userAgent ?? null,
         });
     } catch {
-        // Audit failure must never propagate — log silently
-        console.warn('[audit] logAdminAction failed silently for action:', action);
+        // Audit failure must never propagate — log non-blocking
+        auditLog.warn({ action }, 'logAdminAction failed (non-blocking)');
     }
 }
