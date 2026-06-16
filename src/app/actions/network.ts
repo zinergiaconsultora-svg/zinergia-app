@@ -1,5 +1,7 @@
 'use server'
 
+import { logger } from '@/lib/utils/logger'
+
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { requireServerRole } from '@/lib/auth/permissions'
@@ -74,7 +76,7 @@ export async function createInvitationAction(
         })
     } catch (e) {
         // Non-blocking: log the error but don't fail the invitation creation
-        console.error('[createInvitationAction] Email send failed:', e)
+        logger.error('[createInvitationAction] Email send failed', e)
     }
 
     return { code, inviteUrl, emailSent }
@@ -176,7 +178,7 @@ interface InvitationEmailParams {
 
 async function sendInvitationEmail({ to, inviteUrl, role, inviterName }: InvitationEmailParams): Promise<boolean> {
     if (!process.env.RESEND_API_KEY) {
-        console.warn('[sendInvitationEmail] RESEND_API_KEY not set. Skipping email.')
+        logger.warn('[sendInvitationEmail] RESEND_API_KEY not set. Skipping email.')
         return false
     }
 
@@ -247,7 +249,7 @@ async function sendInvitationEmail({ to, inviteUrl, role, inviterName }: Invitat
     })
 
     if (error) {
-        console.error('[sendInvitationEmail] Resend error:', error)
+        logger.error('[sendInvitationEmail] Resend error', error)
         return false
     }
 

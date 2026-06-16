@@ -1,5 +1,7 @@
 'use server'
 
+import { logger } from '@/lib/utils/logger'
+
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { Proposal } from '@/types/crm'
@@ -269,7 +271,7 @@ async function processCommissions(
     } catch (err) {
         // Commission failure must NOT roll back the proposal status change.
         // Log and continue — commissions can be reprocessed manually if needed.
-        console.error('[updateProposalStatusAction] Commission processing failed:', err)
+        logger.error('[updateProposalStatusAction] Commission processing failed', err)
     }
 }
 
@@ -441,6 +443,6 @@ async function autoCreateContract(
             start_date: new Date().toISOString().split('T')[0],
         })
     } catch (err) {
-        console.error('[autoCreateContract] Error:', err);
+        logger.error('[autoCreateContract] Error', err);
     }
 }

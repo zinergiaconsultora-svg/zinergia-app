@@ -1,5 +1,7 @@
 'use server';
 
+import { logger } from '@/lib/utils/logger';
+
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { requireServerRole } from '@/lib/auth/permissions';
@@ -436,7 +438,7 @@ export async function markOcrJobFailed(jobId: string, reason: string): Promise<v
         .eq('agent_id', user.id)
         .eq('status', 'processing'); // Safety: only update if still stuck
     if (error) {
-        console.error(`[OCR] markOcrJobFailed DB error for job ${jobId}:`, error.message);
+        logger.error(`[OCR] markOcrJobFailed DB error for job ${jobId}`, error);
         throw new Error(`Error al marcar job como fallido: ${error.message}`);
     }
 }
