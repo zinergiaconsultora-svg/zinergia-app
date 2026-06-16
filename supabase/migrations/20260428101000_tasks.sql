@@ -69,6 +69,12 @@ CREATE TRIGGER tasks_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+-- Índice de ordenación por fecha de vencimiento (movido aquí desde
+-- 20260428100000_indexes_storage_rls.sql, donde `tasks` aún no existía).
+CREATE INDEX IF NOT EXISTS idx_tasks_agent_duedate
+    ON tasks(agent_id, due_date ASC)
+    WHERE status IN ('pending', 'in_progress');
+
 -- Verificación
 SELECT
     'tasks' AS tabla,
