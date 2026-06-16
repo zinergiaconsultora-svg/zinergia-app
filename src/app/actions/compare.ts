@@ -7,7 +7,6 @@ import { env } from '@/lib/env';
 import { createClient } from '@/lib/supabase/server';
 import { AletheiaEngine } from '@/lib/aletheia/engine';
 import { aletheiaResultToWebhookShape, crmToAletheiaInvoice, offerToTariffCandidate } from '@/lib/aletheia/adapter';
-import { inferInvoicePowerType } from '@/lib/invoices/normalization';
 
 const N8N_TIMEOUT_MS = Number(env.N8N_TIMEOUT_MS) || 10_000;
 
@@ -16,10 +15,10 @@ const N8N_TIMEOUT_MS = Number(env.N8N_TIMEOUT_MS) || 10_000;
 async function runAletheiaFallback(invoice: InvoiceData) {
     const supabase = await createClient();
 
-    // Derivar tipo_cliente desde el tipo de acceso de la factura
-    // 3.0TD / 3.1TD / 6.1TD → exclusivo PYME; 2.0TD → incluir ambos
-    const powerType = inferInvoicePowerType(invoice);
-    const isPymeOnly = powerType === '3.0' || powerType === '3.1';
+    // Filtrar por el segmento elegido por el usuario (RESIDENCIAL/PYME), que
+    // coincide con lv_zinergia_tarifas.tipo_cliente. El segmento viaja en la
+    // factura (invoice.segment); si no está, no se filtra (compatibilidad).
+    const segment = invoice.segment === 'RESIDENCIAL' || invoice.segment === 'PYME' ? invoice.segment : undefined;
 
     let query = supabase
         .from('lv_zinergia_tarifas')
@@ -27,7 +26,7 @@ async function runAletheiaFallback(invoice: InvoiceData) {
         .eq('is_active', true)
         .eq('supply_type', 'electricity');
 
-    if (isPymeOnly) query = query.eq('tipo_cliente', 'PYME');
+    if (segment) query = query.eq('tipo_cliente', segment);
 
     const { data: rows, error } = await query;
 

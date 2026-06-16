@@ -57,18 +57,26 @@ export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: R
         // We use the same query as crmService but adapted for internal use
         // Note: Using 'lv_zinergia_tarifas' as the source of truth
         const baseTariffSelect = 'id, company, tariff_name, tariff_type, modelo, logo_color, offer_type, fixed_fee, power_price_p1, power_price_p2, power_price_p3, power_price_p4, power_price_p5, power_price_p6, energy_price_p1, energy_price_p2, energy_price_p3, energy_price_p4, energy_price_p5, energy_price_p6';
-        let tariffResponse = await supabase
-            .from('lv_zinergia_tarifas')
-            .select(`${baseTariffSelect}, surplus_compensation_price`)
-            .eq('is_active', true)
-            .eq('supply_type', 'electricity') as unknown as TariffResponse;
+
+        // Filtrar el catálogo por el segmento elegido por el usuario (RESIDENCIAL/PYME),
+        // que coincide con lv_zinergia_tarifas.tipo_cliente. Sustituye la heurística
+        // que infería el segmento de la tarifa eléctrica (incorrecta para PYME en 2.0TD).
+        const segment: 'RESIDENCIAL' | 'PYME' | undefined =
+            ocrData?.segment === 'RESIDENCIAL' || ocrData?.segment === 'PYME' ? ocrData.segment : undefined;
+
+        const buildTariffQuery = (select: string) => {
+            const q = supabase
+                .from('lv_zinergia_tarifas')
+                .select(select)
+                .eq('is_active', true)
+                .eq('supply_type', 'electricity');
+            return segment ? q.eq('tipo_cliente', segment) : q;
+        };
+
+        let tariffResponse = await buildTariffQuery(`${baseTariffSelect}, surplus_compensation_price`) as unknown as TariffResponse;
 
         if (tariffResponse.error && tariffResponse.error.message.includes('surplus_compensation_price')) {
-            tariffResponse = await supabase
-                .from('lv_zinergia_tarifas')
-                .select(baseTariffSelect)
-                .eq('is_active', true)
-                .eq('supply_type', 'electricity') as unknown as TariffResponse;
+            tariffResponse = await buildTariffQuery(baseTariffSelect) as unknown as TariffResponse;
         }
 
         const { data: tariffData, error } = tariffResponse;

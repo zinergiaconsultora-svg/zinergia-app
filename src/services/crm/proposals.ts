@@ -54,6 +54,7 @@ export const proposalService = {
             dni_cif: invoiceData.dni_cif ?? null,
             name: clientName || invoiceData.client_name || invoiceData.company_name || 'Nuevo Cliente',
             address: invoiceData.supply_address ?? null,
+            segment: invoiceData.segment ?? null,
         });
 
         // 2. Save Proposal

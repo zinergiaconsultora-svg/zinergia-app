@@ -180,9 +180,13 @@ export async function POST(request: Request) {
         // 3. Recuperar job para obtener agent_id y franchise_id
         const { data: job } = await supabaseAdmin
             .from('ocr_jobs')
-            .select('id, agent_id, franchise_id, file_name')
+            .select('id, agent_id, franchise_id, file_name, client_segment')
             .eq('id', job_id)
             .single();
+
+        // Segmento elegido por el usuario en el simulador (fuente de verdad).
+        const jobSegment = (job?.client_segment as 'RESIDENCIAL' | 'PYME' | null) ?? null;
+        // type derivado del segmento; fallback a heurística sólo si no hay segmento.
 
         // 4. Auto-crear/actualizar cliente desde los datos extraídos
         let clientId: string | null = null;
@@ -232,6 +236,8 @@ export async function POST(request: Request) {
                             average_monthly_bill: invoiceData.total_amount
                                 ? Math.round((invoiceData.total_amount as number) / ((invoiceData.period_days as number || 30) / 30))
                                 : undefined,
+                            segment: jobSegment ?? undefined,
+                            type: jobSegment ? (jobSegment === 'PYME' ? 'company' : 'residential') : undefined,
                         })
                         .eq('id', existingClient.id);
                     clientId = existingClient.id;
@@ -258,7 +264,10 @@ export async function POST(request: Request) {
                             average_monthly_bill: invoiceData.total_amount
                                 ? Math.round((invoiceData.total_amount as number) / ((invoiceData.period_days as number || 30) / 30))
                                 : null,
-                            type: dniCif ? 'company' : 'residential',
+                            segment: jobSegment,
+                            // El tipo se deriva del segmento elegido; sólo se cae a la
+                            // heurística del DNI cuando no hay segmento (p.ej. subidas antiguas).
+                            type: jobSegment ? (jobSegment === 'PYME' ? 'company' : 'residential') : (dniCif ? 'company' : 'residential'),
                             status: 'new',
                         })
                         .select('id')

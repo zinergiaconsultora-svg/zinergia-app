@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useCallback, useRef } from 'react';
-import { InvoiceData, SavingsResult } from '@/types/crm';
+import { InvoiceData, SavingsResult, ClientSegment } from '@/types/crm';
 import { analyzeDocumentWithRetry as analyzeDocument, validateFile } from '@/services/simulatorService';
 import { crmService } from '@/services/crmService';
 import { OptimizationRecommendation, AuditOpportunity } from '@/lib/aletheia/types';
@@ -28,6 +28,7 @@ function extractInvoiceData(raw: Record<string, unknown> | null): InvoiceData | 
 
 interface SimulatorState {
     step: Step;
+    segment: ClientSegment | null;  // elegido en el Paso 0, antes de subir la factura
     isAnalyzing: boolean;
     isMockMode: boolean;
     invoiceData: InvoiceData;
@@ -65,6 +66,7 @@ type SimulatorAction =
     | { type: 'SET_SAVED_PROPOSAL_ID'; payload: string }
     | { type: 'SET_OCR_JOB_ID'; payload: string }
     | { type: 'SET_OCR_DATA_CONFIRMED' }
+    | { type: 'SET_SEGMENT'; payload: ClientSegment | null }
     | { type: 'RESET' }
     | { type: 'GO_BACK_TO_STEP1' };
 
@@ -76,6 +78,7 @@ const defaultInvoiceData: InvoiceData = {
 
 const initialState: SimulatorState = {
     step: 1,
+    segment: null,
     isAnalyzing: false,
     isMockMode: false,
     invoiceData: defaultInvoiceData,
@@ -97,18 +100,24 @@ function simulatorReducer(state: SimulatorState, action: SimulatorAction): Simul
     switch (action.type) {
         case 'START_ANALYSIS':
             return { ...state, isAnalyzing: true, uploadError: null, isMockMode: false };
-        case 'SET_INVOICE_DATA':
+        case 'SET_INVOICE_DATA': {
             // Usado exclusivamente para la llegada del resultado OCR.
             // Fuerza step 2, guarda el snapshot original y detiene el análisis.
+            // El segmento elegido en el Paso 0 se inyecta aquí, así viaja en
+            // invoiceData hacia la comparación y el guardado del cliente.
+            const withSegment: InvoiceData = {
+                ...action.payload,
+                segment: action.payload.segment ?? state.segment ?? undefined,
+            };
             return {
                 ...state,
-                invoiceData: action.payload,
-                // Guardar snapshot original solo la primera vez (al llegar del OCR)
-                originalInvoiceData: state.originalInvoiceData ?? action.payload,
+                invoiceData: withSegment,
+                originalInvoiceData: state.originalInvoiceData ?? withSegment,
                 ocrDataConfirmed: false,
                 step: 2,
                 isAnalyzing: false,
             };
+        }
         case 'UPDATE_INVOICE_FIELDS':
             // Usado para edición de campos por el usuario en el formulario.
             // NO toca step ni originalInvoiceData — el snapshot OCR permanece inmutable.
@@ -121,6 +130,8 @@ function simulatorReducer(state: SimulatorState, action: SimulatorAction): Simul
             return { ...state, ocrJobId: action.payload };
         case 'SET_OCR_DATA_CONFIRMED':
             return { ...state, ocrDataConfirmed: true };
+        case 'SET_SEGMENT':
+            return { ...state, segment: action.payload };
         case 'SET_ERROR':
             return { ...state, uploadError: action.payload, isAnalyzing: false };
         case 'SET_RESULTS':
@@ -283,7 +294,7 @@ export function useSimulator() {
                 throw new Error(validation.error!);
             }
 
-            const result = await analyzeDocument(file);
+            const result = await analyzeDocument(file, state.segment ?? undefined);
 
             if (result.data) {
                 dispatch({ type: 'SET_MOCK_MODE', payload: !!result.isMock });
@@ -394,7 +405,7 @@ export function useSimulator() {
             console.error('Error processing invoice:', error);
             dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Error al procesar la factura' });
         }
-    }, []);
+    }, [state.segment]);
 
     const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -539,6 +550,14 @@ export function useSimulator() {
         dispatch({ type: 'GO_BACK_TO_STEP1' });
     }, []);
 
+    const setSegment = useCallback((segment: ClientSegment) => {
+        dispatch({ type: 'SET_SEGMENT', payload: segment });
+    }, []);
+
+    const clearSegment = useCallback(() => {
+        dispatch({ type: 'SET_SEGMENT', payload: null });
+    }, []);
+
     const setInvoiceData = useCallback((data: InvoiceData) => {
         dispatch({ type: 'UPDATE_INVOICE_FIELDS', payload: data });
     }, []);
@@ -578,5 +597,7 @@ export function useSimulator() {
         reset: handleReset,
         goBackToStep1,
         confirmOcrData,
+        setSegment,
+        clearSegment,
     };
 }
