@@ -1,4 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
+import { config as loadEnv } from 'dotenv';
+
+// Load staging credentials / base URL (gitignored) so E2E never touches prod.
+loadEnv({ path: '.env.staging.local' });
 
 /**
  * E2E test configuration for Zinergia.
@@ -70,7 +74,8 @@ export default defineConfig({
     webServer: process.env.CI
         ? undefined
         : {
-              command: 'npm run dev',
+              // Runs the app against the STAGING Supabase project (never prod).
+              command: 'npm run dev:staging',
               url: 'http://localhost:3000',
               reuseExistingServer: true,
               timeout: 120_000,
