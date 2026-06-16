@@ -58,6 +58,15 @@ const envSchema = z.object({
                 message: 'APP_ENCRYPTION_PEPPER is required in production. Generate with `node scripts/generate-encryption-keys.mjs`.',
             });
         }
+        // The OCR webhook authenticates N8N callbacks via this key. Without it,
+        // the callback endpoint that writes client PII would be unprotected.
+        if (!data.WEBHOOK_API_KEY) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['WEBHOOK_API_KEY'],
+                message: 'WEBHOOK_API_KEY is required in production to authenticate the OCR webhook callback.',
+            });
+        }
     }
 });
 

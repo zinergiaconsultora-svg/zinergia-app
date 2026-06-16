@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { env } from '@/lib/env';
 import { sendPushToUser } from '@/lib/push/sendPush';
 import { encryptNullable, hashCups, hashDni } from '@/lib/crypto/pii';
+import { safeStringEqual } from '@/lib/crypto/timingSafe';
 import { moduleLogger } from '@/lib/logger';
 import { redactOcrTextSample, sanitizeOcrTrainingData } from '@/lib/ocr/sanitizeTrainingData';
 import { normalizeInvoiceData, parseInvoiceNumber } from '@/lib/invoices/normalization';
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     const authHeader = request.headers.get('authorization');
     log.info({ hasApiKey: !!apiKey, hasAuth: !!authHeader }, 'OCR callback received');
 
-    if (apiKey !== env.WEBHOOK_API_KEY) {
+    if (!safeStringEqual(apiKey, env.WEBHOOK_API_KEY)) {
         log.warn({ keyPrefix: apiKey?.slice(0, 8) ?? 'null' }, 'OCR callback auth failed');
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
