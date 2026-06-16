@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { crmService } from '@/services/crmService';
+import { getClientsAction } from '@/app/actions/clients';
 import { Client } from '@/types/crm';
 
 const PAGE_SIZE = 20;
@@ -15,7 +15,7 @@ export function useClients(initialData?: Client[]) {
     const loadClients = async () => {
         try {
             setLoading(true);
-            const data = await crmService.getClients(undefined, PAGE_SIZE, 0);
+            const data = await getClientsAction(PAGE_SIZE, 0);
             setClients(data);
             setOffset(data.length);
             setHasMore(data.length === PAGE_SIZE);
@@ -31,7 +31,7 @@ export function useClients(initialData?: Client[]) {
         if (loadingMore || !hasMore) return;
         try {
             setLoadingMore(true);
-            const data = await crmService.getClients(undefined, PAGE_SIZE, offset);
+            const data = await getClientsAction(PAGE_SIZE, offset);
             setClients(prev => [...prev, ...data]);
             setOffset(prev => prev + data.length);
             setHasMore(data.length === PAGE_SIZE);
