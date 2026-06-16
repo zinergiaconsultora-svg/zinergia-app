@@ -61,10 +61,9 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user_created
 
 -- ═══════════════════════════════════════════
 -- 6. MEDIUM: tasks — due date ordering
+--    (moved to 20260428101000_tasks.sql: `tasks` is created there,
+--     after this migration, so the index must live with the table.)
 -- ═══════════════════════════════════════════
-CREATE INDEX IF NOT EXISTS idx_tasks_agent_duedate
-    ON tasks(agent_id, due_date ASC)
-    WHERE status IN ('pending', 'in_progress');
 
 -- ═══════════════════════════════════════════
 -- 7. MEDIUM: client_activities — franchise feed

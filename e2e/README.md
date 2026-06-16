@@ -3,42 +3,51 @@
 La suite vive en `e2e/` y cubre: login (`auth`), dashboard, simulador,
 propuesta pública, panel admin y accesibilidad (`a11y`).
 
-## Estado
+## Entorno de staging
 
-- La infraestructura está completa (config, specs, `global.setup.ts`).
-- El setup **degrada con elegancia**: si no hay credenciales de test, escribe
-  un estado de sesión vacío y los tests que requieren login se saltan, en vez
-  de romper.
-- **Lo único que falta para ejecutarla de verdad** son las credenciales de
-  test y (en CI) una URL objetivo. Eso son secretos que debes proveer tú.
+Los E2E corren contra el proyecto Supabase de **staging** (`zinergia-staging`,
+ref `dnzytocmtmnptndeczny`), **nunca contra producción**. El staging tiene el
+mismo esquema que producción (aplicado con `supabase db push`) y datos de
+tarifas cargados.
 
-## Ejecutar en local
+Usuarios de prueba ya creados en staging:
+- Agente: `e2e-agent@zinergia.app`
+- Admin:  `e2e-admin@zinergia.app`
 
-1. Crea dos usuarios de prueba en Supabase (uno `agent`, uno `admin`).
-2. Añade a `.env.test.local` (o exporta en tu shell):
+## Cómo correrlos en local
 
-   ```
-   E2E_AGENT_EMAIL=...
-   E2E_AGENT_PASSWORD=...
-   E2E_ADMIN_EMAIL=...
-   E2E_ADMIN_PASSWORD=...
-   # opcional; por defecto http://localhost:3000
-   PLAYWRIGHT_BASE_URL=http://localhost:3000
-   ```
+1. Necesitas el archivo **`.env.staging.local`** en la raíz (gitignored). Ya
+   está creado en la máquina de desarrollo con:
+   - `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` (staging)
+   - `APP_ENCRYPTION_KEY` / `APP_ENCRYPTION_PEPPER` (staging)
+   - `E2E_AGENT_EMAIL` / `E2E_AGENT_PASSWORD`
+   - `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`
+   - `PLAYWRIGHT_BASE_URL=http://localhost:3000`
+   - `STAGING_DB_PASSWORD` (para `supabase db push` a staging)
 
-3. Instala los navegadores (una vez): `npx playwright install --with-deps chromium`
-4. Ejecuta: `npm run test:e2e` (arranca `npm run dev` automáticamente en local).
+   Para recrearlo en otra máquina, copia esos valores desde el dashboard de
+   staging (URL + anon key en Settings → API; resetea la DB password en
+   Settings → Database) y genera claves de cifrado con
+   `node scripts/generate-encryption-keys.mjs`.
+
+2. Instala los navegadores (una vez): `npx playwright install --with-deps chromium`
+3. Ejecuta: `npm run test:e2e`
+   - Playwright arranca automáticamente `npm run dev:staging`, que levanta la
+     app cargando `.env.staging.local` (los valores de staging ganan sobre los
+     de `.env.local`, que apuntan a producción). Tu `npm run dev` normal sigue
+     usando producción sin cambios.
    - UI interactiva: `npm run test:e2e:ui`
 
-## Habilitar en CI (GitHub Actions)
+## Re-aplicar esquema a staging
 
-1. En **Settings → Secrets and variables → Actions**, añade:
-   `E2E_AGENT_EMAIL`, `E2E_AGENT_PASSWORD`, `E2E_ADMIN_EMAIL`,
-   `E2E_ADMIN_PASSWORD`, y `PLAYWRIGHT_BASE_URL` apuntando al **deployment de
-   preview** del PR (en CI no se levanta `npm run dev`: `webServer` es
-   `undefined` cuando `CI=true`).
-2. Añade un job que, tras el deploy de preview, exporte esos secretos y corra
-   `npx playwright install --with-deps chromium && npm run test:e2e`.
+```
+# con STAGING_DB_PASSWORD en .env.staging.local
+npx supabase db push --db-url "postgresql://postgres.dnzytocmtmnptndeczny:<STAGING_DB_PASSWORD>@aws-1-eu-central-1.pooler.supabase.com:5432/postgres"
+```
 
-> Recomendado usar usuarios de prueba en un proyecto Supabase de **staging**,
-> no en producción, para no ensuciar datos reales.
+## CI (pendiente, opcional)
+
+Para correrlos en GitHub Actions: añadir los `E2E_*`, la URL/anon de staging y
+las claves como **secrets**, y un job que despliegue una preview apuntando a
+staging y ejecute `npm run test:e2e` con `PLAYWRIGHT_BASE_URL` = la URL de la
+preview (`webServer` queda `undefined` cuando `CI=true`).
