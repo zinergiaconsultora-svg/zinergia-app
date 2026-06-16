@@ -1,5 +1,7 @@
 'use server';
 
+import { logger } from '@/lib/utils/logger';
+
 import { resend } from '@/lib/resend';
 import { Proposal } from '@/types/crm';
 import { generateProposalPDF } from '@/lib/pdf/generate';
@@ -74,7 +76,7 @@ export async function sendProposalEmail(
 ) {
     try {
         if (!process.env.RESEND_API_KEY) {
-            console.warn('RESEND_API_KEY is not set. Email delivery disabled.');
+            logger.warn('RESEND_API_KEY is not set. Email delivery disabled.');
             return { success: false, error: 'El envío de email no está configurado. Contacta con soporte.' };
         }
 
@@ -124,13 +126,13 @@ export async function sendProposalEmail(
         });
 
         if (data.error) {
-            console.error('Resend error:', data.error);
+            logger.error('Resend error', data.error);
             return { success: false, error: data.error.message };
         }
 
         return { success: true, data };
     } catch (error) {
-        console.error('Server action error:', error);
+        logger.error('Server action error', error);
         return { success: false, error: 'Failed to send email' };
     }
 }

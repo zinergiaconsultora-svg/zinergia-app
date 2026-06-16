@@ -1,5 +1,8 @@
 import webpush from 'web-push';
 import { createServiceClient } from '@/lib/supabase/service';
+import { moduleLogger } from '@/lib/logger';
+
+const log = moduleLogger('push');
 
 // Lazy VAPID init — no llamar a setVapidDetails en tiempo de módulo
 // para evitar errores durante el build de Next.js
@@ -16,7 +19,7 @@ function ensureVapid(): boolean {
         _vapidReady = true;
         return true;
     } catch (e) {
-        console.warn('[Push] VAPID setup failed:', e);
+        log.warn({ err: e }, 'VAPID setup failed');
         return false;
     }
 }
@@ -34,7 +37,7 @@ export interface PushPayload {
  */
 export async function sendPushToUser(userId: string, payload: PushPayload): Promise<void> {
     if (!ensureVapid()) {
-        console.warn('[Push] VAPID not configured — skipping push notification');
+        log.warn('VAPID not configured — skipping push notification');
         return;
     }
 
@@ -66,6 +69,6 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
             )
         );
     } catch (e) {
-        console.warn('[Push] sendPushToUser failed (non-blocking):', e);
+        log.warn({ err: e }, 'sendPushToUser failed (non-blocking)');
     }
 }
