@@ -218,7 +218,6 @@ export async function POST(request: Request) {
                     await supabaseAdmin
                         .from('clients')
                         .update({
-                            cups: cups || undefined,
                             cups_ciphertext: cups ? encryptNullable(cups) : undefined,
                             cups_hash: cups ? hashCups(cups) : undefined,
                             current_supplier: (invoiceData.company_name as string) || undefined,
@@ -243,10 +242,8 @@ export async function POST(request: Request) {
                             franchise_id: job.franchise_id,
                             owner_id: job.agent_id,
                             name: clientName,
-                            dni_cif: dniCif || null,
                             dni_cif_ciphertext: dniCif ? encryptNullable(dniCif) : null,
                             dni_cif_hash: dniCif ? hashDni(dniCif) : null,
-                            cups: cups || null,
                             cups_ciphertext: cups ? encryptNullable(cups) : null,
                             cups_hash: cups ? hashCups(cups) : null,
                             address: (invoiceData.supply_address as string) || null,

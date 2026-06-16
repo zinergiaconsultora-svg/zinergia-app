@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { crmService } from '@/services/crmService';
+import { getClientByIdAction } from '@/app/actions/clients';
 import { Client, Proposal } from '@/types/crm';
 
 export function useClientDetails(clientId: string) {
@@ -14,7 +15,7 @@ export function useClientDetails(clientId: string) {
     const fetchClient = useCallback(async () => {
         try {
             setLoading(true);
-            const data = await crmService.getClientById(clientId);
+            const data = await getClientByIdAction(clientId);
             setClient(data);
 
             const fetchedProposals = await crmService.getProposalsByClient(clientId);

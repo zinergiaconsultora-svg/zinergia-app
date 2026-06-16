@@ -1,5 +1,5 @@
 import { useReducer, useEffect, useCallback } from 'react';
-import { crmService } from '@/services/crmService';
+import { createClientAction, updateClientAction } from '@/app/actions/clients';
 import { Client, ClientType } from '@/types/crm';
 
 interface UseClientFormProps {
@@ -111,9 +111,9 @@ export function useClientForm({ clientToEdit, onSuccess, onClose }: UseClientFor
 
         try {
             if (clientToEdit) {
-                await crmService.updateClient(clientToEdit.id, state.formData);
+                await updateClientAction(clientToEdit.id, state.formData);
             } else {
-                await crmService.createClient({
+                await createClientAction({
                     ...state.formData,
                     status: 'new'
                 });
