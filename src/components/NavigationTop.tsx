@@ -122,8 +122,11 @@ export const NavigationTop = () => {
 
                     {/* Logo Section */}
                     <div className="flex items-center gap-8">
-                        <Link href="/dashboard" className="transition-transform active:scale-95">
+                        <Link href="/dashboard" className="transition-transform active:scale-95 flex flex-col items-start">
                             <ZinergiaLogo className="w-16 md:w-20" />
+                            <span className="text-[9px] text-slate-400/70 font-mono tracking-tight leading-none -mt-0.5 pl-0.5">
+                                {process.env.NEXT_PUBLIC_APP_VERSION}
+                            </span>
                         </Link>
 
                         {/* Desktop Navigation Items */}
@@ -282,6 +285,9 @@ export const NavigationTop = () => {
                                         </>
                                     )}
                                 </div>
+                                <p className="text-center text-[10px] text-slate-400/60 font-mono mt-3">
+                                    {process.env.NEXT_PUBLIC_APP_VERSION}
+                                </p>
                             </div>
                         </motion.div>
                     </>

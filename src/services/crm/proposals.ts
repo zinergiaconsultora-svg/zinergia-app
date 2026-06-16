@@ -6,6 +6,7 @@ import { getFranchiseId } from './shared';
 import { logger } from '@/lib/utils/logger';
 import { activitiesService } from './activities';
 import { updateProposalStatusAction } from '@/app/actions/proposals';
+import { resolveOrCreateClientAction } from '@/app/actions/clients';
 
 export const proposalService = {
     async getProposalsByClient(clientId: string, serverClient?: SupabaseClient) {
@@ -44,44 +45,16 @@ export const proposalService = {
         const { data: { user } } = await supabase.auth.getUser();
         const ownerId = user?.id;
 
-        // 1. Resolve client — explicit id → deduplicate by CUPS → deduplicate by DNI/CIF → create
-        let clientId = invoiceData.client_id;
-        if (!clientId && invoiceData.cups) {
-            const { data: existing } = await supabase
-                .from('clients')
-                .select('id')
-                .eq('franchise_id', franchiseId)
-                .eq('cups', invoiceData.cups)
-                .maybeSingle();
-            clientId = existing?.id;
-        }
-        if (!clientId && invoiceData.dni_cif) {
-            const { data: existing } = await supabase
-                .from('clients')
-                .select('id')
-                .eq('franchise_id', franchiseId)
-                .eq('dni_cif', invoiceData.dni_cif)
-                .maybeSingle();
-            clientId = existing?.id;
-        }
-        if (!clientId) {
-            const { data: newClient, error: clientError } = await supabase
-                .from('clients')
-                .insert({
-                    name: clientName || invoiceData.client_name || invoiceData.company_name || 'Nuevo Cliente',
-                    franchise_id: franchiseId,
-                    owner_id: ownerId,
-                    type: 'residential',
-                    status: 'new',
-                    cups: invoiceData.cups || null,
-                    dni_cif: invoiceData.dni_cif || null,
-                    address: invoiceData.supply_address || null,
-                })
-                .select('id')
-                .single();
-            if (clientError) throw clientError;
-            clientId = newClient?.id;
-        }
+        // 1. Resolve client — explicit id → dedup by CUPS/DNI blind index → create.
+        // Delegated to a server action so CUPS/DNI are encrypted server-side and
+        // deduplicated against the *_hash columns (browser has no encryption key).
+        const clientId = await resolveOrCreateClientAction({
+            client_id: invoiceData.client_id ?? null,
+            cups: invoiceData.cups ?? null,
+            dni_cif: invoiceData.dni_cif ?? null,
+            name: clientName || invoiceData.client_name || invoiceData.company_name || 'Nuevo Cliente',
+            address: invoiceData.supply_address ?? null,
+        });
 
         // 2. Save Proposal
         const proposal: Partial<Proposal> = {
