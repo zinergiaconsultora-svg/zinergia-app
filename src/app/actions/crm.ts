@@ -148,18 +148,17 @@ export async function importClientsFromCsvAction(rows: CsvClientRow[]): Promise<
     // Pre-fetch existing CUPS in this franchise to detect duplicates.
     // Uses the blind-index hash column for equality search (RGPD-safe).
     const candidateCups = rows.map(r => r.cups?.trim().toUpperCase()).filter(Boolean) as string[];
-    const existingCups = new Set<string>();
+    // Dedup is keyed on the blind-index hash only (plaintext column is gone).
+    const existingCupsHashes = new Set<string>();
     if (candidateCups.length > 0) {
         const candidateHashes = candidateCups.map(c => hashCups(c));
         const { data: existing } = await supabase
             .from('clients')
-            .select('cups, cups_hash')
+            .select('cups_hash')
             .eq('franchise_id', franchiseId)
             .in('cups_hash', candidateHashes);
         (existing ?? []).forEach(r => {
-            if (r.cups) existingCups.add(r.cups);
-            // Also track via hash in case the plaintext column is already cleared.
-            if (r.cups_hash) existingCups.add(r.cups_hash);
+            if (r.cups_hash) existingCupsHashes.add(r.cups_hash);
         });
     }
 
@@ -177,8 +176,8 @@ export async function importClientsFromCsvAction(rows: CsvClientRow[]): Promise<
         const clean = result.data;
         const normalizedCups = clean.cups?.trim().toUpperCase() ?? '';
         const cupsHash = normalizedCups ? hashCups(normalizedCups) : null;
-        // Dedup check against both plaintext set and hash set.
-        if (normalizedCups && (existingCups.has(normalizedCups) || (cupsHash && existingCups.has(cupsHash)))) {
+        // Dedup check against the blind-index hash set.
+        if (cupsHash && existingCupsHashes.has(cupsHash)) {
             skipped++;
             return;
         }
@@ -188,10 +187,7 @@ export async function importClientsFromCsvAction(rows: CsvClientRow[]): Promise<
             email: clean.email || null,
             phone: clean.phone || null,
             address: clean.address || null,
-            // Plaintext columns kept during dual-write phase.
-            cups: normalizedCups || null,
-            dni_cif: normalizedDni || null,
-            // Encrypted + blind-index columns (RGPD).
+            // Encrypted + blind-index columns only (RGPD); no plaintext PII.
             cups_ciphertext: normalizedCups ? encryptNullable(normalizedCups) : null,
             cups_hash: cupsHash,
             dni_cif_ciphertext: normalizedDni ? encryptNullable(normalizedDni) : null,
@@ -206,6 +202,8 @@ export async function importClientsFromCsvAction(rows: CsvClientRow[]): Promise<
             franchise_id: franchiseId,
             owner_id: user.id,
         });
+        // Track within-batch so two rows with the same CUPS aren't both inserted.
+        if (cupsHash) existingCupsHashes.add(cupsHash);
     });
 
     let inserted = 0;

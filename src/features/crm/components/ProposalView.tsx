@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { InvoiceData, SavingsResult, Client, Proposal, ProposalStatus } from '@/types/crm';
 import { crmService } from '@/services/crmService';
+import { getClientsAction } from '@/app/actions/clients';
 import { generatePublicLinkAction } from '@/app/actions/publicProposal';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -83,7 +84,7 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
 
     const loadClients = async () => {
         try {
-            const data = await crmService.getClients();
+            const data = await getClientsAction(200, 0);
             setClients(data);
         } catch (error) {
             console.error('Failed to load clients', error);

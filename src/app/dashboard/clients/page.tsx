@@ -1,19 +1,11 @@
-import { cache } from 'react';
 import ClientsView from '@/features/crm/components/ClientsView';
-import { createClient } from '@/lib/supabase/server';
-import { crmService } from '@/services/crmService';
-import { SupabaseClient } from '@supabase/supabase-js';
+import { getClientsAction } from '@/app/actions/clients';
 
 export const dynamic = 'force-dynamic';
 
-// Cache the clients fetch to deduplicate requests within the same render
-const getClientsCached = cache(async (supabase: SupabaseClient) => {
-    return crmService.getClients(supabase);
-});
-
 export default async function ClientsPage() {
-    const supabase = await createClient();
-    const clients = await getClientsCached(supabase);
+    // getClientsAction decrypts CUPS / DNI server-side and enforces RLS by session.
+    const clients = await getClientsAction(20, 0);
 
     return <ClientsView initialData={clients} />;
 }
