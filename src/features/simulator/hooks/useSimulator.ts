@@ -304,21 +304,24 @@ export function useSimulator() {
 
             const supabase = createClient();
 
-            // Mecanismo principal: Broadcast directo del callback (sin RLS)
+            // Mecanismo principal: el broadcast solo trae una SEÑAL (sin PII).
+            // Al recibirla, obtenemos los datos vía getOcrJobStatus (autenticado,
+            // RLS-safe) — nunca desde el payload del canal abierto.
             const channel = supabase.channel(`ocr_job_${result.jobId}`)
-                .on('broadcast', { event: 'ocr_result' }, (payload) => {
+                .on('broadcast', { event: 'ocr_result' }, async (payload) => {
                     if (resolved) return;
-                    const { status: jobStatus, data: jobData, error_message } = payload.payload as {
+                    const { status: jobStatus, error_message } = payload.payload as {
                         status: string;
-                        data: Record<string, unknown> | null;
                         error_message: string | null;
                     };
-                    if (jobStatus === 'completed' && jobData) {
+                    if (jobStatus === 'completed') {
+                        const job = await getOcrJobStatus(result.jobId!);
+                        if (resolved || !job) return;
                         resolved = true;
                         clearInterval(pollInterval);
                         clearTimeout(slowWarningId);
                         clearTimeout(timeoutId);
-                        dispatch({ type: 'SET_INVOICE_DATA', payload: extractInvoiceData(jobData) as InvoiceData });
+                        dispatch({ type: 'SET_INVOICE_DATA', payload: extractInvoiceData(job.extracted_data as Record<string, unknown>) as InvoiceData });
                         supabase.removeChannel(channel);
                         activeChannelRef.current = null;
                         activeSupabaseRef.current = null;
