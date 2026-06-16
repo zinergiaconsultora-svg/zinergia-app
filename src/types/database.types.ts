@@ -377,11 +377,9 @@ export type Database = {
           city: string | null
           contracted_power: Json | null
           created_at: string | null
-          cups: string | null
           cups_ciphertext: string | null
           cups_hash: string | null
           current_supplier: string | null
-          dni_cif: string | null
           dni_cif_ciphertext: string | null
           dni_cif_hash: string | null
           email: string | null
@@ -407,11 +405,9 @@ export type Database = {
           city?: string | null
           contracted_power?: Json | null
           created_at?: string | null
-          cups?: string | null
           cups_ciphertext?: string | null
           cups_hash?: string | null
           current_supplier?: string | null
-          dni_cif?: string | null
           dni_cif_ciphertext?: string | null
           dni_cif_hash?: string | null
           email?: string | null
@@ -437,11 +433,9 @@ export type Database = {
           city?: string | null
           contracted_power?: Json | null
           created_at?: string | null
-          cups?: string | null
           cups_ciphertext?: string | null
           cups_hash?: string | null
           current_supplier?: string | null
-          dni_cif?: string | null
           dni_cif_ciphertext?: string | null
           dni_cif_hash?: string | null
           email?: string | null
