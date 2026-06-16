@@ -7,6 +7,7 @@ import { useSimulatorContext } from '../contexts/SimulatorContext';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { InvoiceData } from '@/types/crm';
 import { SimulatorUpload } from './SimulatorUpload';
+import { SimulatorSegmentStep } from './SimulatorSegmentStep';
 import { SimulatorBatchUpload } from './SimulatorBatchUpload';
 import { SimulatorForm } from './SimulatorForm';
 import { SimulatorResults } from './SimulatorResults';
@@ -19,6 +20,9 @@ export const SimulatorView = () => {
     const [powerTypeOverride, setPowerTypeOverride] = useState<'2.0' | '3.0' | '3.1' | null>(null);
     const {
         step,
+        segment,
+        setSegment,
+        clearSegment,
         isAnalyzing,
         isMockMode,
         invoiceData,
@@ -83,8 +87,13 @@ export const SimulatorView = () => {
 
                 <AnimatePresence mode="wait">
 
-                    {/* PASO 1: Subir Factura — modo individual */}
-                    {step === 1 && !isAnalyzing && !batchMode && (
+                    {/* PASO 0: Tipo de cliente (Residencial / PYME) — antes de subir */}
+                    {step === 1 && !isAnalyzing && !batchMode && !segment && (
+                        <SimulatorSegmentStep onSelect={setSegment} />
+                    )}
+
+                    {/* PASO 1: Subir Factura — modo individual (requiere segmento) */}
+                    {step === 1 && !isAnalyzing && !batchMode && segment && (
                         <SimulatorUpload
                             onFileUpload={handleFileUpload}
                             onDrop={handleDrop}
@@ -92,6 +101,8 @@ export const SimulatorView = () => {
                             isAnalyzing={isAnalyzing}
                             uploadError={uploadError}
                             onBatchMode={() => setBatchMode(true)}
+                            segment={segment}
+                            onChangeSegment={clearSegment}
                         />
                     )}
 

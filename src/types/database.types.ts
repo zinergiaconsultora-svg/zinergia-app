@@ -393,6 +393,7 @@ export type Database = {
           notes: string | null
           owner_id: string
           phone: string | null
+          segment: string | null
           status: string | null
           tariff_type: string | null
           type: string
@@ -421,6 +422,7 @@ export type Database = {
           notes?: string | null
           owner_id: string
           phone?: string | null
+          segment?: string | null
           status?: string | null
           tariff_type?: string | null
           type?: string
@@ -449,6 +451,7 @@ export type Database = {
           notes?: string | null
           owner_id?: string
           phone?: string | null
+          segment?: string | null
           status?: string | null
           tariff_type?: string | null
           type?: string
@@ -1375,6 +1378,7 @@ export type Database = {
           agent_id: string | null
           attempts: number
           client_id: string | null
+          client_segment: string | null
           created_at: string
           duplicate_of: string | null
           error_message: string | null
@@ -1391,6 +1395,7 @@ export type Database = {
           agent_id?: string | null
           attempts?: number
           client_id?: string | null
+          client_segment?: string | null
           created_at?: string
           duplicate_of?: string | null
           error_message?: string | null
@@ -1407,6 +1412,7 @@ export type Database = {
           agent_id?: string | null
           attempts?: number
           client_id?: string | null
+          client_segment?: string | null
           created_at?: string
           duplicate_of?: string | null
           error_message?: string | null

@@ -225,6 +225,7 @@ const resolveClientSchema = z.object({
     dni_cif: z.string().trim().max(40).optional().nullable(),
     name: z.string().trim().max(200).optional().nullable(),
     address: z.string().trim().max(300).optional().nullable(),
+    segment: z.enum(['RESIDENCIAL', 'PYME']).optional().nullable(),
 });
 
 export type ResolveClientInput = z.infer<typeof resolveClientSchema>;
@@ -275,7 +276,9 @@ export async function resolveOrCreateClientAction(input: ResolveClientInput): Pr
             name: clean.name || 'Nuevo Cliente',
             franchise_id: franchiseId,
             owner_id: userId,
-            type: 'residential',
+            segment: clean.segment ?? null,
+            // type derivado del segmento elegido (PYME→company, residencial→residential).
+            type: clean.segment === 'PYME' ? 'company' : 'residential',
             status: 'new',
             address: clean.address || null,
             ...pii,

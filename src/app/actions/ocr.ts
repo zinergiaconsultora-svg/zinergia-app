@@ -137,6 +137,7 @@ export async function analyzeDocumentByUrlAction(
     fileName: string,
     fileType: string,
     rawText?: string,
+    segment?: string,
 ): Promise<{ jobId: string; isMock: boolean; data?: InvoiceData }> {
     const OCR_WEBHOOK_URL = env.OCR_WEBHOOK_URL;
     const WEBHOOK_API_KEY = env.WEBHOOK_API_KEY;
@@ -171,6 +172,7 @@ export async function analyzeDocumentByUrlAction(
                 file_name: fileName,
                 file_path: fileUrl,
                 attempts: 1,
+                client_segment: segment || null,
             })
             .select('id')
             .single();
@@ -305,6 +307,7 @@ export async function analyzeDocumentAction(formData: FormData): Promise<{ jobId
         const fileUrl = await uploadToStorage(supabase, file, user.id);
 
         // Crear el Job en la DB
+        const segment = (formData.get('segment') as string) || null;
         const { data: job, error: jobError } = await supabase
             .from('ocr_jobs')
             .insert({
@@ -314,6 +317,7 @@ export async function analyzeDocumentAction(formData: FormData): Promise<{ jobId
                 file_name: file.name,
                 file_path: fileUrl,
                 attempts: 1,
+                client_segment: segment,
             })
             .select('id')
             .single();

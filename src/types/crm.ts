@@ -1,4 +1,6 @@
 export type ClientType = 'residential' | 'company' | 'public_admin' | 'particular';
+/** Segmento de negocio elegido por el usuario. Independiente de la tarifa eléctrica (tariff_type). */
+export type ClientSegment = 'RESIDENCIAL' | 'PYME';
 export type ClientStatus = 'new' | 'contacted' | 'in_process' | 'won' | 'lost';
 export type DetectedClientType = 'particular' | 'empresa';
 export type DetectedTariffType = 'fija' | 'indexada';
@@ -19,6 +21,7 @@ export interface Client {
 
     // Metadata
     type: ClientType;
+    segment?: ClientSegment;
     status: ClientStatus;
     dni_cif?: string;
 
@@ -51,6 +54,7 @@ export interface InvoiceData {
 
     // --- Extended Webhook Data ---
     client_name?: string;
+    segment?: ClientSegment;
     dni_cif?: string;
     cups?: string;
     supply_address?: string;
