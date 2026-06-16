@@ -1,5 +1,7 @@
 'use server';
 
+import { logger } from '@/lib/utils/logger';
+
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -12,7 +14,7 @@ interface SendEmailParams {
 
 export async function sendEmailAction({ to, subject, html }: SendEmailParams) {
     if (!process.env.RESEND_API_KEY) {
-        console.error('Missing RESEND_API_KEY');
+        logger.error('Missing RESEND_API_KEY');
         return { success: false, error: 'Configuration error' };
     }
 
@@ -25,13 +27,13 @@ export async function sendEmailAction({ to, subject, html }: SendEmailParams) {
         });
 
         if (data.error) {
-            console.error('Resend API Error:', data.error);
+            logger.error('Resend API Error', data.error);
             return { success: false, error: data.error.message };
         }
 
         return { success: true, id: data.data?.id };
     } catch (error) {
-        console.error('Server Action Error:', error);
+        logger.error('Server Action Error', error);
         return { success: false, error: 'Failed to send email' };
     }
 }

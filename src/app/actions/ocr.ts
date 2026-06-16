@@ -1,5 +1,7 @@
 'use server';
 
+import { logger } from '@/lib/utils/logger';
+
 import { env } from '@/lib/env';
 import { createClient } from '@/lib/supabase/server';
 import { InvoiceData } from '@/types/crm';
@@ -27,7 +29,7 @@ function parseRawInvoiceData(rawData: Record<string, unknown>): Record<string, u
     const result = rawInvoiceSchema.safeParse(rawData);
     if (!result.success) {
         // Log solo el error de validación, no los datos (pueden contener PII)
-        console.warn('[OCR] Raw data validation warnings:', result.error.issues.map(i => i.path.join('.')));
+        logger.warn('[OCR] Raw data validation warnings', { fields: result.error.issues.map(i => i.path.join('.')) });
     }
     // Devuelve los datos parseados si son válidos, o los originales si no
     // El normalizer downstream maneja datos incompletos con coerciones propias
@@ -81,7 +83,7 @@ async function fetchWithRetry(
 
         if (attempt < retries - 1) {
             const delay = BASE_DELAY_MS * Math.pow(2, attempt);
-            console.warn(`[OCR] Intento ${attempt + 1} fallido. Reintentando en ${delay}ms...`);
+            logger.warn(`[OCR] Intento ${attempt + 1} fallido. Reintentando en ${delay}ms...`);
             await new Promise(r => setTimeout(r, delay));
         }
     }
@@ -107,7 +109,7 @@ async function uploadToStorage(
             .upload(path, file, { contentType: file.type, upsert: false });
 
         if (error) {
-            console.warn('[OCR] Storage upload failed (non-blocking):', error.message);
+            logger.warn('[OCR] Storage upload failed (non-blocking)', { error: error.message });
             return null;
         }
 
@@ -117,7 +119,7 @@ async function uploadToStorage(
 
         return data?.signedUrl ?? null;
     } catch (e) {
-        console.warn('[OCR] Storage upload exception (non-blocking):', e);
+        logger.warn('[OCR] Storage upload exception (non-blocking)', { err: e });
         return null;
     }
 }
@@ -241,7 +243,7 @@ export async function analyzeDocumentByUrlAction(
 
     } catch (error) {
         if (env.NODE_ENV === 'development') {
-            console.warn('⚠️ OCR (URL) Webhook failed. Using MOCK data for development.', error);
+            logger.warn('OCR (URL) Webhook failed. Using MOCK data for development.', { err: error });
             return {
                 jobId: 'MOCK-JOB',
                 isMock: true,
@@ -262,7 +264,7 @@ export async function analyzeDocumentByUrlAction(
                 } as InvoiceData
             };
         }
-        console.error('[OCR] Error (URL flow) tras reintentos:', error);
+        logger.error('[OCR] Error (URL flow) tras reintentos', error);
         throw new Error('No se ha podido enviar la factura para su procesamiento.');
     }
 }
@@ -375,7 +377,7 @@ export async function analyzeDocumentAction(formData: FormData): Promise<{ jobId
 
     } catch (error) {
         if (env.NODE_ENV === 'development') {
-            console.warn('⚠️ OCR Webhook failed. Using MOCK data for development.', error);
+            logger.warn('OCR Webhook failed. Using MOCK data for development.', { err: error });
             return {
                 jobId: 'MOCK-JOB',
                 isMock: true,
@@ -400,7 +402,7 @@ export async function analyzeDocumentAction(formData: FormData): Promise<{ jobId
             };
         }
 
-        console.error('[OCR] Error tras reintentos:', error);
+        logger.error('[OCR] Error tras reintentos', error);
         throw new Error('No se ha podido enviar la factura para su procesamiento tras múltiples intentos.');
     }
 }

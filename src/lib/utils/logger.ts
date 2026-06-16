@@ -1,44 +1,23 @@
-type LogLevel = 'error' | 'warn' | 'info';
+/**
+ * Lightweight logging facade.
+ *
+ * Delegates to the structured pino logger in `@/lib/logger`, which:
+ *   - emits structured JSON in production (stdout → Vercel log drain),
+ *   - redacts PII fields (cups, dni_cif, email, address, tokens, …),
+ *   - stays silent under NODE_ENV=test so test output stays clean.
+ *
+ * The `(message, error?, context?)` signature is kept for backwards
+ * compatibility with existing callers. Prefer importing `moduleLogger` from
+ * `@/lib/logger` directly in new code for a bound module name.
+ */
 
-interface LogEntry {
-    level: LogLevel;
-    message: string;
-    error?: unknown;
-    context?: Record<string, unknown>;
-    timestamp: string;
-}
-
-function formatLog(entry: LogEntry): string {
-    const ts = entry.timestamp;
-    const lvl = entry.level.toUpperCase();
-    const ctx = entry.context ? ` ${JSON.stringify(entry.context)}` : '';
-    const err = entry.error instanceof Error ? ` | ${entry.error.message}` : '';
-    return `[${ts}] ${lvl}: ${entry.message}${ctx}${err}`;
-}
-
-function log(level: LogLevel, message: string, error?: unknown, context?: Record<string, unknown>) {
-    const entry: LogEntry = {
-        level,
-        message,
-        error,
-        context,
-        timestamp: new Date().toISOString(),
-    };
-
-    if (level === 'error') {
-        console.error(formatLog(entry), error instanceof Error ? error.stack : '');
-    } else if (level === 'warn') {
-        console.warn(formatLog(entry));
-    } else {
-        console.info(formatLog(entry));
-    }
-}
+import { logger as structured } from '@/lib/logger';
 
 export const logger = {
     error: (message: string, error?: unknown, context?: Record<string, unknown>) =>
-        log('error', message, error, context),
+        structured.error({ ...(context ?? {}), err: error }, message),
     warn: (message: string, context?: Record<string, unknown>) =>
-        log('warn', message, undefined, context),
+        structured.warn({ ...(context ?? {}) }, message),
     info: (message: string, context?: Record<string, unknown>) =>
-        log('info', message, undefined, context),
+        structured.info({ ...(context ?? {}) }, message),
 };

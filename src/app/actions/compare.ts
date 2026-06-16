@@ -1,5 +1,7 @@
 'use server';
 
+import { logger } from '@/lib/utils/logger';
+
 import { InvoiceData, Offer } from '@/types/crm';
 import { env } from '@/lib/env';
 import { createClient } from '@/lib/supabase/server';
@@ -60,7 +62,7 @@ export async function calculateSavingsAction(invoice: InvoiceData) {
 
     // If webhook is not configured, go straight to local engine
     if (!COMPARISON_WEBHOOK_URL || !WEBHOOK_API_KEY) {
-        console.warn('[Compare Action] Webhook not configured — using Aletheia fallback');
+        logger.warn('[Compare Action] Webhook not configured — using Aletheia fallback');
         return runAletheiaFallback(invoice);
     }
 
@@ -83,7 +85,7 @@ export async function calculateSavingsAction(invoice: InvoiceData) {
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('[Compare Action] n8n error response:', errorText);
+            logger.error('[Compare Action] n8n error response', errorText);
             throw new Error(`n8n returned ${response.status}: ${response.statusText}`);
         }
 
@@ -92,7 +94,7 @@ export async function calculateSavingsAction(invoice: InvoiceData) {
         clearTimeout(timer);
 
         const isTimeout = error instanceof Error && error.name === 'AbortError';
-        console.warn(
+        logger.warn(
             isTimeout
                 ? `[Compare Action] n8n timed out after ${N8N_TIMEOUT_MS}ms — falling back to Aletheia`
                 : `[Compare Action] n8n failed (${(error as Error).message}) — falling back to Aletheia`

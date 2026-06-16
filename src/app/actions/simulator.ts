@@ -1,5 +1,7 @@
 'use server';
 
+import { logger } from '@/lib/utils/logger';
+
 import { createClient } from '@/lib/supabase/server';
 import { AletheiaEngine } from '@/lib/aletheia/engine';
 import { Normalizer } from '@/lib/aletheia/normalizer';
@@ -72,7 +74,7 @@ export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: R
         const { data: tariffData, error } = tariffResponse;
 
         if (error) {
-            console.error('Aletheia: Error fetching tariffs', error);
+            logger.error('Aletheia: Error fetching tariffs', error);
             return err('Error al obtener tarifas de la base de datos.');
         }
 
@@ -144,7 +146,7 @@ export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: R
         return ok(result);
 
     } catch (e) {
-        console.error('Aletheia: Critical Fault', e);
+        logger.error('Aletheia: Critical Fault', e);
         return err(`Error crítico en el motor de cálculo: ${(e as Error).message}`);
     }
 }

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateProposalPDF } from '@/lib/pdf/generate';
 import type { UserRole } from '@/types/crm';
+import { moduleLogger } from '@/lib/logger';
+
+const log = moduleLogger('proposal-pdf');
 
 export async function GET(
     request: NextRequest,
@@ -61,7 +64,7 @@ export async function GET(
             },
         });
     } catch (error) {
-        console.error('PDF Generation Error:', error);
+        log.error({ err: error }, 'PDF generation failed');
         return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 });
     }
 }
