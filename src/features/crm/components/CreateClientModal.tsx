@@ -3,7 +3,7 @@
 import React from 'react';
 import { useClientForm } from '@/features/crm/hooks/useClientForm';
 import { Client } from '@/types/crm';
-import { X, ChevronRight, Check, User, Building2, Zap, AlertTriangle } from 'lucide-react';
+import { X, ChevronRight, Check, User, Building2, Zap, AlertTriangle, UserCheck } from 'lucide-react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 
 interface CreateClientModalProps {
@@ -20,6 +20,9 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
         setStep,
         loading,
         error,
+        duplicate,
+        dismissDuplicate,
+        forceCreate,
         handleChange,
         handleSubmit
     } = useClientForm({ clientToEdit, onSuccess, onClose });
@@ -96,6 +99,42 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
                             <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-600 text-sm">
                                 <AlertTriangle size={18} />
                                 <span>{error}</span>
+                            </div>
+                        )}
+
+                        {/* Duplicate Warning */}
+                        {duplicate && (
+                            <div className="mx-6 mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                                <div className="flex items-start gap-3">
+                                    <div className="bg-amber-100 p-1.5 rounded-lg text-amber-600 mt-0.5">
+                                        <UserCheck size={18} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-bold text-amber-900">
+                                            Ya existe un cliente con {duplicate.field === 'cups' ? 'este CUPS' : 'este DNI/CIF'}
+                                        </p>
+                                        <p className="text-sm text-amber-700 mt-0.5 truncate">
+                                            <span className="font-semibold">{duplicate.name}</span>
+                                        </p>
+                                        <div className="flex gap-2 mt-3">
+                                            <button
+                                                type="button"
+                                                onClick={forceCreate}
+                                                disabled={loading}
+                                                className="px-3 py-1.5 text-xs font-bold bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+                                            >
+                                                Crear de todos modos
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={dismissDuplicate}
+                                                className="px-3 py-1.5 text-xs font-bold bg-white text-amber-700 border border-amber-300 rounded-lg hover:bg-amber-50 transition-colors"
+                                            >
+                                                Corregir datos
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         )}
 

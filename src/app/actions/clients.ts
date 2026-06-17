@@ -188,6 +188,57 @@ export async function getClientKpisAction(): Promise<ClientKpis> {
     return { total, nuevos, pipelineValue, conversion };
 }
 
+// ── Duplicate detection ────────────────────────────────────────────────────
+
+export interface DuplicateMatch {
+    id: string;
+    name: string;
+    field: 'cups' | 'dni_cif';
+}
+
+/**
+ * Check if a client with the same CUPS or DNI/CIF already exists in the franchise.
+ * Returns the first match found, or null if no duplicate.
+ * Used by the UI to warn before creating — the user can still proceed.
+ */
+export async function checkDuplicateClientAction(
+    cups?: string,
+    dniCif?: string,
+    excludeId?: string,
+): Promise<DuplicateMatch | null> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+    const { supabase, franchiseId } = await getSessionContext();
+    if (!franchiseId) return null;
+
+    if (cups?.trim()) {
+        const h = hashCups(cups);
+        let query = supabase
+            .from('clients')
+            .select('id, name')
+            .eq('franchise_id', franchiseId)
+            .eq('cups_hash', h)
+            .limit(1);
+        if (excludeId) query = query.neq('id', excludeId);
+        const { data } = await query.maybeSingle();
+        if (data) return { id: data.id, name: data.name, field: 'cups' };
+    }
+
+    if (dniCif?.trim()) {
+        const h = hashDni(dniCif);
+        let query = supabase
+            .from('clients')
+            .select('id, name')
+            .eq('franchise_id', franchiseId)
+            .eq('dni_cif_hash', h)
+            .limit(1);
+        if (excludeId) query = query.neq('id', excludeId);
+        const { data } = await query.maybeSingle();
+        if (data) return { id: data.id, name: data.name, field: 'dni_cif' };
+    }
+
+    return null;
+}
+
 /** Load a single client by id, with CUPS / DNI decrypted. */
 export async function getClientByIdAction(id: string): Promise<Client | null> {
     await requireServerRole(['admin', 'franchise', 'agent']);
