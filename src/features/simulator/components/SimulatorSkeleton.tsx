@@ -37,6 +37,17 @@ export const SimulatorSkeleton = () => {
             exit={{ opacity: 0 }}
             className="max-w-4xl mx-auto relative"
         >
+            {/* Grid futurista de escaneo */}
+            <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none z-10 opacity-[0.15] bg-[linear-gradient(rgba(16,185,129,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.08)_1px,transparent_1px)] bg-[size:16px_16px]" />
+
+            {/* Haz de luz láser de escaneado vertical holográfico */}
+            <motion.div
+                initial={{ top: '0%' }}
+                animate={{ top: ['0%', '100%', '0%'] }}
+                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_15px_rgba(52,211,153,0.9)] z-15 pointer-events-none opacity-90"
+            />
+
             {/* Overlay con fases animadas */}
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-3xl backdrop-blur-sm bg-white/40 dark:bg-slate-900/40">
                 <div className="bg-white dark:bg-slate-800 px-8 py-7 rounded-2xl shadow-2xl flex flex-col items-center border border-indigo-100 dark:border-indigo-900/50 max-w-sm w-full">
