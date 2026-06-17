@@ -61,6 +61,10 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
     const [filterColdDays, setFilterColdDays] = useState(0);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [scores, setScores] = useState<Map<string, ClientScore>>(new Map());
+    // Timestamp de corte para "sin contactar hace X días". Se calcula en el
+    // manejador del select (evento), no en render, para no llamar a Date.now()
+    // durante el render (regla react-hooks/purity). 0 = filtro desactivado.
+    const [coldCutoff, setColdCutoff] = useState(0);
 
     useEffect(() => {
         if (clients.length === 0) return;
@@ -87,12 +91,11 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
             if (!Number.isNaN(min)) result = result.filter(c => (c.average_monthly_bill ?? 0) >= min);
         }
 
-        if (filterColdDays > 0) {
-            const cutoff = Date.now() - filterColdDays * 86_400_000;
+        if (coldCutoff > 0) {
             // "Cold" = no contact (or creation) more recent than the cutoff.
             result = result.filter(c => {
                 const ref = c.last_contact_date ?? c.created_at;
-                return new Date(ref).getTime() <= cutoff;
+                return new Date(ref).getTime() <= coldCutoff;
             });
         }
 
@@ -106,13 +109,20 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
         });
 
         return result;
-    }, [clients, statusFilter, sortBy, filterSupplier, filterMinBill, filterColdDays]);
+    }, [clients, statusFilter, sortBy, filterSupplier, filterMinBill, coldCutoff]);
 
     const hasAdvancedFilters = filterSupplier.trim() !== '' || filterMinBill !== '' || filterColdDays > 0;
     const clearAdvancedFilters = useCallback(() => {
         setFilterSupplier('');
         setFilterMinBill('');
         setFilterColdDays(0);
+        setColdCutoff(0);
+    }, []);
+
+    // Evento (no render): aquí sí podemos leer Date.now() para fijar el corte.
+    const handleColdDaysChange = useCallback((days: number) => {
+        setFilterColdDays(days);
+        setColdCutoff(days > 0 ? Date.now() - days * 86_400_000 : 0);
     }, []);
 
     const toggleSelect = useCallback((id: string) => {
@@ -322,7 +332,7 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                     </div>
                     <select
                         value={filterColdDays}
-                        onChange={(e) => setFilterColdDays(Number(e.target.value))}
+                        onChange={(e) => handleColdDaysChange(Number(e.target.value))}
                         aria-label="Sin contactar desde hace"
                         className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-slate-600 dark:text-slate-300 focus:border-indigo-400 outline-none"
                     >
