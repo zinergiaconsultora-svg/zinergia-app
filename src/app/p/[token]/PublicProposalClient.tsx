@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Proposal } from '@/types/crm';
 import { acceptPublicProposalAction, trackPublicProposalViewAction } from '@/app/actions/publicProposal';
+import confetti from 'canvas-confetti';
 import dynamic from 'next/dynamic';
 
 const SignaturePad = dynamic(
@@ -35,6 +36,7 @@ export default function PublicProposalClient({ proposal, token }: Props) {
     const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
     const [signatureData, setSignatureData] = useState<string | null>(null);
     const [signedName, setSignedName] = useState('');
+    const [sliderVal, setSliderVal] = useState(50);
 
     const expiresAt = proposal.public_expires_at
         ? new Date(proposal.public_expires_at as string).toLocaleDateString('es-ES', {
@@ -50,6 +52,34 @@ export default function PublicProposalClient({ proposal, token }: Props) {
             // El tracking es auxiliar: la propuesta debe seguir visible aunque falle.
         });
     }, [token]);
+
+    useEffect(() => {
+        if (step === 'done') {
+            const duration = 4 * 1000;
+            const end = Date.now() + duration;
+
+            (function frame() {
+                confetti({
+                    particleCount: 4,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0, y: 0.8 },
+                    colors: ['#6366f1', '#10b981', '#3b82f6', '#f59e0b']
+                });
+                confetti({
+                    particleCount: 4,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1, y: 0.8 },
+                    colors: ['#6366f1', '#10b981', '#3b82f6', '#f59e0b']
+                });
+
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            }());
+        }
+    }, [step]);
 
     const handleAccept = async () => {
         if (!signatureData) return;
@@ -113,21 +143,57 @@ export default function PublicProposalClient({ proposal, token }: Props) {
                                 </div>
                             </div>
 
-                            {/* Comparativa */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="bg-white/5 border border-white/10 rounded-2xl p-5 text-center">
-                                    <p className="text-slate-400 text-xs mb-2 uppercase tracking-wider">Pagas ahora</p>
-                                    <p className="text-2xl font-bold text-slate-300 line-through decoration-red-400">
-                                        {formatCurrency(proposal.current_annual_cost)}
-                                    </p>
-                                    <p className="text-slate-500 text-xs mt-1">al año</p>
+                            {/* Slider Comparativo Interactivo Antes/Después */}
+                            <div className="bg-white/5 border border-white/10 rounded-3xl p-6 relative overflow-hidden">
+                                <p className="text-slate-400 text-xs mb-4 uppercase tracking-wider text-center font-bold">Desliza para ver la diferencia de coste</p>
+                                
+                                <div className="relative h-28 rounded-2xl bg-slate-950 overflow-hidden flex items-center">
+                                    {/* Antes (Coste actual) */}
+                                    <div className="absolute inset-0 bg-gradient-to-r from-red-950/40 via-red-900/10 to-transparent flex flex-col justify-center px-6">
+                                        <p className="text-xs text-red-400 font-bold uppercase tracking-wider">Pagas ahora</p>
+                                        <p className="text-3xl font-black text-slate-400 line-through decoration-red-500/80 decoration-2">{formatCurrency(proposal.current_annual_cost)}</p>
+                                        <p className="text-[10px] text-slate-500 font-mono">Coste anterior estimado / año</p>
+                                    </div>
+                                    
+                                    {/* Después (Con Zinergia) con clip-path dinámico revelador */}
+                                    <div 
+                                        className="absolute inset-0 bg-gradient-to-r from-emerald-950/50 via-indigo-900/30 to-indigo-950/60 border-l border-emerald-400/50 flex flex-col justify-center px-6 transition-all duration-75"
+                                        style={{ 
+                                            clipPath: `inset(0 0 0 ${sliderVal}%)`,
+                                            left: 0
+                                        }}
+                                    >
+                                        <div className="ml-auto text-right">
+                                            <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">Con Zinergia</p>
+                                            <p className="text-3xl font-black text-white">{formatCurrency(proposal.offer_annual_cost)}</p>
+                                            <p className="text-[10px] text-emerald-300/80 font-bold">¡Ahorras {formatCurrency(proposal.annual_savings)}/año! ({savingsPercent}%)</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Línea divisoria del slider */}
+                                    <div 
+                                        className="absolute top-0 bottom-0 w-0.5 bg-gradient-to-b from-emerald-400 via-emerald-300 to-indigo-500 pointer-events-none"
+                                        style={{ left: `${100 - sliderVal}%` }}
+                                    >
+                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white text-indigo-950 shadow-lg border border-emerald-400 flex items-center justify-center text-[10px] font-bold">
+                                            ↔
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="bg-indigo-600/20 border border-indigo-500/30 rounded-2xl p-5 text-center">
-                                    <p className="text-indigo-300 text-xs mb-2 uppercase tracking-wider">Con Zinergia</p>
-                                    <p className="text-2xl font-bold text-white">
-                                        {formatCurrency(proposal.offer_annual_cost)}
-                                    </p>
-                                    <p className="text-indigo-300 text-xs mt-1">al año</p>
+
+                                {/* Control Deslizante de entrada */}
+                                <div className="mt-4 flex items-center gap-3">
+                                    <span className="text-[10px] text-red-400 font-bold uppercase shrink-0">Antes</span>
+                                    <input 
+                                        type="range" 
+                                        min="0" 
+                                        max="100" 
+                                        value={100 - sliderVal} 
+                                        onChange={(e) => setSliderVal(100 - Number(e.target.value))}
+                                        className="flex-1 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                                        aria-label="Deslizador de comparación de antes y después"
+                                    />
+                                    <span className="text-[10px] text-emerald-400 font-bold uppercase shrink-0">Zinergia</span>
                                 </div>
                             </div>
 
@@ -239,10 +305,14 @@ export default function PublicProposalClient({ proposal, token }: Props) {
                                 </label>
 
                                 {/* Canvas firma */}
-                                <div className="bg-white rounded-2xl p-2">
+                                <div className="relative bg-slate-950/60 border border-white/10 rounded-2xl p-2.5 shadow-2xl backdrop-blur-xl group hover:border-indigo-500/30 transition-all duration-300">
+                                    <div className="absolute top-2 right-3 flex items-center gap-1.5 z-10">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Panel Activo</span>
+                                    </div>
                                     <SignaturePad
                                         onSignature={setSignatureData}
-                                        label="Traza tu firma"
+                                        label="Traza tu firma digital en el recuadro"
                                     />
                                 </div>
                             </div>
