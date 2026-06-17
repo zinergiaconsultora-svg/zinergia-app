@@ -1,6 +1,8 @@
 import { useReducer, useEffect, useCallback } from 'react';
-import { createClientAction, updateClientAction } from '@/app/actions/clients';
+import { createClientAction, updateClientAction, checkDuplicateClientAction } from '@/app/actions/clients';
+import type { DuplicateMatch } from '@/app/actions/clients';
 import { Client, ClientType } from '@/types/crm';
+import { logger } from '@/lib/utils/logger';
 
 interface UseClientFormProps {
     clientToEdit?: Client | null;
@@ -12,6 +14,7 @@ interface FormState {
     loading: boolean;
     step: number;
     error: string | null;
+    duplicate: DuplicateMatch | null;
     formData: {
         name: string;
         email: string;
@@ -19,6 +22,7 @@ interface FormState {
         address: string;
         type: ClientType;
         cups: string;
+        dni_cif: string;
         current_supplier: string;
         tariff_type: string;
     };
@@ -28,6 +32,7 @@ type FormAction =
     | { type: 'SET_FIELD'; field: keyof FormState['formData']; value: string }
     | { type: 'SET_STEP'; step: number }
     | { type: 'SET_ERROR'; error: string | null }
+    | { type: 'SET_DUPLICATE'; duplicate: DuplicateMatch | null }
     | { type: 'START_SUBMIT' }
     | { type: 'SUBMIT_SUCCESS' }
     | { type: 'SUBMIT_ERROR'; error: string }
@@ -40,6 +45,7 @@ const defaultFormData = {
     address: '',
     type: 'particular' as ClientType,
     cups: '',
+    dni_cif: '',
     current_supplier: '',
     tariff_type: '2.0TD'
 };
@@ -48,6 +54,7 @@ const initialState: FormState = {
     loading: false,
     step: 1,
     error: null,
+    duplicate: null,
     formData: defaultFormData
 };
 
@@ -56,12 +63,15 @@ function formReducer(state: FormState, action: FormAction): FormState {
         case 'SET_FIELD':
             return {
                 ...state,
-                formData: { ...state.formData, [action.field]: action.value }
+                formData: { ...state.formData, [action.field]: action.value },
+                duplicate: null,
             };
         case 'SET_STEP':
             return { ...state, step: action.step };
         case 'SET_ERROR':
             return { ...state, error: action.error };
+        case 'SET_DUPLICATE':
+            return { ...state, duplicate: action.duplicate, loading: false };
         case 'START_SUBMIT':
             return { ...state, loading: true, error: null };
         case 'SUBMIT_SUCCESS':
@@ -79,6 +89,7 @@ function formReducer(state: FormState, action: FormAction): FormState {
                         address: action.clientToEdit.address || '',
                         type: action.clientToEdit.type || 'particular',
                         cups: action.clientToEdit.cups || '',
+                        dni_cif: action.clientToEdit.dni_cif || '',
                         current_supplier: action.clientToEdit.current_supplier || '',
                         tariff_type: action.clientToEdit.tariff_type || '2.0TD'
                     }
@@ -105,11 +116,27 @@ export function useClientForm({ clientToEdit, onSuccess, onClose }: UseClientFor
         dispatch({ type: 'SET_STEP', step });
     }, []);
 
+    const dismissDuplicate = useCallback(() => {
+        dispatch({ type: 'SET_DUPLICATE', duplicate: null });
+    }, []);
+
     const handleSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
         dispatch({ type: 'START_SUBMIT' });
 
         try {
+            // On create (not edit), check for duplicates if no prior warning was dismissed
+            if (!clientToEdit && !state.duplicate) {
+                const dup = await checkDuplicateClientAction(
+                    state.formData.cups || undefined,
+                    state.formData.dni_cif || undefined,
+                );
+                if (dup) {
+                    dispatch({ type: 'SET_DUPLICATE', duplicate: dup });
+                    return;
+                }
+            }
+
             if (clientToEdit) {
                 await updateClientAction(clientToEdit.id, state.formData);
             } else {
@@ -122,11 +149,28 @@ export function useClientForm({ clientToEdit, onSuccess, onClose }: UseClientFor
             onSuccess();
             onClose();
         } catch (err: unknown) {
-            console.error(err);
+            logger.error('Error saving client:', err);
             const errorMessage = err instanceof Error ? err.message : 'Error al guardar cliente';
             dispatch({ type: 'SUBMIT_ERROR', error: errorMessage });
         }
-    }, [clientToEdit, state.formData, onSuccess, onClose]);
+    }, [clientToEdit, state.formData, state.duplicate, onSuccess, onClose]);
+
+    const forceCreate = useCallback(async () => {
+        dispatch({ type: 'START_SUBMIT' });
+        try {
+            await createClientAction({
+                ...state.formData,
+                status: 'new'
+            });
+            dispatch({ type: 'SUBMIT_SUCCESS' });
+            onSuccess();
+            onClose();
+        } catch (err: unknown) {
+            logger.error('Error saving client (force):', err);
+            const errorMessage = err instanceof Error ? err.message : 'Error al guardar cliente';
+            dispatch({ type: 'SUBMIT_ERROR', error: errorMessage });
+        }
+    }, [state.formData, onSuccess, onClose]);
 
     return {
         formData: state.formData,
@@ -134,6 +178,9 @@ export function useClientForm({ clientToEdit, onSuccess, onClose }: UseClientFor
         setStep,
         loading: state.loading,
         error: state.error,
+        duplicate: state.duplicate,
+        dismissDuplicate,
+        forceCreate,
         handleChange,
         handleSubmit
     };
