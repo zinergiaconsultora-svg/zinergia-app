@@ -67,18 +67,37 @@ export async function generatePublicLinkAction(proposalId: string): Promise<{ to
     const token = generateToken();
     const expiresAt = new Date(Date.now() + LINK_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
+    const { data: proposalCtx } = await supabase
+        .from('proposals')
+        .select('client_id, franchise_id')
+        .eq('id', proposalId)
+        .eq('agent_id', user.id)
+        .maybeSingle();
+
+    if (!proposalCtx) throw new Error('Propuesta no encontrada o sin permisos');
+
     const { error } = await supabase
         .from('proposals')
         .update({
             public_token: token,
             public_expires_at: expiresAt,
             sent_date: new Date().toISOString(),
-            status: 'sent', // Al generar el link, la propuesta pasa a enviada
+            status: 'sent',
         })
         .eq('id', proposalId)
         .eq('agent_id', user.id);
 
     if (error) throw new Error(`Error generando link: ${error.message}`);
+
+    const adminClient = createServiceClient();
+    await adminClient.from('client_activities').insert({
+        client_id: proposalCtx.client_id,
+        agent_id: user.id,
+        franchise_id: proposalCtx.franchise_id,
+        type: 'proposal_link_sent',
+        description: 'Se ha generado y compartido el enlace público de la propuesta.',
+        metadata: { proposal_id: proposalId },
+    });
 
     revalidatePath(`/dashboard/proposals/${proposalId}`);
     revalidatePath('/dashboard/proposals');
@@ -234,6 +253,29 @@ export async function acceptPublicProposalAction(
         .eq('id', proposal.id);
 
     if (error) return { success: false, message: 'Error al procesar la aceptación.' };
+
+    // Log the acceptance event
+    try {
+        const { data: propForActivity } = await adminClient
+            .from('proposals')
+            .select('client_id, agent_id, franchise_id')
+            .eq('id', proposal.id)
+            .maybeSingle();
+        if (propForActivity?.client_id && propForActivity?.agent_id) {
+            await adminClient.from('client_activities').insert({
+                client_id: propForActivity.client_id,
+                agent_id: propForActivity.agent_id,
+                franchise_id: propForActivity.franchise_id,
+                type: 'proposal_accepted',
+                description: signedName
+                    ? `El cliente ${signedName} ha aceptado y firmado la propuesta.`
+                    : 'El cliente ha aceptado la propuesta.',
+                metadata: { proposal_id: proposal.id },
+            });
+        }
+    } catch (actErr) {
+        log.warn({ err: actErr, proposalId: proposal.id }, 'failed to log acceptance activity');
+    }
 
     // Cargar contexto de la propuesta (necesario para comisión y notificaciones).
     let propData: Record<string, unknown> | null = null;

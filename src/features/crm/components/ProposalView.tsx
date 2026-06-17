@@ -19,9 +19,12 @@ import { InvoiceData, SavingsResult, Client, Proposal, ProposalStatus } from '@/
 import { crmService } from '@/services/crmService';
 import { getClientsAction } from '@/app/actions/clients';
 import { generatePublicLinkAction } from '@/app/actions/publicProposal';
+import { logProposalCreatedAction } from '@/app/actions/proposalActivities';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DigitalProposalCard } from '@/features/comparator/components/DigitalProposalCard';
+import ProposalTimeline from '@/features/crm/components/ProposalTimeline';
 import type { InvoiceSimulationResult } from '@/lib/comparison/invoice-simulator';
 
 interface ProposalViewProps {
@@ -87,7 +90,7 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
             const data = await getClientsAction(200, 0);
             setClients(data);
         } catch (error) {
-            console.error('Failed to load clients', error);
+            logger.error('Failed to load clients', error);
         }
     };
 
@@ -116,12 +119,13 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
                 optimization_result: data.result.optimization_result || undefined,
             };
 
-            await crmService.saveProposal(proposalData);
+            const saved = await crmService.saveProposal(proposalData);
 
-            // Success! Redirect to client
+            logProposalCreatedAction(saved.id, selectedClient.id).catch(() => {});
+
             router.push(`/dashboard/clients/${selectedClient.id}`);
         } catch (error) {
-            console.error('Failed to save proposal', error);
+            logger.error('Failed to save proposal', error);
             toast.error('Error al guardar la propuesta. Inténtalo de nuevo.');
         } finally {
             setSaving(false);
@@ -156,7 +160,7 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
             await crmService.updateProposalStatus(initialProposal.id, newStatus);
             setStatus(newStatus);
         } catch (error) {
-            console.error('Failed to update status', error);
+            logger.error('Failed to update status', error);
             toast.error('Error al actualizar el estado.');
         }
     };
@@ -169,7 +173,7 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
             await crmService.deleteProposal(initialProposal.id);
             router.back();
         } catch (error) {
-            console.error('Failed to delete proposal', error);
+            logger.error('Failed to delete proposal', error);
             toast.error('Error al eliminar la propuesta.');
         }
     };
@@ -333,6 +337,16 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
                     title={initialProposal ? "Estudio Personalizado" : "Mejor Opción Detectada"}
                 />
             </div>
+
+            {/* Timeline de actividad */}
+            {initialProposal && (
+                <div className="max-w-4xl mx-auto px-4 mt-6 print:hidden">
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Historial</h3>
+                        <ProposalTimeline proposalId={initialProposal.id} />
+                    </div>
+                </div>
+            )}
 
             {/* SAVE PROPOSAL MODAL */}
             <AnimatePresence>
