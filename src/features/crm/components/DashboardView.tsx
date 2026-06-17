@@ -50,6 +50,10 @@ const RenewalsPanel = dynamic(() => import('@/features/renewals/components/Renew
     ssr: false,
     loading: () => <div className="h-64 bg-slate-100/50 dark:bg-slate-800/30 animate-pulse rounded-2xl" />,
 });
+const AgendaToday = dynamic(() => import('@/features/crm/components/AgendaToday'), {
+    ssr: false,
+    loading: () => <div className="h-48 bg-slate-100/50 dark:bg-slate-800/30 animate-pulse rounded-2xl" />,
+});
 
 interface DashboardStats {
     user?: {
@@ -334,8 +338,14 @@ export default function DashboardView() {
                         </div>
                     </div>
 
-                    {/* ROW 2: Copilot (Daily Briefing 1/2 + Renewals 1/2) */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* ROW 2: Agenda + Copilot + Renewals */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        <div className="bg-white/90 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/80 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-none p-5">
+                            <SectionHeader title="Mi Agenda Hoy" link="Tareas" linkHref="/dashboard/tasks" />
+                            <div className="mt-3">
+                                <AgendaToday />
+                            </div>
+                        </div>
                         <div className="bg-white/90 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/80 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-none p-5">
                             <DailyBriefing />
                         </div>
