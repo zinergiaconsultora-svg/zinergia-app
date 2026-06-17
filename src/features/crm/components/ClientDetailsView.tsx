@@ -196,7 +196,19 @@ export default function ClientDetailsView({ clientId }: { clientId: string }) {
                                 {client.name.toLowerCase()}
                             </h1>
                             <StatusBadge status={client.status} />
+                            {client.segment && (
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                                    client.segment === 'PYME'
+                                        ? 'bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/30'
+                                        : 'bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30'
+                                }`}>
+                                    {client.segment}
+                                </span>
+                            )}
                         </div>
+                        {client.dni_cif && (
+                            <p className="text-[11px] text-slate-400 mt-0.5 font-mono">{client.dni_cif}</p>
+                        )}
                     </div>
 
                     {/* Quick contact + actions */}
@@ -232,6 +244,23 @@ export default function ClientDetailsView({ clientId }: { clientId: string }) {
                         <PropertyCell label="Email" value={client.email} href={client.email ? `mailto:${client.email}` : undefined} />
                         <PropertyCell label="Teléfono" value={client.phone} href={client.phone ? `tel:${client.phone}` : undefined} />
                     </div>
+
+                    {/* Last contact + notes */}
+                    {(client.last_contact_date || client.notes) && (
+                        <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-3">
+                            {client.last_contact_date && (
+                                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                                    <CalendarDays size={13} className="text-slate-400 shrink-0" />
+                                    <span>Último contacto: <span className="font-medium text-slate-700 dark:text-slate-300">{new Date(client.last_contact_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</span></span>
+                                </div>
+                            )}
+                            {client.notes && (
+                                <p className="text-xs text-slate-500 italic flex-1 truncate" title={client.notes}>
+                                    {client.notes}
+                                </p>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* ═══ KPI STRIP + SIMULATE BUTTON ═══ */}
