@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSimulatorContext } from '../contexts/SimulatorContext';
-import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { InvoiceData } from '@/types/crm';
 import { SimulatorUpload } from './SimulatorUpload';
 import { SimulatorSegmentStep } from './SimulatorSegmentStep';
@@ -58,7 +57,6 @@ export const SimulatorView = () => {
         <div className="min-h-screen relative overflow-hidden">
             {/* Background con gradiente orgánico */}
             <div className="fixed inset-0 gradient-organic -z-10" />
-            <AmbientBackground />
 
             <div className="relative z-10 px-3 sm:px-4 pt-4 pb-20 overflow-x-hidden">
                 <motion.div

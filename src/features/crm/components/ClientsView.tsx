@@ -8,7 +8,6 @@ import { motion } from 'framer-motion';
 import { useClients } from '../hooks/useClients';
 import ClientCard from './ClientCard';
 import dynamic from 'next/dynamic';
-import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { Button } from '@/components/ui/primitives/Button';
 import { Input } from '@/components/ui/primitives/Input';
 import BulkActions from './BulkActions';
@@ -117,8 +116,6 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 relative overflow-hidden font-sans selection:bg-energy-500/30 selection:text-energy-900">
-            <AmbientBackground />
-
             <div className="max-w-[1400px] mx-auto px-6 sm:px-8 lg:px-12 py-12 relative z-10">
 
                 {/* HEADER */}

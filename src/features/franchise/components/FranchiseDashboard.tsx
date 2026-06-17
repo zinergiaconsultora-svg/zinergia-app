@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { Users, TrendingUp, Target, Wallet, ArrowUpRight, Zap, Building2, BarChart3, CheckCircle2, Clock } from 'lucide-react';
 import { getFranchiseOverviewAction, FranchiseOverview, AgentStat } from '@/app/actions/franchise';
-import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -135,7 +134,6 @@ export default function FranchiseDashboard() {
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 relative overflow-hidden font-sans">
-            <AmbientBackground />
 
             <div className="max-w-[1400px] mx-auto px-6 sm:px-8 lg:px-12 py-10 relative z-10 space-y-8">
 
