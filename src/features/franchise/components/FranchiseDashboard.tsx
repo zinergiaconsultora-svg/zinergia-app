@@ -6,18 +6,16 @@ import { getFranchiseOverviewAction, FranchiseOverview, AgentStat } from '@/app/
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { AnimatedSparkline } from '@/components/ui/AnimatedSparkline';
 
 const FMT_EUR = (n: number) =>
     new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
 
-function KpiCard({ icon, label, value, sub, color, sparklineColor, hero = false }: {
+function KpiCard({ icon, label, value, sub, color, hero = false }: {
     icon: React.ReactNode;
     label: string;
     value: string | number;
     sub?: string;
     color: string;
-    sparklineColor?: string;
     hero?: boolean;
 }) {
     return (
@@ -28,7 +26,6 @@ function KpiCard({ icon, label, value, sub, color, sparklineColor, hero = false 
             </div>
             <div className="text-3xl font-black text-slate-900 dark:text-white leading-none">{value}</div>
             {sub && <div className="text-xs text-slate-400 mt-1">{sub}</div>}
-            {sparklineColor && <AnimatedSparkline color={sparklineColor} delay={0.3} className="mt-3" />}
         </Card>
     );
 }
@@ -167,16 +164,14 @@ export default function FranchiseDashboard() {
                         label="Clientes"
                         value={totals.clients}
                         color="text-indigo-500"
-                        sparklineColor="#6366f1"
-                    />
+                                            />
                     <KpiCard
                         icon={<Target size={16} />}
                         label="Pipeline"
                         value={FMT_EUR(totals.pipeline_value)}
                         sub="factura/mes en proceso"
                         color="text-violet-500"
-                        sparklineColor="#8b5cf6"
-                        hero
+                                                hero
                     />
                     <KpiCard
                         icon={<BarChart3 size={16} />}
@@ -190,8 +185,7 @@ export default function FranchiseDashboard() {
                         value={`${conversionPct}%`}
                         sub={`${totals.accepted} firmadas`}
                         color="text-emerald-500"
-                        sparklineColor="#10b981"
-                    />
+                                            />
                     <KpiCard
                         icon={<Wallet size={16} />}
                         label="Comisiones pendientes"
