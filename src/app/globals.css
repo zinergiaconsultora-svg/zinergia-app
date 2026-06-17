@@ -314,83 +314,6 @@ a, button, nav, header, img, svg {
   }
 }
 
-@keyframes pulse-slow {
-
-  0%,
-  100% {
-    opacity: 0.8;
-    transform: scale(1);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1.05);
-  }
-}
-
-@keyframes float-slow {
-
-  0%,
-  100% {
-    transform: translateY(0) translateX(0);
-    opacity: 0;
-  }
-
-  25% {
-    opacity: 0.6;
-  }
-
-  50% {
-    transform: translateY(-20px) translateX(10px);
-  }
-
-  75% {
-    opacity: 0.3;
-  }
-}
-
-@keyframes glow-soft {
-
-  0%,
-  100% {
-    fill-opacity: 0.1;
-  }
-
-  50% {
-    fill-opacity: 0.25;
-  }
-}
-
-.animate-pulse-slow {
-  animation: pulse-slow 6s ease-in-out infinite;
-}
-
-.animate-float-slow {
-  animation: float-slow 8s ease-in-out infinite;
-}
-
-.animate-glow-soft {
-  animation: glow-soft 4s ease-in-out infinite;
-}
-
-@keyframes glow-strong {
-
-  0%,
-  100% {
-    fill-opacity: 0.4;
-    stroke-opacity: 0.5;
-  }
-
-  50% {
-    fill-opacity: 0.8;
-    stroke-opacity: 1;
-  }
-}
-
-.animate-glow-strong {
-  animation: glow-strong 3s ease-in-out infinite;
-}
-
 /* ========================================
    PREFERS-REDUCED-MOTION (Accesibilidad)
    ======================================== */
@@ -403,46 +326,6 @@ a, button, nav, header, img, svg {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-}
-
-/* ========================================
-   STAGGERED REVEALS (High-impact animations)
-   ======================================== */
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(30px) scale(0.95);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.animate-fade-in-up {
-  animation: fade-in-up 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards;
-}
-
-/* Stagger delays */
-.stagger-1 {
-  animation-delay: 0.1s;
-}
-
-.stagger-2 {
-  animation-delay: 0.2s;
-}
-
-.stagger-3 {
-  animation-delay: 0.3s;
-}
-
-.stagger-4 {
-  animation-delay: 0.4s;
-}
-
-.stagger-5 {
-  animation-delay: 0.5s;
 }
 
 /* ========================================

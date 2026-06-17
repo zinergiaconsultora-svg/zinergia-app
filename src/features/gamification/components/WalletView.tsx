@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import {
     Wallet,
     TrendingUp,
@@ -64,7 +64,6 @@ export default function WalletView({ canManage = false, allCommissions: initialA
         franchisePersonal,
         franchiseNetwork,
         clearedCommissions,
-        handleSimulateSale,
         handleWithdraw,
         reloadCommissions,
     } = useWallet();
@@ -169,23 +168,13 @@ export default function WalletView({ canManage = false, allCommissions: initialA
                     </h1>
                     <p className="text-slate-500 text-sm mt-1">Gestión de comisiones y pagos.</p>
                 </div>
-                <button
-                    onClick={handleSimulateSale}
-                    className="px-3 py-1.5 text-xs font-mono font-bold text-slate-400 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-energy-600 transition-colors"
-                >
-                    DEV: SIMULAR VENTA
-                </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
+                <div
                     className="md:col-span-1 bg-slate-900 rounded-xl p-6 text-white shadow-card relative overflow-hidden flex flex-col justify-between min-h-[220px] group border border-slate-800"
                 >
                     <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-50 pointer-events-none"></div>
-                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-energy-500 rounded-full blur-[80px] opacity-20 group-hover:opacity-30 transition-opacity"></div>
                     <div className="relative z-10">
                         <div className="flex justify-between items-start mb-8">
                             <div className="bg-white/10 backdrop-blur-md p-2.5 rounded-xl border border-white/10 shrink-0">
@@ -226,13 +215,10 @@ export default function WalletView({ canManage = false, allCommissions: initialA
                             </div>
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
                 <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 h-full">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
+                    <div
                         className="bg-white p-6 rounded-xl border border-slate-200 shadow-card flex flex-col justify-center relative overflow-hidden group min-h-[160px]"
                     >
                         <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -247,12 +233,9 @@ export default function WalletView({ canManage = false, allCommissions: initialA
                             <span className="w-2 h-2 rounded-full bg-amber-500"></span>
                             <p className="text-xs text-slate-400 font-medium">Validacion en curso</p>
                         </div>
-                    </motion.div>
+                    </div>
 
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 }}
+                    <div
                         className="bg-white p-6 rounded-xl border border-slate-200 shadow-card flex flex-col justify-center relative overflow-hidden group min-h-[160px]"
                     >
                         <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -273,12 +256,9 @@ export default function WalletView({ canManage = false, allCommissions: initialA
                             {(growth.growth_percent ?? 0) > 0 ? <ArrowUpRight size={12} /> : (growth.growth_percent ?? 0) < 0 ? <ArrowDownRight size={12} /> : null}
                             {(growth.growth_percent ?? 0) > 0 ? '+' : ''}{(growth.growth_percent ?? 0).toFixed(1)}% vs mes anterior
                         </p>
-                    </motion.div>
+                    </div>
 
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.4 }}
+                    <div
                         className="sm:col-span-2 bg-gradient-to-r from-energy-500 to-energy-600 p-px rounded-xl shadow-card"
                     >
                         <div className="bg-white rounded-[11px] p-4 flex flex-col sm:flex-row sm:items-center justify-between h-full gap-4 sm:gap-0">
@@ -302,7 +282,7 @@ export default function WalletView({ canManage = false, allCommissions: initialA
                                 Retirar Fondos
                             </button>
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             </div>
 
@@ -422,13 +402,9 @@ export default function WalletView({ canManage = false, allCommissions: initialA
             )}
 
             {/* Rejection Dialog */}
-            <AnimatePresence>
-                {rejectionId && (
+            {rejectionId && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setRejectionId(null)}>
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
+                        <div
                             role="dialog"
                             aria-modal="true"
                             aria-label="Motivo del rechazo"
@@ -448,10 +424,9 @@ export default function WalletView({ canManage = false, allCommissions: initialA
                                 <button onClick={() => setRejectionId(null)} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100">Cancelar</button>
                                 <button onClick={handleRejectWithdrawal} disabled={!rejectionReason.trim()} className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 disabled:opacity-40 transition-colors">Rechazar</button>
                             </div>
-                        </motion.div>
+                        </div>
                     </div>
                 )}
-            </AnimatePresence>
 
             {/* ADMIN: Commission Management */}
             {canManage && (
