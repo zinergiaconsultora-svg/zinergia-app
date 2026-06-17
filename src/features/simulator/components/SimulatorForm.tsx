@@ -18,6 +18,7 @@ import PreviousInvoiceDiff from './PreviousInvoiceDiff';
 import { KeyboardHelpOverlay, KeyboardHint } from './KeyboardHelpOverlay';
 import { useKeyboardNav } from '../hooks/useKeyboardNav';
 import { getVisibleInvoicePeriods, inferInvoicePowerType, validateNormalizedInvoice } from '@/lib/invoices/normalization';
+import { getMissingCriticalFields } from '@/lib/invoices/criticalFields';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -556,14 +557,17 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     }, [data.total_amount, data.period_days]);
 
     const hasBlockingErrors = validationSummary.errorCount > 0;
-    const canCompareInvoice = hasEnergyValues && hasPowerValues && !isAnalyzing && !hasBlockingErrors;
-    const compareBlockReason = !hasEnergyValues
-        ? 'No se puede comparar hasta detectar o introducir consumo.'
-        : !hasPowerValues
-            ? 'No se puede comparar hasta detectar o introducir potencia contratada.'
-            : hasBlockingErrors
-                ? 'Hay errores críticos de OCR/coherencia. Corrige los periodos marcados antes de ejecutar la comparativa.'
-                : undefined;
+
+    // Campos obligatorios para una comparativa válida. Sin ellos no se permite
+    // ejecutar la comparación (bloqueo, no sólo aviso).
+    const missingCriticalFields = getMissingCriticalFields(data);
+
+    const canCompareInvoice = missingCriticalFields.length === 0 && !isAnalyzing && !hasBlockingErrors;
+    const compareBlockReason = missingCriticalFields.length > 0
+        ? `Faltan datos obligatorios para comparar: ${missingCriticalFields.join(', ')}. Complétalos para continuar.`
+        : hasBlockingErrors
+            ? 'Hay errores críticos de OCR/coherencia. Corrige los periodos marcados antes de ejecutar la comparativa.'
+            : undefined;
 
     const tariffLabel = powerType === '2.0' ? 'Tensión Baja 2.0TD'
         : powerType === '3.0' ? 'Empresa 3.0TD'
