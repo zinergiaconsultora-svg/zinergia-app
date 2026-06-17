@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { useSimulatorContext } from '../contexts/SimulatorContext';
 import { InvoiceData } from '@/types/crm';
 import { SimulatorUpload } from './SimulatorUpload';
@@ -59,12 +59,7 @@ export const SimulatorView = () => {
             <div className="fixed inset-0 gradient-organic -z-10" />
 
             <div className="relative z-10 px-3 sm:px-4 pt-4 pb-20 overflow-x-hidden">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6 }}
-                    className="max-w-4xl mx-auto text-center mb-8"
-                >
+                <div className="max-w-4xl mx-auto text-center mb-8">
                     {/* Guide link — top right */}
                     <div className="flex justify-end mb-3">
                         <Link
@@ -81,7 +76,7 @@ export const SimulatorView = () => {
                     <p className="text-sm md:text-base text-slate-500 max-w-2xl mx-auto font-body leading-relaxed">
                         Sube tu factura, extrae los datos con IA y descubre las mejores tarifas del mercado. Ahorra hasta un <span className="font-semibold text-emerald-600">40%</span> en tu factura de luz.
                     </p>
-                </motion.div>
+                </div>
 
                 <AnimatePresence mode="wait">
 
