@@ -8,6 +8,7 @@ import { safeStringEqual } from '@/lib/crypto/timingSafe';
 import { moduleLogger } from '@/lib/logger';
 import { redactOcrTextSample, sanitizeOcrTrainingData } from '@/lib/ocr/sanitizeTrainingData';
 import { normalizeInvoiceData, parseInvoiceNumber } from '@/lib/invoices/normalization';
+import { resolveTitularDniCif } from '@/lib/invoices/titularId';
 
 const log = moduleLogger('ocr-callback');
 
@@ -79,10 +80,11 @@ export async function POST(request: Request) {
                 }
             }
 
-            // N8N puede enviar CIF y DNI por separado — combinar en dni_cif priorizando CIF para empresas
-            const rawCif = (rawData.CIF || rawData.cif || rawData.CIF_NIF || rawData.nif_cif || '') as string;
-            const rawDni = (rawData.DNI || rawData.dni || rawData.NIF || rawData.nif || '') as string;
-            const resolvedDniCif = (rawData.dni_cif as string) || rawCif || rawDni || '';
+            // DNI/CIF del TITULAR del contrato (no el de la comercializadora/distribuidora).
+            // resolveTitularDniCif prefiere campos etiquetados como titular, valida el
+            // formato fiscal y excluye CIFs de comercializadoras conocidas. Si no hay uno
+            // fiable devuelve '' (mejor vacío que el CIF equivocado).
+            const resolvedDniCif = resolveTitularDniCif(rawData as Record<string, unknown>);
 
             invoiceData = {
                 client_name: rawData.client_name || rawData.CLIENTE_NOMBRE || rawData.cliente_nombre || rawData.TITULAR || 'Cliente Desconocido',
