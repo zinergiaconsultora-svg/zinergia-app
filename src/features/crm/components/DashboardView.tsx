@@ -14,24 +14,14 @@ import {
     Zap,
 } from 'lucide-react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { formatCurrency } from '@/lib/utils/format';
 import { DashboardSkeleton } from '@/components/ui/DashboardSkeleton';
-import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
-import { MagneticCard } from "@/components/ui/MagneticCard";
-import { AnimatedSparkline } from "@/components/ui/AnimatedSparkline";
-
-
 
 const NotificationsPopover = dynamic(() =>
     import('@/features/crm/components/NotificationsPopover').then(m => ({ default: m.NotificationsPopover })),
     { ssr: false }
 );
-const OcrJobsPanel = dynamic(() => import('./OcrJobsPanel'), {
-    ssr: false,
-    loading: () => <div className="h-32 bg-slate-100/50 animate-pulse rounded-2xl" />,
-});
 
 const SavingsTrendChart = dynamic(() =>
     import('./DashboardCharts').then(m => ({ default: m.SavingsTrendChart })),
@@ -42,17 +32,13 @@ const PipelinePieChart = dynamic(() =>
     { loading: () => <div className="h-full w-full bg-slate-100/20 animate-pulse rounded-full" /> }
 );
 const SmartAlertsStrip = dynamic(() => import('./SmartAlertsStrip'), { ssr: false });
-const DailyBriefing = dynamic(() => import('@/features/copilot/components/DailyBriefing'), {
-    ssr: false,
-    loading: () => <div className="h-64 bg-slate-100/50 dark:bg-slate-800/30 animate-pulse rounded-2xl" />,
-});
 const RenewalsPanel = dynamic(() => import('@/features/renewals/components/RenewalsPanel'), {
     ssr: false,
-    loading: () => <div className="h-64 bg-slate-100/50 dark:bg-slate-800/30 animate-pulse rounded-2xl" />,
+    loading: () => <div className="h-64 bg-slate-100/50 animate-pulse rounded-2xl" />,
 });
 const AgendaToday = dynamic(() => import('@/features/crm/components/AgendaToday'), {
     ssr: false,
-    loading: () => <div className="h-48 bg-slate-100/50 dark:bg-slate-800/30 animate-pulse rounded-2xl" />,
+    loading: () => <div className="h-48 bg-slate-100/50 animate-pulse rounded-2xl" />,
 });
 
 interface DashboardStats {
@@ -110,23 +96,6 @@ const DEFAULT_STATS: DashboardStats = {
     }
 };
 
-// Animation variants - defined outside component to prevent recreation
-const container = {
-    hidden: { opacity: 0 },
-    show: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.1,
-            delayChildren: 0.2
-        }
-    }
-};
-
-const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 }
-};
-
 const DEFAULT_MONTHLY_GOAL = 10000;
 
 export default function DashboardView() {
@@ -150,7 +119,6 @@ export default function DashboardView() {
         loadStats();
     }, []);
 
-    // Memoized calculations
     const monthlyGoal = stats.financials.monthly_goal || DEFAULT_MONTHLY_GOAL;
 
     const goalProgress = useMemo(() =>
@@ -168,7 +136,6 @@ export default function DashboardView() {
         [notifications]
     );
 
-    // Chart Calculations - optimized to single pass O(n) instead of O(3n)
     const { wonDeals, activeDeals, lostDeals } = useMemo(() => {
         return stats.recentProposals.reduce((acc, p) => {
             if (p.status === 'accepted') acc.wonDeals++;
@@ -178,7 +145,6 @@ export default function DashboardView() {
         }, { wonDeals: 0, activeDeals: 0, lostDeals: 0 });
     }, [stats.recentProposals]);
 
-    // Callbacks for notification handlers
     const handleMarkAsRead = useCallback((id: string) => {
         markRead(id);
     }, [markRead]);
@@ -194,27 +160,17 @@ export default function DashboardView() {
     if (loading) return <DashboardSkeleton />;
 
     return (
-        <div className="w-full bg-white lg:bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-300 font-sans overflow-x-hidden flex flex-col relative selection:bg-indigo-100 bg-dot-pattern">
-            {/* Ambient Glows — Efecto Ultra Premium (detrás de todo) */}
-            <div className="fixed inset-0 pointer-events-none overflow-hidden z-[-1]">
-                <div className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] ambient-glow-blue rounded-full blur-[100px] animate-spin-slow opacity-60"></div>
-                <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] ambient-glow-energy rounded-full blur-[100px] animate-spin-slow opacity-60" style={{ animationDirection: 'reverse' }}></div>
-            </div>
+        <div className="w-full bg-white lg:bg-slate-50 text-slate-600 font-sans overflow-x-hidden flex flex-col relative selection:bg-indigo-100">
 
-            <motion.div
-                variants={container}
-                initial="hidden"
-                animate="show"
-                className="flex-1 flex flex-col px-0 md:px-6 md:py-4 gap-0 md:gap-8 max-w-[1700px] mx-auto w-full z-10"
-            >
-                {/* 0. MOBILE HEADER — iOS style */}
-                <motion.div variants={item} className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-[#e5e5ea]">
+            <div className="flex-1 flex flex-col px-0 md:px-6 md:py-4 gap-0 md:gap-6 max-w-[1700px] mx-auto w-full">
+                {/* MOBILE HEADER */}
+                <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-slate-200">
                     <div>
-                        <p className="text-[11px] text-[#8e8e93] font-medium uppercase tracking-wide">Bienvenido</p>
+                        <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide">Bienvenido</p>
                         <h1 className="text-lg font-semibold text-slate-900">{firstName}</h1>
                     </div>
                     <div className="relative">
-                        <button type="button" aria-label="Notificaciones" className="p-2 text-[#8e8e93] relative active:bg-slate-100 rounded-xl transition-colors" onClick={() => setIsNotifOpen(!isNotifOpen)}>
+                        <button type="button" aria-label="Notificaciones" className="p-2 text-slate-400 relative active:bg-slate-100 rounded-xl transition-colors" onClick={() => setIsNotifOpen(!isNotifOpen)}>
                             <Bell size={20} />
                             {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>}
                         </button>
@@ -229,49 +185,28 @@ export default function DashboardView() {
                             />
                         )}
                     </div>
-                </motion.div>
+                </div>
 
-                {/* 1. DESKTOP HEADER ROW */}
-                <motion.div variants={item} className="hidden lg:flex items-center justify-between shrink-0 mb-2">
-                    <div className="flex items-baseline gap-2">
-                        <h1 className="text-xl font-semibold text-slate-800 dark:text-white tracking-tight">
-                            Hola, <span className="text-indigo-600 dark:text-indigo-400">{firstName}.</span>
-                        </h1>
-                        <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">
-                            Tu rendimiento hoy está al 100%.
-                        </span>
-                    </div>
-                </motion.div>
+                {/* DESKTOP HEADER */}
+                <div className="hidden lg:flex items-center justify-between shrink-0 mb-2">
+                    <h1 className="text-xl font-semibold text-slate-800 tracking-tight">
+                        Hola, <span className="text-indigo-600">{firstName}.</span>
+                    </h1>
+                </div>
 
-                {/* Smart alerts — visible on both mobile and desktop */}
-                <motion.div variants={item} className="px-4 lg:px-0">
+                {/* Smart alerts */}
+                <div className="px-4 lg:px-0">
                     <SmartAlertsStrip />
-                </motion.div>
+                </div>
 
-                {/* 2. KPIs — iOS grouped list en móvil, grid en desktop */}
-                <motion.div variants={item} className="mx-4 lg:mx-0 mt-4 lg:mt-0">
-                    {/* Mobile: horizontal scroll KPI chips */}
+                {/* KPIs */}
+                <div className="mx-4 lg:mx-0 mt-4 lg:mt-0">
+                    {/* Mobile: horizontal scroll */}
                     <div className="flex gap-3 overflow-x-auto pb-1 lg:hidden scrollbar-none snap-x snap-mandatory">
-                        <MagneticCard className="snap-start shrink-0 bg-white rounded-2xl border border-[#e5e5ea] px-4 py-3 min-w-[140px] shadow-sm" onClick={() => { if(typeof window !== 'undefined') { import('@/lib/utils/haptics').then(m => m.haptics.light()) } }}>
-                            <p className="text-[11px] text-[#8e8e93] font-medium mb-1">Ahorro detectado</p>
-                            <p className="text-lg font-bold text-slate-900"><AnimatedCounter value={stats.financials.total_detected} suffix=" €" /></p>
-                            <AnimatedSparkline color="#10b981" delay={0.1} />
-                        </MagneticCard>
-                        <MagneticCard className="snap-start shrink-0 bg-white rounded-2xl border border-[#e5e5ea] px-4 py-3 min-w-[140px] shadow-sm" onClick={() => { if(typeof window !== 'undefined') { import('@/lib/utils/haptics').then(m => m.haptics.light()) } }}>
-                            <p className="text-[11px] text-[#8e8e93] font-medium mb-1">Objetivo {goalProgress}%</p>
-                            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1 mb-1 relative overflow-hidden">
-                                <div className="h-full bg-energy-500 rounded-full transition-all" style={{ width: `${goalProgress}%` }} />
-                                {/* Sparkline animado superpuesto a la barra de progreso */}
-                                <AnimatedSparkline color="#ff5722" strokeWidth={1} className="absolute inset-0 opacity-50 mix-blend-multiply" delay={0.2} />
-                            </div>
-                            <p className="text-xs text-slate-500"><AnimatedCounter value={monthlyGoal} suffix=" €" /></p>
-                        </MagneticCard>
-                        <MagneticCard className="snap-start shrink-0 bg-white rounded-2xl border border-[#e5e5ea] px-4 py-3 min-w-[140px] shadow-sm" onClick={() => { if(typeof window !== 'undefined') { import('@/lib/utils/haptics').then(m => m.haptics.light()) } }}>
-                            <p className="text-[11px] text-[#8e8e93] font-medium mb-1">Pipeline activo</p>
-                            <p className="text-lg font-bold text-slate-900"><AnimatedCounter value={stats.financials.pipeline} suffix=" €" /></p>
-                            <AnimatedSparkline color="#3b82f6" delay={0.3} />
-                        </MagneticCard>
-                        <Link href="/dashboard/tariffs" className="snap-start shrink-0 bg-indigo-50 rounded-2xl border border-indigo-100 px-4 py-3 min-w-[140px] shadow-sm flex items-center gap-2 active:bg-indigo-100 transition-colors">
+                        <KpiChip label="Ahorro detectado" value={formatCurrency(stats.financials.total_detected)} />
+                        <KpiChip label={`Objetivo ${goalProgress}%`} value={formatCurrency(monthlyGoal)} progress={goalProgress} />
+                        <KpiChip label="Pipeline activo" value={formatCurrency(stats.financials.pipeline)} />
+                        <Link href="/dashboard/tariffs" className="snap-start shrink-0 bg-indigo-50 rounded-2xl border border-indigo-100 px-4 py-3 min-w-[140px] flex items-center gap-2 active:bg-indigo-100 transition-colors">
                             <Zap size={16} className="text-indigo-500 shrink-0" />
                             <div>
                                 <p className="text-[11px] text-indigo-600 font-semibold">Ver Tarifas</p>
@@ -279,18 +214,17 @@ export default function DashboardView() {
                             </div>
                         </Link>
                     </div>
-                    {/* Desktop: original grid */}
+                    {/* Desktop: grid */}
                     <div className="hidden lg:grid grid-cols-4 gap-4">
-                        <GlassKpiCard label="Ahorro Detectado" value={<AnimatedCounter value={stats.financials.total_detected} suffix=" €" />} icon={TrendingUp} delay={0.1} />
-                        <GlassKpiCard label="Objetivo Mensual" value={`${goalProgress}%`} subValue={<AnimatedCounter value={monthlyGoal} suffix=" €" />} icon={Target} progress={goalProgress} delay={0.2} />
-                        <GlassKpiCard label="Pipeline Activo" value={<AnimatedCounter value={stats.financials.pipeline} suffix=" €" />} icon={Layers} delay={0.3} />
+                        <KpiCard label="Ahorro Detectado" value={formatCurrency(stats.financials.total_detected)} icon={TrendingUp} />
+                        <KpiCard label="Objetivo Mensual" value={`${goalProgress}%`} subValue={formatCurrency(monthlyGoal)} icon={Target} progress={goalProgress} />
+                        <KpiCard label="Pipeline Activo" value={formatCurrency(stats.financials.pipeline)} icon={Layers} />
                         <div
                             role="button"
                             tabIndex={0}
                             onClick={() => router.push('/dashboard/tariffs')}
                             onKeyDown={(e) => { if (e.key === 'Enter') router.push('/dashboard/tariffs'); }}
-                            className="flex flex-col justify-between p-3 bg-indigo-50/80 backdrop-blur-xl rounded-2xl border border-indigo-100 shadow-lg hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full animate-in fade-in zoom-in-95 fill-mode-both"
-                            style={{ animationDelay: '400ms', animationDuration: '500ms' }}
+                            className="flex flex-col justify-between p-3 bg-indigo-50/80 rounded-2xl border border-indigo-100 hover:bg-indigo-100/60 transition-colors cursor-pointer h-full"
                         >
                             <div className="flex items-center justify-between text-indigo-400 mb-1">
                                 <span className="text-[9px] font-medium uppercase tracking-widest opacity-80">Tarifas</span>
@@ -302,30 +236,28 @@ export default function DashboardView() {
                             </div>
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
-                {/* 3. MAIN BENTO GRID (Balanced Layout without gaps) */}
-                <motion.div variants={item} className="flex flex-col gap-4">
-                    
-                    {/* ROW 1: Charts (Trend 2/3 + Pipeline 1/3) */}
+                {/* MAIN GRID */}
+                <div className="flex flex-col gap-4 px-4 lg:px-0">
+
+                    {/* ROW 1: Charts */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        {/* Trend Chart (col-span-2) */}
-                        <div className="lg:col-span-2 bg-white/90 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/80 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-none p-5 flex flex-col group hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
-                            <SectionHeader title="Tendencia de Ahorro" link="Ver Reporte" linkHref="/dashboard/forecast" />
+                        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5 flex flex-col">
+                            <SectionHeader title="Tendencia de Ahorro" link="Ver Analytics" linkHref="/dashboard/analytics" />
                             <div className="mt-4 h-[180px] w-full">
                                 <SavingsTrendChart data={stats.savingsTrend ?? []} />
                             </div>
                         </div>
 
-                        {/* Pipeline Chart (col-span-1) */}
-                        <div className="lg:col-span-1 bg-white/90 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/80 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-none p-5 flex flex-col group hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
+                        <div className="lg:col-span-1 bg-white rounded-2xl border border-slate-200 p-5 flex flex-col">
                             <SectionHeader title="Distribución de Pipeline" />
                             <div className="flex-1 relative min-h-[140px] flex items-center justify-center mt-2">
                                 <div className="h-full w-full max-h-[140px]">
                                     <PipelinePieChart active={activeDeals} won={wonDeals} lost={lostDeals} />
                                 </div>
                             </div>
-                            <div className="flex justify-between border-t border-slate-100 dark:border-slate-800 pt-3 mt-2">
+                            <div className="flex justify-between border-t border-slate-100 pt-3 mt-2">
                                 <div className="text-center">
                                     <div className="text-[10px] uppercase text-slate-400 font-bold tracking-wider">Conversión</div>
                                     <div className="text-sm font-bold text-emerald-600">{stats.financials.conversion_rate}%</div>
@@ -338,74 +270,72 @@ export default function DashboardView() {
                         </div>
                     </div>
 
-                    {/* ROW 2: Agenda + Copilot + Renewals */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        <div className="bg-white/90 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/80 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-none p-5">
+                    {/* ROW 2: Agenda + Renewals */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="bg-white rounded-2xl border border-slate-200 p-5">
                             <SectionHeader title="Mi Agenda Hoy" link="Tareas" linkHref="/dashboard/tasks" />
                             <div className="mt-3">
                                 <AgendaToday />
                             </div>
                         </div>
-                        <div className="bg-white/90 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/80 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-none p-5">
-                            <DailyBriefing />
-                        </div>
-                        <div id="renewals" className="scroll-mt-24 bg-white/90 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/80 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-none p-5">
+                        <div id="renewals" className="scroll-mt-24 bg-white rounded-2xl border border-slate-200 p-5">
                             <RenewalsPanel />
                         </div>
                     </div>
 
-                    {/* ROW 3: Lists (Recent Activity 1/2 + OCR Jobs 1/2) */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[320px]">
-                        {/* Recent Activity */}
-                        <div className="bg-white/90 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/80 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-none p-5 flex flex-col hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 overflow-hidden h-full">
-                            <SectionHeader title="Actividad Reciente" />
-                            <div className="flex-1 overflow-y-auto mt-4 space-y-2 pr-2 custom-scrollbar">
-                                {stats.recentProposals.map((proposal) => (
-                                    <div key={proposal.id} onClick={() => router.push(`/dashboard/proposals/${proposal.id}`)} className="flex items-center justify-between p-3 rounded-xl bg-white/50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500/50 hover:shadow-md hover:bg-white cursor-pointer group transition-all duration-300">
+                    {/* ROW 3: Recent Activity */}
+                    <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col max-h-[320px]">
+                        <SectionHeader title="Actividad Reciente" link="Ver Propuestas" linkHref="/dashboard/proposals" />
+                        <div className="flex-1 overflow-y-auto mt-4 space-y-2 pr-2">
+                            {stats.recentProposals.length === 0 ? (
+                                <p className="text-sm text-slate-400 text-center py-6">Sin actividad reciente</p>
+                            ) : (
+                                stats.recentProposals.map((proposal) => (
+                                    <div key={proposal.id} onClick={() => router.push(`/dashboard/proposals/${proposal.id}`)} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-300 hover:bg-white cursor-pointer group transition-colors">
                                         <div className="flex items-center gap-3 min-w-0">
-                                            <div className={`w-2 h-2 rounded-full ${proposal.status === 'accepted' ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}></div>
+                                            <div className={`w-2 h-2 rounded-full ${proposal.status === 'accepted' ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
                                             <div className="min-w-0">
-                                                <div className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400">{proposal.client_name}</div>
+                                                <div className="text-sm font-medium text-slate-700 truncate group-hover:text-indigo-600">{proposal.client_name}</div>
                                                 <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{formatCurrency(proposal.annual_savings)}</div>
                                             </div>
                                         </div>
-                                        <ArrowUpRight size={14} className="text-slate-300 dark:text-slate-600 group-hover:text-indigo-500" />
+                                        <ArrowUpRight size={14} className="text-slate-300 group-hover:text-indigo-500" />
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* OCR Jobs History Wrapper */}
-                        <div className="h-full flex flex-col [&>div]:h-full [&>div]:flex [&>div]:flex-col [&>div>div:last-child]:flex-1 [&>div>div:last-child]:overflow-auto">
-                            <OcrJobsPanel />
+                                ))
+                            )}
                         </div>
                     </div>
 
-                </motion.div>
-
-            </motion.div>
+                </div>
+            </div>
         </div>
     );
 }
 
-// -- Components --
-
 function SectionHeader({ title, link, linkHref }: { title: string; link?: string; linkHref?: string }) {
-    const router = useRouter();
     return (
-        <div className="flex items-center justify-between pl-1">
-            <h3 className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
-                <span className="w-1 h-1 bg-indigo-400 rounded-full opacity-60"></span>
+        <div className="flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                 {title}
             </h3>
-            {link && (
-                <button
-                    type="button"
-                    onClick={linkHref ? () => router.push(linkHref) : undefined}
-                    className="text-[9px] font-medium text-indigo-400 hover:text-indigo-600 transition-colors uppercase tracking-wider"
-                >
+            {link && linkHref && (
+                <Link href={linkHref} className="text-[10px] font-medium text-indigo-500 hover:text-indigo-700 transition-colors uppercase tracking-wider">
                     {link}
-                </button>
+                </Link>
+            )}
+        </div>
+    );
+}
+
+function KpiChip({ label, value, progress }: { label: string; value: string; progress?: number }) {
+    return (
+        <div className="snap-start shrink-0 bg-white rounded-2xl border border-slate-200 px-4 py-3 min-w-[140px]">
+            <p className="text-[11px] text-slate-400 font-medium mb-1">{label}</p>
+            <p className="text-lg font-bold text-slate-900">{value}</p>
+            {progress !== undefined && (
+                <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1">
+                    <div className="h-full bg-indigo-500 rounded-full transition-all" style={{ width: `${progress}%` }} />
+                </div>
             )}
         </div>
     );
@@ -413,16 +343,15 @@ function SectionHeader({ title, link, linkHref }: { title: string; link?: string
 
 interface KpiCardProps {
     label: string;
-    value: React.ReactNode;
+    value: string;
     icon: React.ElementType;
-    subValue?: React.ReactNode;
+    subValue?: string;
     progress?: number;
-    delay?: number;
 }
 
-function GlassKpiCard({ label, value, icon: Icon, subValue, progress, delay = 0 }: KpiCardProps) {
+function KpiCard({ label, value, icon: Icon, subValue, progress }: KpiCardProps) {
     return (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay }} className="flex flex-col justify-between p-3 bg-white/70 backdrop-blur-xl rounded-2xl border border-white/80 shadow-lg hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 transition-all duration-300 cursor-default">
+        <div className="flex flex-col justify-between p-3 bg-white rounded-2xl border border-slate-200 hover:border-indigo-200 transition-colors cursor-default">
             <div className="flex items-center justify-between text-slate-400 mb-1">
                 <span className="text-[9px] font-medium uppercase tracking-widest opacity-80">{label}</span>
                 <Icon size={13} strokeWidth={1.5} className="opacity-70" />
@@ -434,15 +363,10 @@ function GlassKpiCard({ label, value, icon: Icon, subValue, progress, delay = 0 
                 </div>
                 {progress !== undefined && (
                     <div className="w-full h-1 bg-slate-100 rounded-full mt-1.5 overflow-hidden">
-                        <motion.div
-                            className="h-full bg-indigo-500/80 rounded-full"
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progress}%` }}
-                            transition={{ duration: 0.5, ease: 'easeOut' }}
-                        />
+                        <div className="h-full bg-indigo-500/80 rounded-full transition-all" style={{ width: `${progress}%` }} />
                     </div>
                 )}
             </div>
-        </motion.div>
+        </div>
     );
 }
