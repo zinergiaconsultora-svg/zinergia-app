@@ -4,7 +4,6 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Search, ChevronRight, User, LayoutGrid, Columns3, TrendingUp, Users, Target, Activity, FileUp } from 'lucide-react';
 import { getClientScoresAction, type ClientScore } from '@/app/actions/clientScores';
-import { motion } from 'framer-motion';
 import { useClients } from '../hooks/useClients';
 import ClientCard from './ClientCard';
 import dynamic from 'next/dynamic';
@@ -33,19 +32,6 @@ import { Client } from '@/types/crm';
 interface ClientsViewProps {
     initialData?: Client[];
 }
-
-const containerVariants = {
-    hidden: { opacity: 0 },
-    show: {
-        opacity: 1,
-        transition: { staggerChildren: 0.06 }
-    }
-};
-
-const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 }
-};
 
 type ViewMode = 'list' | 'pipeline';
 type SortOption = 'created_at' | 'name' | 'status';
@@ -308,10 +294,7 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                 {viewMode === 'pipeline' ? (
                     <PipelineView clients={filteredClients} onStatusChange={refresh} />
                 ) : (
-                    <motion.div
-                        variants={containerVariants}
-                        initial="hidden"
-                        animate="show"
+                    <div
                         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                     >
                         {loading ? (
@@ -319,7 +302,7 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                                 <div key={i} className="bg-white/40 rounded-[2rem] p-8 h-64 animate-pulse border border-white/40" />
                             ))
                         ) : filteredClients.length === 0 ? (
-                            <motion.div variants={itemVariants} className="col-span-full py-32 flex flex-col items-center justify-center text-center">
+                            <div className="col-span-full py-32 flex flex-col items-center justify-center text-center">
                                 <div className="w-24 h-24 bg-gradient-to-tr from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 rounded-[2rem] shadow-xl shadow-energy-500/5 flex items-center justify-center mb-6 border border-white/60 dark:border-white/10">
                                     <User size={40} className="text-slate-300 dark:text-slate-600" strokeWidth={1} />
                                 </div>
@@ -327,10 +310,10 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                                 <p className="text-slate-500 dark:text-slate-400 font-light max-w-md">
                                     Prueba con otra búsqueda o añade un nuevo cliente a tu cartera.
                                 </p>
-                            </motion.div>
+                            </div>
                         ) : (
                             filteredClients.map(client => (
-                                <motion.div key={client.id} variants={itemVariants} className="relative">
+                                <div key={client.id} className="relative">
                                     {/* Selection Checkbox */}
                                     <button
                                         onClick={(e) => { e.stopPropagation(); toggleSelect(client.id); }}
@@ -363,10 +346,10 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                                         );
                                     })()}
                                     <ClientCard client={client} />
-                                </motion.div>
+                                </div>
                             ))
                         )}
-                    </motion.div>
+                    </div>
                 )}
 
                 {/* LOAD MORE */}
