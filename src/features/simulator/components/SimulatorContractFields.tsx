@@ -173,7 +173,7 @@ const SimulatorContractFields: React.FC<SimulatorContractFieldsProps> = ({
                         )}
                     </AnimatePresence>
                 </div>
-                <div data-field-status={isLowConfidence('company_name') ? 'warning' : undefined}>
+                <div className="sm:col-span-2" data-field-status={isLowConfidence('company_name') ? 'warning' : undefined}>
                     <Input label="Comercializadora"
                         labelBadge={<><ConfidencePill value={getConfidence('company_name')} /><CorrectionBadge stat={getFieldStat('company_name')} /></>}
                         icon={<Building2 size={15} />}
@@ -181,16 +181,6 @@ const SimulatorContractFields: React.FC<SimulatorContractFieldsProps> = ({
                         placeholder="Endesa, Iberdrola…"
                         warning={lowConfWarn('company_name')}
                         action={pdfUrl && data.company_name ? <LocateButton onClick={() => locate(data.company_name)} lowConfidence={isLowConfidence('company_name')} /> : undefined}
-                    />
-                </div>
-                <div data-field-status={isLowConfidence('dni_cif') ? 'warning' : undefined}>
-                    <Input label="CIF / DNI"
-                        labelBadge={<><ConfidencePill value={getConfidence('dni_cif')} /><CorrectionBadge stat={getFieldStat('dni_cif')} /></>}
-                        icon={<Hash size={15} />}
-                        value={data.dni_cif ?? ''} onChange={e => onUpdate('dni_cif', e.target.value)}
-                        placeholder="Identificación"
-                        warning={lowConfWarn('dni_cif')}
-                        action={pdfUrl && data.dni_cif ? <LocateButton onClick={() => locate(data.dni_cif)} lowConfidence={isLowConfidence('dni_cif')} /> : undefined}
                     />
                 </div>
             </div>
@@ -230,6 +220,16 @@ const SimulatorContractFields: React.FC<SimulatorContractFieldsProps> = ({
                                     placeholder="Nombre completo"
                                     warning={lowConfWarn('client_name') ?? (data.client_name && data.client_name.length < 5 ? 'Nombre muy corto' : undefined)}
                                     action={pdfUrl && data.client_name ? <LocateButton onClick={() => locate(data.client_name)} lowConfidence={isLowConfidence('client_name')} /> : undefined}
+                                />
+                            </div>
+                            <div data-field-status={isLowConfidence('dni_cif') ? 'warning' : undefined}>
+                                <Input label="DNI / CIF del titular"
+                                    labelBadge={<><ConfidencePill value={getConfidence('dni_cif')} /><CorrectionBadge stat={getFieldStat('dni_cif')} /></>}
+                                    icon={<Hash size={15} />}
+                                    value={data.dni_cif ?? ''} onChange={e => onUpdate('dni_cif', e.target.value)}
+                                    placeholder="Identificación del titular"
+                                    warning={lowConfWarn('dni_cif')}
+                                    action={pdfUrl && data.dni_cif ? <LocateButton onClick={() => locate(data.dni_cif)} lowConfidence={isLowConfidence('dni_cif')} /> : undefined}
                                 />
                             </div>
                             <div data-field-status={isLowConfidence('invoice_number') ? 'warning' : undefined}>

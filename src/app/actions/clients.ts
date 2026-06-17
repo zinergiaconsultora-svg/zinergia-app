@@ -369,6 +369,109 @@ export async function updateClientAction(id: string, updates: Partial<ClientInpu
     return hydrateClientRow(data as ClientPiiRow) as unknown as Client;
 }
 
+/** Delete a single client. RLS keeps an agent within their own franchise. */
+export async function deleteClientAction(id: string): Promise<void> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+    if (!z.uuid().safeParse(id).success) throw new Error('ID de cliente inválido');
+
+    const { supabase } = await getSessionContext();
+    const { error } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw new Error(`Error eliminando cliente: ${error.message}`);
+
+    revalidatePath('/dashboard/clients');
+    revalidatePath('/dashboard');
+}
+
+// ── Registro de contacto / notas ─────────────────────────────────────────────
+
+const CONTACT_CHANNELS = ['call', 'email', 'whatsapp', 'meeting', 'other'] as const;
+type ContactChannel = (typeof CONTACT_CHANNELS)[number];
+
+const CHANNEL_LABELS: Record<ContactChannel, string> = {
+    call: 'Llamada',
+    email: 'Email',
+    whatsapp: 'WhatsApp',
+    meeting: 'Reunión',
+    other: 'Contacto',
+};
+
+const contactInputSchema = z.object({
+    channel: z.enum(CONTACT_CHANNELS),
+    note: z.string().trim().max(500).optional().or(z.literal('')),
+});
+
+export type LogContactInput = z.infer<typeof contactInputSchema>;
+
+/**
+ * Register a contact with a client: stamps last_contact_date, promotes a brand
+ * new lead to "contacted", and drops a timeline entry. The agent's daily action.
+ */
+export async function logClientContactAction(id: string, input: LogContactInput): Promise<void> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+    if (!z.uuid().safeParse(id).success) throw new Error('ID de cliente inválido');
+
+    const parsed = contactInputSchema.safeParse(input);
+    if (!parsed.success) throw new Error(parsed.error.issues[0].message);
+    const { channel, note } = parsed.data;
+
+    const { supabase, userId, franchiseId } = await getSessionContext();
+
+    const { data: current } = await supabase
+        .from('clients')
+        .select('status')
+        .eq('id', id)
+        .maybeSingle();
+
+    const payload: Record<string, unknown> = { last_contact_date: new Date().toISOString() };
+    // A first contact moves an untouched lead forward, never downgrades a later stage.
+    if ((current as { status?: string } | null)?.status === 'new') payload.status = 'contacted';
+
+    const { error } = await supabase.from('clients').update(payload).eq('id', id);
+    if (error) throw new Error(`Error registrando contacto: ${error.message}`);
+
+    const label = CHANNEL_LABELS[channel];
+    const description = note ? `${label} — ${note}` : `Contacto registrado por ${label}`;
+    await supabase.from('client_activities').insert({
+        client_id: id,
+        agent_id: userId,
+        franchise_id: franchiseId,
+        type: 'contact_logged',
+        description,
+        metadata: { channel },
+    });
+
+    revalidatePath('/dashboard/clients');
+    revalidatePath(`/dashboard/clients/${id}`);
+    revalidatePath('/dashboard');
+}
+
+/** Append a free-text note to a client's timeline. */
+export async function addClientNoteAction(id: string, note: string): Promise<void> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+    if (!z.uuid().safeParse(id).success) throw new Error('ID de cliente inválido');
+
+    const clean = z.string().trim().min(1, 'La nota no puede estar vacía').max(1000).safeParse(note);
+    if (!clean.success) throw new Error(clean.error.issues[0].message);
+
+    const { supabase, userId, franchiseId } = await getSessionContext();
+    const { error } = await supabase.from('client_activities').insert({
+        client_id: id,
+        agent_id: userId,
+        franchise_id: franchiseId,
+        type: 'note_added',
+        description: clean.data,
+        metadata: {},
+    });
+    if (error) throw new Error(`Error guardando nota: ${error.message}`);
+
+    revalidatePath(`/dashboard/clients/${id}`);
+    revalidatePath('/dashboard/clients');
+}
+
 const resolveClientSchema = z.object({
     client_id: z.uuid().optional().nullable(),
     cups: z.string().trim().max(60).optional().nullable(),

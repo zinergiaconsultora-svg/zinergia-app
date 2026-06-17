@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Zap, Flame, BadgePercent, ChevronDown } from 'lucide-react'
 import { TarifaRow, TariffCommissionRow } from '@/app/actions/tariffs'
@@ -35,6 +35,12 @@ export default function TarifasAdminView({ initialElectricity, initialGas, initi
     const [gas, setGas] = useState(initialGas)
     const [commissions, setCommissions] = useState(initialCommissions)
     const [collaboratorPct, setCollaboratorPct] = useState(initialCollaboratorPct)
+
+    // Re-sync con el servidor cuando router.refresh() trae props nuevas (p.ej. tras importar Excel).
+    useEffect(() => { setElectricity(initialElectricity) }, [initialElectricity])
+    useEffect(() => { setGas(initialGas) }, [initialGas])
+    useEffect(() => { setCommissions(initialCommissions) }, [initialCommissions])
+    useEffect(() => { setCollaboratorPct(initialCollaboratorPct) }, [initialCollaboratorPct])
 
     const handleElecUpdate = (updated: TarifaRow[], deleted?: string) => {
         setElectricity(deleted ? updated.filter(r => r.id !== deleted) : updated)

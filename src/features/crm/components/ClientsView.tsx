@@ -6,6 +6,7 @@ import { Plus, Search, ChevronRight, User, LayoutGrid, Columns3, TrendingUp, Use
 import { getClientScoresAction, type ClientScore } from '@/app/actions/clientScores';
 import { useClients } from '../hooks/useClients';
 import ClientCard from './ClientCard';
+import ClientQuickActions from './ClientQuickActions';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/primitives/Button';
 import { Input } from '@/components/ui/primitives/Input';
@@ -55,6 +56,9 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
     const [viewMode, setViewMode] = useState<ViewMode>('pipeline');
     const [statusFilter, setStatusFilter] = useState<ClientStatus | 'all'>('all');
     const [sortBy, setSortBy] = useState<SortOption>('created_at');
+    const [filterSupplier, setFilterSupplier] = useState('');
+    const [filterMinBill, setFilterMinBill] = useState('');
+    const [filterColdDays, setFilterColdDays] = useState(0);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [scores, setScores] = useState<Map<string, ClientScore>>(new Map());
 
@@ -73,6 +77,25 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
             result = result.filter(c => c.status === statusFilter);
         }
 
+        if (filterSupplier.trim()) {
+            const q = filterSupplier.trim().toLowerCase();
+            result = result.filter(c => (c.current_supplier ?? '').toLowerCase().includes(q));
+        }
+
+        if (filterMinBill) {
+            const min = parseFloat(filterMinBill);
+            if (!Number.isNaN(min)) result = result.filter(c => (c.average_monthly_bill ?? 0) >= min);
+        }
+
+        if (filterColdDays > 0) {
+            const cutoff = Date.now() - filterColdDays * 86_400_000;
+            // "Cold" = no contact (or creation) more recent than the cutoff.
+            result = result.filter(c => {
+                const ref = c.last_contact_date ?? c.created_at;
+                return new Date(ref).getTime() <= cutoff;
+            });
+        }
+
         result.sort((a, b) => {
             switch (sortBy) {
                 case 'name': return a.name.localeCompare(b.name);
@@ -83,7 +106,14 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
         });
 
         return result;
-    }, [clients, statusFilter, sortBy]);
+    }, [clients, statusFilter, sortBy, filterSupplier, filterMinBill, filterColdDays]);
+
+    const hasAdvancedFilters = filterSupplier.trim() !== '' || filterMinBill !== '' || filterColdDays > 0;
+    const clearAdvancedFilters = useCallback(() => {
+        setFilterSupplier('');
+        setFilterMinBill('');
+        setFilterColdDays(0);
+    }, []);
 
     const toggleSelect = useCallback((id: string) => {
         setSelectedIds(prev => {
@@ -268,6 +298,49 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                     </div>
                 </div>
 
+                {/* ADVANCED FILTERS */}
+                <div className="flex flex-wrap items-center gap-2 mb-5">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mr-1">Filtros</span>
+                    <input
+                        value={filterSupplier}
+                        onChange={(e) => setFilterSupplier(e.target.value)}
+                        placeholder="Compañía actual…"
+                        aria-label="Filtrar por compañía actual"
+                        className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-slate-600 dark:text-slate-300 w-40 focus:border-indigo-400 outline-none"
+                    />
+                    <div className="relative">
+                        <input
+                            type="number"
+                            min="0"
+                            value={filterMinBill}
+                            onChange={(e) => setFilterMinBill(e.target.value)}
+                            placeholder="Factura mín."
+                            aria-label="Factura mensual mínima en euros"
+                            className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-3 pr-6 py-1.5 text-slate-600 dark:text-slate-300 w-28 focus:border-indigo-400 outline-none"
+                        />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none">€</span>
+                    </div>
+                    <select
+                        value={filterColdDays}
+                        onChange={(e) => setFilterColdDays(Number(e.target.value))}
+                        aria-label="Sin contactar desde hace"
+                        className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-slate-600 dark:text-slate-300 focus:border-indigo-400 outline-none"
+                    >
+                        <option value={0}>Sin contactar: cualquiera</option>
+                        <option value={7}>Sin contactar +7 días</option>
+                        <option value={14}>Sin contactar +14 días</option>
+                        <option value={30}>Sin contactar +30 días</option>
+                    </select>
+                    {hasAdvancedFilters && (
+                        <button
+                            onClick={clearAdvancedFilters}
+                            className="text-xs text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium px-2 py-1.5 transition-colors"
+                        >
+                            ✕ Limpiar filtros
+                        </button>
+                    )}
+                </div>
+
                 {/* BULK ACTIONS BAR */}
                 <BulkActions
                     clients={filteredClients}
@@ -339,12 +412,16 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                                         return (
                                             <div
                                                 title={s.reasons.join(' · ')}
-                                                className={`absolute top-4 right-4 z-20 w-7 h-7 rounded-full ${color} ring-2 flex items-center justify-center text-white text-[10px] font-bold shadow-sm`}
+                                                className={`absolute top-4 right-14 z-20 w-7 h-7 rounded-full ${color} ring-2 flex items-center justify-center text-white text-[10px] font-bold shadow-sm`}
                                             >
                                                 {s.score}
                                             </div>
                                         );
                                     })()}
+                                    {/* Quick actions menu */}
+                                    <div className="absolute top-3.5 right-3.5 z-20">
+                                        <ClientQuickActions client={client} onChanged={refresh} />
+                                    </div>
                                     <ClientCard client={client} />
                                 </div>
                             ))

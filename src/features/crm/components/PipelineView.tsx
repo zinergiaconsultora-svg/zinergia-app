@@ -5,6 +5,7 @@ import { Client, ClientStatus } from '@/types/crm';
 import { updateClientStatus } from '@/app/actions/crm';
 import { Building2, User, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import ClientQuickActions from './ClientQuickActions';
 
 interface Props {
     clients: Client[];
@@ -162,12 +163,15 @@ export default function PipelineView({ clients, onStatusChange }: Props) {
                                                 <div className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 leading-tight truncate pr-1">
                                                     {client.name}
                                                 </div>
-                                                <div className={`shrink-0 w-6 h-6 rounded-lg flex items-center justify-center ${
-                                                    client.type === 'company'
-                                                        ? 'bg-blue-50 text-blue-500 dark:bg-blue-500/10 dark:text-blue-400'
-                                                        : 'bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10 dark:text-emerald-400'
-                                                }`}>
-                                                    {client.type === 'company' ? <Building2 size={12} strokeWidth={2.5} /> : <User size={12} strokeWidth={2.5} />}
+                                                <div className="shrink-0 flex items-center gap-1">
+                                                    <ClientQuickActions client={client} onChanged={onStatusChange} variant="pipeline" />
+                                                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                                                        client.type === 'company'
+                                                            ? 'bg-blue-50 text-blue-500 dark:bg-blue-500/10 dark:text-blue-400'
+                                                            : 'bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10 dark:text-emerald-400'
+                                                    }`}>
+                                                        {client.type === 'company' ? <Building2 size={12} strokeWidth={2.5} /> : <User size={12} strokeWidth={2.5} />}
+                                                    </div>
                                                 </div>
                                             </div>
 

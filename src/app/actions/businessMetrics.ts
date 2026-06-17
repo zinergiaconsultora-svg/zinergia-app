@@ -82,7 +82,7 @@ export async function getBusinessMetricsAction(): Promise<BusinessMetrics> {
         // Commissions (for franchise revenue)
         supabase
             .from('network_commissions')
-            .select('franchise_id, total_revenue, agent_commission, franchise_profit, hq_royalty, status')
+            .select('franchise_id, agent_commission, franchise_commission, status')
             .in('status', ['cleared', 'paid']),
     ]);
 
@@ -138,7 +138,7 @@ export async function getBusinessMetricsAction(): Promise<BusinessMetrics> {
         const existing = proposalsByFranchise.get(c.franchise_id) ?? { accepted: 0, total_savings: 0 };
         proposalsByFranchise.set(c.franchise_id, {
             accepted: existing.accepted + 1,
-            total_savings: existing.total_savings + (Number(c.total_revenue) || 0),
+            total_savings: existing.total_savings + (Number(c.agent_commission) || 0) + (Number(c.franchise_commission) || 0),
         });
     });
 
@@ -147,7 +147,7 @@ export async function getBusinessMetricsAction(): Promise<BusinessMetrics> {
         if (!c.franchise_id) return;
         commissionsByFranchise.set(
             c.franchise_id,
-            (commissionsByFranchise.get(c.franchise_id) ?? 0) + (Number(c.franchise_profit) || 0),
+            (commissionsByFranchise.get(c.franchise_id) ?? 0) + (Number(c.franchise_commission) || 0),
         );
     });
 

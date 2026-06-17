@@ -266,10 +266,8 @@ export interface Commission {
     proposal_id: string;
     agent_id: string;
     franchise_id: string;
-    total_revenue: number;
     agent_commission: number;
     franchise_commission: number;
-    hq_royalty: number;
     status: 'pending' | 'cleared' | 'paid';
     created_at: string;
 
@@ -465,6 +463,7 @@ export type ActivityType =
     | 'proposal_sent'
     | 'proposal_accepted'
     | 'proposal_rejected'
+    | 'contact_logged'
     | 'note_added';
 
 export interface ClientActivity {

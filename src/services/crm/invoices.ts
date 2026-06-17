@@ -22,7 +22,6 @@ interface CommissionBase {
 }
 
 interface CommissionRow extends CommissionBase {
-    total_revenue: number;
     created_at: string;
 }
 
@@ -39,7 +38,6 @@ export const invoiceService = {
                 id,
                 proposal_id,
                 agent_commission,
-                total_revenue,
                 created_at,
                 proposals (
                     client_id,

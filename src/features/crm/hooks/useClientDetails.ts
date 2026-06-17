@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { crmService } from '@/services/crmService';
-import { getClientByIdAction } from '@/app/actions/clients';
+import { getClientByIdAction, deleteClientAction } from '@/app/actions/clients';
 import { Client, Proposal } from '@/types/crm';
 
 export function useClientDetails(clientId: string) {
@@ -35,7 +35,7 @@ export function useClientDetails(clientId: string) {
     const handleDeleteClient = async () => {
         setDeleting(true);
         try {
-            await crmService.deleteClient(clientId);
+            await deleteClientAction(clientId);
             router.push('/dashboard/clients');
         } catch (err: unknown) {
             console.error('Error deleting client:', err);

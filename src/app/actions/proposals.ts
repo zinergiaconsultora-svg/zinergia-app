@@ -4,6 +4,7 @@ import { logger } from '@/lib/utils/logger'
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
 import { Proposal } from '@/types/crm'
 import { getActiveCommissionRule } from './commissionRules'
 import { createNotificationInternal } from './notifications'
@@ -156,6 +157,58 @@ export async function updateProposalStatusAction(
     return proposal as Proposal
 }
 
+/**
+ * Registra una venta cerrada: exige una nota que la justifique (constancia),
+ * marca la propuesta como aceptada — lo que genera la comisión de la tarifa en
+ * el wallet — y deja un rastro explícito en el historial del cliente.
+ */
+export async function registerSaleAction(proposalId: string, note: string): Promise<Proposal> {
+    await requireServerRole(['admin', 'franchise', 'agent'])
+
+    const idResult = z.uuid().safeParse(proposalId)
+    if (!idResult.success) throw new Error('ID de propuesta inválido')
+
+    const noteResult = z
+        .string()
+        .trim()
+        .min(3, 'Añade una nota que justifique la venta (cómo se cerró)')
+        .max(1000)
+        .safeParse(note)
+    if (!noteResult.success) throw new Error(noteResult.error.issues[0].message)
+
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('No autenticado')
+
+    // Guarda la justificación en la propuesta (RLS aplica).
+    await supabase.from('proposals').update({ notes: noteResult.data }).eq('id', idResult.data)
+
+    // Cierra el acuerdo: dispara comisión (según tarifa), contrato, tareas y avisos.
+    const proposal = await updateProposalStatusAction(idResult.data, 'accepted')
+
+    // Constancia explícita en el timeline del cliente.
+    if (proposal.client_id) {
+        try {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('franchise_id')
+                .eq('id', user.id)
+                .maybeSingle()
+            await supabase.from('client_activities').insert({
+                client_id: proposal.client_id,
+                agent_id: user.id,
+                franchise_id: profile?.franchise_id ?? null,
+                type: 'note_added',
+                description: `Venta registrada — ${noteResult.data}`,
+                metadata: { proposal_id: proposal.id, kind: 'sale_justification' },
+            })
+        } catch { /* non-critical */ }
+    }
+
+    revalidatePath('/dashboard/wallet')
+    return proposal
+}
+
 async function createStatusNotification(
     supabase: Awaited<ReturnType<typeof createClient>>,
     userId: string,
@@ -230,16 +283,38 @@ async function processCommissions(
         // Load active commission rule (falls back to defaults if table missing)
         const baseRule = await getActiveCommissionRule()
 
-        // Apply per-franchise royalty override if configured
+        // Per-franchise royalty: the franchise's configured cut of the agent's commission.
         const { data: franchiseCfg } = await supabase
             .from('franchise_config')
             .select('royalty_percent')
             .eq('franchise_id', profile.franchise_id)
             .eq('active', true)
             .maybeSingle()
+        const royaltyPercent: number | null = franchiseCfg?.royalty_percent ?? null
 
-        const rule = applyFranchiseOverride(baseRule, franchiseCfg?.royalty_percent ?? null)
-        const split = calculateCommissionSplit(proposal.annual_savings || 0, rule)
+        // Commission amount comes from the TARIFF (offer.estimated_agent_commission):
+        // that fixed € is the agent's commission. The franchise takes its configured
+        // % on top. Legacy offers without a tariff commission fall back to the old
+        // savings × rule split so nothing is lost.
+        const offer = proposal.offer_snapshot as { estimated_agent_commission?: number | null } | null
+        const tariffCommission = Number(offer?.estimated_agent_commission ?? 0)
+        const round2 = (n: number) => Math.round(n * 100) / 100
+
+        let agentCommission: number
+        let franchiseCommission: number
+        let pointsToAward: number
+
+        if (tariffCommission > 0) {
+            agentCommission = round2(tariffCommission)
+            franchiseCommission = round2(tariffCommission * ((royaltyPercent ?? 0) / 100))
+            pointsToAward = Math.round(baseRule.points_per_win)
+        } else {
+            const rule = applyFranchiseOverride(baseRule, royaltyPercent)
+            const split = calculateCommissionSplit(proposal.annual_savings || 0, rule)
+            agentCommission = split.agent_commission
+            franchiseCommission = split.franchise_profit
+            pointsToAward = split.points
+        }
 
         // Upsert con ignoreDuplicates: si dos requests concurrentes llegan al mismo tiempo,
         // el UNIQUE constraint en proposal_id garantiza que solo uno insertará. El otro
@@ -249,10 +324,8 @@ async function processCommissions(
             proposal_id: proposal.id,
             agent_id: user.id,
             franchise_id: profile.franchise_id,
-            total_revenue: split.pot,
-            agent_commission: split.agent_commission,
-            franchise_profit: split.franchise_profit,
-            hq_royalty: split.hq_royalty,
+            agent_commission: agentCommission,
+            franchise_commission: franchiseCommission,
             status: 'pending',
         }, { onConflict: 'proposal_id', ignoreDuplicates: true })
 
@@ -265,7 +338,7 @@ async function processCommissions(
 
         await supabase.from('user_points').upsert({
             user_id: user.id,
-            points: (current?.points || 0) + split.points,
+            points: (current?.points || 0) + pointsToAward,
             last_updated: new Date().toISOString(),
         })
     } catch (err) {

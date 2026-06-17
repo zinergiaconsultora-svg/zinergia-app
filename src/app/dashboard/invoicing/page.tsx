@@ -18,7 +18,6 @@ interface UninvoicedCommission {
     id: string;
     proposal_id: string;
     agent_commission: number;
-    total_revenue: number;
     created_at: string;
     proposals?: {
         client_id: string;

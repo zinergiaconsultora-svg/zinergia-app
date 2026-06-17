@@ -37,9 +37,7 @@ export function exportCommissionsToCSV(commissions: Commission[], label = 'comis
         'ID Propuesta',
         'ID Agente',
         'Comisión Agente (€)',
-        'Ganancia Franquicia (€)',
-        'Royalty HQ (€)',
-        'Revenue Total (€)',
+        'Comisión Franquicia (€)',
         'Estado',
     ];
 
@@ -49,18 +47,14 @@ export function exportCommissionsToCSV(commissions: Commission[], label = 'comis
         c.proposal_id,
         c.agent_id,
         c.agent_commission.toFixed(2),
-        c.franchise_commission.toFixed(2),
-        c.hq_royalty.toFixed(2),
-        c.total_revenue.toFixed(2),
+        (c.franchise_commission ?? 0).toFixed(2),
         STATUS_LABELS[c.status] ?? c.status,
     ]);
 
     // Summary row
     const totalAgent = commissions.reduce((s, c) => s + c.agent_commission, 0);
     const totalFranchise = commissions.reduce((s, c) => s + (c.franchise_commission ?? 0), 0);
-    const totalHq = commissions.reduce((s, c) => s + c.hq_royalty, 0);
-    const totalRevenue = commissions.reduce((s, c) => s + c.total_revenue, 0);
-    const totals = ['TOTAL', '', '', '', totalAgent.toFixed(2), totalFranchise.toFixed(2), totalHq.toFixed(2), totalRevenue.toFixed(2), ''];
+    const totals = ['TOTAL', '', '', '', totalAgent.toFixed(2), totalFranchise.toFixed(2), ''];
 
     const csv = buildCsv([header, ...rows, [], totals]);
     const date = new Date().toISOString().slice(0, 10);

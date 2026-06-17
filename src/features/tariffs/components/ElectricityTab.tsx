@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useTransition, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Plus, Edit3, Trash2, ToggleLeft, ToggleRight, Search, AlertTriangle, FileSpreadsheet } from 'lucide-react'
+import { Plus, Edit3, Trash2, Copy, ToggleLeft, ToggleRight, Search, AlertTriangle, FileSpreadsheet, Rows3, Maximize2 } from 'lucide-react'
 import { TarifaRow, TariffCommissionRow, deleteTarifa, toggleTarifaActive } from '@/app/actions/tariffs'
 import { MODELO_COLORS, fmt, blankTarifa } from './tariff-form-utils'
 import { TarifaFormPanel } from './TarifaFormPanel'
+import { ConfirmDialog } from './ConfirmDialog'
 import dynamic from 'next/dynamic'
 import { CompanyCell } from './CompanyCell'
 
@@ -21,13 +23,22 @@ interface Props {
     onUpdate: (updated: TarifaRow[], deleted?: string) => void
 }
 
+const COMPACT_PERIODS = [1, 2, 3] as const
+const ALL_PERIODS = [1, 2, 3, 4, 5, 6] as const
+
 export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) {
+    const router = useRouter()
     const [search, setSearch] = useState('')
     const [companyFilter, setCompanyFilter] = useState('ALL')
     const [formData, setFormData] = useState<Partial<TarifaRow> | null>(null)
-    const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+    const [deleteId, setDeleteId] = useState<string | null>(null)
+    const [bulkDelete, setBulkDelete] = useState(false)
     const [showImport, setShowImport] = useState(false)
+    const [detailed, setDetailed] = useState(false)
+    const [selected, setSelected] = useState<Set<string>>(new Set())
     const [pending, start] = useTransition()
+
+    const periods = detailed ? ALL_PERIODS : COMPACT_PERIODS
 
     const companiesWithCommission = useMemo(
         () => new Set(commissions.filter(c => c.supply_type === 'electricity').map(c => c.company)),
@@ -39,6 +50,15 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
         (r.tariff_name.toLowerCase().includes(search.toLowerCase()) || r.company.toLowerCase().includes(search.toLowerCase()))
     ), [rows, companyFilter, search])
 
+    const allSelected = filtered.length > 0 && filtered.every(r => selected.has(r.id))
+    const toggleSelect = (id: string) => setSelected(prev => {
+        const next = new Set(prev)
+        if (next.has(id)) next.delete(id); else next.add(id)
+        return next
+    })
+    const toggleSelectAll = () => setSelected(allSelected ? new Set() : new Set(filtered.map(r => r.id)))
+    const clearSelection = () => setSelected(new Set())
+
     const handleToggle = (row: TarifaRow) => start(async () => {
         try {
             await toggleTarifaActive(row.id, !row.is_active)
@@ -46,17 +66,45 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
         } catch (e) { toast.error((e as Error).message) }
     })
 
-    const handleDelete = (id: string) => {
-        if (deleteConfirm !== id) { setDeleteConfirm(id); setTimeout(() => setDeleteConfirm(null), 3000); return }
+    const handleDelete = () => {
+        const id = deleteId
+        if (!id) return
         start(async () => {
             try {
                 await deleteTarifa(id)
                 onUpdate(rows, id)
                 toast.success('Tarifa eliminada')
             } catch (e) { toast.error((e as Error).message) }
-            setDeleteConfirm(null)
+            setDeleteId(null)
         })
     }
+
+    const handleDuplicate = (row: TarifaRow) => {
+        setFormData({ ...row, id: undefined, tariff_name: `${row.tariff_name} (copia)`, is_active: true })
+    }
+
+    const handleBulkToggle = (active: boolean) => start(async () => {
+        const ids = [...selected]
+        try {
+            await Promise.all(ids.map(id => toggleTarifaActive(id, active)))
+            onUpdate(rows.map(r => selected.has(r.id) ? { ...r, is_active: active } : r))
+            toast.success(`${ids.length} tarifa(s) ${active ? 'activadas' : 'desactivadas'}`)
+            clearSelection()
+        } catch (e) { toast.error((e as Error).message) }
+    })
+
+    const handleBulkDelete = () => start(async () => {
+        const ids = [...selected]
+        try {
+            await Promise.all(ids.map(id => deleteTarifa(id)))
+            onUpdate(rows.filter(r => !selected.has(r.id)))
+            toast.success(`${ids.length} tarifa(s) eliminadas`)
+            clearSelection()
+        } catch (e) { toast.error((e as Error).message) }
+        setBulkDelete(false)
+    })
+
+    const colCount = 4 + periods.length * 2 + 1 + (isAdmin ? 2 : 0) // sel + company + producto + modelo + atr + E + P + activa + actions
 
     return (
         <div className="space-y-4">
@@ -86,68 +134,79 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
                         </button>
                     ))}
                 </div>
-                {isAdmin && (
-                    <div className="flex items-center gap-2 ml-auto">
-                        <button type="button" onClick={() => setShowImport(true)} className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-600/20 transition-all">
-                            <FileSpreadsheet size={14} /> Excel
-                        </button>
-                        <button type="button" onClick={() => setFormData(blankTarifa('electricity'))} className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-600/20 transition-all">
-                            <Plus size={14} /> Nueva tarifa
-                        </button>
-                    </div>
-                )}
+                <div className="flex items-center gap-2 ml-auto">
+                    {/* Compacto / detallado */}
+                    <button
+                        type="button"
+                        onClick={() => setDetailed(d => !d)}
+                        title={detailed ? 'Ver compacto (P1-P3)' : 'Ver detallado (P1-P6)'}
+                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border border-slate-200/60 bg-white/80 text-slate-600 hover:bg-white hover:text-slate-900 transition-all"
+                    >
+                        {detailed ? <Rows3 size={14} /> : <Maximize2 size={14} />}
+                        {detailed ? 'Compacto' : 'Detallado'}
+                    </button>
+                    {isAdmin && (
+                        <>
+                            <button type="button" onClick={() => setShowImport(true)} className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-600/20 transition-all">
+                                <FileSpreadsheet size={14} /> Excel
+                            </button>
+                            <button type="button" onClick={() => setFormData(blankTarifa('electricity'))} className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-600/20 transition-all">
+                                <Plus size={14} /> Nueva tarifa
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
 
+            {/* Bulk actions bar */}
+            {isAdmin && selected.size > 0 && (
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 border border-indigo-200 rounded-2xl animate-in fade-in slide-in-from-top-1">
+                    <span className="text-xs font-bold text-indigo-700 mr-1">{selected.size} seleccionada(s)</span>
+                    <button type="button" onClick={() => handleBulkToggle(true)} disabled={pending} className="px-3 py-1.5 bg-white text-emerald-700 border border-emerald-200 text-xs font-bold rounded-lg hover:bg-emerald-50 transition-colors disabled:opacity-50">Activar</button>
+                    <button type="button" onClick={() => handleBulkToggle(false)} disabled={pending} className="px-3 py-1.5 bg-white text-slate-600 border border-slate-200 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50">Desactivar</button>
+                    <button type="button" onClick={() => setBulkDelete(true)} disabled={pending} className="px-3 py-1.5 bg-rose-100 text-rose-700 text-xs font-bold rounded-lg hover:bg-rose-200 transition-colors disabled:opacity-50">Eliminar</button>
+                    <button type="button" onClick={clearSelection} className="ml-auto text-xs text-slate-400 hover:text-slate-600">✕ Limpiar</button>
+                </div>
+            )}
+
             {/* Table */}
-            <div className="bg-white/60 backdrop-blur-xl rounded-3xl border border-white shadow-xl shadow-slate-200/40 overflow-hidden">
-                <table className="w-full table-fixed text-[11px]">
-                    <colgroup>
-                        <col className="w-[18%] sm:w-[14%]" />
-                        <col className="w-[9%]" />
-                        <col className="w-[6%]" />
-                        <col className="w-[4%]" />
-                        <col className="w-[4.8%]" />
-                        <col className="w-[4.8%]" />
-                        <col className="w-[4.8%]" />
-                        <col className="w-[4.8%]" />
-                        <col className="w-[4.8%]" />
-                        <col className="w-[4.8%]" />
-                        <col className="w-[4.8%]" />
-                        <col className="w-[4.8%]" />
-                        <col className="w-[4.8%]" />
-                        <col className="w-[4.8%]" />
-                        <col className="w-[4.8%]" />
-                        <col className="w-[4.8%]" />
-                        <col className="w-[4.2%]" />
-                        {isAdmin && <col className="w-[5%]" />}
-                    </colgroup>
+            <div className="bg-white/60 backdrop-blur-xl rounded-3xl border border-white shadow-xl shadow-slate-200/40 overflow-x-auto">
+                <table className="w-full text-[11px]">
                     <thead>
                         <tr className="bg-slate-50/50 border-b border-white">
-                            <th className="text-left px-1.5 py-3 font-semibold text-slate-500 sm:px-3">Compañía</th>
-                            <th className="text-left px-3 py-3 font-semibold text-slate-500">Producto</th>
-                            <th className="text-left px-2 py-3 font-semibold text-slate-500">Modelo</th>
-                            <th className="text-left px-2 py-3 font-semibold text-slate-500">ATR</th>
-                            <th className="text-right px-2 py-3 font-semibold text-slate-500" title="Energía P1">E.P1</th>
-                            <th className="text-right px-2 py-3 font-semibold text-slate-500" title="Energía P2">E.P2</th>
-                            <th className="text-right px-2 py-3 font-semibold text-slate-500" title="Energía P3">E.P3</th>
-                            <th className="text-right px-2 py-3 font-semibold text-slate-400" title="Energía P4">E.P4</th>
-                            <th className="text-right px-2 py-3 font-semibold text-slate-400" title="Energía P5">E.P5</th>
-                            <th className="text-right px-2 py-3 font-semibold text-slate-400" title="Energía P6">E.P6</th>
-                            <th className="text-right px-2 py-3 font-semibold text-slate-500" title="Potencia P1">kW P1</th>
-                            <th className="text-right px-2 py-3 font-semibold text-slate-500" title="Potencia P2">kW P2</th>
-                            <th className="text-right px-2 py-3 font-semibold text-slate-500" title="Potencia P3">kW P3</th>
-                            <th className="text-right px-2 py-3 font-semibold text-slate-500" title="Potencia P4">kW P4</th>
-                            <th className="text-right px-2 py-3 font-semibold text-slate-500" title="Potencia P5">kW P5</th>
-                            <th className="text-right px-2 py-3 font-semibold text-slate-500" title="Potencia P6">kW P6</th>
-                            <th className="text-center px-2 py-3 font-semibold text-slate-500">Activa</th>
-                            {isAdmin && <th className="px-2 py-3" />}
+                            {isAdmin && (
+                                <th rowSpan={2} className="px-2 py-3 text-center align-middle">
+                                    <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} aria-label="Seleccionar todas" className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/30" />
+                                </th>
+                            )}
+                            <th rowSpan={2} className="text-left px-1.5 py-3 font-semibold text-slate-500 align-middle sm:px-3">Compañía</th>
+                            <th rowSpan={2} className="text-left px-3 py-3 font-semibold text-slate-500 align-middle">Producto</th>
+                            <th rowSpan={2} className="text-left px-2 py-3 font-semibold text-slate-500 align-middle">Modelo</th>
+                            <th rowSpan={2} className="text-left px-2 py-3 font-semibold text-slate-500 align-middle">ATR</th>
+                            <th colSpan={periods.length} className="text-center px-2 py-2 font-bold text-indigo-500 border-l border-slate-100 uppercase tracking-wider text-[9px]">Energía €/kWh</th>
+                            <th colSpan={periods.length} className="text-center px-2 py-2 font-bold text-teal-600 border-l border-slate-100 uppercase tracking-wider text-[9px]">Potencia €/kW</th>
+                            <th rowSpan={2} className="text-center px-2 py-3 font-semibold text-slate-500 align-middle border-l border-slate-100">Activa</th>
+                            {isAdmin && <th rowSpan={2} className="px-2 py-3 align-middle" />}
+                        </tr>
+                        <tr className="bg-slate-50/50 border-b border-white text-[9px]">
+                            {periods.map((p, i) => (
+                                <th key={`e${p}`} className={`text-right px-2 py-1.5 font-semibold text-slate-400 ${i === 0 ? 'border-l border-slate-100' : ''}`} title={`Energía P${p}`}>P{p}</th>
+                            ))}
+                            {periods.map((p, i) => (
+                                <th key={`p${p}`} className={`text-right px-2 py-1.5 font-semibold text-slate-400 ${i === 0 ? 'border-l border-slate-100' : ''}`} title={`Potencia P${p}`}>P{p}</th>
+                            ))}
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100/50">
                         {filtered.map(row => (
-                            <tr key={row.id} className={`hover:bg-white hover:shadow-sm hover:scale-[1.002] relative z-0 hover:z-10 transition-all duration-300 ${!row.is_active ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                            <tr key={row.id} className={`hover:bg-white transition-colors duration-200 ${!row.is_active ? 'opacity-40' : ''} ${selected.has(row.id) ? 'bg-indigo-50/40' : ''}`}>
+                                {isAdmin && (
+                                    <td className="px-2 py-2.5 text-center">
+                                        <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleSelect(row.id)} aria-label={`Seleccionar ${row.tariff_name}`} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/30" />
+                                    </td>
+                                )}
                                 <td className="px-1.5 py-2.5 sm:px-3">
-                                    <div className="group/company flex min-w-0 items-center justify-center gap-1 sm:justify-start sm:gap-2">
+                                    <div className="flex min-w-0 items-center gap-1 sm:gap-2">
                                         <CompanyCell company={row.company} logoColor={row.logo_color} size="md" showName={false} />
                                         <div className="hidden min-w-0 sm:block">
                                             <div className="flex min-w-0 items-center gap-1.5">
@@ -164,26 +223,26 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
                                         </div>
                                     </div>
                                 </td>
-                                <td className="px-3 py-3 text-slate-600 font-medium truncate" title={row.tariff_name}>{row.tariff_name}</td>
+                                <td className="px-3 py-3 text-slate-600 font-medium max-w-[160px] truncate" title={row.tariff_name}>{row.tariff_name}</td>
                                 <td className="px-2 py-3">
                                     {row.modelo ? (
                                         <span className={`inline-block max-w-full truncate px-2 py-0.5 rounded-full text-[9px] font-bold ${MODELO_COLORS[row.modelo] ?? 'bg-slate-100 text-slate-600'}`}>{row.modelo}</span>
                                     ) : <span className="text-slate-300">—</span>}
                                 </td>
                                 <td className="px-2 py-2.5 font-mono text-slate-600 tabular-nums">{row.tariff_type ?? '—'}</td>
-                                <td className="px-2 py-2.5 text-right font-mono text-slate-700 tabular-nums">{fmt(row.energy_price_p1, 4)}</td>
-                                <td className="px-2 py-2.5 text-right font-mono text-slate-500 tabular-nums">{fmt(row.energy_price_p2, 4)}</td>
-                                <td className="px-2 py-2.5 text-right font-mono text-slate-500 tabular-nums">{fmt(row.energy_price_p3, 4)}</td>
-                                <td className="px-2 py-2.5 text-right font-mono text-slate-400 tabular-nums">{fmt(row.energy_price_p4 ?? 0, 4)}</td>
-                                <td className="px-2 py-2.5 text-right font-mono text-slate-400 tabular-nums">{fmt(row.energy_price_p5 ?? 0, 4)}</td>
-                                <td className="px-2 py-2.5 text-right font-mono text-slate-400 tabular-nums">{fmt(row.energy_price_p6 ?? 0, 4)}</td>
-                                <td className="px-2 py-2.5 text-right font-mono text-slate-600 tabular-nums">{fmt(row.power_price_p1, 4)}</td>
-                                <td className="px-2 py-2.5 text-right font-mono text-slate-600 tabular-nums">{fmt(row.power_price_p2, 4)}</td>
-                                <td className="px-2 py-2.5 text-right font-mono text-slate-600 tabular-nums">{fmt(row.power_price_p3, 4)}</td>
-                                <td className="px-2 py-2.5 text-right font-mono text-slate-500 tabular-nums">{fmt(row.power_price_p4 ?? 0, 4)}</td>
-                                <td className="px-2 py-2.5 text-right font-mono text-slate-500 tabular-nums">{fmt(row.power_price_p5 ?? 0, 4)}</td>
-                                <td className="px-2 py-2.5 text-right font-mono text-slate-500 tabular-nums">{fmt(row.power_price_p6 ?? 0, 4)}</td>
-                                <td className="px-2 py-2.5 text-center">
+                                {periods.map((p, i) => {
+                                    const val = (row[`energy_price_p${p}` as keyof TarifaRow] as number) ?? 0
+                                    return (
+                                        <td key={`e${p}`} className={`px-2 py-2.5 text-right font-mono tabular-nums ${p <= 3 ? 'text-slate-700' : 'text-slate-400'} ${i === 0 ? 'border-l border-slate-100/70' : ''}`}>{fmt(val, 4)}</td>
+                                    )
+                                })}
+                                {periods.map((p, i) => {
+                                    const val = (row[`power_price_p${p}` as keyof TarifaRow] as number) ?? 0
+                                    return (
+                                        <td key={`p${p}`} className={`px-2 py-2.5 text-right font-mono tabular-nums ${p <= 3 ? 'text-slate-600' : 'text-slate-400'} ${i === 0 ? 'border-l border-slate-100/70' : ''}`}>{fmt(val, 4)}</td>
+                                    )
+                                })}
+                                <td className="px-2 py-2.5 text-center border-l border-slate-100/70">
                                     {isAdmin ? (
                                         <button type="button" onClick={() => handleToggle(row)} disabled={pending} aria-label="Activar o desactivar tarifa" className="text-slate-400 hover:text-indigo-600 transition-colors">
                                             {row.is_active ? <ToggleRight size={20} className="text-indigo-500" /> : <ToggleLeft size={20} />}
@@ -194,11 +253,10 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
                                 </td>
                                 {isAdmin && (
                                     <td className="px-2 py-2.5">
-                                        <div className="flex items-center justify-end gap-1">
-                                            <button type="button" onClick={() => setFormData(row)} aria-label="Editar tarifa" className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"><Edit3 size={13} /></button>
-                                            <button type="button" onClick={() => handleDelete(row.id)} aria-label="Eliminar tarifa" className={`p-1.5 rounded-lg transition-colors ${deleteConfirm === row.id ? 'bg-rose-600 text-white' : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'}`}>
-                                                {deleteConfirm === row.id ? <span className="text-[9px] font-bold px-0.5">OK</span> : <Trash2 size={13} />}
-                                            </button>
+                                        <div className="flex items-center justify-end gap-0.5">
+                                            <button type="button" onClick={() => handleDuplicate(row)} aria-label="Duplicar tarifa" title="Duplicar" className="p-1.5 rounded-lg text-slate-300 hover:text-violet-600 hover:bg-violet-50 transition-colors"><Copy size={13} /></button>
+                                            <button type="button" onClick={() => setFormData(row)} aria-label="Editar tarifa" title="Editar" className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"><Edit3 size={13} /></button>
+                                            <button type="button" onClick={() => setDeleteId(row.id)} aria-label="Eliminar tarifa" title="Eliminar" className="p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors"><Trash2 size={13} /></button>
                                         </div>
                                     </td>
                                 )}
@@ -206,7 +264,7 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
                         ))}
                         {filtered.length === 0 && (
                             <tr>
-                                <td colSpan={isAdmin ? 18 : 17} className="py-24">
+                                <td colSpan={colCount} className="py-24">
                                     <div className="flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-bottom-2">
                                         <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-[1.5rem] flex items-center justify-center mb-5 rotate-3 shadow-sm">
                                             <Search size={22} className="text-slate-300" />
@@ -221,11 +279,29 @@ export function ElectricityTab({ rows, commissions, isAdmin, onUpdate }: Props) 
                 </table>
             </div>
 
+            <ConfirmDialog
+                open={deleteId !== null}
+                title="Eliminar tarifa"
+                message="Esta acción no se puede deshacer. La tarifa dejará de estar disponible."
+                busy={pending}
+                onConfirm={handleDelete}
+                onCancel={() => setDeleteId(null)}
+            />
+            <ConfirmDialog
+                open={bulkDelete}
+                title={`Eliminar ${selected.size} tarifa(s)`}
+                message="Vas a eliminar varias tarifas a la vez. Esta acción no se puede deshacer."
+                confirmLabel={`Eliminar ${selected.size}`}
+                busy={pending}
+                onConfirm={handleBulkDelete}
+                onCancel={() => setBulkDelete(false)}
+            />
+
             {showImport && (
                 <TariffExcelImportModal
                     supplyType="electricity"
                     onClose={() => setShowImport(false)}
-                    onSuccess={() => { setShowImport(false); toast.success('Recarga la página para ver las tarifas importadas') }}
+                    onSuccess={() => { setShowImport(false); toast.success('Tarifas importadas'); router.refresh() }}
                 />
             )}
         </div>

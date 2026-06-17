@@ -14,12 +14,16 @@ import {
     Link2,
     Copy,
     CheckCheck,
+    BadgeCheck,
+    Banknote,
 } from 'lucide-react';
 import { InvoiceData, SavingsResult, Client, Proposal, ProposalStatus } from '@/types/crm';
 import { crmService } from '@/services/crmService';
 import { getClientsAction } from '@/app/actions/clients';
 import { generatePublicLinkAction } from '@/app/actions/publicProposal';
+import { registerSaleAction, updateProposalStatusAction } from '@/app/actions/proposals';
 import { logProposalCreatedAction } from '@/app/actions/proposalActivities';
+import { formatCurrency } from '@/lib/utils/format';
 import { toast } from 'sonner';
 import { logger } from '@/lib/utils/logger';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -49,6 +53,11 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
     const [saving, setSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Registrar venta (cierre de acuerdo)
+    const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
+    const [saleNote, setSaleNote] = useState('');
+    const [registeringSale, setRegisteringSale] = useState(false);
 
     useEffect(() => {
         if (initialProposal) {
@@ -157,11 +166,30 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
     const handleStatusChange = async (newStatus: ProposalStatus) => {
         if (!initialProposal) return;
         try {
-            await crmService.updateProposalStatus(initialProposal.id, newStatus);
+            // Server action: aplica permisos, avisos y (si procede) el resto del flujo.
+            await updateProposalStatusAction(initialProposal.id, newStatus);
             setStatus(newStatus);
         } catch (error) {
             logger.error('Failed to update status', error);
             toast.error('Error al actualizar el estado.');
+        }
+    };
+
+    const commissionFromTariff = data?.result.offer.estimated_agent_commission ?? null;
+
+    const handleRegisterSale = async () => {
+        if (!initialProposal) return;
+        setRegisteringSale(true);
+        try {
+            await registerSaleAction(initialProposal.id, saleNote);
+            setStatus('accepted');
+            setIsSaleModalOpen(false);
+            setSaleNote('');
+            toast.success('Venta registrada. La comisión se ha añadido a la cartera.');
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'No se pudo registrar la venta.');
+        } finally {
+            setRegisteringSale(false);
         }
     };
 
@@ -205,27 +233,45 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
 
                     <div className="flex items-center gap-3">
                         {initialProposal && (
-                            <div className="hidden sm:flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Estado:</span>
-                                <select
-                                    value={status}
-                                    onChange={(e) => handleStatusChange(e.target.value as ProposalStatus)}
-                                    className="bg-transparent text-[11px] font-bold text-indigo-600 outline-none border-none cursor-pointer p-0 pr-4"
-                                    aria-label="Cambiar Estado"
-                                    title="Cambiar Estado"
-                                >
-                                    <option value="draft">Borrador</option>
-                                    <option value="sent">Enviada</option>
-                                    <option value="accepted">Aceptada</option>
-                                    <option value="rejected">Rechazada</option>
-                                    <option value="expired">Expirada</option>
-                                </select>
-                            </div>
+                            status === 'accepted' ? (
+                                <div className="hidden sm:flex items-center gap-1.5 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">
+                                    <BadgeCheck size={13} className="text-emerald-600" />
+                                    <span className="text-[11px] font-bold text-emerald-700">Venta registrada</span>
+                                </div>
+                            ) : (
+                                <div className="hidden sm:flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Estado:</span>
+                                    <select
+                                        value={status}
+                                        onChange={(e) => handleStatusChange(e.target.value as ProposalStatus)}
+                                        className="bg-transparent text-[11px] font-bold text-indigo-600 outline-none border-none cursor-pointer p-0 pr-4"
+                                        aria-label="Cambiar Estado"
+                                        title="Cambiar Estado"
+                                    >
+                                        <option value="draft">Borrador</option>
+                                        <option value="sent">Enviada</option>
+                                        <option value="rejected">Rechazada</option>
+                                        <option value="expired">Expirada</option>
+                                    </select>
+                                </div>
+                            )
                         )}
 
                         <div className="flex gap-2">
                             {initialProposal ? (
                                 <>
+                                    {/* Registrar venta (cerrar acuerdo) */}
+                                    {status !== 'accepted' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsSaleModalOpen(true)}
+                                            className="flex items-center gap-1.5 px-3 h-9 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all text-xs font-bold shadow-sm shadow-emerald-600/20"
+                                            title="Registrar la venta y generar la comisión"
+                                        >
+                                            <BadgeCheck size={14} />
+                                            <span className="hidden sm:inline">Registrar venta</span>
+                                        </button>
+                                    )}
                                     {/* Compartir link público */}
                                     <button
                                         type="button"
@@ -454,6 +500,99 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
                                         <>
                                             <Save size={18} />
                                             <span>Confirmar y Guardar</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* REGISTRAR VENTA MODAL */}
+            <AnimatePresence>
+                {isSaleModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
+                            onClick={() => setIsSaleModalOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-label="Registrar venta"
+                            className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
+                        >
+                            <div className="p-6 border-b border-slate-100 flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                                    <BadgeCheck size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-900">Registrar venta</h3>
+                                    <p className="text-xs text-slate-500">Deja constancia del cierre y genera la comisión.</p>
+                                </div>
+                            </div>
+
+                            <div className="p-6 space-y-4">
+                                {/* Comisión de la tarifa */}
+                                <div className="flex items-center justify-between gap-3 p-4 rounded-2xl bg-emerald-50/60 border border-emerald-100">
+                                    <div className="flex items-center gap-2.5">
+                                        <Banknote size={18} className="text-emerald-600 shrink-0" />
+                                        <span className="text-sm font-semibold text-slate-700">Comisión de la tarifa</span>
+                                    </div>
+                                    {commissionFromTariff != null && commissionFromTariff > 0 ? (
+                                        <span className="text-lg font-black text-emerald-700 tabular-nums">{formatCurrency(commissionFromTariff)}</span>
+                                    ) : (
+                                        <span className="text-xs text-amber-600 font-semibold text-right max-w-[55%]">Sin comisión en la tarifa — se calculará por la regla del ahorro</span>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 block">
+                                        Justificación del cierre <span className="text-red-400">*</span>
+                                    </label>
+                                    <textarea
+                                        value={saleNote}
+                                        onChange={(e) => setSaleNote(e.target.value)}
+                                        rows={3}
+                                        maxLength={1000}
+                                        autoFocus
+                                        placeholder="Ej.: Contrato firmado por el cliente el 17/06, enviado a la comercializadora. Nº contrato…"
+                                        className="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all text-sm text-slate-800 resize-none"
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-1.5">Queda registrado en el historial del cliente como prueba del acuerdo.</p>
+                                </div>
+                            </div>
+
+                            <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsSaleModalOpen(false)}
+                                    className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleRegisterSale}
+                                    disabled={registeringSale || saleNote.trim().length < 3}
+                                    className="flex-[2] py-3 bg-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {registeringSale ? (
+                                        <>
+                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                            <span>Registrando...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <BadgeCheck size={18} />
+                                            <span>Confirmar venta</span>
                                         </>
                                     )}
                                 </button>

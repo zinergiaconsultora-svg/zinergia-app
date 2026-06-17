@@ -398,11 +398,7 @@ function CommissionSimulator({ electricity, gas, commissions, collaboratorPct }:
 export default function TarifasAgentView({ electricity, gas, commissions, collaboratorPct }: Props) {
     const [tab, setTab] = useState<Tab>('electricity')
 
-    // Stats for the agent
-    const elecWithComm = useMemo(() =>
-        electricity.filter(r => r.is_active && resolveCommission(r, commissions, collaboratorPct).fixed !== null).length,
-        [electricity, commissions, collaboratorPct]
-    )
+    const pctLabel = Math.round(collaboratorPct * 100)
 
     const tabs = [
         { id: 'electricity' as Tab, label: 'Electricidad', icon: <Zap size={14} />, count: electricity.filter(r => r.is_active).length },
@@ -411,49 +407,30 @@ export default function TarifasAgentView({ electricity, gas, commissions, collab
 
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-start gap-4">
+            {/* Header — compacto */}
+            <div className="flex items-center gap-3 flex-wrap">
                 <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-200 shrink-0">
                     <Euro size={20} />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                     <h1 className="text-xl font-black text-slate-900">Tarifas disponibles</h1>
-                    <p className="text-xs text-slate-400 mt-0.5">Precios de mercado y tu comisión por cada producto que comercialices</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Precios de mercado y tu comisión por producto</p>
+                </div>
+                <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-full pl-3 pr-2 py-1.5">
+                    <span className="text-xs font-bold text-emerald-700">
+                        Tu comisión: {pctLabel}%
+                    </span>
+                    <span
+                        className="text-emerald-500/70 cursor-help"
+                        title={`Recibes el ${pctLabel}% de la comisión bruta de cada producto. La columna "Tu comisión" es lo que ganas si el cliente firma: una cantidad fija por contrato en consumos pequeños, o variable por MWh en consumos grandes.`}
+                    >
+                        <Info size={14} />
+                    </span>
                 </div>
             </div>
 
-            {/* Info banner */}
-            <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-100 rounded-2xl p-4">
-                <Info size={16} className="text-emerald-500 mt-0.5 shrink-0" />
-                <div>
-                    <p className="text-xs font-semibold text-emerald-800">
-                        Tu comisión es el {Math.round(collaboratorPct * 100)}% de la comisión bruta de cada producto.
-                    </p>
-                    <p className="text-xs text-emerald-700 mt-0.5">
-                        La columna <span className="font-bold">Tu comisión</span> muestra lo que recibirás si el cliente firma ese producto.
-                        Para consumos pequeños es una cantidad fija por contrato; para consumos grandes, una comisión variable por MWh contratado.
-                    </p>
-                </div>
-            </div>
-
-            {/* Simulador de comisión */}
+            {/* Simulador de comisión (desplegable) */}
             <CommissionSimulator electricity={electricity} gas={gas} commissions={commissions} collaboratorPct={collaboratorPct} />
-
-            {/* Summary cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                    { label: 'Tarifas luz', value: electricity.filter(r => r.is_active).length, sub: 'disponibles', color: 'text-indigo-600', bg: 'bg-indigo-50' },
-                    { label: 'Tarifas gas', value: gas.filter(r => r.is_active).length, sub: 'disponibles', color: 'text-orange-600', bg: 'bg-orange-50' },
-                    { label: 'Con comisión', value: elecWithComm, sub: 'productos luz', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                    { label: 'Tu %', value: `${Math.round(collaboratorPct * 100)}%`, sub: 'de la comisión', color: 'text-teal-600', bg: 'bg-teal-50' },
-                ].map(c => (
-                    <div key={c.label} className={`${c.bg} rounded-2xl p-4`}>
-                        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{c.label}</p>
-                        <p className={`text-2xl font-black ${c.color} mt-1`}>{c.value}</p>
-                        <p className="text-[10px] text-slate-400">{c.sub}</p>
-                    </div>
-                ))}
-            </div>
 
             {/* Tabs */}
             <div className="flex gap-1 bg-white border border-slate-200 p-1 rounded-2xl w-fit">

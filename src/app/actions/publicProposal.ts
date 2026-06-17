@@ -324,17 +324,33 @@ export async function acceptPublicProposalAction(
                     .eq('active', true)
                     .maybeSingle();
 
-                const rule = applyFranchiseOverride(baseRule, franchiseCfg?.royalty_percent ?? null);
-                const split = calculateCommissionSplit(propData.annual_savings as number, rule);
+                // La comisión la marca la TARIFA (offer.estimated_agent_commission):
+                // ese € es la comisión del agente; la franquicia toma su % encima.
+                // Si la tarifa no trae comisión, se recurre a la regla sobre el ahorro.
+                const royaltyPercent: number | null = franchiseCfg?.royalty_percent ?? null;
+                const offer = propData?.offer_snapshot as { estimated_agent_commission?: number | null } | null;
+                const tariffCommission = Number(offer?.estimated_agent_commission ?? 0);
+                const round2 = (n: number) => Math.round(n * 100) / 100;
+
+                let agentCommission: number;
+                let franchiseCommission: number;
+                if (tariffCommission > 0) {
+                    agentCommission = round2(tariffCommission);
+                    franchiseCommission = round2(tariffCommission * ((royaltyPercent ?? 0) / 100));
+                } else {
+                    const rule = applyFranchiseOverride(baseRule, royaltyPercent);
+                    const split = calculateCommissionSplit(propData.annual_savings as number, rule);
+                    agentCommission = split.agent_commission;
+                    franchiseCommission = split.franchise_profit;
+                }
+
                 // ignoreDuplicates: el UNIQUE constraint en proposal_id actúa como guardia atómica
                 const { error: commError } = await adminClient.from('network_commissions').upsert({
                     proposal_id: proposal.id,
                     agent_id: agentProfile.id,
                     franchise_id: agentProfile.franchise_id,
-                    total_revenue: split.pot,
-                    agent_commission: split.agent_commission,
-                    franchise_profit: split.franchise_profit,
-                    hq_royalty: split.hq_royalty,
+                    agent_commission: agentCommission,
+                    franchise_commission: franchiseCommission,
                     status: 'pending',
                 }, { onConflict: 'proposal_id', ignoreDuplicates: true });
                 if (commError) throw commError;

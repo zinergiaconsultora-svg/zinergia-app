@@ -11,6 +11,7 @@ import {
     FileText,
     Clock,
     Loader2,
+    PhoneCall,
 } from 'lucide-react';
 import { ClientActivity, ActivityType } from '@/types/crm';
 import { activitiesService } from '@/services/crm/activities';
@@ -24,6 +25,7 @@ const ACTIVITY_CONFIG: Record<ActivityType, { icon: React.ElementType; color: st
     proposal_sent: { icon: Send, color: 'text-blue-600', bg: 'bg-blue-50' },
     proposal_accepted: { icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     proposal_rejected: { icon: XCircle, color: 'text-red-600', bg: 'bg-red-50' },
+    contact_logged: { icon: PhoneCall, color: 'text-blue-600', bg: 'bg-blue-50' },
     note_added: { icon: FileText, color: 'text-slate-500', bg: 'bg-slate-50' },
 };
 
