@@ -5,6 +5,7 @@ import { crmService } from '@/services/crmService';
 import { Proposal } from '@/types/crm';
 import ProposalView from '@/features/crm/components/ProposalView';
 import { useParams, useRouter } from 'next/navigation';
+import { logger } from '@/lib/utils/logger';
 
 export default function ProposalDetailsPage() {
     const params = useParams();
@@ -23,7 +24,7 @@ export default function ProposalDetailsPage() {
                 const data = await crmService.getProposalById(id);
                 setProposal(data);
             } catch (err) {
-                console.error(err);
+                logger.error('Error loading proposal:', err);
                 setError('No se pudo cargar la propuesta. Puede que no exista o no tengas permisos.');
             } finally {
                 setLoading(false);
