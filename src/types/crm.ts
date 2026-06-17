@@ -25,6 +25,9 @@ export interface Client {
     status: ClientStatus;
     dni_cif?: string;
 
+    notes?: string;
+    last_contact_date?: string;
+
     // Geolocation for Geo-Intelligence
     zip_code?: string;
     city?: string;
