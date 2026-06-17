@@ -61,10 +61,12 @@ const STATUS_FILTERS: { value: ClientStatus | 'all'; label: string; emoji: strin
 ];
 
 export default function ClientsView({ initialData }: ClientsViewProps) {
-    const { clients, loading, loadingMore, hasMore, refresh, loadMore } = useClients(initialData);
+    const {
+        clients, loading, loadingMore, hasMore, searching,
+        searchTerm, search, refresh, loadMore, kpis, kpisLoading,
+    } = useClients(initialData);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isCsvImportOpen, setIsCsvImportOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
     const [viewMode, setViewMode] = useState<ViewMode>('pipeline');
     const [statusFilter, setStatusFilter] = useState<ClientStatus | 'all'>('all');
     const [sortBy, setSortBy] = useState<SortOption>('created_at');
@@ -79,23 +81,8 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
     }, [clients]);
     const router = useRouter();
 
-    const kpis = useMemo(() => {
-        const total = clients.length;
-        const nuevos = clients.filter(c => c.status === 'new').length;
-        const pipelineValue = clients
-            .filter(c => c.status === 'in_process')
-            .reduce((sum, c) => sum + (c.average_monthly_bill || 0), 0);
-        const won = clients.filter(c => c.status === 'won').length;
-        const lost = clients.filter(c => c.status === 'lost').length;
-        const conversion = (won + lost) > 0 ? Math.round((won / (won + lost)) * 100) : 0;
-        return { total, nuevos, pipelineValue, conversion };
-    }, [clients]);
-
     const filteredClients = useMemo(() => {
-        let result = clients.filter(c =>
-            c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            c.cups?.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        let result = [...clients];
 
         if (statusFilter !== 'all') {
             result = result.filter(c => c.status === statusFilter);
@@ -111,7 +98,7 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
         });
 
         return result;
-    }, [clients, searchTerm, statusFilter, sortBy]);
+    }, [clients, statusFilter, sortBy]);
 
     const toggleSelect = useCallback((id: string) => {
         setSelectedIds(prev => {
@@ -158,10 +145,14 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                     <div className="flex-1 max-w-md flex gap-3">
                         <div className="relative group flex-1">
                             <Input
-                                placeholder="Buscar por nombre o CUPS..."
+                                placeholder="Buscar por nombre, CUPS, teléfono, email o DNI..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                icon={<Search size={18} />}
+                                onChange={(e) => search(e.target.value)}
+                                icon={searching ? (
+                                    <div className="w-[18px] h-[18px] border-2 border-slate-300 border-t-indigo-500 rounded-full animate-spin" />
+                                ) : (
+                                    <Search size={18} />
+                                )}
                                 className="rounded-2xl py-6"
                             />
                         </div>
@@ -194,14 +185,18 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                             <Users size={16} className="text-indigo-500" />
                             <span className="text-xs font-semibold uppercase tracking-wider">Total Clientes</span>
                         </div>
-                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{kpis.total}</div>
+                        <div className="text-3xl font-bold text-slate-900 dark:text-white">
+                            {kpisLoading ? <span className="inline-block w-12 h-8 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" /> : kpis.total}
+                        </div>
                     </div>
                     <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl p-5 shadow-sm hover:shadow-floating transition-all">
                         <div className="flex items-center gap-3 mb-2 text-slate-500">
                             <Activity size={16} className="text-emerald-500" />
                             <span className="text-xs font-semibold uppercase tracking-wider">Nuevos Leads</span>
                         </div>
-                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{kpis.nuevos}</div>
+                        <div className="text-3xl font-bold text-slate-900 dark:text-white">
+                            {kpisLoading ? <span className="inline-block w-8 h-8 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" /> : kpis.nuevos}
+                        </div>
                     </div>
                     <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl p-5 shadow-sm hover:shadow-floating transition-all">
                         <div className="flex items-center gap-3 mb-2 text-slate-500">
@@ -209,7 +204,9 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                             <span className="text-xs font-semibold uppercase tracking-wider">Valor Pipeline</span>
                         </div>
                         <div className="text-3xl font-bold text-slate-900 dark:text-white">
-                            {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(kpis.pipelineValue)}<span className="text-lg text-slate-400 font-medium ml-1">/mes</span>
+                            {kpisLoading ? <span className="inline-block w-20 h-8 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" /> : (
+                                <>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(kpis.pipelineValue)}<span className="text-lg text-slate-400 font-medium ml-1">/mes</span></>
+                            )}
                         </div>
                     </div>
                     <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl p-5 shadow-sm hover:shadow-floating transition-all">
@@ -217,7 +214,9 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                             <Target size={16} className="text-amber-500" />
                             <span className="text-xs font-semibold uppercase tracking-wider">Tasa Conversión</span>
                         </div>
-                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{kpis.conversion}%</div>
+                        <div className="text-3xl font-bold text-slate-900 dark:text-white">
+                            {kpisLoading ? <span className="inline-block w-10 h-8 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" /> : <>{kpis.conversion}%</>}
+                        </div>
                     </div>
                 </div>
 

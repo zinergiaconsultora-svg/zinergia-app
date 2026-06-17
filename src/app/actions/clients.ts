@@ -53,6 +53,14 @@ export type ClientInput = z.infer<typeof clientInputSchema>;
 
 const PAGE_SIZE_MAX = 200;
 
+// ── KPIs type ──────────────────────────────────────────────────────────────
+export interface ClientKpis {
+    total: number;
+    nuevos: number;
+    pipelineValue: number;
+    conversion: number;
+}
+
 async function getSessionContext() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -87,6 +95,97 @@ export async function getClientsAction(limit = 20, offset = 0): Promise<Client[]
 
     if (error) throw new Error(`Error cargando clientes: ${error.message}`);
     return hydrateClientRows((data ?? []) as ClientPiiRow[]) as unknown as Client[];
+}
+
+/**
+ * Search clients server-side. Searches name/email/phone via ilike.
+ * For CUPS or DNI-shaped queries, also tries an exact match on the blind-index hash.
+ */
+export async function searchClientsAction(
+    query: string,
+    limit = 20,
+    offset = 0,
+): Promise<Client[]> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+    const q = query.trim();
+    if (!q) return getClientsAction(limit, offset);
+
+    const safeLimit = Math.min(Math.max(1, limit), PAGE_SIZE_MAX);
+    const safeOffset = Math.max(0, offset);
+    const { supabase, franchiseId } = await getSessionContext();
+    if (!franchiseId) return [];
+
+    const pattern = `%${q}%`;
+
+    const { data: textMatches, error: textErr } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('franchise_id', franchiseId)
+        .or(`name.ilike.${pattern},email.ilike.${pattern},phone.ilike.${pattern}`)
+        .order('created_at', { ascending: false })
+        .range(safeOffset, safeOffset + safeLimit - 1);
+    if (textErr) throw new Error(`Error buscando clientes: ${textErr.message}`);
+
+    type DbRow = ClientPiiRow & { id: string };
+    const results = new Map<string, DbRow>();
+    for (const row of (textMatches ?? []) as DbRow[]) results.set(row.id, row);
+
+    // Also try exact match on CUPS/DNI hash (the query might be a CUPS or DNI).
+    const normalized = q.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (normalized.length >= 5) {
+        try {
+            const cupsHash = hashCups(q);
+            const { data: cupsMatch } = await supabase
+                .from('clients')
+                .select('*')
+                .eq('franchise_id', franchiseId)
+                .eq('cups_hash', cupsHash)
+                .limit(5);
+            for (const row of (cupsMatch ?? []) as DbRow[]) results.set(row.id, row);
+        } catch { /* hash may fail if keys not configured in dev */ }
+
+        try {
+            const dniHash = hashDni(q);
+            const { data: dniMatch } = await supabase
+                .from('clients')
+                .select('*')
+                .eq('franchise_id', franchiseId)
+                .eq('dni_cif_hash', dniHash)
+                .limit(5);
+            for (const row of (dniMatch ?? []) as DbRow[]) results.set(row.id, row);
+        } catch { /* hash may fail if keys not configured in dev */ }
+    }
+
+    const rows = Array.from(results.values());
+    return hydrateClientRows(rows) as unknown as Client[];
+}
+
+/**
+ * KPIs calculated over the entire franchise portfolio, not just a page.
+ */
+export async function getClientKpisAction(): Promise<ClientKpis> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+    const { supabase, franchiseId } = await getSessionContext();
+    if (!franchiseId) return { total: 0, nuevos: 0, pipelineValue: 0, conversion: 0 };
+
+    const { data, error } = await supabase
+        .from('clients')
+        .select('status, average_monthly_bill')
+        .eq('franchise_id', franchiseId);
+
+    if (error) throw new Error(`Error cargando KPIs: ${error.message}`);
+    const rows = data ?? [];
+
+    const total = rows.length;
+    const nuevos = rows.filter(r => r.status === 'new').length;
+    const pipelineValue = rows
+        .filter(r => r.status === 'in_process')
+        .reduce((sum, r) => sum + (r.average_monthly_bill || 0), 0);
+    const won = rows.filter(r => r.status === 'won').length;
+    const lost = rows.filter(r => r.status === 'lost').length;
+    const conversion = (won + lost) > 0 ? Math.round((won / (won + lost)) * 100) : 0;
+
+    return { total, nuevos, pipelineValue, conversion };
 }
 
 /** Load a single client by id, with CUPS / DNI decrypted. */
