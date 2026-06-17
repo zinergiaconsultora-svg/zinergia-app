@@ -5,6 +5,7 @@ import { logger } from '@/lib/utils/logger';
 import { env } from '@/lib/env';
 import { createClient } from '@/lib/supabase/server';
 import { InvoiceData } from '@/types/crm';
+import { resolveTitularDniCif } from '@/lib/invoices/titularId';
 import { z } from 'zod';
 
 // Schema de validación para datos crudos del webhook N8N
@@ -33,7 +34,10 @@ function parseRawInvoiceData(rawData: Record<string, unknown>): Record<string, u
     }
     // Devuelve los datos parseados si son válidos, o los originales si no
     // El normalizer downstream maneja datos incompletos con coerciones propias
-    return result.success ? result.data : rawData;
+    const out = (result.success ? result.data : rawData) as Record<string, unknown>;
+    // Asegurar que dni_cif es el del TITULAR, no el de la comercializadora.
+    out.dni_cif = resolveTitularDniCif(rawData);
+    return out;
 }
 
 const MAX_RETRIES = 3;
