@@ -21,6 +21,7 @@ export interface DriveHealth {
     updatedAt: string | null;
     sync: { total: number; archived: number; pending: number; failed: number };
     quota: { usage: number; limit: number | null } | null;
+    quotaError: string | null;
     rgpd: DriveRgpdEvent[];
 }
 
@@ -43,13 +44,20 @@ export async function getDriveHealthAction(): Promise<DriveHealth> {
     ]);
 
     const connected = Boolean(cred.data);
+    const configured = isDriveConfigured();
     let quota: DriveHealth['quota'] = null;
-    if (isDriveConfigured() && connected) {
+    let quotaError: string | null = null;
+    if (!configured) {
+        quotaError = 'Variables GOOGLE_DRIVE_* no disponibles en el runtime (env no cargado).';
+    } else if (!connected) {
+        quotaError = 'Sin fila en integration_credentials.';
+    } else {
         try {
             const drive = await getDriveStorage();
             quota = await drive.getStorageQuota();
         } catch (err) {
-            logger.warn('[driveHealth] quota check failed', { err: err instanceof Error ? err.message : String(err) });
+            quotaError = err instanceof Error ? err.message : String(err);
+            logger.warn('[driveHealth] quota check failed', { err: quotaError });
         }
     }
 
@@ -73,6 +81,7 @@ export async function getDriveHealthAction(): Promise<DriveHealth> {
             failed: failed.count ?? 0,
         },
         quota,
+        quotaError,
         rgpd,
     };
 }

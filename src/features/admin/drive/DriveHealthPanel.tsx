@@ -125,7 +125,14 @@ export default function DriveHealthPanel({ health }: { health: DriveHealth }) {
                         )}
                     </>
                 ) : (
-                    <p className="text-sm text-slate-400">No disponible (integración sin conectar o sin acceso).</p>
+                    <div>
+                        <p className="text-sm text-slate-400">No disponible (integración sin conectar o sin acceso).</p>
+                        <div className="mt-2 rounded-lg bg-slate-50 border border-slate-100 p-2.5 text-[12px] font-mono text-slate-600 space-y-0.5">
+                            <p>configurado (env): <strong className={health.configured ? 'text-emerald-700' : 'text-rose-700'}>{health.configured ? 'sí' : 'NO'}</strong></p>
+                            <p>conectado (BD): <strong className={health.connected ? 'text-emerald-700' : 'text-rose-700'}>{health.connected ? 'sí' : 'NO'}</strong></p>
+                            <p className="break-words">motivo: <span className="text-rose-600">{health.quotaError ?? '—'}</span></p>
+                        </div>
+                    </div>
                 )}
             </div>
 
