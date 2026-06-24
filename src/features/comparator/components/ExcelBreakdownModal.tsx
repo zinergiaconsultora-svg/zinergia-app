@@ -143,13 +143,13 @@ export const ExcelBreakdownModal: React.FC<ExcelBreakdownModalProps> = ({ isOpen
     const savingsPercent = clientSide.total > 0 ? (periodSavings / clientSide.total) * 100 : 0;
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Desglose — ${result.offer.marketer_name} · ${result.offer.tariff_name}`}>
+        <Modal isOpen={isOpen} onClose={onClose} title={`Desglose — ${result.offer.marketer_name} · ${result.offer.tariff_name}`} size="xl">
             <div className="space-y-5">
                 {/* Hero savings strip */}
                 <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 p-4">
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.15),transparent_70%)]" />
-                    <div className="relative flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-6">
+                    <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-4 sm:gap-6">
                             <div>
                                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Factura actual</p>
                                 <p className="text-lg font-bold text-white/60 line-through tabular-nums">{formatCurrency(clientSide.total)}</p>
@@ -169,9 +169,9 @@ export const ExcelBreakdownModal: React.FC<ExcelBreakdownModalProps> = ({ isOpen
                 </div>
 
                 {/* Side-by-side tables */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                     {/* Client invoice */}
-                    <div className="rounded-xl border border-slate-200 overflow-hidden">
+                    <div className="overflow-hidden rounded-xl border border-slate-200">
                         <div className="bg-slate-50 px-4 py-2.5 flex items-center gap-2 border-b border-slate-200">
                             <div className="w-2 h-2 rounded-full bg-slate-400" />
                             <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Factura actual</span>
@@ -183,7 +183,7 @@ export const ExcelBreakdownModal: React.FC<ExcelBreakdownModalProps> = ({ isOpen
                             {clientSide.rows.map((row, i) => (
                                 <div
                                     key={i}
-                                    className={`flex items-center gap-2 px-3 py-1.5 text-xs ${
+                                    className={`grid grid-cols-[20px_1fr_minmax(92px,auto)_88px] items-center gap-2 px-3 py-2 text-xs ${
                                         row.bold ? 'bg-slate-50 font-bold' : ''
                                     } ${row.type === 'total' ? 'border-t-2 border-slate-200' : ''}`}
                                 >
@@ -201,7 +201,7 @@ export const ExcelBreakdownModal: React.FC<ExcelBreakdownModalProps> = ({ isOpen
                     </div>
 
                     {/* Simulation */}
-                    <div className="rounded-xl border border-emerald-200 overflow-hidden">
+                    <div className="overflow-hidden rounded-xl border border-emerald-200">
                         <div className="bg-emerald-50 px-4 py-2.5 flex items-center gap-2 border-b border-emerald-200">
                             <div className="w-2 h-2 rounded-full bg-emerald-500" />
                             <span className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Simulación</span>
@@ -211,7 +211,7 @@ export const ExcelBreakdownModal: React.FC<ExcelBreakdownModalProps> = ({ isOpen
                             {simSide.rows.map((row, i) => (
                                 <div
                                     key={i}
-                                    className={`flex items-center gap-2 px-3 py-1.5 text-xs ${
+                                    className={`grid grid-cols-[20px_1fr_minmax(128px,auto)_88px] items-center gap-2 px-3 py-2 text-xs ${
                                         row.bold ? 'bg-emerald-50/70 font-bold' : ''
                                     } ${row.type === 'total' ? 'border-t-2 border-emerald-200' : ''}`}
                                 >
@@ -234,7 +234,7 @@ export const ExcelBreakdownModal: React.FC<ExcelBreakdownModalProps> = ({ isOpen
 
                 {/* Annual projection */}
                 <div className="rounded-xl bg-gradient-to-r from-emerald-50 to-emerald-100/50 border border-emerald-200 p-4">
-                    <div className="flex items-start gap-3">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                         <div className="p-2 rounded-lg bg-emerald-600 text-white shrink-0 mt-0.5">
                             <Scale size={16} />
                         </div>
@@ -243,7 +243,7 @@ export const ExcelBreakdownModal: React.FC<ExcelBreakdownModalProps> = ({ isOpen
                                 <h4 className="text-sm font-bold text-slate-900">Proyección anual</h4>
                                 <TrendingDown size={14} className="text-emerald-600" />
                             </div>
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid gap-3 sm:grid-cols-3">
                                 <div>
                                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Ahorro este periodo</p>
                                     <p className={`text-xl font-black tabular-nums ${periodSavings >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>

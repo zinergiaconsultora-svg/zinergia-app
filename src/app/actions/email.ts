@@ -5,6 +5,8 @@ import { logger } from '@/lib/utils/logger';
 import { resend } from '@/lib/resend';
 import { Proposal } from '@/types/crm';
 import { generateProposalPDF } from '@/lib/pdf/generate';
+import { requireServerRole } from '@/lib/auth/permissions';
+import { z } from 'zod';
 
 const FROM = 'Zinergia <onboarding@resend.dev>';
 
@@ -74,7 +76,14 @@ export async function sendProposalEmail(
     clientName: string,
     proposal: Proposal
 ) {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+
     try {
+        const parsedEmail = z.string().trim().email().max(200).safeParse(email);
+        if (!parsedEmail.success) {
+            return { success: false, error: 'Email inválido.' };
+        }
+
         if (!process.env.RESEND_API_KEY) {
             logger.warn('RESEND_API_KEY is not set. Email delivery disabled.');
             return { success: false, error: 'El envío de email no está configurado. Contacta con soporte.' };
@@ -114,7 +123,7 @@ export async function sendProposalEmail(
 
         const data = await resend.emails.send({
             from: 'Zinergia <onboarding@resend.dev>', // Update this with verified domain later
-            to: [email],
+            to: [parsedEmail.data],
             subject: subject,
             html: html,
             attachments: [

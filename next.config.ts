@@ -26,7 +26,7 @@ const cspDirectives = [
   `img-src 'self' data: blob: https://i.pravatar.cc https://images.unsplash.com https://randomuser.me https://unpkg.com https://*.tile.openstreetmap.org https://${supabaseHost}`,
   `font-src 'self' https://fonts.gstatic.com`,
   `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://*.sentry.io https://nominatim.openstreetmap.org https://unpkg.com`,
-  "frame-src 'none'",
+  `frame-src 'self' blob: https://${supabaseHost}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

@@ -26,6 +26,7 @@ import {
 import { hashCups, hashDni } from '@/lib/crypto/pii';
 import { moduleLogger } from '@/lib/logger';
 import { purgeClientDriveFiles } from '@/lib/drive/purgeClientDriveFiles';
+import { writeLeadAuditEvent } from '@/lib/audit/leadAuditLog';
 
 const log = moduleLogger('clients-action');
 
@@ -53,6 +54,7 @@ const clientInputSchema = z.object({
 export type ClientInput = z.infer<typeof clientInputSchema>;
 
 const PAGE_SIZE_MAX = 200;
+const leadClientReasonSchema = z.string().trim().min(3, 'Añade un motivo del cambio').max(500, 'El motivo es demasiado largo');
 
 // ── KPIs type ──────────────────────────────────────────────────────────────
 export interface ClientKpis {
@@ -73,6 +75,36 @@ async function getSessionContext() {
         .single();
     const franchiseId = profile?.franchise_id ?? null;
     return { supabase, userId: user.id, franchiseId };
+}
+
+function buildClientUpdatePayload(clean: Partial<ClientInput>): Record<string, unknown> {
+    const payload: Record<string, unknown> = {};
+    if (clean.name !== undefined) payload.name = clean.name;
+    if (clean.email !== undefined) payload.email = clean.email || null;
+    if (clean.phone !== undefined) payload.phone = clean.phone || null;
+    if (clean.address !== undefined) payload.address = clean.address || null;
+    if (clean.type !== undefined) payload.type = clean.type;
+    if (clean.status !== undefined) payload.status = clean.status;
+    if (clean.current_supplier !== undefined) payload.current_supplier = clean.current_supplier || null;
+    if (clean.tariff_type !== undefined) payload.tariff_type = clean.tariff_type || null;
+    if (clean.average_monthly_bill !== undefined) payload.average_monthly_bill = clean.average_monthly_bill ?? null;
+    if (clean.city !== undefined) payload.city = clean.city || null;
+    if (clean.zip_code !== undefined) payload.zip_code = clean.zip_code || null;
+
+    // Re-encrypt PII only for the fields actually provided.
+    if (clean.cups !== undefined || clean.dni_cif !== undefined) {
+        const pii = buildClientPiiColumns({ cups: clean.cups, dni_cif: clean.dni_cif });
+        if (clean.cups !== undefined) {
+            payload.cups_ciphertext = pii.cups_ciphertext;
+            payload.cups_hash = pii.cups_hash;
+        }
+        if (clean.dni_cif !== undefined) {
+            payload.dni_cif_ciphertext = pii.dni_cif_ciphertext;
+            payload.dni_cif_hash = pii.dni_cif_hash;
+        }
+    }
+
+    return payload;
 }
 
 /**
@@ -316,33 +348,7 @@ export async function updateClientAction(id: string, updates: Partial<ClientInpu
     const clean = parsed.data;
 
     const { supabase, userId, franchiseId } = await getSessionContext();
-
-    // Build the update payload from the non-PII allowlist only.
-    const payload: Record<string, unknown> = {};
-    if (clean.name !== undefined) payload.name = clean.name;
-    if (clean.email !== undefined) payload.email = clean.email || null;
-    if (clean.phone !== undefined) payload.phone = clean.phone || null;
-    if (clean.address !== undefined) payload.address = clean.address || null;
-    if (clean.type !== undefined) payload.type = clean.type;
-    if (clean.status !== undefined) payload.status = clean.status;
-    if (clean.current_supplier !== undefined) payload.current_supplier = clean.current_supplier || null;
-    if (clean.tariff_type !== undefined) payload.tariff_type = clean.tariff_type || null;
-    if (clean.average_monthly_bill !== undefined) payload.average_monthly_bill = clean.average_monthly_bill ?? null;
-    if (clean.city !== undefined) payload.city = clean.city || null;
-    if (clean.zip_code !== undefined) payload.zip_code = clean.zip_code || null;
-
-    // Re-encrypt PII only for the fields actually provided.
-    if (clean.cups !== undefined || clean.dni_cif !== undefined) {
-        const pii = buildClientPiiColumns({ cups: clean.cups, dni_cif: clean.dni_cif });
-        if (clean.cups !== undefined) {
-            payload.cups_ciphertext = pii.cups_ciphertext;
-            payload.cups_hash = pii.cups_hash;
-        }
-        if (clean.dni_cif !== undefined) {
-            payload.dni_cif_ciphertext = pii.dni_cif_ciphertext;
-            payload.dni_cif_hash = pii.dni_cif_hash;
-        }
-    }
+    const payload = buildClientUpdatePayload(clean);
 
     const { data, error } = await supabase
         .from('clients')
@@ -367,6 +373,99 @@ export async function updateClientAction(id: string, updates: Partial<ClientInpu
     revalidatePath('/dashboard/clients');
     revalidatePath(`/dashboard/clients/${id}`);
     revalidatePath('/dashboard');
+    return hydrateClientRow(data as ClientPiiRow) as unknown as Client;
+}
+
+/** Load the client linked to a lead/OCR job, if any. */
+export async function getLeadClientAction(jobId: string): Promise<Client | null> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+    if (!z.uuid().safeParse(jobId).success) throw new Error('ID de lead inválido');
+
+    const { supabase } = await getSessionContext();
+    const { data: job, error: jobError } = await supabase
+        .from('ocr_jobs')
+        .select('client_id')
+        .eq('id', jobId)
+        .maybeSingle();
+
+    if (jobError) throw new Error(`Error cargando lead: ${jobError.message}`);
+    if (!job?.client_id) return null;
+
+    const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('id', job.client_id)
+        .maybeSingle();
+
+    if (error) throw new Error(`Error cargando cliente: ${error.message}`);
+    if (!data) return null;
+    return hydrateClientRow(data as ClientPiiRow) as unknown as Client;
+}
+
+/**
+ * Update the client from the lead review workflow. Requires a justification and
+ * records both a lead audit event and a client timeline entry.
+ */
+export async function updateLeadClientFromLeadAction(
+    jobId: string,
+    updates: Partial<ClientInput>,
+    reason: string,
+): Promise<Client> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+    if (!z.uuid().safeParse(jobId).success) throw new Error('ID de lead inválido');
+
+    const parsedReason = leadClientReasonSchema.safeParse(reason);
+    if (!parsedReason.success) throw new Error(parsedReason.error.issues[0].message);
+
+    const parsed = clientInputSchema.partial().safeParse(updates);
+    if (!parsed.success) throw new Error(parsed.error.issues[0].message);
+    const clean = parsed.data;
+    const changedFields = Object.keys(clean).filter((key) => clean[key as keyof ClientInput] !== undefined);
+    if (changedFields.length === 0) throw new Error('No hay cambios que guardar');
+
+    const { supabase, userId, franchiseId } = await getSessionContext();
+    const { data: job, error: jobError } = await supabase
+        .from('ocr_jobs')
+        .select('client_id')
+        .eq('id', jobId)
+        .maybeSingle();
+
+    if (jobError) throw new Error(`Error cargando lead: ${jobError.message}`);
+    if (!job?.client_id) throw new Error('Este lead no tiene cliente vinculado');
+
+    const payload = buildClientUpdatePayload(clean);
+    const { data, error } = await supabase
+        .from('clients')
+        .update(payload)
+        .eq('id', job.client_id)
+        .select('*')
+        .single();
+
+    if (error) throw new Error(`Error actualizando cliente: ${error.message}`);
+
+    const detail = `Motivo: ${parsedReason.data}`;
+    await writeLeadAuditEvent({
+        jobId,
+        eventType: 'note_added',
+        title: 'Datos del cliente actualizados',
+        detail,
+        metadata: { changedFields },
+        actorId: userId,
+    }).catch(() => undefined);
+
+    logClientActivity(supabase, {
+        clientId: job.client_id,
+        agentId: userId,
+        franchiseId,
+        type: 'note_added',
+        description: `Datos del cliente actualizados. ${detail}`,
+        metadata: { job_id: jobId, changedFields },
+    });
+
+    revalidatePath('/dashboard/clients');
+    revalidatePath(`/dashboard/clients/${job.client_id}`);
+    revalidatePath('/dashboard/invoices');
+    revalidatePath('/admin/leads');
     return hydrateClientRow(data as ClientPiiRow) as unknown as Client;
 }
 

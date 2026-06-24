@@ -10,6 +10,8 @@ import { getActiveCommissionRule } from './commissionRules'
 import { createNotificationInternal } from './notifications'
 import { requireServerRole } from '@/lib/auth/permissions'
 import { calculateCommissionSplit, applyFranchiseOverride } from '@/lib/commissions/calculator'
+import { writeLeadAuditEvent } from '@/lib/audit/leadAuditLog'
+import type { LeadProposalSummary } from './invoices'
 
 /**
  * Updates a proposal's status and, if moving to 'accepted',
@@ -35,6 +37,16 @@ export interface ProposalHistoryItem {
         cups?: string;
     } | null;
 }
+
+const customLeadProposalSchema = z.object({
+    marketerName: z.string().trim().min(1, 'La comercializadora es obligatoria').max(120),
+    tariffName: z.string().trim().min(1, 'La tarifa es obligatoria').max(160),
+    currentAnnualCost: z.coerce.number().positive('El coste actual anual debe ser mayor que 0').max(1_000_000),
+    offerAnnualCost: z.coerce.number().nonnegative('El nuevo coste no puede ser negativo').max(1_000_000),
+    notes: z.string().trim().max(1200).optional().or(z.literal('')),
+});
+
+export type CustomLeadProposalInput = z.input<typeof customLeadProposalSchema>;
 
 /**
  * Returns past proposals for a given CUPS, scoped to the current user's data.
@@ -74,6 +86,126 @@ export async function getProposalHistoryByCupsAction(cups: string): Promise<Prop
         const cd = p.calculation_data as { cups?: string } | null
         return cd?.cups === cups
     }) as ProposalHistoryItem[]
+}
+
+/**
+ * Admin-only custom proposal from a lead. This covers the case where the
+ * comparator produced no suitable offer or the admin wants to craft a commercial
+ * proposal manually and send it to the comercial for follow-up.
+ */
+export async function createCustomLeadProposalAction(
+    jobId: string,
+    input: CustomLeadProposalInput,
+): Promise<LeadProposalSummary> {
+    await requireServerRole(['admin']);
+
+    const idResult = z.uuid().safeParse(jobId);
+    if (!idResult.success) throw new Error('ID de lead inválido');
+
+    const parsed = customLeadProposalSchema.safeParse(input);
+    if (!parsed.success) throw new Error(parsed.error.issues[0].message);
+
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('No autenticado');
+
+    const { data: job, error: jobError } = await supabase
+        .from('ocr_jobs')
+        .select('id, client_id, franchise_id, agent_id, extracted_data, compared_at')
+        .eq('id', idResult.data)
+        .maybeSingle();
+
+    if (jobError) throw new Error(`Error cargando lead: ${jobError.message}`);
+    if (!job?.client_id) throw new Error('Este lead no tiene cliente vinculado');
+
+    const annualSavings = Math.max(0, parsed.data.currentAnnualCost - parsed.data.offerAnnualCost);
+    const savingsPercent = parsed.data.currentAnnualCost > 0
+        ? (annualSavings / parsed.data.currentAnnualCost) * 100
+        : 0;
+
+    const offerSnapshot: Proposal['offer_snapshot'] = {
+        id: `custom-${idResult.data}`,
+        marketer_name: parsed.data.marketerName,
+        tariff_name: parsed.data.tariffName,
+        logo_color: 'bg-slate-700',
+        type: 'fixed',
+        power_price: { p1: 0, p2: 0, p3: 0, p4: 0, p5: 0, p6: 0 },
+        energy_price: { p1: 0, p2: 0, p3: 0, p4: 0, p5: 0, p6: 0 },
+        contract_duration: 'Propuesta personalizada',
+    };
+
+    const calculationData = {
+        ...((job.extracted_data as Record<string, unknown> | null) ?? {}),
+        custom_proposal: true,
+        custom_proposal_notes: parsed.data.notes || null,
+    } as unknown as Proposal['calculation_data'];
+
+    const { data: proposal, error } = await supabase
+        .from('proposals')
+        .insert({
+            client_id: job.client_id,
+            franchise_id: job.franchise_id,
+            agent_id: job.agent_id,
+            status: 'draft',
+            offer_snapshot: offerSnapshot,
+            calculation_data: calculationData,
+            current_annual_cost: parsed.data.currentAnnualCost,
+            offer_annual_cost: parsed.data.offerAnnualCost,
+            annual_savings: annualSavings,
+            savings_percent: savingsPercent,
+            notes: parsed.data.notes || null,
+        })
+        .select('id, created_at, status, current_annual_cost, offer_annual_cost, annual_savings, savings_percent, offer_snapshot')
+        .single();
+
+    if (error) throw new Error(`Error creando propuesta: ${error.message}`);
+
+    if (!job.compared_at) {
+        await supabase.from('ocr_jobs').update({ compared_at: new Date().toISOString() }).eq('id', idResult.data);
+    }
+
+    await writeLeadAuditEvent({
+        jobId: idResult.data,
+        actorId: user.id,
+        eventType: 'note_added',
+        title: 'Propuesta personalizada creada',
+        detail: `${parsed.data.marketerName} · ${parsed.data.tariffName}`,
+        metadata: {
+            proposalId: proposal.id,
+            annualSavings,
+            savingsPercent,
+        },
+    }).catch(() => undefined);
+
+    if (job.agent_id) {
+        await createNotificationInternal(supabase, job.agent_id, {
+            title: 'Nueva propuesta personalizada',
+            message: `Admin ha creado una propuesta para ${parsed.data.marketerName} (${Math.round(annualSavings).toLocaleString('es-ES')} €/año de ahorro).`,
+            type: 'info',
+            link: `/dashboard/proposals/${proposal.id}`,
+        }).catch(() => undefined);
+    }
+
+    try {
+        const { error: activityError } = await supabase.from('client_activities').insert({
+            client_id: job.client_id,
+            agent_id: user.id,
+            franchise_id: job.franchise_id,
+            type: 'proposal_created',
+            description: `Propuesta personalizada creada: ${parsed.data.marketerName} · ${parsed.data.tariffName}`,
+            metadata: { proposal_id: proposal.id, job_id: idResult.data, annualSavings },
+        });
+        if (activityError) {
+            logger.warn('[createCustomLeadProposalAction] activity log failed', { error: activityError.message });
+        }
+    } catch {
+        // Non-critical: the proposal and lead audit are the primary records.
+    }
+
+    revalidatePath('/admin/leads');
+    revalidatePath('/dashboard/proposals');
+    revalidatePath(`/dashboard/clients/${job.client_id}`);
+    return proposal as LeadProposalSummary;
 }
 
 export async function updateProposalStatusAction(

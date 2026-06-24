@@ -29,6 +29,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft,
     ChevronRight,
+    Download,
+    ExternalLink,
     ZoomIn,
     ZoomOut,
     Maximize2,
@@ -38,10 +40,14 @@ import {
     Crosshair,
     PanelRightOpen,
     PanelRightClose,
+    RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.mjs',
+    import.meta.url,
+).toString();
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -90,6 +96,9 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         const [isFullscreen, setIsFullscreen] = useState(false);
         const [highlightQuery, setHighlightQuery] = useState<string | null>(null);
         const [foundOnPage, setFoundOnPage] = useState<boolean | null>(null);
+        const [loadError, setLoadError] = useState<string | null>(null);
+        const [viewerTimedOut, setViewerTimedOut] = useState(false);
+        const [viewerAttempt, setViewerAttempt] = useState(0);
         // Portal solo disponible en cliente — isMounted derived from typeof window
         const [portalMounted] = useState(typeof window !== 'undefined');
         const [showConfPanel, setShowConfPanel] = useState(false);
@@ -103,6 +112,25 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         const [fsWidth, setFsWidth] = useState(0);
 
         const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+        // ── Fallback si el visor avanzado se queda bloqueado ────────────────
+        useEffect(() => {
+            const resetFrame = requestAnimationFrame(() => {
+                setLoadError(null);
+                setViewerTimedOut(false);
+                setNumPages(0);
+                setPageNumber(1);
+            });
+
+            const timer = setTimeout(() => {
+                setViewerTimedOut(true);
+            }, 12_000);
+
+            return () => {
+                cancelAnimationFrame(resetFrame);
+                clearTimeout(timer);
+            };
+        }, [url, viewerAttempt]);
 
         // ── Medir ancho inline ────────────────────────────────────────────────
         useEffect(() => {
@@ -365,6 +393,74 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             );
         };
 
+        const openPdf = () => {
+            window.open(url, '_blank', 'noopener,noreferrer');
+        };
+
+        const downloadPdf = () => {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'factura-original.pdf';
+            a.rel = 'noopener noreferrer';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        };
+
+        const retryAdvancedViewer = () => {
+            setLoadError(null);
+            setViewerTimedOut(false);
+            setViewerAttempt((attempt) => attempt + 1);
+        };
+
+        const buildNativeFallback = () => (
+            <div className="absolute inset-0 flex flex-col bg-slate-950">
+                <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
+                    <div className="min-w-0">
+                        <p className="text-xs font-black uppercase tracking-widest text-slate-300">
+                            Revisión de factura
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-slate-500">
+                            {loadError
+                                ? 'El visor avanzado no pudo renderizar el PDF.'
+                                : 'El visor avanzado está tardando más de lo habitual.'}
+                        </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                        <button
+                            type="button"
+                            onClick={retryAdvancedViewer}
+                            className="inline-flex items-center gap-1 rounded-lg bg-slate-800 px-2.5 py-1.5 text-[11px] font-bold text-slate-200 transition-colors hover:bg-slate-700"
+                        >
+                            <RefreshCw size={12} /> Reintentar
+                        </button>
+                        <button
+                            type="button"
+                            onClick={downloadPdf}
+                            className="inline-flex items-center gap-1 rounded-lg bg-slate-800 px-2.5 py-1.5 text-[11px] font-bold text-slate-200 transition-colors hover:bg-slate-700"
+                        >
+                            <Download size={12} /> Descargar
+                        </button>
+                        <button
+                            type="button"
+                            onClick={openPdf}
+                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-emerald-500"
+                        >
+                            <ExternalLink size={12} /> Abrir
+                        </button>
+                    </div>
+                </div>
+                <iframe
+                    src={url}
+                    title="Factura original"
+                    className="min-h-0 flex-1 border-0 bg-white"
+                />
+                <p className="border-t border-slate-800 px-4 py-2 text-[11px] text-slate-500">
+                    Si tu navegador no muestra el PDF integrado, usa Abrir o Descargar para cotejar la factura original.
+                </p>
+            </div>
+        );
+
         const buildPdfContent = (
             scrollRef: React.RefObject<HTMLDivElement | null>,
             width: number,
@@ -372,12 +468,26 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             const panelWidth = showConfPanel && confidenceFields && confidenceFields.length > 0 ? 200 : 0;
             const w = fitWidth && width > 0 ? Math.max(width - panelWidth, 200) : undefined;
             const s = fitWidth ? undefined : scale;
+            const showNativeFallback = Boolean(loadError || viewerTimedOut);
+
             return (
                 <div className="absolute inset-0 flex overflow-hidden">
+                    {showNativeFallback ? buildNativeFallback() : (
                     <div ref={scrollRef} className="flex-1 overflow-auto p-4 flex flex-col items-center gap-4">
                         <Document
+                            key={`${url}-${viewerAttempt}`}
                             file={url}
-                            onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+                            onLoadSuccess={({ numPages: n }) => {
+                                setNumPages(n);
+                                setLoadError(null);
+                                setViewerTimedOut(false);
+                            }}
+                            onLoadError={(error) => {
+                                setLoadError(error.message || 'No se pudo cargar el documento');
+                            }}
+                            onSourceError={(error) => {
+                                setLoadError(error.message || 'No se pudo leer el documento');
+                            }}
                             loading={
                                 <div className="flex items-center justify-center h-48 w-full">
                                     <div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
@@ -403,8 +513,9 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                             )}
                         </Document>
                     </div>
+                    )}
                     <AnimatePresence>
-                        {buildConfidencePanel()}
+                        {!showNativeFallback && buildConfidencePanel()}
                     </AnimatePresence>
                 </div>
             );

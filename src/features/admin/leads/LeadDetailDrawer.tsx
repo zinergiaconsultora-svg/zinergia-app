@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
-import { CalendarClock, CheckCircle2, Clock3, Euro, ExternalLink, FileText, MessageSquareText, UserCheck, X, XCircle } from 'lucide-react';
+import { Building2, CalendarClock, CheckCircle2, Clock3, Edit3, Euro, ExternalLink, FileText, Mail, MessageSquareText, Phone, UserCheck, X, XCircle, Zap } from 'lucide-react';
 import type { LeadAuditEvent } from '@/app/actions/leadAudit';
-import type { InvoiceRegistryRow } from '@/app/actions/invoices';
+import type { InvoiceRegistryRow, LeadProposalSummary } from '@/app/actions/invoices';
+import type { Client } from '@/types/crm';
 import {
     Detail,
     DriveChip,
@@ -29,6 +30,13 @@ interface LeadDetailDrawerProps {
     noteSaving?: boolean;
     onNoteTextChange?: (value: string) => void;
     onAddNote?: () => void;
+    proposals?: LeadProposalSummary[];
+    proposalsLoading?: boolean;
+    leadClient?: Client | null;
+    clientLoading?: boolean;
+    onEditClient?: () => void;
+    onCreateCustomProposal?: () => void;
+    canManageOutcome?: boolean;
 }
 
 const timelineTone: Record<LeadTimelineStatus, string> = {
@@ -47,6 +55,26 @@ function auditActor(event: LeadAuditEvent) {
     return event.actor_name || event.actor_email || 'Sistema';
 }
 
+function formatMoney(value: number | null | undefined) {
+    if (value == null || Number.isNaN(value)) return '—';
+    return new Intl.NumberFormat('es-ES', {
+        style: 'currency',
+        currency: 'EUR',
+        maximumFractionDigits: 0,
+    }).format(value);
+}
+
+function proposalStatusLabel(status: string) {
+    const labels: Record<string, string> = {
+        draft: 'Borrador',
+        sent: 'Enviada',
+        accepted: 'Aceptada',
+        rejected: 'Rechazada',
+        expired: 'Caducada',
+    };
+    return labels[status] ?? status;
+}
+
 export function LeadDetailDrawer({
     lead,
     onClose,
@@ -59,6 +87,13 @@ export function LeadDetailDrawer({
     noteSaving = false,
     onNoteTextChange,
     onAddNote,
+    proposals = [],
+    proposalsLoading = false,
+    leadClient = null,
+    clientLoading = false,
+    onEditClient,
+    onCreateCustomProposal,
+    canManageOutcome = true,
 }: LeadDetailDrawerProps) {
     useEscapeKey(onClose);
 
@@ -129,6 +164,126 @@ export function LeadDetailDrawer({
                             </ul>
                         </section>
                     )}
+
+                    <section className="mb-5 rounded-2xl border border-slate-100 bg-white p-4">
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                            <div>
+                                <h3 className="text-sm font-extrabold text-slate-900">Cliente CRM</h3>
+                                <p className="text-[12px] text-slate-500">Datos editables desde el lead con motivo obligatorio.</p>
+                            </div>
+                            {leadClient && onEditClient && (
+                                <button
+                                    type="button"
+                                    onClick={onEditClient}
+                                    className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-200"
+                                >
+                                    <Edit3 size={13} /> Editar
+                                </button>
+                            )}
+                        </div>
+                        {clientLoading ? (
+                            <div className="h-20 animate-pulse rounded-2xl bg-slate-100" />
+                        ) : leadClient ? (
+                            <div className="rounded-2xl bg-slate-50 p-3">
+                                <div className="mb-2 flex items-center gap-2">
+                                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-500">
+                                        <Building2 size={15} />
+                                    </span>
+                                    <div className="min-w-0">
+                                        <p className="truncate text-sm font-black text-slate-950">{leadClient.name}</p>
+                                        <p className="truncate text-[12px] text-slate-500">
+                                            {leadClient.current_supplier || 'Sin comercializadora'}{leadClient.tariff_type ? ` · ${leadClient.tariff_type}` : ''}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-[12px]">
+                                    <Detail label="CUPS" value={maskCups(leadClient.cups ?? null)} />
+                                    <Detail label="DNI/CIF" value={leadClient.dni_cif || '—'} />
+                                    <Detail label="Email" value={leadClient.email || '—'} />
+                                    <Detail label="Teléfono" value={leadClient.phone || '—'} />
+                                </div>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {leadClient.phone && (
+                                        <a href={`tel:${leadClient.phone}`} className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[12px] font-bold text-slate-600 ring-1 ring-slate-100">
+                                            <Phone size={12} /> Llamar
+                                        </a>
+                                    )}
+                                    {leadClient.email && (
+                                        <a href={`mailto:${leadClient.email}`} className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[12px] font-bold text-slate-600 ring-1 ring-slate-100">
+                                            <Mail size={12} /> Email
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="rounded-2xl bg-slate-50 px-3 py-3 text-sm text-slate-500">
+                                Sin cliente vinculado todavía. Cuando el OCR cree o vincule el cliente, aparecerá aquí.
+                            </p>
+                        )}
+                    </section>
+
+                    <section className="mb-5 rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4">
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                            <div>
+                                <h3 className="text-sm font-extrabold text-slate-900">Propuestas del comparador</h3>
+                                <p className="text-[12px] text-slate-500">Ofertas generadas para este lead/cliente.</p>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                                {onCreateCustomProposal && (
+                                    <button
+                                        type="button"
+                                        onClick={onCreateCustomProposal}
+                                        className="rounded-xl bg-emerald-600 px-3 py-1.5 text-[11px] font-black text-white transition-colors hover:bg-emerald-700"
+                                    >
+                                        Crear personalizada
+                                    </button>
+                                )}
+                                <span className="inline-flex items-center gap-1 rounded-xl bg-white px-2.5 py-1.5 text-[11px] font-black text-emerald-700 ring-1 ring-emerald-100">
+                                    <Zap size={12} /> {proposals.length}
+                                </span>
+                            </div>
+                        </div>
+                        {proposalsLoading ? (
+                            <div className="space-y-2">
+                                <div className="h-16 animate-pulse rounded-2xl bg-white/80" />
+                                <div className="h-16 animate-pulse rounded-2xl bg-white/80" />
+                            </div>
+                        ) : proposals.length === 0 ? (
+                            <p className="rounded-2xl bg-white/70 px-3 py-3 text-sm text-slate-500">
+                                No hay propuestas guardadas todavía. Ejecuta la comparativa desde el simulador para generarlas.
+                            </p>
+                        ) : (
+                            <div className="space-y-2">
+                                {proposals.map((proposal) => (
+                                    <a
+                                        key={proposal.id}
+                                        href={`/dashboard/proposals/${proposal.id}`}
+                                        className="block rounded-2xl border border-emerald-100 bg-white px-3 py-3 transition-colors hover:border-emerald-200 hover:bg-emerald-50"
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-black text-slate-950">
+                                                    {proposal.offer_snapshot?.marketer_name || 'Comercializadora'}
+                                                </p>
+                                                <p className="truncate text-[12px] text-slate-500">
+                                                    {proposal.offer_snapshot?.tariff_name || 'Tarifa'} · {proposalStatusLabel(proposal.status)}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm font-black tabular-nums text-emerald-700">{formatMoney(proposal.annual_savings)}</p>
+                                                <p className="text-[11px] font-bold text-slate-400">/año</p>
+                                            </div>
+                                        </div>
+                                        <div className="mt-2 grid grid-cols-3 gap-2 text-[11px]">
+                                            <Detail label="Actual" value={formatMoney(proposal.current_annual_cost)} />
+                                            <Detail label="Oferta" value={formatMoney(proposal.offer_annual_cost)} />
+                                            <Detail label="Mejora" value={`${Math.round(proposal.savings_percent || 0)}%`} />
+                                        </div>
+                                    </a>
+                                ))}
+                            </div>
+                        )}
+                    </section>
 
                     <section className="mb-5 rounded-2xl border border-slate-100 bg-slate-50 p-4">
                         <div className="mb-3 flex items-center justify-between gap-3">
@@ -250,7 +405,7 @@ export function LeadDetailDrawer({
                         >
                             <ExternalLink size={16} /> Ver factura
                         </button>
-                        {isOpen && lead.process_status !== 'failed' && (
+                        {canManageOutcome && isOpen && lead.process_status !== 'failed' && (
                             <>
                                 <button
                                     type="button"
@@ -268,7 +423,7 @@ export function LeadDetailDrawer({
                                 </button>
                             </>
                         )}
-                        {lead.closed && (
+                        {canManageOutcome && lead.closed && (
                             <button
                                 type="button"
                                 onClick={onConvert}
@@ -277,7 +432,7 @@ export function LeadDetailDrawer({
                                 <Euro size={16} /> Editar cierre
                             </button>
                         )}
-                        {lead.lost && (
+                        {canManageOutcome && lead.lost && (
                             <button
                                 type="button"
                                 onClick={onLost}

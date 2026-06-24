@@ -5,6 +5,7 @@ import { logger } from '@/lib/utils/logger';
 import { InvoiceData, Offer } from '@/types/crm';
 import { env } from '@/lib/env';
 import { createClient } from '@/lib/supabase/server';
+import { requireServerRole } from '@/lib/auth/permissions';
 import { AletheiaEngine } from '@/lib/aletheia/engine';
 import { aletheiaResultToWebhookShape, crmToAletheiaInvoice, offerToTariffCandidate } from '@/lib/aletheia/adapter';
 
@@ -56,6 +57,8 @@ async function runAletheiaFallback(invoice: InvoiceData) {
 // ── Main action ───────────────────────────────────────────────────────────────
 
 export async function calculateSavingsAction(invoice: InvoiceData) {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+
     const COMPARISON_WEBHOOK_URL = env.COMPARISON_WEBHOOK_URL;
     const WEBHOOK_API_KEY = env.WEBHOOK_API_KEY;
 
@@ -83,8 +86,10 @@ export async function calculateSavingsAction(invoice: InvoiceData) {
         clearTimeout(timer);
 
         if (!response.ok) {
-            const errorText = await response.text();
-            logger.error('[Compare Action] n8n error response', errorText);
+            logger.error('[Compare Action] n8n error response', {
+                status: response.status,
+                statusText: response.statusText,
+            });
             throw new Error(`n8n returned ${response.status}: ${response.statusText}`);
         }
 

@@ -2,6 +2,35 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { headers } from 'next/headers'
+import { z } from 'zod'
+import { rateLimit } from '@/lib/rate-limit'
+
+const registerInvitationLimiter = rateLimit({ windowMs: 10 * 60_000, max: 10 })
+
+const registerInvitationSchema = z.object({
+    invitationId: z.uuid(),
+    email: z.string().trim().email().max(200),
+    fullName: z.string().trim().min(1).max(200),
+    password: z.string().min(8).max(128),
+})
+
+const invitationCodeSchema = z.string().trim().min(8).max(32).regex(/^[A-Z0-9]+$/i)
+const completeInvitationSchema = z.object({
+    invitationId: z.uuid(),
+    fullName: z.string().trim().min(1).max(200),
+})
+
+async function getServerActionClientKey(): Promise<string> {
+    try {
+        const h = await headers()
+        return h.get('x-forwarded-for')?.split(',')[0]?.trim()
+            || h.get('x-real-ip')?.trim()
+            || 'unknown'
+    } catch {
+        return 'unknown'
+    }
+}
 
 /**
  * Registers a new user and completes their invitation in a single server action.
@@ -18,13 +47,19 @@ export async function registerWithInvitationAction(
     fullName: string,
     password: string
 ): Promise<{ userId: string }> {
+    const clean = registerInvitationSchema.parse({ invitationId, email, fullName, password })
+    const rl = registerInvitationLimiter.check(`${await getServerActionClientKey()}:${clean.email.toLowerCase()}`)
+    if (!rl.allowed) {
+        throw new Error('Demasiados intentos. Espera unos minutos y vuelve a probar.')
+    }
+
     const service = createServiceClient()
 
     // Validate the invitation before creating any user
     const { data: invitation, error: invError } = await service
         .from('network_invitations')
         .select('id, email, role, creator_id, used, expires_at')
-        .eq('id', invitationId)
+        .eq('id', clean.invitationId)
         .single()
 
     if (invError || !invitation) throw new Error('Invitación no encontrada')
@@ -32,16 +67,16 @@ export async function registerWithInvitationAction(
     if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
         throw new Error('Esta invitación ha expirado. Solicita un nuevo enlace.')
     }
-    if (invitation.email.toLowerCase() !== email.toLowerCase()) {
+    if (invitation.email.toLowerCase() !== clean.email.toLowerCase()) {
         throw new Error('El email no coincide con la invitación')
     }
 
     // Create the user via admin API — email_confirm: true skips confirmation email
     const { data: newUser, error: createError } = await service.auth.admin.createUser({
-        email,
-        password,
+        email: clean.email,
+        password: clean.password,
         email_confirm: true,
-        user_metadata: { full_name: fullName },
+        user_metadata: { full_name: clean.fullName },
     })
 
     if (createError) {
@@ -50,7 +85,7 @@ export async function registerWithInvitationAction(
             createError.message.toLowerCase().includes('user already exists')) {
             throw new Error('Este email ya tiene una cuenta registrada.')
         }
-        throw new Error(`Error al crear la cuenta: ${createError.message}`)
+        throw new Error('No se pudo crear la cuenta. Revisa los datos o contacta con soporte.')
     }
 
     const userId = newUser.user.id
@@ -66,7 +101,7 @@ export async function registerWithInvitationAction(
     const { error: profileError } = await service
         .from('profiles')
         .update({
-            full_name: fullName,
+            full_name: clean.fullName,
             role: invitation.role,
             parent_id: invitation.creator_id,
             franchise_id: creatorProfile?.franchise_id ?? null,
@@ -92,12 +127,15 @@ export async function registerWithInvitationAction(
 export async function validateInvitationCode(
     code: string
 ): Promise<{ id: string; email: string; role: string; creator_id: string } | null> {
+    const parsedCode = invitationCodeSchema.safeParse(code)
+    if (!parsedCode.success) return null
+
     const supabase = createServiceClient()
 
     const { data, error } = await supabase
         .from('network_invitations')
         .select('id, email, role, creator_id, expires_at')
-        .eq('code', code)
+        .eq('code', parsedCode.data.toUpperCase())
         .eq('used', false)
         .maybeSingle()
 
@@ -123,6 +161,7 @@ export async function completeInvitationAction(
     invitationId: string,
     fullName: string
 ): Promise<void> {
+    const clean = completeInvitationSchema.parse({ invitationId, fullName })
     const supabase = await createClient()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -132,7 +171,7 @@ export async function completeInvitationAction(
     const { data: invitation, error: invError } = await supabase
         .from('network_invitations')
         .select('id, email, role, creator_id, used, expires_at')
-        .eq('id', invitationId)
+        .eq('id', clean.invitationId)
         .single()
 
     if (invError || !invitation) throw new Error('Invitación no encontrada')
@@ -158,7 +197,7 @@ export async function completeInvitationAction(
     const { error: profileError } = await supabase
         .from('profiles')
         .update({
-            full_name: fullName,
+            full_name: clean.fullName,
             role: invitation.role,
             parent_id: invitation.creator_id,
             franchise_id: creatorProfile?.franchise_id ?? null,

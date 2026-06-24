@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { env } from '@/lib/env';
 import { rateLimit, getClientKey } from '@/lib/rate-limit';
 import { redactOcrTextSample, sanitizeOcrTrainingData } from '@/lib/ocr/sanitizeTrainingData';
+import { safeStringEqual } from '@/lib/crypto/timingSafe';
 
 // Defense-in-depth rate limit on top of x-api-key auth.
 // Shared across invocations within a warm Node/Edge container.
@@ -47,17 +48,18 @@ export async function GET(request: Request) {
 
     // ── Auth ─────────────────────────────────────────────────────────────────
     const apiKey = request.headers.get('x-api-key');
-    if (apiKey !== env.WEBHOOK_API_KEY) {
+    if (!safeStringEqual(apiKey, env.WEBHOOK_API_KEY)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // ── Params ───────────────────────────────────────────────────────────────
     const { searchParams } = new URL(request.url);
     const rawCompany = searchParams.get('company') ?? '';
-    const limit = Math.min(parseInt(searchParams.get('limit') ?? '5', 10), 10);
+    const rawLimit = Number.parseInt(searchParams.get('limit') ?? '5', 10);
+    const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 10) : 5;
     const validatedOnly = searchParams.get('validated_only') === 'true';
 
-    if (!rawCompany) {
+    if (!rawCompany || rawCompany.length > 120) {
         return NextResponse.json({ error: 'Missing company parameter' }, { status: 400 });
     }
 

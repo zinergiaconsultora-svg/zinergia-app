@@ -33,6 +33,14 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 .next-localhost.log
+.next-localhost.*.log
+
+# local audit and generated reports
+.sb-pentest-context.json
+.sb-pentest-audit.log
+.sb-pentest-evidence/
+output/
+public/auditoria/
 
 # env files (can opt-in for committing if needed)
 .env

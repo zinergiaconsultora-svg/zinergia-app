@@ -3,9 +3,18 @@ self.addEventListener('install', () => {
 });
 
 self.addEventListener('activate', (event) => {
-    event.waitUntil(self.clients.claim());
+    event.waitUntil(
+        caches.keys()
+            .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+            .then(() => self.clients.claim())
+    );
 });
 
+self.addEventListener('message', (event) => {
+    if (event.data?.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});
 
 // Web Push: mostrar notificación cuando llega un push del servidor
 self.addEventListener('push', (event) => {

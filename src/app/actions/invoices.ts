@@ -86,6 +86,20 @@ export interface InvoiceRegistryRow {
     reviewed_at: string | null;
 }
 
+export interface LeadProposalSummary {
+    id: string;
+    created_at: string;
+    status: string;
+    current_annual_cost: number;
+    offer_annual_cost: number;
+    annual_savings: number;
+    savings_percent: number;
+    offer_snapshot: {
+        marketer_name?: string;
+        tariff_name?: string;
+    } | null;
+}
+
 /**
  * Lists invoices from the registry VIEW. RLS (security_invoker) scopes the rows
  * to the caller: a comercial sees only their own, admin/franchise see more.
@@ -132,6 +146,46 @@ export async function getInvoiceFileUrlAction(jobId: string): Promise<string | n
     // (storage RLS is folder-scoped by owner uid). Authorization already happened above.
     const { data } = await createServiceClient().storage.from('ocr-invoices').createSignedUrl(path, 300);
     return data?.signedUrl ?? null;
+}
+
+/**
+ * Returns the proposals generated for the lead's linked client. This is used in
+ * the lead drawer so admin and the originating comercial can see what the
+ * comparator already produced without jumping to CRM first.
+ */
+export async function getLeadProposalsAction(jobId: string): Promise<LeadProposalSummary[]> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+    if (!z.uuid().safeParse(jobId).success) return [];
+
+    const supabase = (await createClient()) as unknown as SupabaseClient;
+
+    // RLS-scoped authorization: if the caller cannot see the OCR job, no row is
+    // returned and no proposal lookup is attempted.
+    const { data: job, error: jobError } = await supabase
+        .from('ocr_jobs')
+        .select('client_id')
+        .eq('id', jobId)
+        .maybeSingle();
+
+    if (jobError) {
+        logger.error('[invoices] getLeadProposalsAction job lookup failed', { error: jobError.message });
+        return [];
+    }
+    if (!job?.client_id) return [];
+
+    const { data, error } = await supabase
+        .from('proposals')
+        .select('id, created_at, status, current_annual_cost, offer_annual_cost, annual_savings, savings_percent, offer_snapshot')
+        .eq('client_id', job.client_id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+    if (error) {
+        logger.error('[invoices] getLeadProposalsAction proposals lookup failed', { error: error.message });
+        return [];
+    }
+
+    return (data ?? []) as LeadProposalSummary[];
 }
 
 const closeInvoiceSchema = z.object({

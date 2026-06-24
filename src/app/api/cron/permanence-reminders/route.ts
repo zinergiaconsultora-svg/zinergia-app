@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { moduleLogger } from '@/lib/logger';
 import { sendPushToUser } from '@/lib/push/sendPush';
 import { buildPermanenceReminder } from '@/lib/invoices/permanenceReminder';
+import { writeLeadAuditEvent } from '@/lib/audit/leadAuditLog';
 
 const log = moduleLogger('cron:permanence-reminders');
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
 
         const { data: jobs, error } = await supabase
             .from('ocr_jobs')
-            .select('id, agent_id, closed_company, permanence_until')
+            .select('id, agent_id, closed_company, permanence_until, extracted_data')
             .eq('closed', true)
             .is('permanence_reminded_at', null)
             .not('permanence_until', 'is', null)
@@ -37,23 +38,72 @@ export async function GET(request: Request) {
         }
         if (!jobs?.length) return NextResponse.json({ success: true, reminded: 0 });
 
+        const { data: admins } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('role', 'admin');
+        const adminIds = new Set((admins ?? []).map((admin) => admin.id).filter(Boolean));
+
         let reminded = 0;
+        let notificationsSent = 0;
         for (const job of jobs) {
             if (!job.agent_id || !job.permanence_until) continue;
             const reminder = buildPermanenceReminder({
                 company: job.closed_company,
                 permanenceUntil: job.permanence_until,
             });
+            const extracted = job.extracted_data as Record<string, unknown> | null;
+            const clientName = typeof extracted?.client_name === 'string' ? extracted.client_name : null;
+            const adminMessage = clientName
+                ? `${clientName}: ${reminder.message}`
+                : reminder.message;
 
-            await supabase.from('notifications').insert({
-                user_id: job.agent_id,
-                title: reminder.title,
-                message: reminder.message,
-                type: reminder.type,
-                link: reminder.link,
-            });
-            await sendPushToUser(job.agent_id, { title: reminder.title, body: reminder.message })
-                .catch(() => undefined);
+            const notifications = [
+                {
+                    user_id: job.agent_id,
+                    title: reminder.title,
+                    message: reminder.message,
+                    type: reminder.type,
+                    link: reminder.link,
+                },
+                ...Array.from(adminIds).map((adminId) => ({
+                    user_id: adminId,
+                    title: 'Lead con permanencia próxima',
+                    message: adminMessage,
+                    type: reminder.type,
+                    link: '/admin/leads?queue=permanence_due',
+                })),
+            ];
+
+            const { error: notificationError } = await supabase.from('notifications').insert(notifications);
+            if (notificationError) {
+                log.warn({ err: notificationError, jobId: job.id }, 'permanence notification insert failed');
+            } else {
+                notificationsSent += notifications.length;
+            }
+
+            const pushRecipients = new Set<string>([job.agent_id, ...adminIds]);
+            await Promise.all(Array.from(pushRecipients).map((userId) =>
+                sendPushToUser(userId, {
+                    title: adminIds.has(userId) ? 'Lead con permanencia próxima' : reminder.title,
+                    body: adminIds.has(userId) ? adminMessage : reminder.message,
+                    url: adminIds.has(userId) ? '/admin/leads?queue=permanence_due' : reminder.link,
+                }).catch(() => undefined)
+            ));
+
+            await writeLeadAuditEvent({
+                jobId: job.id,
+                actorId: null,
+                eventType: 'note_added',
+                title: 'Recordatorio de permanencia enviado',
+                detail: adminMessage,
+                metadata: {
+                    permanenceUntil: job.permanence_until,
+                    adminRecipients: Array.from(adminIds).length,
+                    agentNotified: Boolean(job.agent_id),
+                },
+            }).catch(() => undefined);
+
             await supabase
                 .from('ocr_jobs')
                 .update({ permanence_reminded_at: new Date().toISOString() })
@@ -61,8 +111,8 @@ export async function GET(request: Request) {
             reminded++;
         }
 
-        log.info({ reminded }, 'permanence reminders sent');
-        return NextResponse.json({ success: true, reminded, timestamp: new Date().toISOString() });
+        log.info({ reminded, notificationsSent }, 'permanence reminders sent');
+        return NextResponse.json({ success: true, reminded, notificationsSent, timestamp: new Date().toISOString() });
     } catch (error) {
         Sentry.captureException(error);
         log.error({ err: error }, 'permanence reminders failed');

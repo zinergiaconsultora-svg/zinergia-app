@@ -15,17 +15,23 @@ import { scoreLead, sortByPriority } from './priority';
 import { PriorityBadge } from './PriorityBadge';
 import {
     getInvoiceFileUrlAction,
+    getLeadProposalsAction,
     markLeadLostAction,
     type AdminLeadFilters,
     type AdminLeadOutcome,
     type AdminLeadQueue,
     type InvoiceRegistryRow,
+    type LeadProposalSummary,
 } from '@/app/actions/invoices';
+import { getLeadClientAction } from '@/app/actions/clients';
 import {
     addLeadNoteAction,
     getLeadAuditEventsAction,
     type LeadAuditEvent,
 } from '@/app/actions/leadAudit';
+import type { Client } from '@/types/crm';
+import LeadClientEditModal from './LeadClientEditModal';
+import LeadCustomProposalModal from './LeadCustomProposalModal';
 import {
     formatEur,
     formatDate,
@@ -281,9 +287,16 @@ export default function AdminLeadsView({
     const [searchTerm, setSearchTerm] = useState(filters.search ?? '');
     const [auditEvents, setAuditEvents] = useState<LeadAuditEvent[]>([]);
     const [auditLoading, setAuditLoading] = useState(false);
+    const [leadProposals, setLeadProposals] = useState<LeadProposalSummary[]>([]);
+    const [proposalsLoading, setProposalsLoading] = useState(false);
+    const [leadClient, setLeadClient] = useState<Client | null>(null);
+    const [clientLoading, setClientLoading] = useState(false);
+    const [editingLeadClient, setEditingLeadClient] = useState<Client | null>(null);
+    const [customProposalLead, setCustomProposalLead] = useState<InvoiceRegistryRow | null>(null);
     const [noteText, setNoteText] = useState('');
     const [noteSaving, setNoteSaving] = useState(false);
     const auditRequestJobRef = useRef<string | null>(null);
+    const leadContextRequestJobRef = useRef<string | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [bulkBusy, setBulkBusy] = useState(false);
     const [sortMode, setSortMode] = useState<'recent' | 'priority'>('recent');
@@ -305,18 +318,58 @@ export default function AdminLeadsView({
         }
     }
 
+    async function loadLeadContext(jobId: string) {
+        leadContextRequestJobRef.current = jobId;
+        setProposalsLoading(true);
+        setClientLoading(true);
+        setLeadProposals([]);
+        setLeadClient(null);
+
+        const [proposalsResult, clientResult] = await Promise.allSettled([
+            getLeadProposalsAction(jobId),
+            getLeadClientAction(jobId),
+        ]);
+
+        if (leadContextRequestJobRef.current !== jobId) return;
+
+        if (proposalsResult.status === 'fulfilled') {
+            setLeadProposals(proposalsResult.value);
+        } else {
+            toast.error('No se pudieron cargar las propuestas del lead');
+        }
+
+        if (clientResult.status === 'fulfilled') {
+            setLeadClient(clientResult.value);
+        } else {
+            toast.error('No se pudo cargar el cliente vinculado');
+        }
+
+        setProposalsLoading(false);
+        setClientLoading(false);
+    }
+
     function openLeadDetail(lead: InvoiceRegistryRow) {
         setSelectedLead(lead);
         setNoteText('');
         setAuditEvents([]);
+        setLeadProposals([]);
+        setLeadClient(null);
         void loadLeadAudit(lead.job_id);
+        void loadLeadContext(lead.job_id);
     }
 
     function closeLeadDetail() {
         auditRequestJobRef.current = null;
+        leadContextRequestJobRef.current = null;
         setSelectedLead(null);
         setAuditEvents([]);
         setAuditLoading(false);
+        setLeadProposals([]);
+        setProposalsLoading(false);
+        setLeadClient(null);
+        setClientLoading(false);
+        setEditingLeadClient(null);
+        setCustomProposalLead(null);
         setNoteText('');
     }
 
@@ -658,6 +711,41 @@ export default function AdminLeadsView({
                     noteSaving={noteSaving}
                     onNoteTextChange={setNoteText}
                     onAddNote={() => void addSelectedLeadNote()}
+                    proposals={leadProposals}
+                    proposalsLoading={proposalsLoading}
+                    leadClient={leadClient}
+                    clientLoading={clientLoading}
+                    onEditClient={leadClient ? () => setEditingLeadClient(leadClient) : undefined}
+                    onCreateCustomProposal={() => setCustomProposalLead(selectedLead)}
+                />
+            )}
+            {selectedLead && editingLeadClient && (
+                <LeadClientEditModal
+                    jobId={selectedLead.job_id}
+                    client={editingLeadClient}
+                    onClose={() => setEditingLeadClient(null)}
+                    onSaved={(updated) => {
+                        setLeadClient(updated);
+                        setEditingLeadClient(null);
+                        void loadLeadAudit(selectedLead.job_id);
+                    }}
+                />
+            )}
+            {customProposalLead && (
+                <LeadCustomProposalModal
+                    lead={customProposalLead}
+                    onClose={() => setCustomProposalLead(null)}
+                    onCreated={(proposal) => {
+                        setLeadProposals((current) => [proposal, ...current.filter((item) => item.id !== proposal.id)]);
+                        applyLeadPatch(customProposalLead.job_id, {
+                            has_proposal: true,
+                            annual_savings: proposal.annual_savings,
+                            savings_percent: proposal.savings_percent,
+                            process_status: 'compared',
+                            compared_at: new Date().toISOString(),
+                        });
+                        void loadLeadAudit(customProposalLead.job_id);
+                    }}
                 />
             )}
             {converting && (

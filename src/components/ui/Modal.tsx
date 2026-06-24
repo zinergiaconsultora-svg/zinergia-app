@@ -9,9 +9,16 @@ interface ModalProps {
     onClose: () => void;
     title: string;
     children: React.ReactNode;
+    size?: 'md' | 'lg' | 'xl';
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+const sizeClasses: Record<NonNullable<ModalProps['size']>, string> = {
+    md: 'max-w-md',
+    lg: 'max-w-2xl',
+    xl: 'max-w-5xl',
+};
+
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
     const dialogRef = useRef<HTMLDivElement>(null);
     const previousFocus = useRef<HTMLElement | null>(null);
 
@@ -71,7 +78,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
                             role="dialog"
                             aria-modal="true"
                             aria-label={title}
-                            className="bg-white/90 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl w-full max-w-md pointer-events-auto overflow-hidden"
+                            className={`max-h-[calc(100vh-2rem)] overflow-hidden bg-white/90 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl w-full pointer-events-auto ${sizeClasses[size]}`}
                         >
                             <div className="flex justify-between items-center p-6 border-b border-slate-200/50">
                                 <h3 className="text-xl font-display font-semibold text-slate-900">{title}</h3>
@@ -83,7 +90,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
                                     <X size={20} />
                                 </button>
                             </div>
-                            <div className="p-6">
+                            <div className="max-h-[calc(100vh-8rem)] overflow-y-auto p-6">
                                 {children}
                             </div>
                         </div>

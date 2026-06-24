@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     log.info({ hasApiKey: !!apiKey, hasAuth: !!authHeader }, 'OCR callback received');
 
     if (!safeStringEqual(apiKey, env.WEBHOOK_API_KEY)) {
-        log.warn({ keyPrefix: apiKey?.slice(0, 8) ?? 'null' }, 'OCR callback auth failed');
+        log.warn({ hasApiKey: !!apiKey }, 'OCR callback auth failed');
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

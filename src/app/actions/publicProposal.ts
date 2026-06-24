@@ -125,9 +125,13 @@ export async function getPublicProposalAction(token: string): Promise<Proposal &
             clients(name)
         `)
         .eq('public_token', token)
+        .in('status', ['sent', 'accepted'])
         .maybeSingle();
 
     if (error || !data) return null;
+    const isAccepted = data.status === 'accepted' || !!data.public_accepted_at;
+    const expiresAt = data.public_expires_at ? new Date(data.public_expires_at) : null;
+    if (!isAccepted && (!expiresAt || expiresAt < new Date())) return null;
 
     return {
         ...data,

@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { hashCups } from '@/lib/crypto/pii';
+import { requireServerRole } from '@/lib/auth/permissions';
 
 interface DedupResult {
     isDuplicate: boolean;
@@ -14,6 +15,8 @@ export async function checkDuplicateAction(
     fileContentHash: string,
     cups?: string,
 ): Promise<DedupResult> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('No autenticado');
@@ -70,6 +73,8 @@ export async function saveFileHashAction(
     jobId: string,
     fileContentHash: string,
 ): Promise<void> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;

@@ -4,6 +4,7 @@ import { logger } from '@/lib/utils/logger';
 
 import { env } from '@/lib/env';
 import { createClient } from '@/lib/supabase/server';
+import { requireServerRole } from '@/lib/auth/permissions';
 import { InvoiceData } from '@/types/crm';
 import { resolveTitularDniCif } from '@/lib/invoices/titularId';
 import { scheduleInvoiceArchive } from '@/lib/drive/scheduleInvoiceArchive';
@@ -48,6 +49,34 @@ const FETCH_TIMEOUT_MS = 30_000;
 // Tipos y tamaño permitidos — rechazar antes del webhook
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const OCR_STORAGE_BUCKET = 'ocr-invoices';
+
+function assertUserOwnedSignedOcrUrl(fileUrl: string, userId: string): void {
+    let url: URL;
+    let supabaseUrl: URL;
+
+    try {
+        url = new URL(fileUrl);
+        supabaseUrl = new URL(String(env.NEXT_PUBLIC_SUPABASE_URL ?? ''));
+    } catch {
+        throw new Error('URL de factura no válida');
+    }
+
+    if (url.origin !== supabaseUrl.origin) {
+        throw new Error('URL de factura no permitida');
+    }
+
+    const signedPrefix = `/storage/v1/object/sign/${OCR_STORAGE_BUCKET}/`;
+    if (!url.pathname.startsWith(signedPrefix) || !url.searchParams.get('token')) {
+        throw new Error('URL de factura no firmada');
+    }
+
+    const objectPath = decodeURIComponent(url.pathname.slice(signedPrefix.length));
+    const [ownerFolder] = objectPath.split('/');
+    if (ownerFolder !== userId) {
+        throw new Error('URL de factura sin permisos');
+    }
+}
 
 /**
  * Envía una solicitud con retry + backoff exponencial.
@@ -163,6 +192,8 @@ export async function analyzeDocumentByUrlAction(
     rawText?: string,
     segment?: string,
 ): Promise<{ jobId: string; isMock: boolean; data?: InvoiceData }> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+
     const OCR_WEBHOOK_URL = env.OCR_WEBHOOK_URL;
     const WEBHOOK_API_KEY = env.WEBHOOK_API_KEY;
     let createdJobId: string | null = null;
@@ -179,6 +210,7 @@ export async function analyzeDocumentByUrlAction(
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('No estás autenticado');
+        assertUserOwnedSignedOcrUrl(fileUrl, user.id);
 
         const { data: profile } = await supabase
             .from('profiles')
@@ -302,6 +334,8 @@ export async function analyzeDocumentByUrlAction(
 }
 
 export async function analyzeDocumentAction(formData: FormData): Promise<{ jobId: string; isMock: boolean; data?: InvoiceData }> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+
     const OCR_WEBHOOK_URL = env.OCR_WEBHOOK_URL;
     const WEBHOOK_API_KEY = env.WEBHOOK_API_KEY;
     let createdJobId: string | null = null;

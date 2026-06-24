@@ -49,16 +49,43 @@ export function PwaRegister() {
         if (!('serviceWorker' in navigator)) return;
         if (!window.isSecureContext) return;
 
-        window.addEventListener('load', () => {
+        let refreshing = false;
+        const handleControllerChange = () => {
+            if (refreshing) return;
+            refreshing = true;
+            window.location.reload();
+        };
+
+        navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+
+        const handleLoad = () => {
             navigator.serviceWorker.register('/sw.js')
                 .then((registration) => {
+                    registration.update().catch(() => {});
+                    registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
+                    registration.addEventListener('updatefound', () => {
+                        const worker = registration.installing;
+                        if (!worker) return;
+                        worker.addEventListener('statechange', () => {
+                            if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                                worker.postMessage({ type: 'SKIP_WAITING' });
+                            }
+                        });
+                    });
                     // Intentar suscribir a push después de registrar el SW
                     subscribeToPush(registration);
                 })
                 .catch((err) => {
                     console.error('Service Worker registration failed:', err);
                 });
-        });
+        };
+
+        window.addEventListener('load', handleLoad);
+
+        return () => {
+            window.removeEventListener('load', handleLoad);
+            navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+        };
     }, []);
 
     return null;

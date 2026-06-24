@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { requireServerRole } from '@/lib/auth/permissions'
+import { z } from 'zod'
 
 interface ProfileSettingsInput {
     companyName: string;
@@ -11,7 +13,23 @@ interface ProfileSettingsInput {
     defaultVat: number;
 }
 
+const profileSettingsSchema = z.object({
+    companyName: z.string().trim().min(1).max(200),
+    nif: z.string().trim().max(40),
+    address: z.string().trim().max(500),
+    defaultMargin: z.coerce.number().min(0).max(100),
+    defaultVat: z.coerce.number().min(0).max(100),
+});
+
+const agentProfileSchema = z.object({
+    full_name: z.string().trim().min(1).max(200),
+    phone: z.string().trim().max(40).optional().or(z.literal('')),
+});
+
 export async function saveProfileSettingsAction(input: ProfileSettingsInput): Promise<void> {
+    await requireServerRole(['admin', 'franchise', 'agent'])
+
+    const clean = profileSettingsSchema.parse(input)
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
@@ -20,7 +38,7 @@ export async function saveProfileSettingsAction(input: ProfileSettingsInput): Pr
     // Update profile full_name
     const { error: profileError } = await supabase
         .from('profiles')
-        .update({ full_name: input.companyName })
+        .update({ full_name: clean.companyName })
         .eq('id', user.id)
 
     if (profileError) throw profileError
@@ -31,11 +49,11 @@ export async function saveProfileSettingsAction(input: ProfileSettingsInput): Pr
         .upsert(
             {
                 owner_id: user.id,
-                company_name: input.companyName,
-                nif: input.nif,
-                address: input.address,
-                default_margin: input.defaultMargin,
-                default_vat: input.defaultVat,
+                company_name: clean.companyName,
+                nif: clean.nif,
+                address: clean.address,
+                default_margin: clean.defaultMargin,
+                default_vat: clean.defaultVat,
             },
             { onConflict: 'owner_id' }
         )
@@ -80,13 +98,16 @@ export async function updateAgentProfileAction(input: {
     full_name: string;
     phone?: string;
 }): Promise<void> {
+    await requireServerRole(['admin', 'franchise', 'agent'])
+
+    const clean = agentProfileSchema.parse(input)
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('No autenticado')
 
     const { error } = await supabase
         .from('profiles')
-        .update({ full_name: input.full_name, phone: input.phone ?? null })
+        .update({ full_name: clean.full_name, phone: clean.phone || null })
         .eq('id', user.id)
 
     if (error) throw error

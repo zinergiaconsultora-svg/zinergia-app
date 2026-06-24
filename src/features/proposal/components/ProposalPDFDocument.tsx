@@ -44,6 +44,9 @@ function resolveLogoUrl(marketerName?: string | null, explicitLogo?: string | nu
 const today = new Date().toLocaleDateString('es-ES', {
     day: 'numeric', month: 'long', year: 'numeric',
 });
+const validUntil = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toLocaleDateString('es-ES', {
+    day: 'numeric', month: 'long', year: 'numeric',
+});
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
 
@@ -109,6 +112,21 @@ const s = StyleSheet.create({
     },
     clientName: { fontSize: 20, fontFamily: 'Helvetica-Bold', color: C.slate900, marginBottom: 4 },
     clientMeta: { fontSize: 8, color: C.slate500 },
+    proposalMeta: {
+        flexDirection: 'row',
+        gap: 8,
+        marginTop: -8,
+        marginBottom: 16,
+    },
+    proposalMetaItem: {
+        flex: 1,
+        borderWidth: 1,
+        borderColor: C.slate200,
+        borderRadius: 6,
+        padding: 8,
+    },
+    proposalMetaLabel: { fontSize: 6.5, color: C.slate500, textTransform: 'uppercase', letterSpacing: 0.8 },
+    proposalMetaValue: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: C.slate900, marginTop: 2 },
 
     // ── Savings hero
     savingsHero: {
@@ -234,6 +252,19 @@ const s = StyleSheet.create({
     oppMsg: { fontSize: 7, color: '#78350f' },
     oppRoi: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: C.amber, textAlign: 'right' },
 
+    // ── Commercial close
+    closeStrip: {
+        marginTop: 12,
+        marginBottom: 12,
+        borderRadius: 8,
+        padding: 12,
+        backgroundColor: '#ecfdf5',
+        borderWidth: 1,
+        borderColor: '#a7f3d0',
+    },
+    closeTitle: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: C.emerald, marginBottom: 4 },
+    closeText: { fontSize: 7.5, color: '#065f46', lineHeight: 1.5 },
+
     // ── Footer
     footer: {
         position: 'absolute',
@@ -301,6 +332,21 @@ export function ProposalPDFDocument({
                         {invoiceData.company_name ? `  ·  Actual: ${invoiceData.company_name}` : ''}
                         {invoiceData.tariff_name ? ` (${invoiceData.tariff_name})` : ''}
                     </Text>
+                </View>
+
+                <View style={s.proposalMeta}>
+                    <View style={s.proposalMetaItem}>
+                        <Text style={s.proposalMetaLabel}>Tipo de documento</Text>
+                        <Text style={s.proposalMetaValue}>Propuesta comercial</Text>
+                    </View>
+                    <View style={s.proposalMetaItem}>
+                        <Text style={s.proposalMetaLabel}>Validez estimada</Text>
+                        <Text style={s.proposalMetaValue}>Hasta {validUntil}</Text>
+                    </View>
+                    <View style={s.proposalMetaItem}>
+                        <Text style={s.proposalMetaLabel}>Base del estudio</Text>
+                        <Text style={s.proposalMetaValue}>Factura original + tarifas activas</Text>
+                    </View>
                 </View>
 
                 {/* Savings hero */}
@@ -461,6 +507,14 @@ export function ProposalPDFDocument({
                     </View>
                 ))}
 
+                <View style={s.closeStrip}>
+                    <Text style={s.closeTitle}>Siguiente paso recomendado</Text>
+                    <Text style={s.closeText}>
+                        Confirmar con el cliente que los datos de suministro son correctos, validar condiciones de permanencia
+                        y preparar la documentación de contratación de la oferta seleccionada.
+                    </Text>
+                </View>
+
                 {/* Invoice details */}
                 <Text style={s.sectionTitle}>Datos de la Factura</Text>
                 <View style={s.detailsGrid}>
@@ -499,7 +553,7 @@ export function ProposalPDFDocument({
                         Zinergia Consultoría Energética · {today}
                     </Text>
                     <Text style={s.footerText}>
-                        Simulación basada en datos históricos. Los ahorros reales pueden variar.
+                        Documento comercial confidencial. Simulación basada en datos históricos; los ahorros reales pueden variar.
                     </Text>
                     <Text style={s.footerText} render={({ pageNumber, totalPages }) =>
                         `${pageNumber} / ${totalPages}`
@@ -566,7 +620,7 @@ export function ProposalPDFDocument({
 
                     <View style={s.footer} fixed>
                         <Text style={s.footerText}>Zinergia Consultoría Energética · {today}</Text>
-                        <Text style={s.footerText}>Simulación basada en datos históricos. Los ahorros reales pueden variar.</Text>
+                        <Text style={s.footerText}>Documento comercial confidencial. Los ahorros reales pueden variar.</Text>
                         <Text style={s.footerText} render={({ pageNumber, totalPages }) =>
                             `${pageNumber} / ${totalPages}`
                         } />

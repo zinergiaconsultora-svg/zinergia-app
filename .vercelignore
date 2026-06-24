@@ -2,3 +2,19 @@ node_modules
 .git
 .next
 opencode
+
+# Local environment and runtime artifacts
+.env
+.env.*
+*.log
+.next-localhost*.log
+.next-localhost.*.log
+
+# Local audit / QA artifacts that should never be packaged into deployments
+.sb-pentest-context.json
+.sb-pentest-audit.log
+.sb-pentest-evidence
+GUIA_PRUEBAS.md
+PLAN_MEJORAS.md
+output
+public/auditoria
