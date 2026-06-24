@@ -14,6 +14,7 @@ import { createDriveStorage, type DriveStorage } from './driveStorage';
 import { createTokenCache, DriveAuthError } from './tokenClient';
 import { loadDriveRefreshToken, markDriveDegraded } from './credentials';
 
+// Deploy marker: rebuild to pick up GOOGLE_DRIVE_* env vars (Vercel prebuilt fix).
 let cachedStorage: DriveStorage | null = null;
 
 function requireDriveEnv(): { clientId: string; clientSecret: string; rootFolderId: string } {
