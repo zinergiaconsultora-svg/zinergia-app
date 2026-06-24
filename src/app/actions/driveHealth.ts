@@ -3,8 +3,9 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { requireServerRole } from '@/lib/auth/permissions';
 import { logger } from '@/lib/utils/logger';
-import { getDriveStorage, isDriveConfigured } from '@/lib/drive/index';
+import { getDriveStorage, isDriveConfigured, resetDriveStorageCache } from '@/lib/drive/index';
 import { reconcilePendingDriveArchives } from '@/lib/drive/reconcilePendingArchives';
+import { saveDriveRefreshToken } from '@/lib/drive/credentials';
 
 export interface DriveRgpdEvent {
     action: string;
@@ -90,4 +91,25 @@ export async function getDriveHealthAction(): Promise<DriveHealth> {
 export async function triggerDriveReconcileAction(): Promise<{ processed: number; archived: number; failed: number }> {
     await requireServerRole(['admin']);
     return reconcilePendingDriveArchives(50);
+}
+
+/**
+ * Connects/reconnects Drive by encrypting the refresh token IN the prod runtime
+ * (with the prod APP_ENCRYPTION_KEY) and saving it. This is the correct way to
+ * store the token so decryption succeeds — avoids any key mismatch. Admin only.
+ */
+export async function connectDriveAction(refreshToken: string): Promise<{ success: boolean; message?: string }> {
+    await requireServerRole(['admin']);
+    const token = refreshToken?.trim();
+    if (!token || token.length < 20) {
+        return { success: false, message: 'El token no parece válido.' };
+    }
+    try {
+        await saveDriveRefreshToken(token);
+        resetDriveStorageCache();
+        return { success: true };
+    } catch (e) {
+        logger.error('[driveHealth] connectDriveAction failed', { err: e instanceof Error ? e.message : String(e) });
+        return { success: false, message: e instanceof Error ? e.message : 'Error al guardar el token' };
+    }
 }

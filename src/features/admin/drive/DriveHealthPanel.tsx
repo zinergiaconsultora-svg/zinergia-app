@@ -12,7 +12,7 @@ import {
     ShieldX,
     PlugZap,
 } from 'lucide-react';
-import { triggerDriveReconcileAction, type DriveHealth } from '@/app/actions/driveHealth';
+import { triggerDriveReconcileAction, connectDriveAction, type DriveHealth } from '@/app/actions/driveHealth';
 import { StatCard } from '@/components/ui/StatCard';
 
 function formatGB(bytes: number): string {
@@ -22,6 +22,30 @@ function formatGB(bytes: number): string {
 export default function DriveHealthPanel({ health }: { health: DriveHealth }) {
     const router = useRouter();
     const [running, setRunning] = useState(false);
+    const [token, setToken] = useState('');
+    const [connecting, setConnecting] = useState(false);
+
+    async function connect() {
+        if (!token.trim()) {
+            toast.error('Pega el refresh token primero');
+            return;
+        }
+        setConnecting(true);
+        try {
+            const res = await connectDriveAction(token.trim());
+            if (res.success) {
+                toast.success('Token guardado. Drive conectado.');
+                setToken('');
+                router.refresh();
+            } else {
+                toast.error(res.message ?? 'No se pudo conectar');
+            }
+        } catch {
+            toast.error('No se pudo conectar');
+        } finally {
+            setConnecting(false);
+        }
+    }
 
     async function reconcile() {
         setRunning(true);
@@ -84,6 +108,30 @@ export default function DriveHealthPanel({ health }: { health: DriveHealth }) {
                         Ver <code className="font-mono">docs/google-drive-setup.md</code>.
                     </div>
                 )}
+            </div>
+
+            {/* Conectar / reconectar Drive */}
+            <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+                <h2 className="text-sm font-bold text-slate-800 mb-1">Conectar / reconectar Drive</h2>
+                <p className="text-[13px] text-slate-500 mb-3">
+                    Pega el <strong>refresh token</strong> de Google Drive. El servidor lo cifra con su propia clave y lo guarda.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                        type="password"
+                        value={token}
+                        onChange={(e) => setToken(e.target.value)}
+                        placeholder="1//0..."
+                        className="flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 font-mono text-sm focus:border-energy-500 focus:ring-1 focus:ring-energy-500 outline-none"
+                    />
+                    <button
+                        onClick={connect}
+                        disabled={connecting}
+                        className="shrink-0 py-2.5 px-4 rounded-xl bg-energy-600 text-white font-semibold hover:bg-energy-700 transition-colors disabled:opacity-50"
+                    >
+                        {connecting ? 'Guardando…' : 'Conectar Drive'}
+                    </button>
+                </div>
             </div>
 
             {/* Sync */}
