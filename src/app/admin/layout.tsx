@@ -14,8 +14,8 @@ export default async function AdminLayout({
         <div className="w-full bg-white lg:bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-300 font-sans min-h-screen transition-colors duration-300">
             {/* Admin Header Bar */}
             <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800/50 flex items-center justify-between px-6 shadow-sm dark:shadow-none">
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4 min-w-0">
+                    <div className="flex items-center gap-3 shrink-0">
                         <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-md">
                             Z
                         </div>
@@ -23,12 +23,24 @@ export default async function AdminLayout({
                             Zinergia <span className="text-indigo-600 dark:text-indigo-400 ml-1">SuperAdmin</span>
                         </h1>
                     </div>
-                    <nav className="flex items-center gap-1 ml-4 bg-slate-100 dark:bg-slate-800/40 rounded-lg p-0.5 border border-slate-200 dark:border-transparent">
+                    <nav className="flex items-center gap-1 ml-2 sm:ml-4 bg-slate-100 dark:bg-slate-800/40 rounded-lg p-0.5 border border-slate-200 dark:border-transparent overflow-x-auto whitespace-nowrap [&>a]:shrink-0">
                         <a
                             href="/admin"
                             className="px-3 py-1.5 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/60 transition-all"
                         >
                             📊 Dashboard
+                        </a>
+                        <a
+                            href="/admin/leads"
+                            className="px-3 py-1.5 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/60 transition-all"
+                        >
+                            🎯 Leads
+                        </a>
+                        <a
+                            href="/admin/drive"
+                            className="px-3 py-1.5 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/60 transition-all"
+                        >
+                            ☁️ Drive
                         </a>
                         <a
                             href="/admin/reporting"

@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { requireServerRole } from '@/lib/auth/permissions';
 import { revalidatePath } from 'next/cache';
+import { purgeClientDriveFiles } from '@/lib/drive/purgeClientDriveFiles';
 import type { ClientStatus, ClientType } from '@/types/crm';
 import { z } from 'zod';
 import { encryptNullable, hashCups, hashDni } from '@/lib/crypto/pii';
@@ -68,6 +69,9 @@ export async function deleteClientsBulk(clientIds: string[]): Promise<{ deleted:
     if (!idsResult.success) throw new Error(`IDs inválidos: ${idsResult.error.issues[0].message}`);
 
     const supabase = await createClient();
+
+    // RGPD cascade: remove the invoice files from Drive before the DB cascade.
+    await purgeClientDriveFiles(idsResult.data);
 
     const { data, error } = await supabase
         .from('clients')

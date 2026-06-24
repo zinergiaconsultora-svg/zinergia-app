@@ -3,6 +3,7 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { requireServerRole } from '@/lib/auth/permissions';
 import { uuidSchema } from '@/lib/validation/schemas';
+import { purgeClientDriveFiles } from '@/lib/drive/purgeClientDriveFiles';
 
 export interface ClientExpiringSoon {
     id: string;
@@ -112,6 +113,10 @@ export async function eraseClientAction(
     if (auditErr) {
         return { success: false, message: `Error al registrar en audit log: ${auditErr.message}` };
     }
+
+    // RGPD cascade: delete the invoice files from Drive BEFORE the DB cascade
+    // removes the ocr_jobs rows (and with them the drive_file_ids).
+    await purgeClientDriveFiles([client.id]);
 
     // Delete (cascades to proposals, ocr_jobs, etc.)
     const { error: deleteErr } = await supabase

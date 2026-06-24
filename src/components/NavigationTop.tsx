@@ -9,6 +9,7 @@ import {
     Network,
     Briefcase,
     FileSignature,
+    FileText,
     Sparkles,
     Receipt,
     Settings,
@@ -26,6 +27,7 @@ import { createClient } from '@/lib/supabase/client';
 const navItems = [
     { name: 'Inicio',      href: '/dashboard',           icon: LayoutDashboard },
     { name: 'Clientes',    href: '/dashboard/clients',   icon: Contact         },
+    { name: 'Facturas',    href: '/dashboard/invoices',  icon: FileText        },
     { name: 'Propuestas',  href: '/dashboard/proposals', icon: FileSignature   },
     { name: 'Simulador',   href: '/dashboard/simulator', icon: Sparkles        },
     { name: 'Cartera',     href: '/dashboard/wallet',    icon: Briefcase       },

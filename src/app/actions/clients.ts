@@ -25,6 +25,7 @@ import {
 } from '@/lib/crypto/clientPii';
 import { hashCups, hashDni } from '@/lib/crypto/pii';
 import { moduleLogger } from '@/lib/logger';
+import { purgeClientDriveFiles } from '@/lib/drive/purgeClientDriveFiles';
 
 const log = moduleLogger('clients-action');
 
@@ -375,6 +376,10 @@ export async function deleteClientAction(id: string): Promise<void> {
     if (!z.uuid().safeParse(id).success) throw new Error('ID de cliente inválido');
 
     const { supabase } = await getSessionContext();
+
+    // RGPD cascade: remove the invoice files from Drive before the DB cascade.
+    await purgeClientDriveFiles([id]);
+
     const { error } = await supabase
         .from('clients')
         .delete()

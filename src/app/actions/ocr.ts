@@ -6,6 +6,7 @@ import { env } from '@/lib/env';
 import { createClient } from '@/lib/supabase/server';
 import { InvoiceData } from '@/types/crm';
 import { resolveTitularDniCif } from '@/lib/invoices/titularId';
+import { scheduleInvoiceArchive } from '@/lib/drive/scheduleInvoiceArchive';
 import { z } from 'zod';
 
 // Schema de validación para datos crudos del webhook N8N
@@ -198,6 +199,9 @@ export async function analyzeDocumentByUrlAction(
             throw new Error(`El archivo supera el límite de 10 MB (${(file.size / 1024 / 1024).toFixed(1)} MB).`);
         }
 
+        // Archivar la factura en el Drive de la consultora (no bloqueante).
+        await scheduleInvoiceArchive(supabase, { jobId: job.id, agentId: user.id, file });
+
         const formData = new FormData();
         formData.append('file', file);
         formData.append('job_id', job.id);
@@ -329,6 +333,9 @@ export async function analyzeDocumentAction(formData: FormData): Promise<{ jobId
         if (jobError || !job) {
             throw new Error('Fallo al crear el trabajo de OCR en la base de datos');
         }
+
+        // Archivar la factura en el Drive de la consultora (no bloqueante).
+        await scheduleInvoiceArchive(supabase, { jobId: job.id, agentId: user.id, file });
 
         formData.append('job_id', job.id);
 

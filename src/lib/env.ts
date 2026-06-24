@@ -28,6 +28,14 @@ const envSchema = z.object({
     APP_ENCRYPTION_KEY: z.string().min(1).optional(),
     APP_ENCRYPTION_PEPPER: z.string().min(1).optional(),
 
+    // Google Drive (factura archiving). Server-side only.
+    // OAuth client of the GCP project; the refresh token itself is NOT here —
+    // it lives encrypted in the `integration_credentials` table so it can be
+    // rotated without a redeploy. Scope is strictly `drive.file`.
+    GOOGLE_DRIVE_CLIENT_ID: z.string().min(1).optional(),
+    GOOGLE_DRIVE_CLIENT_SECRET: z.string().min(1).optional(),
+    GOOGLE_DRIVE_ROOT_FOLDER_ID: z.string().min(1).optional(),
+
     // CNMC SIPS API OAuth 1.0a credentials. Server-side only.
     CNMC_OAUTH_CONSUMER_KEY: z.string().min(1).optional(),
     CNMC_OAUTH_CONSUMER_SECRET: z.string().min(1).optional(),
