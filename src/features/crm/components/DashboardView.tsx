@@ -1,15 +1,13 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from 'next/navigation';
 import { crmService } from '@/services/crmService';
 import { Client } from '@/types/crm';
-import { useNotifications } from '@/contexts/NotificationContext';
 import {
     TrendingUp,
     Target,
     Layers,
-    Bell,
     ArrowUpRight,
     Zap,
 } from 'lucide-react';
@@ -17,11 +15,6 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { formatCurrency } from '@/lib/utils/format';
 import { DashboardSkeleton } from '@/components/ui/DashboardSkeleton';
-
-const NotificationsPopover = dynamic(() =>
-    import('@/features/crm/components/NotificationsPopover').then(m => ({ default: m.NotificationsPopover })),
-    { ssr: false }
-);
 
 const SavingsTrendChart = dynamic(() =>
     import('./DashboardCharts').then(m => ({ default: m.SavingsTrendChart })),
@@ -102,8 +95,6 @@ export default function DashboardView() {
     const router = useRouter();
     const [stats, setStats] = useState<DashboardStats>(DEFAULT_STATS);
     const [loading, setLoading] = useState(true);
-    const [isNotifOpen, setIsNotifOpen] = useState(false);
-    const { notifications, markRead, markAllRead } = useNotifications();
 
     useEffect(() => {
         async function loadStats() {
@@ -131,11 +122,6 @@ export default function DashboardView() {
         [stats.user?.full_name]
     );
 
-    const unreadCount = useMemo(() =>
-        notifications.filter(n => !n.read).length,
-        [notifications]
-    );
-
     const { wonDeals, activeDeals, lostDeals } = useMemo(() => {
         return stats.recentProposals.reduce((acc, p) => {
             if (p.status === 'accepted') acc.wonDeals++;
@@ -144,18 +130,6 @@ export default function DashboardView() {
             return acc;
         }, { wonDeals: 0, activeDeals: 0, lostDeals: 0 });
     }, [stats.recentProposals]);
-
-    const handleMarkAsRead = useCallback((id: string) => {
-        markRead(id);
-    }, [markRead]);
-
-    const handleMarkAllAsRead = useCallback(() => {
-        markAllRead();
-    }, [markAllRead]);
-
-    const handleDismiss = useCallback((_id: string) => {
-        markRead(_id);
-    }, [markRead]);
 
     if (loading) return <DashboardSkeleton />;
 
@@ -168,22 +142,6 @@ export default function DashboardView() {
                     <div>
                         <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide">Bienvenido</p>
                         <h1 className="text-lg font-semibold text-slate-900">{firstName}</h1>
-                    </div>
-                    <div className="relative">
-                        <button type="button" aria-label="Notificaciones" className="p-2 text-slate-400 relative active:bg-slate-100 rounded-xl transition-colors" onClick={() => setIsNotifOpen(!isNotifOpen)}>
-                            <Bell size={20} />
-                            {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>}
-                        </button>
-                        {isNotifOpen && (
-                            <NotificationsPopover
-                                isOpen={isNotifOpen}
-                                onClose={() => setIsNotifOpen(false)}
-                                notifications={notifications}
-                                onMarkAsRead={handleMarkAsRead}
-                                onMarkAllAsRead={handleMarkAllAsRead}
-                                onDismiss={handleDismiss}
-                            />
-                        )}
                     </div>
                 </div>
 

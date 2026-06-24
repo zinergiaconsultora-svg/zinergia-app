@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Plus, Search, ChevronRight, User, LayoutGrid, Columns3, TrendingUp, Users, Target, Activity, FileUp } from 'lucide-react';
+import { Plus, Search, User, LayoutGrid, Columns3, TrendingUp, Users, Target, Activity, FileUp, SlidersHorizontal } from 'lucide-react';
 import { getClientScoresAction, type ClientScore } from '@/app/actions/clientScores';
 import { useClients } from '../hooks/useClients';
 import ClientCard from './ClientCard';
@@ -59,6 +58,7 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
     const [filterSupplier, setFilterSupplier] = useState('');
     const [filterMinBill, setFilterMinBill] = useState('');
     const [filterColdDays, setFilterColdDays] = useState(0);
+    const [showFilters, setShowFilters] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [scores, setScores] = useState<Map<string, ClientScore>>(new Map());
     // Timestamp de corte para "sin contactar hace X días". Se calcula en el
@@ -72,7 +72,6 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
             .then(list => setScores(new Map(list.map(s => [s.clientId, s]))))
             .catch(() => { /* non-fatal */ });
     }, [clients]);
-    const router = useRouter();
 
     const filteredClients = useMemo(() => {
         let result = [...clients];
@@ -141,21 +140,13 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
     const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 relative overflow-hidden font-sans selection:bg-energy-500/30 selection:text-energy-900">
-            <div className="max-w-[1400px] mx-auto px-6 sm:px-8 lg:px-12 py-12 relative z-10">
+        <div className="min-h-screen relative overflow-hidden font-sans selection:bg-energy-500/30 selection:text-energy-900 pb-20">
+            <div className="max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12 py-5 sm:py-12 relative z-10">
 
                 {/* HEADER */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-8">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
-                            <Button
-                                onClick={() => router.back()}
-                                variant="secondary"
-                                size="icon"
-                                className="rounded-2xl"
-                            >
-                                <ChevronRight size={20} className="rotate-180" />
-                            </Button>
                             <span className="text-[11px] font-medium text-energy-600 bg-energy-50 px-3 py-1 rounded-full border border-energy-100 uppercase tracking-widest">
                                 Cartera
                             </span>
@@ -202,42 +193,42 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                 </div>
 
                 {/* CRM INSIGHTS CARDS */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl p-5 shadow-sm hover:shadow-floating transition-all">
-                        <div className="flex items-center gap-3 mb-2 text-slate-500">
-                            <Users size={16} className="text-indigo-500" />
-                            <span className="text-xs font-semibold uppercase tracking-wider">Total Clientes</span>
+                <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-4 sm:overflow-visible mb-8">
+                    <div className="snap-start shrink-0 w-[42%] sm:w-auto sm:shrink bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-floating transition-all">
+                        <div className="flex items-center gap-2 sm:gap-3 mb-2 text-slate-500">
+                            <Users size={16} className="text-indigo-500 shrink-0" />
+                            <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider truncate">Total Clientes</span>
                         </div>
-                        <div className="text-3xl font-bold text-slate-900 dark:text-white">
+                        <div className="text-xl sm:text-3xl font-bold text-slate-900 dark:text-white">
                             {kpisLoading ? <span className="inline-block w-12 h-8 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" /> : kpis.total}
                         </div>
                     </div>
-                    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl p-5 shadow-sm hover:shadow-floating transition-all">
-                        <div className="flex items-center gap-3 mb-2 text-slate-500">
-                            <Activity size={16} className="text-emerald-500" />
-                            <span className="text-xs font-semibold uppercase tracking-wider">Nuevos Leads</span>
+                    <div className="snap-start shrink-0 w-[42%] sm:w-auto sm:shrink bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-floating transition-all">
+                        <div className="flex items-center gap-2 sm:gap-3 mb-2 text-slate-500">
+                            <Activity size={16} className="text-emerald-500 shrink-0" />
+                            <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider truncate">Nuevos Leads</span>
                         </div>
-                        <div className="text-3xl font-bold text-slate-900 dark:text-white">
+                        <div className="text-xl sm:text-3xl font-bold text-slate-900 dark:text-white">
                             {kpisLoading ? <span className="inline-block w-8 h-8 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" /> : kpis.nuevos}
                         </div>
                     </div>
-                    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl p-5 shadow-sm hover:shadow-floating transition-all">
-                        <div className="flex items-center gap-3 mb-2 text-slate-500">
-                            <TrendingUp size={16} className="text-violet-500" />
-                            <span className="text-xs font-semibold uppercase tracking-wider">Valor Pipeline</span>
+                    <div className="snap-start shrink-0 w-[42%] sm:w-auto sm:shrink bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-floating transition-all">
+                        <div className="flex items-center gap-2 sm:gap-3 mb-2 text-slate-500">
+                            <TrendingUp size={16} className="text-violet-500 shrink-0" />
+                            <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider truncate">Valor Pipeline</span>
                         </div>
-                        <div className="text-3xl font-bold text-slate-900 dark:text-white">
+                        <div className="text-xl sm:text-3xl font-bold text-slate-900 dark:text-white whitespace-nowrap">
                             {kpisLoading ? <span className="inline-block w-20 h-8 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" /> : (
-                                <>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(kpis.pipelineValue)}<span className="text-lg text-slate-400 font-medium ml-1">/mes</span></>
+                                <>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(kpis.pipelineValue)}<span className="text-sm sm:text-lg text-slate-400 font-medium ml-1">/mes</span></>
                             )}
                         </div>
                     </div>
-                    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl p-5 shadow-sm hover:shadow-floating transition-all">
-                        <div className="flex items-center gap-3 mb-2 text-slate-500">
-                            <Target size={16} className="text-amber-500" />
-                            <span className="text-xs font-semibold uppercase tracking-wider">Tasa Conversión</span>
+                    <div className="snap-start shrink-0 w-[42%] sm:w-auto sm:shrink bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-floating transition-all">
+                        <div className="flex items-center gap-2 sm:gap-3 mb-2 text-slate-500">
+                            <Target size={16} className="text-amber-500 shrink-0" />
+                            <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider truncate">Tasa Conversión</span>
                         </div>
-                        <div className="text-3xl font-bold text-slate-900 dark:text-white">
+                        <div className="text-xl sm:text-3xl font-bold text-slate-900 dark:text-white">
                             {kpisLoading ? <span className="inline-block w-10 h-8 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" /> : <>{kpis.conversion}%</>}
                         </div>
                     </div>
@@ -305,20 +296,34 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                         <span className="text-[10px] font-medium text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full">
                             {filteredClients.length} {filteredClients.length === 1 ? 'cliente' : 'clientes'}
                         </span>
+
+                        {/* Mobile filters toggle */}
+                        <button
+                            onClick={() => setShowFilters(v => !v)}
+                            className={`sm:hidden relative flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
+                                showFilters || hasAdvancedFilters
+                                    ? 'bg-indigo-50 border-indigo-200 text-indigo-600'
+                                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
+                            }`}
+                        >
+                            <SlidersHorizontal size={14} />
+                            Filtros
+                            {hasAdvancedFilters && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-indigo-500 rounded-full" />}
+                        </button>
                     </div>
                 </div>
 
                 {/* ADVANCED FILTERS */}
-                <div className="flex flex-wrap items-center gap-2 mb-5">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mr-1">Filtros</span>
+                <div className={`${showFilters ? 'flex' : 'hidden'} sm:flex flex-wrap items-center gap-2 mb-5`}>
+                    <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest text-slate-400 mr-1">Filtros</span>
                     <input
                         value={filterSupplier}
                         onChange={(e) => setFilterSupplier(e.target.value)}
                         placeholder="Compañía actual…"
                         aria-label="Filtrar por compañía actual"
-                        className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-slate-600 dark:text-slate-300 w-40 focus:border-indigo-400 outline-none"
+                        className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-slate-600 dark:text-slate-300 w-[calc(50%-0.25rem)] sm:w-40 focus:border-indigo-400 outline-none"
                     />
-                    <div className="relative">
+                    <div className="relative w-[calc(50%-0.25rem)] sm:w-auto">
                         <input
                             type="number"
                             min="0"
@@ -326,7 +331,7 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                             onChange={(e) => setFilterMinBill(e.target.value)}
                             placeholder="Factura mín."
                             aria-label="Factura mensual mínima en euros"
-                            className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-3 pr-6 py-1.5 text-slate-600 dark:text-slate-300 w-28 focus:border-indigo-400 outline-none"
+                            className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-3 pr-6 py-1.5 text-slate-600 dark:text-slate-300 w-full sm:w-28 focus:border-indigo-400 outline-none"
                         />
                         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none">€</span>
                     </div>
@@ -334,7 +339,7 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                         value={filterColdDays}
                         onChange={(e) => handleColdDaysChange(Number(e.target.value))}
                         aria-label="Sin contactar desde hace"
-                        className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-slate-600 dark:text-slate-300 focus:border-indigo-400 outline-none"
+                        className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-slate-600 dark:text-slate-300 focus:border-indigo-400 outline-none w-full sm:w-auto"
                     >
                         <option value={0}>Sin contactar: cualquiera</option>
                         <option value={7}>Sin contactar +7 días</option>

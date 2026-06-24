@@ -129,8 +129,9 @@ function ElecTable({ rows, commissions, collaboratorPct }: { rows: TarifaRow[]; 
             </div>
 
             {/* Table */}
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-                <table className="w-full text-xs">
+            <p className="sm:hidden text-[10px] text-slate-400 text-center">← desliza para ver más columnas →</p>
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto">
+                <table className="w-full text-xs min-w-[760px]">
                     <thead>
                         <tr className="bg-slate-50 border-b border-slate-100">
                             <th className="text-left px-4 py-3 font-semibold text-slate-500">Compañía</th>
@@ -206,8 +207,8 @@ function GasTable({ rows, commissions, collaboratorPct }: { rows: TarifaRow[]; c
     const active = rows.filter(r => r.is_active)
 
     return (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-            <table className="w-full text-xs">
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto">
+            <table className="w-full text-xs min-w-[680px]">
                 <thead>
                     <tr className="bg-slate-50 border-b border-slate-100">
                         <th className="text-left px-4 py-3 font-semibold text-slate-500">Compañía</th>
@@ -408,17 +409,17 @@ export default function TarifasAgentView({ electricity, gas, commissions, collab
     return (
         <div className="space-y-6">
             {/* Header — compacto */}
-            <div className="flex items-center gap-3 flex-wrap">
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-200 shrink-0">
-                    <Euro size={20} />
+            <div className="flex items-center gap-3">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-200 shrink-0">
+                    <Euro size={18} />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <h1 className="text-xl font-black text-slate-900">Tarifas disponibles</h1>
-                    <p className="text-xs text-slate-400 mt-0.5">Precios de mercado y tu comisión por producto</p>
+                    <h1 className="text-base sm:text-xl font-black text-slate-900 truncate">Tarifas disponibles</h1>
+                    <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">Precios de mercado y tu comisión</p>
                 </div>
-                <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-full pl-3 pr-2 py-1.5">
-                    <span className="text-xs font-bold text-emerald-700">
-                        Tu comisión: {pctLabel}%
+                <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-full pl-2.5 pr-2 py-1.5 shrink-0">
+                    <span className="text-[11px] sm:text-xs font-bold text-emerald-700 whitespace-nowrap">
+                        {pctLabel}%
                     </span>
                     <span
                         className="text-emerald-500/70 cursor-help"

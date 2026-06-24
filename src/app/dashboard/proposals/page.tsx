@@ -396,8 +396,9 @@ export default function ProposalsPage() {
             ) : viewMode === 'table' ? (
                 /* ── TABLE VIEW ── */
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <p className="sm:hidden text-[10px] text-slate-400 text-center pt-2">← desliza para ver más columnas →</p>
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                        <table className="w-full text-sm min-w-[640px]">
                             <thead>
                                 <tr className="border-b border-slate-100">
                                     <th className="w-10 px-3 py-3">
@@ -442,7 +443,7 @@ export default function ProposalsPage() {
                                             </td>
                                             <td className="px-3 py-3">
                                                 <Link href={`/dashboard/proposals/${p.id}`}
-                                                    className="font-semibold text-slate-900 hover:text-indigo-600 transition-colors break-words">
+                                                    className="font-semibold text-slate-900 hover:text-indigo-600 transition-colors whitespace-nowrap">
                                                     {p.clients?.name || p.calculation_data?.client_name || 'Cliente'}
                                                 </Link>
                                                 {pendingDays !== null && pendingDays >= 3 && (

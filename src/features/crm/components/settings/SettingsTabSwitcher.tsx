@@ -23,11 +23,11 @@ export function SettingsTabSwitcher({
     onSave,
 }: SettingsTabSwitcherProps) {
     return (
-        <div className="flex items-center gap-3">
-            <div className="bg-white/50 backdrop-blur-sm p-1 rounded-xl border border-white/40 flex items-center shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="bg-white/50 backdrop-blur-sm p-1 rounded-xl border border-white/40 flex items-center shadow-sm overflow-x-auto max-w-full">
                 <button
                     onClick={() => onTabChange('profile')}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'profile'
+                    className={`shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'profile'
                         ? 'bg-white text-energy-600 shadow-sm'
                         : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                         }`}
@@ -37,7 +37,7 @@ export function SettingsTabSwitcher({
                 </button>
                 <button
                     onClick={() => onTabChange('commercial')}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'commercial'
+                    className={`shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'commercial'
                         ? 'bg-white text-energy-600 shadow-sm'
                         : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                         }`}
@@ -47,7 +47,7 @@ export function SettingsTabSwitcher({
                 </button>
                 <button
                     onClick={() => onTabChange('network')}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'network'
+                    className={`shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'network'
                         ? 'bg-white text-energy-600 shadow-sm'
                         : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                         }`}
@@ -59,7 +59,7 @@ export function SettingsTabSwitcher({
                     <button
                         type="button"
                         onClick={() => onTabChange('commissions')}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'commissions'
+                        className={`shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'commissions'
                             ? 'bg-white text-energy-600 shadow-sm'
                             : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                             }`}
@@ -71,7 +71,7 @@ export function SettingsTabSwitcher({
             </div>
 
             {activeTab !== 'network' && activeTab !== 'commissions' && (
-                <div className="flex items-center gap-3 ml-2">
+                <div className="flex items-center gap-3 sm:ml-2">
                     {saveSuccess && (
                         <span className="text-sm font-medium text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg animate-in fade-in">
                             ✓ Guardado

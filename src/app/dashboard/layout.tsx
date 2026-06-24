@@ -10,7 +10,7 @@ export default function DashboardLayout({
 }) {
     return (
         <NotificationProvider>
-            <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 relative selection:bg-indigo-100 dark:selection:bg-indigo-900 text-slate-900 dark:text-slate-100 font-sans pt-14 md:pt-16 lg:pt-20 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] lg:pb-0">
+            <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 relative selection:bg-indigo-100 dark:selection:bg-indigo-900 text-slate-900 dark:text-slate-100 font-sans pt-[calc(max(env(safe-area-inset-top,0px),16px)+72px)] lg:pt-20 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] lg:pb-0">
                 <NavigationTop />
                 <OnboardingWizard />
                 <main className="transition-all duration-300">
