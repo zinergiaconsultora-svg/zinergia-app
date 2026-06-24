@@ -40,13 +40,18 @@ function InvoiceCard({
     const [openingFile, setOpeningFile] = useState(false);
 
     async function viewFile() {
-        setOpeningFile(true);
-        const url = await getInvoiceFileUrlAction(invoice.job_id);
-        setOpeningFile(false);
-        if (url) {
-            window.open(url, '_blank', 'noopener,noreferrer');
-        } else {
-            toast.error('El archivo ya no está disponible para previsualizar');
+        try {
+            setOpeningFile(true);
+            const url = await getInvoiceFileUrlAction(invoice.job_id);
+            if (url) {
+                window.open(url, '_blank', 'noopener,noreferrer');
+            } else {
+                toast.error('El archivo ya no está disponible para previsualizar');
+            }
+        } catch {
+            toast.error('No se pudo abrir el archivo');
+        } finally {
+            setOpeningFile(false);
         }
     }
 
@@ -55,7 +60,7 @@ function InvoiceCard({
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, delay: Math.min(index * 0.03, 0.3) }}
-            className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm hover:shadow-md hover:border-slate-200 transition-all"
+            className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm hover:shadow-md hover:border-slate-200 transition-colors"
         >
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -80,6 +85,7 @@ function InvoiceCard({
                 )}
                 <div className="ml-auto flex items-center gap-2">
                     <button
+                        type="button"
                         onClick={viewFile}
                         disabled={openingFile}
                         className="inline-flex items-center gap-1 text-[12px] font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded-lg transition-colors disabled:opacity-50"
@@ -88,6 +94,7 @@ function InvoiceCard({
                     </button>
                     {isAdmin && !isClosed && !invoice.lost && invoice.process_status !== 'failed' && (
                         <button
+                            type="button"
                             onClick={onCloseClick}
                             className="text-[12px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded-lg transition-colors"
                         >
@@ -111,7 +118,7 @@ function InvoiceCard({
                         </div>
                     )}
                     {isAdmin && (
-                        <button onClick={onReopen} className="col-span-2 text-left text-[11px] text-slate-400 hover:text-slate-600 mt-1">
+                        <button type="button" onClick={onReopen} className="col-span-2 text-left text-[11px] text-slate-400 hover:text-slate-600 mt-1">
                             Reabrir (volver a lead)
                         </button>
                     )}
@@ -161,7 +168,7 @@ export default function InvoiceRegistryView({
             </header>
 
             {loading ? (
-                <div className="space-y-3">
+                <div className="space-y-3" aria-busy="true" aria-label="Cargando facturas">
                     {Array.from({ length: 4 }).map((_, i) => (
                         <div key={i} className="h-28 rounded-2xl bg-slate-100 animate-pulse" />
                     ))}
@@ -188,6 +195,7 @@ export default function InvoiceRegistryView({
 
                     {hasMore && (
                         <button
+                            type="button"
                             onClick={loadMore}
                             disabled={loadingMore}
                             className="w-full py-3 rounded-2xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"

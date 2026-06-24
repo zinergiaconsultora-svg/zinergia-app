@@ -77,6 +77,7 @@ export const NavigationTop = () => {
                     <button
                         type="button"
                         onClick={handleLogout}
+                        aria-label="Cerrar sesión"
                         className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-500 active:bg-slate-200/60 transition-colors"
                         title="Cerrar Sesión"
                     >
@@ -107,7 +108,8 @@ export const NavigationTop = () => {
                                     <NavIconLink href="/dashboard/network" label="Red" icon={Network} pathname={pathname} hoveredItem={hoveredItem} setHoveredItem={setHoveredItem} />
                                     <a
                                         href="/admin"
-                                        className={`relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300 ${
+                                        aria-label="Admin Panel"
+                                        className={`relative flex items-center justify-center w-11 h-11 rounded-2xl transition-colors duration-300 ${
                                             pathname.startsWith('/admin')
                                                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
                                                 : 'text-indigo-400 hover:bg-indigo-50/50 hover:text-indigo-600'
@@ -137,7 +139,8 @@ export const NavigationTop = () => {
                         <button
                             type="button"
                             onClick={handleLogout}
-                            className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50/50 transition-all active:scale-90"
+                            aria-label="Cerrar sesión"
+                            className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50/50 transition-colors active:scale-90"
                             title="Cerrar Sesión"
                         >
                             <LogOut size={18} />
@@ -147,6 +150,9 @@ export const NavigationTop = () => {
                         <button
                             type="button"
                             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                            aria-label={isMobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+                            aria-expanded={isMobileMenuOpen}
+                            aria-controls="mobile-menu-sheet"
                             className="hidden w-9 h-9 items-center justify-center rounded-xl bg-slate-900 text-white shadow-md active:scale-95"
                         >
                             {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -173,6 +179,7 @@ export const NavigationTop = () => {
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
                             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                            id="mobile-menu-sheet"
                             className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#f2f2f7] rounded-t-3xl z-[60] pb-safe overflow-hidden pointer-events-auto"
                         >
                             {/* Handle bar */}
@@ -184,19 +191,19 @@ export const NavigationTop = () => {
                                     {isAdmin ? (
                                         /* Admin: solo sus herramientas */
                                         <>
-                                            <Link href="/admin" onClick={(event) => handleMobileNavigation(event, '/admin')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/admin') ? 'bg-white text-indigo-600 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
+                                            <Link href="/admin" onClick={(event) => handleMobileNavigation(event, '/admin')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-colors active:scale-95 ${pathname.startsWith('/admin') ? 'bg-white text-indigo-600 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
                                                 <Shield size={22} strokeWidth={1.5} />
                                                 <span className="text-[11px] font-medium">Admin</span>
                                             </Link>
-                                            <Link href="/dashboard/tariffs" onClick={(event) => handleMobileNavigation(event, '/dashboard/tariffs')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/dashboard/tariffs') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
+                                            <Link href="/dashboard/tariffs" onClick={(event) => handleMobileNavigation(event, '/dashboard/tariffs')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-colors active:scale-95 ${pathname.startsWith('/dashboard/tariffs') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
                                                 <Receipt size={22} strokeWidth={1.5} />
                                                 <span className="text-[11px] font-medium">Tarifas</span>
                                             </Link>
-                                            <Link href="/dashboard/network" onClick={(event) => handleMobileNavigation(event, '/dashboard/network')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/dashboard/network') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
+                                            <Link href="/dashboard/network" onClick={(event) => handleMobileNavigation(event, '/dashboard/network')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-colors active:scale-95 ${pathname.startsWith('/dashboard/network') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
                                                 <Network size={22} strokeWidth={1.5} />
                                                 <span className="text-[11px] font-medium">Red</span>
                                             </Link>
-                                            <Link href="/dashboard/settings" onClick={(event) => handleMobileNavigation(event, '/dashboard/settings')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/dashboard/settings') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
+                                            <Link href="/dashboard/settings" onClick={(event) => handleMobileNavigation(event, '/dashboard/settings')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-colors active:scale-95 ${pathname.startsWith('/dashboard/settings') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
                                                 <Settings size={22} strokeWidth={1.5} />
                                                 <span className="text-[11px] font-medium">Ajustes</span>
                                             </Link>
@@ -208,13 +215,13 @@ export const NavigationTop = () => {
                                                 const Icon = item.icon;
                                                 const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
                                                 return (
-                                                    <Link key={item.name} href={item.href} onClick={(event) => handleMobileNavigation(event, item.href)} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${isActive ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
+                                                    <Link key={item.name} href={item.href} onClick={(event) => handleMobileNavigation(event, item.href)} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-colors active:scale-95 ${isActive ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
                                                         <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
                                                         <span className="text-[11px] font-medium">{item.name}</span>
                                                     </Link>
                                                 );
                                             })}
-                                            <Link href="/dashboard/tariffs" onClick={(event) => handleMobileNavigation(event, '/dashboard/tariffs')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-all active:scale-95 ${pathname.startsWith('/dashboard/tariffs') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
+                                            <Link href="/dashboard/tariffs" onClick={(event) => handleMobileNavigation(event, '/dashboard/tariffs')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-colors active:scale-95 ${pathname.startsWith('/dashboard/tariffs') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
                                                 <Receipt size={22} strokeWidth={1.5} />
                                                 <span className="text-[11px] font-medium">Tarifas</span>
                                             </Link>
@@ -279,6 +286,9 @@ export const NavigationTop = () => {
                     {!isAdmin && <button
                         type="button"
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        aria-label={isMobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+                        aria-expanded={isMobileMenuOpen}
+                        aria-controls="mobile-menu-sheet"
                         className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors"
                     >
                         <div className={`flex items-center justify-center ${isMobileMenuOpen ? 'text-energy-500' : 'text-[#8e8e93]'}`}>
@@ -312,7 +322,13 @@ function NavIconLink({ href, label, icon: Icon, pathname, hoveredItem, setHovere
 
     return (
         <div className="relative group" onMouseEnter={() => setHoveredItem(label)} onMouseLeave={() => setHoveredItem(null)}>
-            <Link href={href} className={containerClass}>
+            <Link
+                href={href}
+                aria-label={label}
+                className={containerClass}
+                onFocus={() => setHoveredItem(label)}
+                onBlur={() => setHoveredItem(null)}
+            >
                 <Icon size={isSimulador ? 24 : 22} strokeWidth={isSimulador ? 2 : 1.5} />
             </Link>
             <AnimatePresence>

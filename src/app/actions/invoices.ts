@@ -8,6 +8,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { requireServerRole } from '@/lib/auth/permissions';
 import { logger } from '@/lib/utils/logger';
 import { extractStoragePath } from '@/lib/drive/storagePath';
+import { recordLeadAuditEvent, type RecordLeadAuditEventInput } from './leadAudit';
 
 export type InvoiceProcessStatus =
     | 'uploaded'
@@ -16,6 +17,36 @@ export type InvoiceProcessStatus =
     | 'closed_won'
     | 'closed_lost'
     | 'failed';
+
+async function safeRecordLeadAuditEvent(input: RecordLeadAuditEventInput): Promise<void> {
+    try {
+        const result = await recordLeadAuditEvent(input);
+        if (!result.success) logger.error('[invoices] lead audit event failed', { reason: result.message });
+    } catch (error) {
+        logger.error('[invoices] lead audit event threw', { error: error instanceof Error ? error.message : 'unknown' });
+    }
+}
+
+interface LeadStateSnapshot {
+    closed: boolean | null;
+    lost: boolean | null;
+    lost_reason: string | null;
+}
+
+async function getLeadStateSnapshot(supabase: SupabaseClient, jobId: string): Promise<LeadStateSnapshot | null> {
+    const { data, error } = await supabase
+        .from('ocr_jobs')
+        .select('closed,lost,lost_reason')
+        .eq('id', jobId)
+        .maybeSingle();
+
+    if (error) {
+        logger.error('[invoices] lead state snapshot failed', { error: error.message });
+        return null;
+    }
+
+    return (data ?? null) as LeadStateSnapshot | null;
+}
 
 /** One row of the invoice registry — mirrors the `invoice_registry` VIEW. */
 export interface InvoiceRegistryRow {
@@ -46,6 +77,13 @@ export interface InvoiceRegistryRow {
     // Enriquecido para el cockpit admin
     agent_name: string | null;
     franchise_name: string | null;
+    // Señales de prioridad comercial
+    period_days: string | null;
+    annual_savings: number | null;
+    savings_percent: number | null;
+    has_proposal: boolean;
+    // Triaje
+    reviewed_at: string | null;
 }
 
 /**
@@ -126,6 +164,7 @@ export async function closeInvoiceAction(
     // Cast to the untyped client: the closure columns aren't in the generated
     // types yet. RLS still applies (session-based).
     const supabase = (await createClient()) as unknown as SupabaseClient;
+    const previousState = await getLeadStateSnapshot(supabase, jobId);
     const { error } = await supabase
         .from('ocr_jobs')
         .update({
@@ -140,6 +179,7 @@ export async function closeInvoiceAction(
             lost: false,
             lost_at: null,
             lost_reason: null,
+            permanence_reminded_at: null,
         })
         .eq('id', jobId);
 
@@ -147,6 +187,19 @@ export async function closeInvoiceAction(
         logger.error('[invoices] closeInvoiceAction failed', { error: error.message });
         return { success: false, message: 'No se pudo cerrar la factura' };
     }
+    const wasAlreadyClosed = previousState?.closed === true;
+    await safeRecordLeadAuditEvent({
+        jobId,
+        eventType: wasAlreadyClosed ? 'closure_updated' : 'lead_closed_won',
+        title: wasAlreadyClosed ? 'Cierre actualizado' : 'Lead convertido en cliente',
+        detail: parsed.data.company,
+        metadata: {
+            company: parsed.data.company,
+            tariff: parsed.data.tariff ?? null,
+            permanenceUntil: parsed.data.permanenceUntil ?? null,
+            commission: parsed.data.commission,
+        },
+    });
     revalidatePath('/dashboard/invoices');
     revalidatePath('/admin/leads');
     return { success: true };
@@ -167,6 +220,7 @@ export async function reopenInvoiceAction(jobId: string): Promise<{ success: boo
             permanence_until: null,
             commission_amount: null,
             closed_at: null,
+            permanence_reminded_at: null,
             lost: false,
             lost_at: null,
             lost_reason: null,
@@ -177,6 +231,13 @@ export async function reopenInvoiceAction(jobId: string): Promise<{ success: boo
         logger.error('[invoices] reopenInvoiceAction failed', { error: error.message });
         return { success: false };
     }
+    await safeRecordLeadAuditEvent({
+        jobId,
+        eventType: 'lead_reopened',
+        title: 'Lead reabierto',
+        detail: 'Vuelve a estado lead',
+        metadata: {},
+    });
     revalidatePath('/dashboard/invoices');
     revalidatePath('/admin/leads');
     return { success: true };
@@ -191,6 +252,7 @@ export async function markLeadLostAction(
     if (!z.uuid().safeParse(jobId).success) return { success: false };
 
     const supabase = (await createClient()) as unknown as SupabaseClient;
+    const previousState = await getLeadStateSnapshot(supabase, jobId);
     const { error } = await supabase
         .from('ocr_jobs')
         .update({
@@ -199,7 +261,12 @@ export async function markLeadLostAction(
             lost_reason: reason?.trim() ? reason.trim().slice(0, 300) : null,
             // Marking lost clears any prior closure.
             closed: false,
+            closed_company: null,
+            closed_tariff: null,
+            permanence_until: null,
+            commission_amount: null,
             closed_at: null,
+            permanence_reminded_at: null,
         })
         .eq('id', jobId);
 
@@ -207,14 +274,25 @@ export async function markLeadLostAction(
         logger.error('[invoices] markLeadLostAction failed', { error: error.message });
         return { success: false };
     }
+    const normalizedReason = reason?.trim() ? reason.trim().slice(0, 300) : null;
+    const wasAlreadyLost = previousState?.lost === true;
+    await safeRecordLeadAuditEvent({
+        jobId,
+        eventType: wasAlreadyLost ? 'lost_reason_updated' : 'lead_marked_lost',
+        title: wasAlreadyLost ? 'Motivo de pérdida actualizado' : 'Lead marcado como perdido',
+        detail: normalizedReason,
+        metadata: { previousReason: previousState?.lost_reason ?? null, reason: normalizedReason },
+    });
     revalidatePath('/admin/leads');
     return { success: true };
 }
 
 export type AdminLeadOutcome = 'open' | 'won' | 'lost' | 'all';
+export type AdminLeadQueue = 'drive_pending' | 'ocr_failed' | 'needs_comparison' | 'permanence_due' | 'cooling' | 'needs_review';
 
 export interface AdminLeadFilters {
     outcome?: AdminLeadOutcome;
+    queue?: AdminLeadQueue;
     agentId?: string;
     franchiseId?: string;
     search?: string;
@@ -234,10 +312,29 @@ export async function getAdminLeadsAction(
 
     let query = supabase.from('invoice_registry').select('*');
 
-    const outcome = filters.outcome ?? 'open';
-    if (outcome === 'won') query = query.eq('process_status', 'closed_won');
-    else if (outcome === 'lost') query = query.eq('process_status', 'closed_lost');
-    else if (outcome === 'open') query = query.not('process_status', 'in', '("closed_won","closed_lost")');
+    if (filters.queue === 'drive_pending') {
+        query = query.eq('archived_in_drive', false);
+    } else if (filters.queue === 'ocr_failed') {
+        query = query.eq('process_status', 'failed');
+    } else if (filters.queue === 'needs_comparison') {
+        query = query.eq('process_status', 'ocr_done');
+    } else if (filters.queue === 'permanence_due') {
+        const dueBefore = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        query = query
+            .eq('process_status', 'closed_won')
+            .not('permanencia_hasta', 'is', null)
+            .lte('permanencia_hasta', dueBefore);
+    } else if (filters.queue === 'cooling') {
+        const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        query = query.eq('closed', false).eq('lost', false).lt('created_at', cutoff);
+    } else if (filters.queue === 'needs_review') {
+        query = query.eq('closed', false).eq('lost', false).is('reviewed_at', null);
+    } else {
+        const outcome = filters.outcome ?? 'open';
+        if (outcome === 'won') query = query.eq('process_status', 'closed_won');
+        else if (outcome === 'lost') query = query.eq('process_status', 'closed_lost');
+        else if (outcome === 'open') query = query.not('process_status', 'in', '("closed_won","closed_lost")');
+    }
 
     if (filters.agentId) query = query.eq('agent_id', filters.agentId);
     if (filters.franchiseId) query = query.eq('franchise_id', filters.franchiseId);
@@ -307,4 +404,53 @@ export async function getLeadMetricsAction(): Promise<{ metrics: LeadMetrics; ra
     const metrics = (metricsRes.data as LeadMetrics | null) ?? EMPTY_METRICS;
     const ranking = (rankingRes.data as LeadAgentRank[] | null) ?? [];
     return { metrics, ranking };
+}
+
+export interface LeadAlerts {
+    drive_pending: number;
+    ocr_failed: number;
+    needs_comparison: number;
+    permanence_due: number;
+    cooling: number;
+    needs_review: number;
+}
+
+export interface FranchiseConversion {
+    franchise_name: string | null;
+    won: number;
+    lost: number;
+    open_leads: number;
+    commission: number;
+}
+
+export interface LossReason {
+    reason: string;
+    count: number;
+}
+
+export interface LeadAnalytics {
+    alerts: LeadAlerts;
+    by_franchise: FranchiseConversion[];
+    loss_reasons: LossReason[];
+    pipeline_savings: number;
+}
+
+const EMPTY_ANALYTICS: LeadAnalytics = {
+    alerts: { drive_pending: 0, ocr_failed: 0, needs_comparison: 0, permanence_due: 0, cooling: 0, needs_review: 0 },
+    by_franchise: [],
+    loss_reasons: [],
+    pipeline_savings: 0,
+};
+
+/** Advanced admin analytics: operational alerts, franchise conversion, loss reasons, pipeline value. Admin only. */
+export async function getLeadAnalyticsAction(): Promise<LeadAnalytics> {
+    await requireServerRole(['admin']);
+    const supabase = (await createClient()) as unknown as SupabaseClient;
+
+    const { data, error } = await supabase.rpc('get_lead_analytics');
+    if (error) {
+        logger.error('[invoices] get_lead_analytics failed', { error: error.message });
+        return EMPTY_ANALYTICS;
+    }
+    return (data as LeadAnalytics | null) ?? EMPTY_ANALYTICS;
 }

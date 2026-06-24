@@ -115,11 +115,12 @@ export function CloseInvoiceModal({
     onClose: () => void;
     onClosed: (patch: Partial<InvoiceRegistryRow>) => void;
 }) {
-    const [company, setCompany] = useState(invoice.comercializadora_actual ?? '');
-    const [tariff, setTariff] = useState(invoice.tarifa_actual ?? '');
-    const [hasPermanence, setHasPermanence] = useState(false);
-    const [permanenceUntil, setPermanenceUntil] = useState('');
-    const [commission, setCommission] = useState('');
+    const isEditingClosure = invoice.closed;
+    const [company, setCompany] = useState(invoice.compania_contratada ?? invoice.comercializadora_actual ?? '');
+    const [tariff, setTariff] = useState(invoice.tarifa_contratada ?? invoice.tarifa_actual ?? '');
+    const [hasPermanence, setHasPermanence] = useState(Boolean(invoice.permanencia_hasta));
+    const [permanenceUntil, setPermanenceUntil] = useState(invoice.permanencia_hasta ?? '');
+    const [commission, setCommission] = useState(invoice.commission_amount === null ? '' : String(invoice.commission_amount));
     const [saving, setSaving] = useState(false);
     useEscapeKey(onClose);
 
@@ -129,30 +130,36 @@ export function CloseInvoiceModal({
             toast.error('Indica la compañía contratada');
             return;
         }
-        setSaving(true);
-        const res = await closeInvoiceAction(invoice.job_id, {
-            company: company.trim(),
-            tariff: tariff.trim() || null,
-            permanenceUntil: hasPermanence && permanenceUntil ? permanenceUntil : null,
-            commission: commission === '' ? 0 : Number(commission),
-        });
-        setSaving(false);
-        if (!res.success) {
-            toast.error(res.message ?? 'No se pudo convertir');
-            return;
+        try {
+            setSaving(true);
+            const res = await closeInvoiceAction(invoice.job_id, {
+                company: company.trim(),
+                tariff: tariff.trim() || null,
+                permanenceUntil: hasPermanence && permanenceUntil ? permanenceUntil : null,
+                commission: commission === '' ? 0 : Number(commission),
+            });
+            if (!res.success) {
+                toast.error(res.message ?? 'No se pudo convertir');
+                return;
+            }
+            toast.success(isEditingClosure ? 'Cierre actualizado' : 'Lead convertido en cliente');
+            onClosed({
+                closed: true,
+                lost: false,
+                lost_reason: null,
+                process_status: 'closed_won',
+                compania_contratada: company.trim(),
+                tarifa_contratada: tariff.trim() || null,
+                permanencia_hasta: hasPermanence && permanenceUntil ? permanenceUntil : null,
+                commission_amount: commission === '' ? 0 : Number(commission),
+                closed_at: new Date().toISOString(),
+            });
+            onClose();
+        } catch {
+            toast.error('No se pudo guardar el cierre');
+        } finally {
+            setSaving(false);
         }
-        toast.success('Lead convertido en cliente');
-        onClosed({
-            closed: true,
-            lost: false,
-            process_status: 'closed_won',
-            compania_contratada: company.trim(),
-            tarifa_contratada: tariff.trim() || null,
-            permanencia_hasta: hasPermanence && permanenceUntil ? permanenceUntil : null,
-            commission_amount: commission === '' ? 0 : Number(commission),
-            closed_at: new Date().toISOString(),
-        });
-        onClose();
     }
 
     const inputCls =
@@ -167,13 +174,17 @@ export function CloseInvoiceModal({
                 onSubmit={submit}
                 role="dialog"
                 aria-modal="true"
-                aria-label="Convertir lead en cliente"
+                aria-label={isEditingClosure ? 'Editar cierre del lead' : 'Convertir lead en cliente'}
                 className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 shadow-xl space-y-4"
             >
                 <div className="flex items-center justify-between">
                     <div>
-                        <h2 className="text-lg font-bold text-slate-900">Convertir lead en cliente</h2>
-                        <p className="text-[12px] text-slate-500">Confirma que el lead aceptó la oferta.</p>
+                        <h2 className="text-lg font-bold text-slate-900">
+                            {isEditingClosure ? 'Editar cierre del cliente' : 'Convertir lead en cliente'}
+                        </h2>
+                        <p className="text-[12px] text-slate-500">
+                            {isEditingClosure ? 'Actualiza compañía, tarifa, permanencia o comisión.' : 'Confirma que el lead aceptó la oferta.'}
+                        </p>
                     </div>
                     <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600" aria-label="Cerrar">
                         <X size={20} />
@@ -182,23 +193,51 @@ export function CloseInvoiceModal({
 
                 <label className="block">
                     <span className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Compañía contratada *</span>
-                    <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Ej. Endesa, Iberdrola…" className={inputCls} autoFocus />
+                    <input
+                        name="company"
+                        autoComplete="organization"
+                        value={company}
+                        onChange={(e) => setCompany(e.target.value)}
+                        placeholder="Ej. Endesa, Iberdrola…"
+                        className={inputCls}
+                        required
+                        autoFocus
+                    />
                 </label>
 
                 <label className="block">
                     <span className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Tarifa</span>
-                    <input value={tariff} onChange={(e) => setTariff(e.target.value)} placeholder="Ej. 2.0TD" className={inputCls} />
+                    <input
+                        name="tariff"
+                        autoComplete="off"
+                        value={tariff}
+                        onChange={(e) => setTariff(e.target.value)}
+                        placeholder="Ej. 2.0TD"
+                        className={inputCls}
+                    />
                 </label>
 
                 <div className="rounded-xl bg-slate-50 p-3">
                     <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={hasPermanence} onChange={(e) => setHasPermanence(e.target.checked)} className="h-4 w-4 rounded accent-energy-500" />
+                        <input
+                            type="checkbox"
+                            name="hasPermanence"
+                            checked={hasPermanence}
+                            onChange={(e) => setHasPermanence(e.target.checked)}
+                            className="h-4 w-4 rounded accent-energy-500"
+                        />
                         <span className="text-sm font-medium text-slate-700">Tiene permanencia</span>
                     </label>
                     {hasPermanence && (
                         <label className="block mt-2">
                             <span className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Revisar el</span>
-                            <input type="date" value={permanenceUntil} onChange={(e) => setPermanenceUntil(e.target.value)} className={inputCls} />
+                            <input
+                                type="date"
+                                name="permanenceUntil"
+                                value={permanenceUntil}
+                                onChange={(e) => setPermanenceUntil(e.target.value)}
+                                className={inputCls}
+                            />
                         </label>
                     )}
                 </div>
@@ -207,12 +246,22 @@ export function CloseInvoiceModal({
                     <span className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Comisión del comercial (€)</span>
                     <div className="mt-1 relative">
                         <Euro size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input type="number" min="0" step="0.01" value={commission} onChange={(e) => setCommission(e.target.value)} placeholder="0,00" className={cn(inputCls, 'mt-0 pl-9')} />
+                        <input
+                            type="number"
+                            name="commission"
+                            inputMode="decimal"
+                            min="0"
+                            step="0.01"
+                            value={commission}
+                            onChange={(e) => setCommission(e.target.value)}
+                            placeholder="0,00"
+                            className={cn(inputCls, 'mt-0 pl-9')}
+                        />
                     </div>
                 </label>
 
                 <button type="submit" disabled={saving} className="w-full py-3 rounded-2xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50">
-                    {saving ? 'Guardando…' : 'Confirmar cliente'}
+                    {saving ? 'Guardando…' : isEditingClosure ? 'Guardar cambios' : 'Confirmar cliente'}
                 </button>
             </motion.form>
         </div>

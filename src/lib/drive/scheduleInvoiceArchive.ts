@@ -13,6 +13,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { archiveInvoiceToDrive } from './archiveInvoice';
 import { getDriveStorage, getDriveRootFolderId, isDriveConfigured } from './index';
 import { resolveAgentFolder } from './folders';
+import { writeLeadAuditEvent } from '@/lib/audit/leadAuditLog';
 
 interface ScheduleInvoiceArchiveInput {
     jobId: string;
@@ -64,6 +65,14 @@ export async function scheduleInvoiceArchive(
                             drive_synced_at: new Date().toISOString(),
                         })
                         .eq('id', id);
+                    // System audit event on the lead timeline (best-effort).
+                    await writeLeadAuditEvent({
+                        jobId: id,
+                        eventType: 'drive_synced',
+                        title: 'Archivado en Drive',
+                        metadata: { driveFileId: info.driveFileId, link: info.webViewLink ?? null },
+                        actorId: null,
+                    }).catch(() => undefined);
                 },
             });
         } catch (err) {

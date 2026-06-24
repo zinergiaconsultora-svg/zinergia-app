@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useMemo } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { InvoiceData, SavingsResult } from '../../../types/crm';
 import { toast } from 'sonner';
 import { Download, Mail, Loader2, Lightbulb, TableProperties, ChevronDown, ChevronUp, Coins } from 'lucide-react';
@@ -32,11 +32,6 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
     const [showBreakdown, setShowBreakdown] = useState(false);
     const [expanded, setExpanded] = useState(false);
     const [advisorNotes, setAdvisorNotes] = useState(initialNotes || '');
-
-    const documentId = useMemo(() =>
-        `ZIN-${new Date().getFullYear()}-${result.offer.id.slice(0, 6).toUpperCase()}`,
-        [result.offer.id]
-    );
 
     useEffect(() => {
         if (onNotesChange) onNotesChange(advisorNotes);

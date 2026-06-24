@@ -9,6 +9,7 @@ import { moduleLogger } from '@/lib/logger';
 import { redactOcrTextSample, sanitizeOcrTrainingData } from '@/lib/ocr/sanitizeTrainingData';
 import { normalizeInvoiceData, parseInvoiceNumber } from '@/lib/invoices/normalization';
 import { resolveTitularDniCif } from '@/lib/invoices/titularId';
+import { writeLeadAuditEvent } from '@/lib/audit/leadAuditLog';
 
 const log = moduleLogger('ocr-callback');
 
@@ -300,6 +301,17 @@ export async function POST(request: Request) {
             Sentry.captureException(dbError, { extra: { jobId: job_id, status } });
             log.error({ err: dbError, jobId: job_id, status }, 'OCR callback DB update failed');
             return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
+        }
+
+        // 5a. Auditoría de sistema: registrar el fallo de OCR en el timeline del lead.
+        if (status === 'failed') {
+            await writeLeadAuditEvent({
+                jobId: job_id,
+                eventType: 'ocr_failed',
+                title: 'OCR fallido',
+                detail: typeof error === 'string' && error.trim() ? error : null,
+                actorId: null,
+            }).catch(() => { /* best-effort: nunca rompe el webhook */ });
         }
 
         // 5b. Guardar ejemplo de entrenamiento para few-shot memory (Fase 1)

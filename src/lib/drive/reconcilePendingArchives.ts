@@ -16,6 +16,7 @@ import { mimeTypeForFileName } from './fileName';
 import { extractStoragePath } from './storagePath';
 import { resolveAgentFolder } from './folders';
 import { getDriveStorage, getDriveRootFolderId, isDriveConfigured } from './index';
+import { writeLeadAuditEvent } from '@/lib/audit/leadAuditLog';
 
 const STORAGE_BUCKET = 'ocr-invoices';
 
@@ -87,6 +88,13 @@ export async function reconcilePendingDriveArchives(limit = 25): Promise<Reconci
                             drive_synced_at: new Date().toISOString(),
                         })
                         .eq('id', id);
+                    await writeLeadAuditEvent({
+                        jobId: id,
+                        eventType: 'drive_synced',
+                        title: 'Archivado en Drive',
+                        metadata: { driveFileId: info.driveFileId, link: info.webViewLink ?? null, via: 'reconcile' },
+                        actorId: null,
+                    }).catch(() => undefined);
                 },
             });
             archived++;

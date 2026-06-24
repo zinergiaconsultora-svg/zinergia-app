@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 import { execSync } from "child_process";
+import { dirname } from "path";
+import { fileURLToPath } from "url";
 import pkg from "./package.json";
+
+const projectRoot = dirname(fileURLToPath(import.meta.url));
 
 const gitHash = (() => {
   if (process.env.VERCEL_GIT_COMMIT_SHA) return process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 7);
@@ -69,6 +73,7 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
 
   turbopack: {
+    root: projectRoot,
     resolveExtensions: ['.tsx', '.ts', '.jsx', '.js'],
   },
 
@@ -116,13 +121,17 @@ export default withSentryConfig(nextConfig, {
   // Include Next.js and dependency code in uploaded source maps
   widenClientFileUpload: true,
 
-  // Auto-instrument — keep defaults (all true)
-  autoInstrumentServerFunctions: true,
-  autoInstrumentMiddleware: true,
-  autoInstrumentAppDirectory: true,
+  // Auto-instrument webpack builds without using deprecated top-level options.
+  webpack: {
+    autoInstrumentServerFunctions: true,
+    autoInstrumentMiddleware: true,
+    autoInstrumentAppDirectory: true,
+  },
 
-  // Create Vercel Cron monitors in Sentry when fully configured
-  automaticVercelMonitors: !!process.env.SENTRY_DSN,
+  // App Router + Turbopack cron monitoring replacement for automaticVercelMonitors.
+  _experimental: {
+    vercelCronsMonitoring: !!process.env.SENTRY_DSN,
+  },
 
   // Swallow source map upload errors gracefully (don't break CI)
   errorHandler: (err) => {

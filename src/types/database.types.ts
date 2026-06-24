@@ -107,6 +107,61 @@ export type Database = {
           },
         ]
       }
+      lead_audit_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          detail: string | null
+          event_type: string
+          id: string
+          job_id: string
+          metadata: Json
+          title: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          detail?: string | null
+          event_type: string
+          id?: string
+          job_id: string
+          metadata?: Json
+          title: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          detail?: string | null
+          event_type?: string
+          id?: string
+          job_id?: string
+          metadata?: Json
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_audit_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_audit_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "lead_audit_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "ocr_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_cycles: {
         Row: {
           closed_at: string | null
@@ -996,6 +1051,42 @@ export type Database = {
           },
         ]
       }
+      integration_credentials: {
+        Row: {
+          access_token: string | null
+          access_token_expires_at: string | null
+          created_at: string
+          encrypted_refresh_token: string
+          id: string
+          last_error: string | null
+          provider: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          access_token_expires_at?: string | null
+          created_at?: string
+          encrypted_refresh_token: string
+          id?: string
+          last_error?: string | null
+          provider: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          access_token_expires_at?: string | null
+          created_at?: string
+          encrypted_refresh_token?: string
+          id?: string
+          last_error?: string | null
+          provider?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lv_zinergia_tarifas: {
         Row: {
           codigo_producto: string | null
@@ -1377,9 +1468,19 @@ export type Database = {
         Row: {
           agent_id: string | null
           attempts: number
+          binary_purged_at: string | null
           client_id: string | null
           client_segment: string | null
+          closed: boolean
+          closed_at: string | null
+          closed_company: string | null
+          closed_tariff: string | null
+          commission_amount: number | null
+          compared_at: string | null
           created_at: string
+          drive_file_id: string | null
+          drive_synced_at: string | null
+          drive_view_link: string | null
           duplicate_of: string | null
           error_message: string | null
           extracted_data: Json | null
@@ -1388,15 +1489,30 @@ export type Database = {
           file_path: string | null
           franchise_id: string | null
           id: string
+          lost: boolean
+          lost_at: string | null
+          lost_reason: string | null
+          permanence_reminded_at: string | null
+          permanence_until: string | null
           status: string
           updated_at: string
         }
         Insert: {
           agent_id?: string | null
           attempts?: number
+          binary_purged_at?: string | null
           client_id?: string | null
           client_segment?: string | null
+          closed?: boolean
+          closed_at?: string | null
+          closed_company?: string | null
+          closed_tariff?: string | null
+          commission_amount?: number | null
+          compared_at?: string | null
           created_at?: string
+          drive_file_id?: string | null
+          drive_synced_at?: string | null
+          drive_view_link?: string | null
           duplicate_of?: string | null
           error_message?: string | null
           extracted_data?: Json | null
@@ -1405,15 +1521,30 @@ export type Database = {
           file_path?: string | null
           franchise_id?: string | null
           id?: string
+          lost?: boolean
+          lost_at?: string | null
+          lost_reason?: string | null
+          permanence_reminded_at?: string | null
+          permanence_until?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
           agent_id?: string | null
           attempts?: number
+          binary_purged_at?: string | null
           client_id?: string | null
           client_segment?: string | null
+          closed?: boolean
+          closed_at?: string | null
+          closed_company?: string | null
+          closed_tariff?: string | null
+          commission_amount?: number | null
+          compared_at?: string | null
           created_at?: string
+          drive_file_id?: string | null
+          drive_synced_at?: string | null
+          drive_view_link?: string | null
           duplicate_of?: string | null
           error_message?: string | null
           extracted_data?: Json | null
@@ -1422,6 +1553,11 @@ export type Database = {
           file_path?: string | null
           franchise_id?: string | null
           id?: string
+          lost?: boolean
+          lost_at?: string | null
+          lost_reason?: string | null
+          permanence_reminded_at?: string | null
+          permanence_until?: string | null
           status?: string
           updated_at?: string
         }
@@ -1583,6 +1719,7 @@ export type Database = {
           fiscal_verified: boolean | null
           fiscal_verified_at: string | null
           franchise_id: string | null
+          drive_folder_id: string | null
           full_name: string | null
           iban: string | null
           id: string
@@ -1610,6 +1747,7 @@ export type Database = {
           fiscal_verified?: boolean | null
           fiscal_verified_at?: string | null
           franchise_id?: string | null
+          drive_folder_id?: string | null
           full_name?: string | null
           iban?: string | null
           id: string
@@ -1637,6 +1775,7 @@ export type Database = {
           fiscal_verified?: boolean | null
           fiscal_verified_at?: string | null
           franchise_id?: string | null
+          drive_folder_id?: string | null
           full_name?: string | null
           iban?: string | null
           id?: string
@@ -2315,6 +2454,44 @@ export type Database = {
       }
     }
     Views: {
+      invoice_registry: {
+        Row: {
+          agent_id: string | null
+          agent_name: string | null
+          archived_in_drive: boolean | null
+          closed: boolean | null
+          closed_at: string | null
+          commission_amount: number | null
+          compania_contratada: string | null
+          compared_at: string | null
+          comercializadora_actual: string | null
+          created_at: string | null
+          cups: string | null
+          drive_synced_at: string | null
+          drive_view_link: string | null
+          franchise_id: string | null
+          franchise_name: string | null
+          importe_total: string | null
+          job_id: string | null
+          lost: boolean | null
+          lost_reason: string | null
+          ocr_status: string | null
+          permanencia_hasta: string | null
+          process_status: string | null
+          tarifa_actual: string | null
+          tarifa_contratada: string | null
+          titular: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ocr_jobs_franchise_id_fkey"
+            columns: ["franchise_id"]
+            isOneToOne: false
+            referencedRelation: "franchises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       franchise_wallet: {
         Row: {
           balance_available: number | null
@@ -2478,6 +2655,18 @@ export type Database = {
           tariff_name: string
         }[]
       }
+      get_lead_agent_ranking: {
+        Args: never
+        Returns: {
+          agent_id: string
+          agent_name: string | null
+          commission: number
+          lost: number
+          open_leads: number
+          won: number
+        }[]
+      }
+      get_lead_metrics: { Args: never; Returns: Json }
       get_monthly_metrics: {
         Args: { p_months?: number }
         Returns: {

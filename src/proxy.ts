@@ -2,10 +2,10 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 /**
- * Middleware de Autenticación Zinergia
+ * Proxy de Autenticación Zinergia
  * Implementa protección de rutas y refresco de sesión Supabase.
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl
 
     // 1. Comprobación de variables de entorno

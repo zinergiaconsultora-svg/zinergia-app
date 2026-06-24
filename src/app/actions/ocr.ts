@@ -129,6 +129,25 @@ async function uploadToStorage(
     }
 }
 
+async function markOcrJobFailed(jobId: string | null): Promise<void> {
+    if (!jobId) return;
+    try {
+        const supabase = await createClient();
+        await supabase
+            .from('ocr_jobs')
+            .update({
+                status: 'failed',
+                error_message: 'No se pudo procesar la factura con OCR.',
+            })
+            .eq('id', jobId);
+    } catch (err) {
+        logger.warn('[OCR] Could not mark OCR job as failed', {
+            jobId,
+            err: err instanceof Error ? err.message : String(err),
+        });
+    }
+}
+
 /**
  * Variante URL-based de analyzeDocumentAction.
  * Recibe una URL firmada de Supabase (subida directamente desde el cliente),
@@ -146,6 +165,7 @@ export async function analyzeDocumentByUrlAction(
 ): Promise<{ jobId: string; isMock: boolean; data?: InvoiceData }> {
     const OCR_WEBHOOK_URL = env.OCR_WEBHOOK_URL;
     const WEBHOOK_API_KEY = env.WEBHOOK_API_KEY;
+    let createdJobId: string | null = null;
 
     if (!OCR_WEBHOOK_URL || !WEBHOOK_API_KEY) {
         throw new Error('Variables de entorno de OCR no definidas');
@@ -185,6 +205,7 @@ export async function analyzeDocumentByUrlAction(
         if (jobError || !job) {
             throw new Error('Fallo al crear el trabajo de OCR en la base de datos');
         }
+        createdJobId = job.id;
 
         // Download file from the signed URL (server→Supabase, fast within same infra)
         // This keeps the N8N flow unchanged — N8N still receives the binary FormData.
@@ -252,6 +273,7 @@ export async function analyzeDocumentByUrlAction(
         return { jobId: job.id, isMock: false };
 
     } catch (error) {
+        await markOcrJobFailed(createdJobId);
         if (env.NODE_ENV === 'development') {
             logger.warn('OCR (URL) Webhook failed. Using MOCK data for development.', { err: error });
             return {
@@ -282,6 +304,7 @@ export async function analyzeDocumentByUrlAction(
 export async function analyzeDocumentAction(formData: FormData): Promise<{ jobId: string; isMock: boolean; data?: InvoiceData }> {
     const OCR_WEBHOOK_URL = env.OCR_WEBHOOK_URL;
     const WEBHOOK_API_KEY = env.WEBHOOK_API_KEY;
+    let createdJobId: string | null = null;
 
     if (!OCR_WEBHOOK_URL || !WEBHOOK_API_KEY) {
         throw new Error('Variables de entorno de OCR no definidas');
@@ -333,6 +356,7 @@ export async function analyzeDocumentAction(formData: FormData): Promise<{ jobId
         if (jobError || !job) {
             throw new Error('Fallo al crear el trabajo de OCR en la base de datos');
         }
+        createdJobId = job.id;
 
         // Archivar la factura en el Drive de la consultora (no bloqueante).
         await scheduleInvoiceArchive(supabase, { jobId: job.id, agentId: user.id, file });
@@ -391,6 +415,7 @@ export async function analyzeDocumentAction(formData: FormData): Promise<{ jobId
         return { jobId: job.id, isMock: false };
 
     } catch (error) {
+        await markOcrJobFailed(createdJobId);
         if (env.NODE_ENV === 'development') {
             logger.warn('OCR Webhook failed. Using MOCK data for development.', { err: error });
             return {
