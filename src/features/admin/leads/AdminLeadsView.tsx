@@ -1,46 +1,29 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { AlertTriangle, CalendarClock, CloudOff, Search, Eye, Info, UserCheck, XCircle, Inbox, Clock3, ClipboardList } from 'lucide-react';
+import { AlertTriangle, CalendarClock, CloudOff, Search, Inbox, Clock3, ClipboardList } from 'lucide-react';
 import { useAdminLeads } from './useAdminLeads';
+import { useLeadDetail } from './useLeadDetail';
+import { useBulkActions } from './useBulkActions';
 import { buildAdminLeadQueryString } from './filters';
 import { LeadDetailDrawer } from './LeadDetailDrawer';
 import { buildOperationalQueuePatch, OPERATIONAL_QUEUES } from './operationalQueues';
 import { BulkActionsBar, type AgentOption } from './BulkActionsBar';
-import { bulkReassignLeadsAction, exportLeadsCsvAction, markLeadsReviewedAction } from '@/app/actions/leadBulk';
-import { scoreLead, sortByPriority } from './priority';
-import { PriorityBadge } from './PriorityBadge';
+import { LeadRow } from './LeadRow';
+import { LostModal } from './LostModal';
+import { sortByPriority } from './priority';
 import {
     getInvoiceFileUrlAction,
-    getLeadProposalsAction,
-    markLeadLostAction,
     type AdminLeadFilters,
     type AdminLeadOutcome,
     type AdminLeadQueue,
     type InvoiceRegistryRow,
-    type LeadProposalSummary,
 } from '@/app/actions/invoices';
-import { getLeadClientAction } from '@/app/actions/clients';
-import {
-    addLeadNoteAction,
-    getLeadAuditEventsAction,
-    type LeadAuditEvent,
-} from '@/app/actions/leadAudit';
-import type { Client } from '@/types/crm';
 import LeadClientEditModal from './LeadClientEditModal';
 import LeadCustomProposalModal from './LeadCustomProposalModal';
-import {
-    formatEur,
-    formatDate,
-    ProcessBadge,
-    LeadStatusBadge,
-    DriveChip,
-    CloseInvoiceModal,
-    useEscapeKey,
-} from '@/features/invoices/components/invoiceParts';
+import { CloseInvoiceModal } from '@/features/invoices/components/invoiceParts';
 
 const TABS: { value: AdminLeadOutcome; label: string }[] = [
     { value: 'open', label: 'Abiertos' },
@@ -57,205 +40,6 @@ const QUEUE_ICONS: Record<AdminLeadQueue, React.ComponentType<{ size?: number; c
     needs_review: ClipboardList,
     cooling: Clock3,
 };
-
-function LostModal({
-    invoice,
-    onClose,
-    onLost,
-}: {
-    invoice: InvoiceRegistryRow;
-    onClose: () => void;
-    onLost: (reason: string | null) => void;
-}) {
-    const [reason, setReason] = useState(invoice.lost_reason ?? '');
-    const [saving, setSaving] = useState(false);
-    useEscapeKey(onClose);
-    const titleId = 'lost-lead-title';
-    const descriptionId = 'lost-lead-description';
-
-    async function submit(e: React.FormEvent) {
-        e.preventDefault();
-        try {
-            setSaving(true);
-            const normalizedReason = reason.trim() ? reason.trim().slice(0, 300) : null;
-            const res = await markLeadLostAction(invoice.job_id, normalizedReason);
-            if (!res.success) {
-                toast.error('No se pudo marcar como perdido');
-                return;
-            }
-            toast.success(invoice.lost ? 'Motivo actualizado' : 'Lead marcado como perdido');
-            onLost(normalizedReason);
-            onClose();
-        } catch {
-            toast.error('No se pudo marcar como perdido');
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 p-0 sm:p-4" onClick={onClose}>
-            <motion.form
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                onClick={(e) => e.stopPropagation()}
-                onSubmit={submit}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby={titleId}
-                aria-describedby={descriptionId}
-                className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 shadow-xl space-y-4"
-            >
-                <h2 id={titleId} className="text-lg font-bold text-slate-900">
-                    {invoice.lost ? 'Editar motivo de pérdida' : 'Marcar lead como perdido'}
-                </h2>
-                <p id={descriptionId} className="text-[13px] text-slate-500">
-                    {invoice.titular || 'Lead'} — no aceptó la oferta. Puedes anotar el motivo (opcional).
-                </p>
-                <label className="block">
-                    <span className="sr-only">Motivo de pérdida</span>
-                    <textarea
-                        name="lostReason"
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                        rows={3}
-                        placeholder="Motivo (opcional): precio, no contesta…"
-                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 focus:border-rose-400 focus:ring-1 focus:ring-rose-400 outline-none"
-                    />
-                </label>
-                <div className="flex gap-2">
-                    <button type="button" onClick={onClose} className="flex-1 py-3 rounded-2xl border border-slate-200 font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
-                        Cancelar
-                    </button>
-                    <button type="submit" disabled={saving} className="flex-1 py-3 rounded-2xl bg-rose-600 text-white font-semibold hover:bg-rose-700 transition-colors disabled:opacity-50">
-                        {saving ? 'Guardando…' : 'Marcar perdido'}
-                    </button>
-                </div>
-            </motion.form>
-        </div>
-    );
-}
-
-function LeadRow({
-    lead,
-    index,
-    selected,
-    onToggleSelect,
-    onConvert,
-    onLost,
-    onDetail,
-}: {
-    lead: InvoiceRegistryRow;
-    index: number;
-    selected: boolean;
-    onToggleSelect: () => void;
-    onConvert: () => void;
-    onLost: () => void;
-    onDetail: () => void;
-}) {
-    const amount = formatEur(lead.importe_total);
-    const commission = formatEur(lead.commission_amount);
-    const [opening, setOpening] = useState(false);
-    const isOpen = !lead.closed && !lead.lost;
-    const priority = isOpen ? scoreLead(lead) : null;
-
-    async function viewFile() {
-        try {
-            setOpening(true);
-            const url = await getInvoiceFileUrlAction(lead.job_id);
-            if (url) window.open(url, '_blank', 'noopener,noreferrer');
-            else toast.error('El archivo ya no está disponible');
-        } catch {
-            toast.error('No se pudo abrir el archivo');
-        } finally {
-            setOpening(false);
-        }
-    }
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2, delay: Math.min(index * 0.025, 0.25) }}
-            className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm hover:shadow-md hover:border-slate-200 transition-colors"
-        >
-            <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                    <input
-                        type="checkbox"
-                        checked={selected}
-                        onChange={onToggleSelect}
-                        aria-label={`Seleccionar lead de ${lead.titular || 'sin titular'}`}
-                        className="mt-1 h-4 w-4 shrink-0 rounded accent-indigo-600 cursor-pointer"
-                    />
-                    <div className="min-w-0">
-                    <p className="font-semibold text-slate-900 truncate">{lead.titular || 'Sin titular'}</p>
-                    <p className="text-sm text-slate-500 truncate">
-                        {lead.comercializadora_actual || 'Comercializadora desconocida'}
-                        {lead.tarifa_actual ? ` · ${lead.tarifa_actual}` : ''}
-                    </p>
-                    <p className="text-[12px] text-slate-400 mt-0.5">
-                        Comercial: <span className="font-medium text-slate-600">{lead.agent_name || '—'}</span>
-                        {lead.franchise_name ? ` · ${lead.franchise_name}` : ''}
-                    </p>
-                    </div>
-                </div>
-                <div className="text-right shrink-0">
-                    {amount && <p className="font-bold text-slate-900 tabular-nums">{amount}</p>}
-                    <p className="text-[11px] text-slate-400">{formatDate(lead.created_at)}</p>
-                    {commission && <p className="text-[11px] font-semibold text-emerald-700">Comisión {commission}</p>}
-                </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 mt-3">
-                {priority && <PriorityBadge priority={priority} showSavings />}
-                <LeadStatusBadge closed={lead.closed} lost={lead.lost} />
-                <ProcessBadge status={lead.process_status} />
-                <DriveChip link={lead.drive_view_link} synced={lead.archived_in_drive} />
-
-                <div className="ml-auto flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={onDetail}
-                        className="inline-flex items-center gap-1 text-[12px] font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded-lg transition-colors"
-                    >
-                        <Info size={13} /> Detalle
-                    </button>
-                    <button
-                        type="button"
-                        onClick={viewFile}
-                        disabled={opening}
-                        className="inline-flex items-center gap-1 text-[12px] font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded-lg transition-colors disabled:opacity-50"
-                    >
-                        <Eye size={13} /> {opening ? '…' : 'Ver'}
-                    </button>
-                    {isOpen && lead.process_status !== 'failed' && (
-                        <>
-                            <button
-                                type="button"
-                                onClick={onLost}
-                                className="inline-flex items-center gap-1 text-[12px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1 rounded-lg transition-colors"
-                            >
-                                <XCircle size={13} /> Perdido
-                            </button>
-                            <button
-                                type="button"
-                                onClick={onConvert}
-                                className="inline-flex items-center gap-1 text-[12px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded-lg transition-colors"
-                            >
-                                <UserCheck size={13} /> Pasar a cliente
-                            </button>
-                        </>
-                    )}
-                </div>
-            </div>
-
-            {lead.lost && lead.lost_reason && (
-                <p className="mt-2 text-[12px] text-rose-600">Motivo: {lead.lost_reason}</p>
-            )}
-        </motion.div>
-    );
-}
 
 export default function AdminLeadsView({
     initialData,
@@ -281,145 +65,42 @@ export default function AdminLeadsView({
         removeLead,
         clearError,
     } = useAdminLeads(initialData ?? [], initialFilters);
+
+    const detail = useLeadDetail();
+    const bulk = useBulkActions(
+        leads,
+        () => applyFilters({}),
+        () => router.refresh(),
+    );
+
     const [converting, setConverting] = useState<InvoiceRegistryRow | null>(null);
     const [losing, setLosing] = useState<InvoiceRegistryRow | null>(null);
-    const [selectedLead, setSelectedLead] = useState<InvoiceRegistryRow | null>(null);
     const [searchTerm, setSearchTerm] = useState(filters.search ?? '');
-    const [auditEvents, setAuditEvents] = useState<LeadAuditEvent[]>([]);
-    const [auditLoading, setAuditLoading] = useState(false);
-    const [leadProposals, setLeadProposals] = useState<LeadProposalSummary[]>([]);
-    const [proposalsLoading, setProposalsLoading] = useState(false);
-    const [leadClient, setLeadClient] = useState<Client | null>(null);
-    const [clientLoading, setClientLoading] = useState(false);
-    const [editingLeadClient, setEditingLeadClient] = useState<Client | null>(null);
-    const [customProposalLead, setCustomProposalLead] = useState<InvoiceRegistryRow | null>(null);
-    const [noteText, setNoteText] = useState('');
-    const [noteSaving, setNoteSaving] = useState(false);
-    const auditRequestJobRef = useRef<string | null>(null);
-    const leadContextRequestJobRef = useRef<string | null>(null);
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-    const [bulkBusy, setBulkBusy] = useState(false);
     const [sortMode, setSortMode] = useState<'recent' | 'priority'>('recent');
 
     const outcome = filters.outcome ?? 'open';
     const activeQueue = filters.queue;
-
-    async function loadLeadAudit(jobId: string) {
-        auditRequestJobRef.current = jobId;
-        setAuditLoading(true);
-
-        try {
-            const events = await getLeadAuditEventsAction(jobId);
-            if (auditRequestJobRef.current === jobId) setAuditEvents(events);
-        } catch {
-            if (auditRequestJobRef.current === jobId) toast.error('No se pudo cargar la auditoría');
-        } finally {
-            if (auditRequestJobRef.current === jobId) setAuditLoading(false);
-        }
-    }
-
-    async function loadLeadContext(jobId: string) {
-        leadContextRequestJobRef.current = jobId;
-        setProposalsLoading(true);
-        setClientLoading(true);
-        setLeadProposals([]);
-        setLeadClient(null);
-
-        const [proposalsResult, clientResult] = await Promise.allSettled([
-            getLeadProposalsAction(jobId),
-            getLeadClientAction(jobId),
-        ]);
-
-        if (leadContextRequestJobRef.current !== jobId) return;
-
-        if (proposalsResult.status === 'fulfilled') {
-            setLeadProposals(proposalsResult.value);
-        } else {
-            toast.error('No se pudieron cargar las propuestas del lead');
-        }
-
-        if (clientResult.status === 'fulfilled') {
-            setLeadClient(clientResult.value);
-        } else {
-            toast.error('No se pudo cargar el cliente vinculado');
-        }
-
-        setProposalsLoading(false);
-        setClientLoading(false);
-    }
-
-    function openLeadDetail(lead: InvoiceRegistryRow) {
-        setSelectedLead(lead);
-        setNoteText('');
-        setAuditEvents([]);
-        setLeadProposals([]);
-        setLeadClient(null);
-        void loadLeadAudit(lead.job_id);
-        void loadLeadContext(lead.job_id);
-    }
-
-    function closeLeadDetail() {
-        auditRequestJobRef.current = null;
-        leadContextRequestJobRef.current = null;
-        setSelectedLead(null);
-        setAuditEvents([]);
-        setAuditLoading(false);
-        setLeadProposals([]);
-        setProposalsLoading(false);
-        setLeadClient(null);
-        setClientLoading(false);
-        setEditingLeadClient(null);
-        setCustomProposalLead(null);
-        setNoteText('');
-    }
-
-    async function addSelectedLeadNote() {
-        if (!selectedLead) return;
-
-        const note = noteText.trim();
-        if (!note) {
-            toast.error('La nota no puede estar vacía');
-            return;
-        }
-
-        try {
-            setNoteSaving(true);
-            const result = await addLeadNoteAction(selectedLead.job_id, note);
-            if (!result.success) {
-                toast.error(result.message ?? 'No se pudo guardar la nota');
-                return;
-            }
-
-            toast.success('Nota añadida');
-            setNoteText('');
-            await loadLeadAudit(selectedLead.job_id);
-        } catch {
-            toast.error('No se pudo guardar la nota');
-        } finally {
-            setNoteSaving(false);
-        }
-    }
+    const displayLeads = sortMode === 'priority' ? sortByPriority(leads) : leads;
 
     function updateFilters(patch: Partial<AdminLeadFilters>) {
         const next = { ...filters, ...patch };
         const query = buildAdminLeadQueryString(next);
         router.replace(`${pathname}?${query}`, { scroll: false });
-        setSelectedIds(new Set());
+        bulk.setSelectedIds(new Set());
         void applyFilters(patch);
     }
 
-    // After an action that changes outcome, drop the row from filtered lists.
     const afterMutation = (jobId: string) => {
         if (outcome === 'open') {
             removeLead(jobId);
-            closeLeadDetail();
+            detail.closeLeadDetail();
         }
         router.refresh();
     };
 
     function applyLeadPatch(jobId: string, patch: Partial<InvoiceRegistryRow>) {
         patchLead(jobId, patch);
-        setSelectedLead((current) => (current?.job_id === jobId ? { ...current, ...patch } : current));
+        detail.setSelectedLead((current) => (current?.job_id === jobId ? { ...current, ...patch } : current));
     }
 
     async function viewLeadFile(lead: InvoiceRegistryRow) {
@@ -429,88 +110,6 @@ export default function AdminLeadsView({
             else toast.error('El archivo ya no está disponible');
         } catch {
             toast.error('No se pudo abrir el archivo');
-        }
-    }
-
-    // ── Selección múltiple + acciones masivas ──────────────────────────────────
-    function toggleSelect(jobId: string) {
-        setSelectedIds((prev) => {
-            const next = new Set(prev);
-            if (next.has(jobId)) next.delete(jobId);
-            else next.add(jobId);
-            return next;
-        });
-    }
-    function clearSelection() {
-        setSelectedIds(new Set());
-    }
-    const allVisibleSelected = leads.length > 0 && leads.every((l) => selectedIds.has(l.job_id));
-    const displayLeads = sortMode === 'priority' ? sortByPriority(leads) : leads;
-    function toggleSelectAllVisible() {
-        setSelectedIds((prev) => {
-            const next = new Set(prev);
-            if (leads.every((l) => next.has(l.job_id))) leads.forEach((l) => next.delete(l.job_id));
-            else leads.forEach((l) => next.add(l.job_id));
-            return next;
-        });
-    }
-
-    async function handleBulkReassign(agentId: string) {
-        const ids = Array.from(selectedIds);
-        if (ids.length === 0) return;
-        try {
-            setBulkBusy(true);
-            const res = await bulkReassignLeadsAction(ids, agentId);
-            if (!res.success) { toast.error(res.message ?? 'No se pudo reasignar'); return; }
-            toast.success(`${res.updated} ${res.updated === 1 ? 'lead reasignado' : 'leads reasignados'}`);
-            clearSelection();
-            await applyFilters({});
-            router.refresh();
-        } catch {
-            toast.error('No se pudo reasignar');
-        } finally {
-            setBulkBusy(false);
-        }
-    }
-
-    async function handleBulkReview() {
-        const ids = Array.from(selectedIds);
-        if (ids.length === 0) return;
-        try {
-            setBulkBusy(true);
-            const res = await markLeadsReviewedAction(ids);
-            if (!res.success) { toast.error(res.message ?? 'No se pudo marcar'); return; }
-            toast.success(`${res.updated} ${res.updated === 1 ? 'lead revisado' : 'leads revisados'}`);
-            clearSelection();
-            await applyFilters({});
-            router.refresh();
-        } catch {
-            toast.error('No se pudo marcar como revisado');
-        } finally {
-            setBulkBusy(false);
-        }
-    }
-
-    async function handleBulkExport() {
-        const ids = Array.from(selectedIds);
-        if (ids.length === 0) return;
-        try {
-            setBulkBusy(true);
-            const res = await exportLeadsCsvAction(ids);
-            if (!res.success || !res.csv) { toast.error(res.message ?? 'No se pudo exportar'); return; }
-            // BOM para que Excel respete los acentos.
-            const blob = new Blob(['﻿' + res.csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
-            toast.success(`${ids.length} ${ids.length === 1 ? 'lead exportado' : 'leads exportados'}`);
-        } catch {
-            toast.error('No se pudo exportar');
-        } finally {
-            setBulkBusy(false);
         }
     }
 
@@ -642,17 +241,17 @@ export default function AdminLeadsView({
                     <p className="font-medium text-slate-500">No hay leads en este filtro.</p>
                 </div>
             ) : (
-                <div className={`space-y-3 ${selectedIds.size > 0 ? 'pb-24' : ''}`}>
+                <div className={`space-y-3 ${bulk.selectedIds.size > 0 ? 'pb-24' : ''}`}>
                     <div className="flex items-center justify-between px-1">
                         <label className="flex items-center gap-2 text-[13px] text-slate-500 cursor-pointer">
                             <input
                                 type="checkbox"
-                                checked={allVisibleSelected}
-                                onChange={toggleSelectAllVisible}
+                                checked={bulk.allVisibleSelected}
+                                onChange={bulk.toggleSelectAllVisible}
                                 aria-label="Seleccionar todos los leads visibles"
                                 className="h-4 w-4 rounded accent-indigo-600"
                             />
-                            Seleccionar todos {selectedIds.size > 0 ? `(${selectedIds.size} seleccionados)` : ''}
+                            Seleccionar todos {bulk.selectedIds.size > 0 ? `(${bulk.selectedIds.size} seleccionados)` : ''}
                         </label>
                         <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-[12px] font-semibold">
                             <button
@@ -678,11 +277,11 @@ export default function AdminLeadsView({
                             key={lead.job_id}
                             lead={lead}
                             index={i}
-                            selected={selectedIds.has(lead.job_id)}
-                            onToggleSelect={() => toggleSelect(lead.job_id)}
+                            selected={bulk.selectedIds.has(lead.job_id)}
+                            onToggleSelect={() => bulk.toggleSelect(lead.job_id)}
                             onConvert={() => setConverting(lead)}
                             onLost={() => setLosing(lead)}
-                            onDetail={() => openLeadDetail(lead)}
+                            onDetail={() => detail.openLeadDetail(lead)}
                         />
                     ))}
                     {hasMore && (
@@ -698,53 +297,53 @@ export default function AdminLeadsView({
                 </div>
             )}
 
-            {selectedLead && (
+            {detail.selectedLead && (
                 <LeadDetailDrawer
-                    lead={selectedLead}
-                    onClose={closeLeadDetail}
-                    onViewFile={() => void viewLeadFile(selectedLead)}
-                    onConvert={() => setConverting(selectedLead)}
-                    onLost={() => setLosing(selectedLead)}
-                    auditEvents={auditEvents}
-                    auditLoading={auditLoading}
-                    noteText={noteText}
-                    noteSaving={noteSaving}
-                    onNoteTextChange={setNoteText}
-                    onAddNote={() => void addSelectedLeadNote()}
-                    proposals={leadProposals}
-                    proposalsLoading={proposalsLoading}
-                    leadClient={leadClient}
-                    clientLoading={clientLoading}
-                    onEditClient={leadClient ? () => setEditingLeadClient(leadClient) : undefined}
-                    onCreateCustomProposal={() => setCustomProposalLead(selectedLead)}
+                    lead={detail.selectedLead}
+                    onClose={detail.closeLeadDetail}
+                    onViewFile={() => void viewLeadFile(detail.selectedLead!)}
+                    onConvert={() => setConverting(detail.selectedLead)}
+                    onLost={() => setLosing(detail.selectedLead)}
+                    auditEvents={detail.auditEvents}
+                    auditLoading={detail.auditLoading}
+                    noteText={detail.noteText}
+                    noteSaving={detail.noteSaving}
+                    onNoteTextChange={detail.setNoteText}
+                    onAddNote={() => void detail.addNote()}
+                    proposals={detail.leadProposals}
+                    proposalsLoading={detail.proposalsLoading}
+                    leadClient={detail.leadClient}
+                    clientLoading={detail.clientLoading}
+                    onEditClient={detail.leadClient ? () => detail.setEditingLeadClient(detail.leadClient) : undefined}
+                    onCreateCustomProposal={() => detail.setCustomProposalLead(detail.selectedLead)}
                 />
             )}
-            {selectedLead && editingLeadClient && (
+            {detail.selectedLead && detail.editingLeadClient && (
                 <LeadClientEditModal
-                    jobId={selectedLead.job_id}
-                    client={editingLeadClient}
-                    onClose={() => setEditingLeadClient(null)}
+                    jobId={detail.selectedLead.job_id}
+                    client={detail.editingLeadClient}
+                    onClose={() => detail.setEditingLeadClient(null)}
                     onSaved={(updated) => {
-                        setLeadClient(updated);
-                        setEditingLeadClient(null);
-                        void loadLeadAudit(selectedLead.job_id);
+                        detail.setLeadClient(updated);
+                        detail.setEditingLeadClient(null);
+                        void detail.loadLeadAudit(detail.selectedLead!.job_id);
                     }}
                 />
             )}
-            {customProposalLead && (
+            {detail.customProposalLead && (
                 <LeadCustomProposalModal
-                    lead={customProposalLead}
-                    onClose={() => setCustomProposalLead(null)}
+                    lead={detail.customProposalLead}
+                    onClose={() => detail.setCustomProposalLead(null)}
                     onCreated={(proposal) => {
-                        setLeadProposals((current) => [proposal, ...current.filter((item) => item.id !== proposal.id)]);
-                        applyLeadPatch(customProposalLead.job_id, {
+                        detail.setLeadProposals((current) => [proposal, ...current.filter((item) => item.id !== proposal.id)]);
+                        applyLeadPatch(detail.customProposalLead!.job_id, {
                             has_proposal: true,
                             annual_savings: proposal.annual_savings,
                             savings_percent: proposal.savings_percent,
                             process_status: 'compared',
                             compared_at: new Date().toISOString(),
                         });
-                        void loadLeadAudit(customProposalLead.job_id);
+                        void detail.loadLeadAudit(detail.customProposalLead!.job_id);
                     }}
                 />
             )}
@@ -753,9 +352,9 @@ export default function AdminLeadsView({
                     invoice={converting}
                     onClose={() => setConverting(null)}
                     onClosed={(patch) => {
-                        const shouldReloadAudit = selectedLead?.job_id === converting.job_id && outcome !== 'open';
+                        const shouldReloadAudit = detail.selectedLead?.job_id === converting.job_id && outcome !== 'open';
                         applyLeadPatch(converting.job_id, patch);
-                        if (shouldReloadAudit) void loadLeadAudit(converting.job_id);
+                        if (shouldReloadAudit) void detail.loadLeadAudit(converting.job_id);
                         afterMutation(converting.job_id);
                     }}
                 />
@@ -765,26 +364,26 @@ export default function AdminLeadsView({
                     invoice={losing}
                     onClose={() => setLosing(null)}
                     onLost={(reason) => {
-                        const shouldReloadAudit = selectedLead?.job_id === losing.job_id && outcome !== 'open';
+                        const shouldReloadAudit = detail.selectedLead?.job_id === losing.job_id && outcome !== 'open';
                         applyLeadPatch(losing.job_id, {
                             lost: true,
                             lost_reason: reason,
                             process_status: 'closed_lost',
                         });
-                        if (shouldReloadAudit) void loadLeadAudit(losing.job_id);
+                        if (shouldReloadAudit) void detail.loadLeadAudit(losing.job_id);
                         afterMutation(losing.job_id);
                     }}
                 />
             )}
-            {selectedIds.size > 0 && (
+            {bulk.selectedIds.size > 0 && (
                 <BulkActionsBar
-                    count={selectedIds.size}
+                    count={bulk.selectedIds.size}
                     agents={agents}
-                    busy={bulkBusy}
-                    onReassign={(agentId) => void handleBulkReassign(agentId)}
-                    onReview={() => void handleBulkReview()}
-                    onExport={() => void handleBulkExport()}
-                    onClear={clearSelection}
+                    busy={bulk.busy}
+                    onReassign={(agentId) => void bulk.handleReassign(agentId)}
+                    onReview={() => void bulk.handleReview()}
+                    onExport={() => void bulk.handleExport()}
+                    onClear={bulk.clearSelection}
                 />
             )}
         </div>

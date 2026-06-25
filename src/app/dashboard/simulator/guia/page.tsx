@@ -699,7 +699,7 @@ export default function SimulatorGuidePage() {
                             </div>
                             <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-4 leading-[1.05] tracking-tight">
                                 Guía del<br />
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600">
+                                <span className="text-emerald-600">
                                     Simulador de Facturas
                                 </span>
                             </h1>

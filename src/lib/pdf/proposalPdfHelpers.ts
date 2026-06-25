@@ -1,5 +1,6 @@
 import { getMarketerLogo } from '@/lib/marketers/logos';
 import { existsSync, readFileSync } from 'fs';
+import { createHash } from 'crypto';
 import path from 'path';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -29,4 +30,9 @@ export function getPdfLogoSource(marketer: string, snapshotLogo?: string | null)
 
     const base64 = readFileSync(filePath).toString('base64');
     return `data:image/jpeg;base64,${base64}`;
+}
+
+export function generateVerificationHash(proposalId: string, savings: number, currentCost: number): string {
+    const input = `${proposalId}:${savings.toFixed(2)}:${currentCost.toFixed(2)}`;
+    return createHash('sha256').update(input).digest('hex').slice(0, 12).toUpperCase();
 }

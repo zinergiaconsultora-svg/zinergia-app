@@ -3,7 +3,7 @@ import { Document, Page, Text, View, Image } from '@react-pdf/renderer';
 import { Proposal } from '@/types/crm';
 import type { InvoiceSimulationResult } from '@/lib/comparison/invoice-simulator';
 import { s, SLATE_500 } from './proposalPdfStyles';
-import { euro, euro2, pct, price, getPdfLogoSource } from './proposalPdfHelpers';
+import { euro, euro2, pct, price, getPdfLogoSource, generateVerificationHash } from './proposalPdfHelpers';
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -32,6 +32,7 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
     const invoiceSavings = calculationAudit?.periodSavings ?? (currentInvoiceEstimate - optimizedInvoiceEstimate);
     const logoSource = getPdfLogoSource(marketer, proposal.offer_snapshot.logo_url);
     const pricePeriods = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'] as const;
+    const verificationHash = generateVerificationHash(proposal.id, savings, currentCost);
 
     // 5-year projection
     const projection = [1, 2, 3, 4, 5].map(yr => ({
@@ -41,7 +42,14 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
     }));
 
     return (
-        <Document title={`Propuesta Zinergia — ${clientName}`} author="Zinergia Consultora">
+        <Document
+            title={`Propuesta Zinergia — ${clientName}`}
+            author="Zinergia Consultora"
+            subject={`Ahorro estimado: ${euro(savings)}/año — ${marketer} ${tariff}`}
+            keywords={`zinergia, propuesta, ${clientName}, ${marketer}, ahorro energético`}
+            creator="Zinergia CRM"
+            producer="Zinergia CRM v2"
+        >
 
             {/* ═══════════════════════════════════════════════
                 PÁGINA 1 — Portada y resumen ejecutivo
@@ -301,6 +309,7 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
                 <View style={s.footer} fixed>
                     <Text style={s.footerDisclaimer}>
                         Estimación fundamentada en métricas de consumo histórico provistas. Sujeto a variaciones técnicas regulatorias o de tarifa indexada según perfil horario de la CUR.
+                        {'\n'}Verificación: {verificationHash}
                     </Text>
                     <Text style={s.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
                 </View>
