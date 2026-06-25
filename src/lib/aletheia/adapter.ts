@@ -158,6 +158,8 @@ export function aletheiaResultToWebhookShape(result: AletheiaResult) {
                 ? `${sim.candidate.permanence_months} meses`
                 : 'Sin permanencia',
             annual_cost: sim.annual_cost_total,
+            annual_saving: sim.annual_savings,
+            estimated_agent_commission: sim.candidate.estimated_agent_commission ?? null,
             optimization_result: null,
         })),
     };
