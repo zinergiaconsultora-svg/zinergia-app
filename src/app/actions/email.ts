@@ -89,19 +89,29 @@ export async function sendProposalEmail(
             return { success: false, error: 'El envío de email no está configurado. Contacta con soporte.' };
         }
 
-        // Generate PDF Buffer
         const pdfBuffer = await generateProposalPDF(proposal);
         const pdfBase64 = pdfBuffer.toString('base64');
 
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://zinergia.vercel.app';
+        const publicLink = proposal.public_token
+            ? `${baseUrl}/p/${proposal.public_token}`
+            : null;
+
         const subject = `Propuesta de Ahorro Energético Zinergia - ${clientName}`;
 
-        // Simple HTML Template
+        const ctaBlock = publicLink
+            ? `<div style="text-align:center;margin:28px 0;">
+                <a href="${publicLink}" style="display:inline-block;padding:14px 32px;background:#10b981;color:#fff;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">Ver propuesta online</a>
+                <p style="margin-top:8px;font-size:12px;color:#94a3b8;">También puedes revisar y firmar directamente desde el enlace.</p>
+              </div>`
+            : '';
+
         const html = `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
                 <h1 style="color: #10b981; margin-bottom: 24px;">Tu Propuesta de Ahorro</h1>
                 <p>Hola <strong>${clientName}</strong>,</p>
-                <p>Adjuntamos el resumen de tu auditoría energética realizada por Zinergia.</p>
-                
+                <p>Te enviamos el resumen de tu auditoría energética realizada por Zinergia.</p>
+
                 <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 24px 0;">
                     <h2 style="margin-top: 0; color: #1e293b;">Ahorro Estimado: ${proposal.annual_savings.toFixed(0)}€ / año</h2>
                     <p style="margin-bottom: 0; color: #64748b;">Eficiencia mejorada en un ${proposal.savings_percent.toFixed(1)}%</p>
@@ -114,18 +124,20 @@ export async function sendProposalEmail(
                     <li><strong>Nuevo Coste Anual:</strong> ${proposal.offer_annual_cost.toFixed(0)}€</li>
                 </ul>
 
+                ${ctaBlock}
+
                 <p style="margin-top: 32px; font-size: 12px; color: #94a3b8;">
-                    Esta es una simulación basada en los datos proporcionados. 
+                    Esta es una simulación basada en los datos proporcionados.
                     Para contratar esta oferta, contacta con tu asesor de Zinergia.
                 </p>
             </div>
         `;
 
         const data = await resend.emails.send({
-            from: 'Zinergia <onboarding@resend.dev>', // Update this with verified domain later
+            from: FROM,
             to: [parsedEmail.data],
-            subject: subject,
-            html: html,
+            subject,
+            html,
             attachments: [
                 {
                     filename: `propuesta_${clientName.replace(/\s+/g, '_')}.pdf`,
@@ -137,6 +149,19 @@ export async function sendProposalEmail(
         if (data.error) {
             logger.error('Resend error', data.error);
             return { success: false, error: data.error.message };
+        }
+
+        if (proposal.id) {
+            try {
+                const { createClient: createSupa } = await import('@/lib/supabase/server');
+                const supabase = await createSupa();
+                await supabase
+                    .from('proposals')
+                    .update({ sent_date: new Date().toISOString().slice(0, 10) })
+                    .eq('id', proposal.id);
+            } catch {
+                // Non-critical: sent_date tracking
+            }
         }
 
         return { success: true, data };

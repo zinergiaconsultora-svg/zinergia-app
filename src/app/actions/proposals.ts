@@ -11,6 +11,8 @@ import { createNotificationInternal } from './notifications'
 import { requireServerRole } from '@/lib/auth/permissions'
 import { calculateCommissionSplit, applyFranchiseOverride } from '@/lib/commissions/calculator'
 import { writeLeadAuditEvent } from '@/lib/audit/leadAuditLog'
+import { syncClientStatusFromLeads } from '@/lib/crm/syncClientStatus'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { LeadProposalSummary } from './invoices'
 
 /**
@@ -248,6 +250,7 @@ export async function updateProposalStatusAction(
     // 2. Trigger commission processing only on 'accepted'
     if (status === 'accepted') {
         await processCommissions(supabase, proposal as Proposal)
+        await autoCloseLeadOnAcceptance(supabase, proposal as Proposal, user.id)
     }
 
     // 3. Create in-app notification for the agent
@@ -377,6 +380,60 @@ async function createStatusNotification(
         })
     } catch {
         // Non-critical — don't block the main action
+    }
+}
+
+async function autoCloseLeadOnAcceptance(
+    supabase: Awaited<ReturnType<typeof createClient>>,
+    proposal: Proposal,
+    actorId: string,
+) {
+    if (!proposal.client_id) return;
+    try {
+        const offer = proposal.offer_snapshot as unknown as Record<string, unknown> | null;
+        const company = (offer?.marketer_name ?? offer?.marketerName ?? '') as string;
+        const tariff = (offer?.tariff_name ?? offer?.tariffName ?? '') as string;
+
+        const { data: openJob } = await supabase
+            .from('ocr_jobs')
+            .select('id, closed, lost')
+            .eq('client_id', proposal.client_id)
+            .eq('closed', false)
+            .eq('lost', false)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (!openJob) return;
+
+        await supabase
+            .from('ocr_jobs')
+            .update({
+                closed: true,
+                closed_at: new Date().toISOString(),
+                closed_company: company || null,
+                closed_tariff: tariff || null,
+                commission_amount: proposal.annual_savings
+                    ? Number(proposal.annual_savings)
+                    : null,
+                lost: false,
+                lost_at: null,
+                lost_reason: null,
+            })
+            .eq('id', openJob.id);
+
+        await writeLeadAuditEvent({
+            jobId: openJob.id,
+            actorId,
+            eventType: 'lead_closed_won',
+            title: 'Lead cerrado automáticamente por propuesta aceptada',
+            detail: `${company} · ${tariff}`,
+            metadata: { proposalId: proposal.id, auto: true },
+        }).catch(() => undefined);
+
+        await syncClientStatusFromLeads(supabase as unknown as SupabaseClient, proposal.client_id!);
+    } catch (err) {
+        logger.warn('[autoCloseLeadOnAcceptance] failed', { error: err });
     }
 }
 

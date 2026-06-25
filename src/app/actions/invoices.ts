@@ -9,6 +9,7 @@ import { requireServerRole } from '@/lib/auth/permissions';
 import { logger } from '@/lib/utils/logger';
 import { extractStoragePath } from '@/lib/drive/storagePath';
 import { recordLeadAuditEvent, type RecordLeadAuditEventInput } from './leadAudit';
+import { syncClientStatusFromLeads } from '@/lib/crm/syncClientStatus';
 
 export type InvoiceProcessStatus =
     | 'uploaded'
@@ -241,6 +242,8 @@ export async function closeInvoiceAction(
         logger.error('[invoices] closeInvoiceAction failed', { error: error.message });
         return { success: false, message: 'No se pudo cerrar la factura' };
     }
+    const { data: jobRow } = await supabase.from('ocr_jobs').select('client_id').eq('id', jobId).maybeSingle();
+    if (jobRow?.client_id) await syncClientStatusFromLeads(supabase as unknown as SupabaseClient, jobRow.client_id);
     const wasAlreadyClosed = previousState?.closed === true;
     await safeRecordLeadAuditEvent({
         jobId,
@@ -285,6 +288,8 @@ export async function reopenInvoiceAction(jobId: string): Promise<{ success: boo
         logger.error('[invoices] reopenInvoiceAction failed', { error: error.message });
         return { success: false };
     }
+    const { data: reopenedJob } = await supabase.from('ocr_jobs').select('client_id').eq('id', jobId).maybeSingle();
+    if (reopenedJob?.client_id) await syncClientStatusFromLeads(supabase as unknown as SupabaseClient, reopenedJob.client_id);
     await safeRecordLeadAuditEvent({
         jobId,
         eventType: 'lead_reopened',
@@ -328,6 +333,8 @@ export async function markLeadLostAction(
         logger.error('[invoices] markLeadLostAction failed', { error: error.message });
         return { success: false };
     }
+    const { data: lostJob } = await supabase.from('ocr_jobs').select('client_id').eq('id', jobId).maybeSingle();
+    if (lostJob?.client_id) await syncClientStatusFromLeads(supabase as unknown as SupabaseClient, lostJob.client_id);
     const normalizedReason = reason?.trim() ? reason.trim().slice(0, 300) : null;
     const wasAlreadyLost = previousState?.lost === true;
     await safeRecordLeadAuditEvent({
