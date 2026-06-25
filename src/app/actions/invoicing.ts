@@ -112,7 +112,7 @@ export async function getUninvoicedCommissionsAction() {
     return invoiceService.getUninvoicedCommissions();
 }
 
-export async function getInvoicesAction(filters?: { status?: InvoiceStatus; limit?: number; offset?: number }) {
+export async function getIssuedInvoicesAction(filters?: { status?: InvoiceStatus; limit?: number; offset?: number }) {
     await requireServerRole(['admin', 'franchise', 'agent']);
     return invoiceService.getInvoices(filters);
 }

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FileText, Plus, DollarSign, Clock, CheckCircle, Loader2, Filter } from 'lucide-react';
 import { InvoiceWithAgent, InvoiceStatus } from '@/types/crm';
-import { getInvoicesAction, getInvoiceStatsAction, issueInvoiceAction, cancelInvoiceAction, markInvoicePaidAction, getUninvoicedCommissionsAction, generateInvoiceAction } from '@/app/actions/invoicing';
+import { getIssuedInvoicesAction, getInvoiceStatsAction, issueInvoiceAction, cancelInvoiceAction, markInvoicePaidAction, getUninvoicedCommissionsAction, generateInvoiceAction } from '@/app/actions/invoicing';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { toast } from 'sonner';
 
@@ -45,7 +45,7 @@ export default function InvoicingPage() {
         (async () => {
             try {
                 const [inv, st, comm] = await Promise.all([
-                    getInvoicesAction({ status: filter !== 'all' ? filter : undefined }),
+                    getIssuedInvoicesAction({ status: filter !== 'all' ? filter : undefined }),
                     getInvoiceStatsAction(),
                     getUninvoicedCommissionsAction()
                 ]);
@@ -64,7 +64,7 @@ export default function InvoicingPage() {
 
     const loadData = useCallback(async () => {
         const [inv, st, comm] = await Promise.all([
-            getInvoicesAction({ status: filter !== 'all' ? filter : undefined }),
+            getIssuedInvoicesAction({ status: filter !== 'all' ? filter : undefined }),
             getInvoiceStatsAction(),
             getUninvoicedCommissionsAction()
         ]);

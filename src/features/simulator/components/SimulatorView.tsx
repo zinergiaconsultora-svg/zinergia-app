@@ -60,8 +60,15 @@ export const SimulatorView = () => {
 
             <div className="relative z-10 px-3 sm:px-4 pt-4 pb-20 overflow-x-hidden">
                 <div className="max-w-4xl mx-auto text-center mb-8">
-                    {/* Guide link — top right */}
-                    <div className="flex justify-end mb-3">
+                    {/* Acciones — top right */}
+                    <div className="flex justify-end gap-2 mb-3">
+                        <Link
+                            href="/dashboard/comparar-multiple"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-indigo-600 transition-colors border border-slate-200 hover:border-indigo-300 px-3 py-1.5 rounded-full bg-white/60 hover:bg-white shadow-sm"
+                        >
+                            <span className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[9px] font-black">+</span>
+                            Comparar varias
+                        </Link>
                         <Link
                             href="/dashboard/simulator/guia"
                             className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-emerald-600 transition-colors border border-slate-200 hover:border-emerald-300 px-3 py-1.5 rounded-full bg-white/60 hover:bg-white shadow-sm"
