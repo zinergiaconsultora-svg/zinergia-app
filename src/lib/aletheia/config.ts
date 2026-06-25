@@ -24,14 +24,6 @@ export const HARDWARE_COSTS = {
     CAPACITOR_COST_PER_KVAR: 35, // Cost per unit of reactive power capability
 };
 
-export const TAX_CONFIG = {
-    IEE: 0.051127, // Impuesto Eléctrico (Standard) - Often reduced by gov, but standard is this. 
-    // NOTE: Aletheia compares BASE IMPONIBLE, so this is mostly for "Total Bill" projection if needed.
-    IVA_REDUCED: 0.10,
-    IVA_STANDARD: 0.21,
-    METER_RENTAL_DEFAULT: 0.81, // €/month approx for digital meter
-};
-
 export const THRESHOLDS = {
     P6_NIGHT_OWL: 0.50, // If >50% consumption is P6, tag as Night Owl/Weekend
     POWER_BLOAT_BUFFER: 0.15, // Suggested power = MaxDemand * 1.15

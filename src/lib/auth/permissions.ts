@@ -5,10 +5,6 @@ import { UserRole } from '@/types/crm'
 // Roles that can write to shared catalog resources (tariffs, commission rules, etc.)
 const ADMIN_ROLES: UserRole[] = ['admin', 'franchise']
 
-export function canManageTariffs(role: UserRole): boolean {
-    return ADMIN_ROLES.includes(role)
-}
-
 export function canConfigureCommissions(role: UserRole): boolean {
     return ADMIN_ROLES.includes(role)
 }

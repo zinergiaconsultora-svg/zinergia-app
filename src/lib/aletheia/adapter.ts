@@ -5,8 +5,8 @@
  * and maps CRM Offer rows to Aletheia TariffCandidate objects.
  */
 
-import { InvoiceData as CrmInvoiceData, Offer } from '@/types/crm';
-import { AletheiaResult, InvoiceData as AletheiaInvoiceData, TariffCandidate, TariffPeriod } from './types';
+import { InvoiceData as CrmInvoiceData } from '@/types/crm';
+import { AletheiaResult, InvoiceData as AletheiaInvoiceData, TariffPeriod } from './types';
 import { inferInvoicePowerType } from '@/lib/invoices/normalization';
 
 const PERIODS: TariffPeriod[] = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];
@@ -112,28 +112,6 @@ export function crmToAletheiaInvoice(inv: CrmInvoiceData): AletheiaInvoiceData {
         current_cost_rental,
         current_total_tax_excluded,
         current_total_amount: inv.total_amount,
-    };
-}
-
-// ── CRM Offer → Aletheia TariffCandidate ─────────────────────────────────────
-
-export function offerToTariffCandidate(offer: Offer): TariffCandidate {
-    const match = (offer.contract_duration || '').match(/\d+/);
-    const permanence_months = match ? parseInt(match[0], 10) : 0;
-
-    const toPeriodRecord = (prices: Record<string, number>): Record<TariffPeriod, number> =>
-        Object.fromEntries(PERIODS.map(p => [p, prices[p] || 0])) as Record<TariffPeriod, number>;
-
-    return {
-        id: offer.id,
-        name: offer.tariff_name,
-        company: offer.marketer_name,
-        type: offer.type ?? 'fixed',
-        logo_color: offer.logo_color,
-        permanence_months,
-        power_price: toPeriodRecord(offer.power_price as unknown as Record<string, number>),
-        energy_price: toPeriodRecord(offer.energy_price as unknown as Record<string, number>),
-        fixed_fee: offer.fixed_fee ?? 0,
     };
 }
 

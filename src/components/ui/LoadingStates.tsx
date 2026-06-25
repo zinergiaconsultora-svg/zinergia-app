@@ -12,19 +12,6 @@ export function DashboardSkeleton() {
     )
 }
 
-export function SimulatorLoading() {
-    return (
-        <div className="space-y-8 p-6 max-w-4xl mx-auto animate-pulse">
-            <div className="h-12 w-64 bg-gray-200 rounded" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="h-24 bg-gray-200 rounded" />
-                <div className="h-24 bg-gray-200 rounded" />
-            </div>
-            <div className="h-96 bg-gray-200 rounded" />
-        </div>
-    )
-}
-
 export function SkeletonCard() {
     return (
         <div className="p-6 border rounded-lg space-y-4 animate-pulse">

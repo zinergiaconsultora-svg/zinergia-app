@@ -7,10 +7,6 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 // franchiseId per userId — avoids 2 sequential DB round-trips on every service call
 const _franchiseIdCache = new Map<string, string | null>();
 
-export function invalidateFranchiseIdCache() {
-    _franchiseIdCache.clear();
-}
-
 export function getCached<T>(key: string): T | null {
     const cached = cache.get(key);
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
