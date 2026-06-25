@@ -31,7 +31,7 @@ export async function sendEmailAction({ to, subject, html }: SendEmailParams) {
 
     try {
         const data = await resend.emails.send({
-            from: 'Zinergia <onboarding@resend.dev>', // Usar este remitente para pruebas
+            from: process.env.RESEND_FROM_EMAIL ?? 'Zinergia <onboarding@resend.dev>',
             to: [parsed.data.to], // En modo test, solo puedes enviar al email con el que te registraste en Resend
             subject: parsed.data.subject,
             html: parsed.data.html,

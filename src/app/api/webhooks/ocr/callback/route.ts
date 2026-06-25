@@ -46,8 +46,9 @@ export async function POST(request: Request) {
         const payload = await request.json();
         const { job_id, status, data, error, confidence } = payload;
 
-        if (!job_id) {
-            return NextResponse.json({ error: 'Missing job_id' }, { status: 400 });
+        const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!job_id || !UUID_RE.test(job_id)) {
+            return NextResponse.json({ error: 'Missing or invalid job_id' }, { status: 400 });
         }
 
         const VALID_STATUSES = ['completed', 'failed'] as const;

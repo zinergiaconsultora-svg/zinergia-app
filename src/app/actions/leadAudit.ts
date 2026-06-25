@@ -4,13 +4,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requireServerRole } from '@/lib/auth/permissions';
-import { createClient } from '@/lib/supabase/server';
+import { createUntypedClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/utils/logger';
 import {
     writeLeadAuditEvent,
     type LeadAuditEventType,
     type WriteLeadAuditEventInput,
 } from '@/lib/audit/leadAuditLog';
+import { rateLimit } from '@/lib/rate-limit';
+
+const noteRateLimiter = rateLimit({ windowMs: 60_000, max: 10 });
 
 export interface LeadAuditEvent {
     id: string;
@@ -65,7 +68,7 @@ export async function recordLeadAuditEvent(input: RecordLeadAuditEventInput): Pr
     if (!jobIdSchema.safeParse(input.jobId).success) return { success: false, message: 'ID inválido' };
     if (!input.title.trim()) return { success: false, message: 'El título de auditoría es obligatorio' };
 
-    const supabase = (await createClient()) as unknown as SupabaseClient;
+    const supabase = await createUntypedClient();
     const actorId = await authorizeActor(supabase, input.jobId);
     if (!actorId) return { success: false, message: 'Lead no accesible' };
 
@@ -82,9 +85,12 @@ export async function addLeadNoteAction(jobId: string, rawNote: string): Promise
     const parsed = noteSchema.safeParse(rawNote);
     if (!parsed.success) return { success: false, message: parsed.error.issues[0].message };
 
-    const supabase = (await createClient()) as unknown as SupabaseClient;
+    const supabase = await createUntypedClient();
     const actorId = await authorizeActor(supabase, jobId);
     if (!actorId) return { success: false, message: 'Lead no accesible' };
+
+    const { allowed } = noteRateLimiter.check(actorId);
+    if (!allowed) return { success: false, message: 'Demasiadas notas, espera un momento' };
 
     const result = await writeLeadAuditEvent({
         jobId,
@@ -101,7 +107,7 @@ export async function getLeadAuditEventsAction(jobId: string): Promise<LeadAudit
     await requireServerRole(['admin', 'franchise', 'agent']);
     if (!jobIdSchema.safeParse(jobId).success) return [];
 
-    const supabase = (await createClient()) as unknown as SupabaseClient;
+    const supabase = await createUntypedClient();
     const { data, error } = await supabase
         .from('lead_audit_events')
         .select(`

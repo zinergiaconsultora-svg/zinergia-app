@@ -258,16 +258,10 @@ export async function updateProposalStatusAction(
 
     // 5. Auto-generate follow-up tasks & Contracts
     if (proposal.client_id) {
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('franchise_id')
-            .eq('id', user.id)
-            .maybeSingle()
-
         await generateFollowUpTasks(supabase, {
             clientId: proposal.client_id,
             proposalId: proposal.id,
-            franchiseId: profile?.franchise_id,
+            franchiseId: profile.franchise_id,
             agentId: user.id,
             status,
         })
@@ -276,7 +270,7 @@ export async function updateProposalStatusAction(
             await autoCreateContract(supabase, {
                 clientId: proposal.client_id,
                 proposalId: proposal.id,
-                franchiseId: profile?.franchise_id,
+                franchiseId: profile.franchise_id,
                 agentId: user.id,
                 proposal: proposal as Proposal
             })

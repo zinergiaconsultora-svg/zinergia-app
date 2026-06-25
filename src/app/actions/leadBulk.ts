@@ -1,17 +1,18 @@
 'use server';
 
-import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@/lib/supabase/server';
+import { createUntypedClient } from '@/lib/supabase/server';
 import { requireServerRole } from '@/lib/auth/permissions';
 import { logger } from '@/lib/utils/logger';
 import { writeLeadAuditEvent } from '@/lib/audit/leadAuditLog';
 import { logAdminAction } from '@/lib/audit/logger';
 import { buildLeadsCsv } from '@/features/admin/leads/exportCsv';
+import { rateLimit } from '@/lib/rate-limit';
 import type { InvoiceRegistryRow } from './invoices';
 
 const MAX_BULK = 200;
+const bulkRateLimiter = rateLimit({ windowMs: 60_000, max: 5 });
 const jobIdsSchema = z.array(z.uuid()).min(1, 'Selecciona al menos un lead').max(MAX_BULK, 'Demasiados leads seleccionados');
 
 /**
@@ -29,7 +30,11 @@ export async function bulkReassignLeadsAction(
     if (!ids.success) return { success: false, updated: 0, message: ids.error.issues[0].message };
     if (!z.uuid().safeParse(newAgentId).success) return { success: false, updated: 0, message: 'Comercial inválido' };
 
-    const supabase = (await createClient()) as unknown as SupabaseClient;
+    const supabase = await createUntypedClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const { allowed } = bulkRateLimiter.check(user?.id ?? 'anon');
+    if (!allowed) return { success: false, updated: 0, message: 'Demasiadas acciones, espera un momento' };
 
     const { data: agent } = await supabase
         .from('profiles')
@@ -37,8 +42,6 @@ export async function bulkReassignLeadsAction(
         .eq('id', newAgentId)
         .maybeSingle();
     if (!agent) return { success: false, updated: 0, message: 'Comercial no encontrado' };
-
-    const { data: { user } } = await supabase.auth.getUser();
 
     const { data: updated, error } = await supabase
         .from('ocr_jobs')
@@ -81,8 +84,11 @@ export async function markLeadsReviewedAction(
     const ids = jobIdsSchema.safeParse(jobIds);
     if (!ids.success) return { success: false, updated: 0, message: ids.error.issues[0].message };
 
-    const supabase = (await createClient()) as unknown as SupabaseClient;
+    const supabase = await createUntypedClient();
     const { data: { user } } = await supabase.auth.getUser();
+
+    const { allowed } = bulkRateLimiter.check(user?.id ?? 'anon');
+    if (!allowed) return { success: false, updated: 0, message: 'Demasiadas acciones, espera un momento' };
 
     const { data: updated, error } = await supabase
         .from('ocr_jobs')
@@ -122,7 +128,7 @@ export async function exportLeadsCsvAction(
     const ids = jobIdsSchema.safeParse(jobIds);
     if (!ids.success) return { success: false, message: ids.error.issues[0].message };
 
-    const supabase = (await createClient()) as unknown as SupabaseClient;
+    const supabase = await createUntypedClient();
     const { data, error } = await supabase
         .from('invoice_registry')
         .select('*')

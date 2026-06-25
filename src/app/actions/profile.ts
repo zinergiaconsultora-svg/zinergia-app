@@ -81,6 +81,7 @@ export interface AgentProfile {
 }
 
 export async function getAgentProfileAction(): Promise<AgentProfile | null> {
+    await requireServerRole(['admin', 'franchise', 'agent'])
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null

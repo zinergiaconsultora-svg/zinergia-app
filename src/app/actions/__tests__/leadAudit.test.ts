@@ -18,11 +18,14 @@ const revalidatePathMock = vi.fn();
 vi.mock('next/cache', () => ({ revalidatePath: revalidatePathMock }));
 vi.mock('@/lib/auth/permissions', () => ({ requireServerRole: requireServerRoleMock }));
 
+const mockSessionClient = {
+    auth: { getUser: getUserMock },
+    from: sessionFromMock,
+};
+
 vi.mock('@/lib/supabase/server', () => ({
-    createClient: vi.fn(async () => ({
-        auth: { getUser: getUserMock },
-        from: sessionFromMock,
-    })),
+    createClient: vi.fn(async () => mockSessionClient),
+    createUntypedClient: vi.fn(async () => mockSessionClient),
 }));
 
 vi.mock('@/lib/supabase/service', () => ({

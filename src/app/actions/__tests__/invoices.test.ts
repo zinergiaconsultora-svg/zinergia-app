@@ -23,10 +23,10 @@ vi.mock('@/lib/auth/permissions', () => ({
     requireServerRole: requireServerRoleMock,
 }));
 
+const mockClient = { from: fromMock };
 vi.mock('@/lib/supabase/server', () => ({
-    createClient: vi.fn(async () => ({
-        from: fromMock,
-    })),
+    createClient: vi.fn(async () => mockClient),
+    createUntypedClient: vi.fn(async () => mockClient),
 }));
 
 vi.mock('@/lib/supabase/service', () => ({

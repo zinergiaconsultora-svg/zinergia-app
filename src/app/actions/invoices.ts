@@ -3,7 +3,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@/lib/supabase/server';
+import { createUntypedClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { requireServerRole } from '@/lib/auth/permissions';
 import { logger } from '@/lib/utils/logger';
@@ -109,7 +109,7 @@ export async function getInvoicesAction(limit = 20, offset = 0): Promise<Invoice
 
     // The VIEW isn't in the generated Database types; query via the untyped
     // client (the auth/session context still applies, so RLS is enforced).
-    const supabase = (await createClient()) as unknown as SupabaseClient;
+    const supabase = await createUntypedClient();
 
     const { data, error } = await supabase
         .from('invoice_registry')
@@ -135,7 +135,7 @@ export async function getInvoiceFileUrlAction(jobId: string): Promise<string | n
 
     // Authorize via the RLS-gated session client: the caller only resolves jobs
     // they may see (own / franchise / admin-all).
-    const supabase = (await createClient()) as unknown as SupabaseClient;
+    const supabase = await createUntypedClient();
     const { data: job } = await supabase.from('ocr_jobs').select('file_path').eq('id', jobId).single();
     if (!job?.file_path) return null;
 
@@ -157,7 +157,7 @@ export async function getLeadProposalsAction(jobId: string): Promise<LeadProposa
     await requireServerRole(['admin', 'franchise', 'agent']);
     if (!z.uuid().safeParse(jobId).success) return [];
 
-    const supabase = (await createClient()) as unknown as SupabaseClient;
+    const supabase = await createUntypedClient();
 
     // RLS-scoped authorization: if the caller cannot see the OCR job, no row is
     // returned and no proposal lookup is attempted.
@@ -217,7 +217,7 @@ export async function closeInvoiceAction(
 
     // Cast to the untyped client: the closure columns aren't in the generated
     // types yet. RLS still applies (session-based).
-    const supabase = (await createClient()) as unknown as SupabaseClient;
+    const supabase = await createUntypedClient();
     const previousState = await getLeadStateSnapshot(supabase, jobId);
     const { error } = await supabase
         .from('ocr_jobs')
@@ -264,7 +264,7 @@ export async function reopenInvoiceAction(jobId: string): Promise<{ success: boo
     await requireServerRole(['admin']);
     if (!z.uuid().safeParse(jobId).success) return { success: false };
 
-    const supabase = (await createClient()) as unknown as SupabaseClient;
+    const supabase = await createUntypedClient();
     const { error } = await supabase
         .from('ocr_jobs')
         .update({
@@ -305,7 +305,7 @@ export async function markLeadLostAction(
     await requireServerRole(['admin']);
     if (!z.uuid().safeParse(jobId).success) return { success: false };
 
-    const supabase = (await createClient()) as unknown as SupabaseClient;
+    const supabase = await createUntypedClient();
     const previousState = await getLeadStateSnapshot(supabase, jobId);
     const { error } = await supabase
         .from('ocr_jobs')
@@ -362,7 +362,7 @@ export async function getAdminLeadsAction(
     offset = 0,
 ): Promise<InvoiceRegistryRow[]> {
     await requireServerRole(['admin']);
-    const supabase = (await createClient()) as unknown as SupabaseClient;
+    const supabase = await createUntypedClient();
 
     let query = supabase.from('invoice_registry').select('*');
 
@@ -393,8 +393,11 @@ export async function getAdminLeadsAction(
     if (filters.agentId) query = query.eq('agent_id', filters.agentId);
     if (filters.franchiseId) query = query.eq('franchise_id', filters.franchiseId);
     if (filters.search?.trim()) {
-        const term = `%${filters.search.trim()}%`;
-        query = query.or(`titular.ilike.${term},agent_name.ilike.${term}`);
+        const sanitized = filters.search.trim().replace(/[(),."\\]/g, '');
+        if (sanitized) {
+            const term = `%${sanitized}%`;
+            query = query.or(`titular.ilike.${term},agent_name.ilike.${term}`);
+        }
     }
 
     const { data, error } = await query
@@ -445,7 +448,7 @@ const EMPTY_METRICS: LeadMetrics = {
 /** Aggregated metrics + per-agent ranking for the admin cockpit. Admin only. */
 export async function getLeadMetricsAction(): Promise<{ metrics: LeadMetrics; ranking: LeadAgentRank[] }> {
     await requireServerRole(['admin']);
-    const supabase = (await createClient()) as unknown as SupabaseClient;
+    const supabase = await createUntypedClient();
 
     const [metricsRes, rankingRes] = await Promise.all([
         supabase.rpc('get_lead_metrics'),
@@ -499,7 +502,7 @@ const EMPTY_ANALYTICS: LeadAnalytics = {
 /** Advanced admin analytics: operational alerts, franchise conversion, loss reasons, pipeline value. Admin only. */
 export async function getLeadAnalyticsAction(): Promise<LeadAnalytics> {
     await requireServerRole(['admin']);
-    const supabase = (await createClient()) as unknown as SupabaseClient;
+    const supabase = await createUntypedClient();
 
     const { data, error } = await supabase.rpc('get_lead_analytics');
     if (error) {

@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 export async function createClient() {
@@ -33,4 +34,9 @@ export async function createClient() {
             },
         }
     )
+}
+
+// Untyped client for querying custom views not in the generated types
+export async function createUntypedClient(): Promise<SupabaseClient> {
+    return (await createClient()) as unknown as SupabaseClient
 }
