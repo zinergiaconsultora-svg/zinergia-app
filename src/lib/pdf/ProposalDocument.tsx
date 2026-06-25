@@ -2,8 +2,16 @@ import React from 'react';
 import { Document, Page, Text, View, Image } from '@react-pdf/renderer';
 import { Proposal } from '@/types/crm';
 import type { InvoiceSimulationResult } from '@/lib/comparison/invoice-simulator';
-import { s, SLATE_500 } from './proposalPdfStyles';
+import { s, SLATE_500, SLATE_700 } from './proposalPdfStyles';
 import { euro, euro2, pct, price, getPdfLogoSource, generateVerificationHash } from './proposalPdfHelpers';
+import { analyzeConsumption } from '@/lib/aletheia/consumptionProfile';
+import { crmToAletheiaInvoice } from '@/lib/aletheia/adapter';
+
+const PROFILE_CLASS_LABEL: Record<string, string> = {
+    flat: 'Perfil plano',
+    moderate: 'Perfil mixto',
+    peaky: 'Perfil picudo',
+};
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -33,6 +41,17 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
     const logoSource = getPdfLogoSource(marketer, proposal.offer_snapshot.logo_url);
     const pricePeriods = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'] as const;
     const verificationHash = generateVerificationHash(proposal.id, savings, currentCost);
+
+    // Perfil de consumo (factor de carga) y estrategia de contratación recomendada.
+    // Se calcula desde calculation_data ya persistido; no requiere datos extra.
+    const consumption = (() => {
+        const cd = proposal.calculation_data;
+        if (!cd) return null;
+        const aletheiaInvoice = crmToAletheiaInvoice(cd);
+        const totalEnergy = Object.values(aletheiaInvoice.energy_consumption).reduce((a, b) => a + (b || 0), 0);
+        if (totalEnergy <= 0) return null;
+        return analyzeConsumption(aletheiaInvoice);
+    })();
 
     // 5-year projection
     const projection = [1, 2, 3, 4, 5].map(yr => ({
@@ -240,6 +259,39 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
                             <View style={s.quoteBox}>
                                 <Text style={s.quoteText}>&quot;{salesArg}&quot;</Text>
                                 <Text style={s.quoteAuthor}>Auditoría Inteligente Aletheia</Text>
+                            </View>
+                        </>
+                    )}
+
+                    {/* Perfil de consumo y estrategia de contratación */}
+                    {consumption && (
+                        <>
+                            <Text style={s.sectionTitle}>Perfil de Consumo y Estrategia de Contratación</Text>
+                            <View style={s.offerTable}>
+                                <View style={s.offerRow}>
+                                    <Text style={s.offerKey}>Factor de carga</Text>
+                                    <Text style={s.offerVal}>
+                                        {consumption.profile.loadFactorPct}% · {PROFILE_CLASS_LABEL[consumption.profile.classification]}
+                                    </Text>
+                                </View>
+                                <View style={s.offerRow}>
+                                    <Text style={s.offerKey}>Demanda pico / media</Text>
+                                    <Text style={s.offerVal}>
+                                        {consumption.profile.peakKw.toFixed(1)} kW / {consumption.profile.avgKw.toFixed(1)} kW
+                                    </Text>
+                                </View>
+                                <View style={s.offerRow}>
+                                    <Text style={s.offerKey}>Estrategia recomendada</Text>
+                                    <Text style={s.offerValGreen}>{consumption.strategy.label}</Text>
+                                </View>
+                            </View>
+                            <View style={{ marginTop: 8, marginBottom: 24 }}>
+                                {consumption.strategy.rationale.map((reason, i) => (
+                                    <View key={i} style={{ flexDirection: 'row', marginBottom: 4 }}>
+                                        <Text style={{ fontSize: 9, color: SLATE_500, marginRight: 5 }}>•</Text>
+                                        <Text style={{ fontSize: 9, color: SLATE_700, flex: 1, lineHeight: 1.4 }}>{reason}</Text>
+                                    </View>
+                                ))}
                             </View>
                         </>
                     )}

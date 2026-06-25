@@ -243,12 +243,19 @@ export function useSimulatorResultsActions({
         try {
             // Dynamic import to avoid SSR issues with crmService if any
             const { crmService } = await import('@/services/crmService');
+            const { crmToAletheiaInvoice } = await import('@/lib/aletheia/adapter');
+            const { analyzeConsumption } = await import('@/lib/aletheia/consumptionProfile');
+
+            const { profile: consumptionProfile, strategy: contractingStrategy } =
+                analyzeConsumption(crmToAletheiaInvoice(invoiceData));
 
             // Reconstruct AletheiaResult structure for saving
             const aletheiaSummary = {
                 client_profile: clientProfile || { tags: [], sales_argument: '' },
                 opportunities: opportunities,
                 optimization_recommendations: optimizationRecommendations,
+                consumption_profile: consumptionProfile,
+                contracting_strategy: contractingStrategy,
                 // These are needed for the type but technically redundant if we just want the summary
                 analysis_meta: { invoice_days: invoiceData.period_days, projected_annual_kwh: 0, seasonality_factor_applied: 1 },
                 current_status: { annual_projected_cost: 0, avg_price_kwh: 0, inefficiencies_detected: [] },

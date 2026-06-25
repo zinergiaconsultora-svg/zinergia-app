@@ -1,4 +1,5 @@
 import { SupervisedRecommendationResult } from '@/lib/supervised/recommender';
+import type { ConsumptionProfileResult, ContractingStrategyResult } from './consumptionProfile';
 
 export type TariffPeriod = 'p1' | 'p2' | 'p3' | 'p4' | 'p5' | 'p6';
 
@@ -114,6 +115,8 @@ export interface AletheiaResult {
     opportunities: AuditOpportunity[];
     optimization_recommendations: OptimizationRecommendation[]; // New field
     client_profile: ClientProfile;
+    consumption_profile: ConsumptionProfileResult;
+    contracting_strategy: ContractingStrategyResult;
     top_proposals: SimulationResult[];
     supervised_recommendation?: SupervisedRecommendationResult;
 }

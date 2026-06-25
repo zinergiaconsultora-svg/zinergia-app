@@ -3,6 +3,7 @@ import { REE_PROFILES } from './config';
 import { Normalizer } from './normalizer';
 import { Optimizer } from './optimizer';
 import { Profiler } from './profiler';
+import { analyzeConsumption } from './consumptionProfile';
 import { AletheiaResult, InvoiceData, SimulationResult, TariffCandidate, TariffPeriod } from './types';
 import { simulateInvoiceComparison } from '@/lib/comparison/invoice-simulator';
 import { buildSupervisedRecommendations } from '@/lib/supervised/recommender';
@@ -18,6 +19,7 @@ export class AletheiaEngine {
         const opportunities = Auditor.audit(invoice);
         const profile = Profiler.analyze(invoice);
         const optimizationRecommendations = Optimizer.analyze(invoice);
+        const { profile: consumptionProfile, strategy: contractingStrategy } = analyzeConsumption(invoice);
 
         // 2. Determine active periods based on tariff type
         let activePeriods: TariffPeriod[];
@@ -164,6 +166,8 @@ export class AletheiaEngine {
             opportunities: opportunities,
             optimization_recommendations: optimizationRecommendations,
             client_profile: profile,
+            consumption_profile: consumptionProfile,
+            contracting_strategy: contractingStrategy,
             top_proposals: sorted.filter(p => p.annual_savings > 0),
             supervised_recommendation: supervisedRecommendation,
         };

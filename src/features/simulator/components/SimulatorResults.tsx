@@ -33,6 +33,7 @@ import { OptimizationRecommendation, AuditOpportunity } from '@/lib/aletheia/typ
 import { detectAnomalies } from '@/lib/anomalyDetector';
 import { AnomalyPanel } from '@/components/AnomalyPanel';
 import { OpportunityCard } from './Results/OpportunityCard';
+import { ConsumptionProfileCard } from './Results/ConsumptionProfileCard';
 import { InvoiceData } from '@/types/crm';
 import dynamic from 'next/dynamic';
 import { CalculationAuditPanel } from './CalculationAuditPanel';
@@ -303,6 +304,9 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                         optionCount={visibleResults.length}
                     />
                 )}
+
+                {/* Perfil de consumo y estrategia de contratación */}
+                {invoiceData && <ConsumptionProfileCard invoiceData={invoiceData} />}
 
                 {/* Sección de Optimizaciones */}
                 {optimizationRecommendations && optimizationRecommendations.length > 0 && (

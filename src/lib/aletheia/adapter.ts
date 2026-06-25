@@ -45,6 +45,17 @@ export function crmToAletheiaInvoice(inv: CrmInvoiceData): AletheiaInvoiceData {
         PERIODS.map((p, i) => [p, ([inv.energy_p1, inv.energy_p2, inv.energy_p3, inv.energy_p4, inv.energy_p5, inv.energy_p6][i]) || 0])
     ) as Record<TariffPeriod, number>;
 
+    // Maxímetro (demanda registrada). Crítico para la optimización de potencia y
+    // el factor de carga; solo se incluye si la OCR detectó algún valor real.
+    const maxDemandVals = [
+        inv.max_demand_p1, inv.max_demand_p2, inv.max_demand_p3,
+        inv.max_demand_p4, inv.max_demand_p5, inv.max_demand_p6,
+    ];
+    const hasMaxDemand = maxDemandVals.some(v => v != null && v > 0);
+    const max_demand = hasMaxDemand
+        ? (Object.fromEntries(PERIODS.map((p, i) => [p, maxDemandVals[i] || 0])) as Record<TariffPeriod, number>)
+        : undefined;
+
     // Compute power cost from per-period prices if available
     const powerPrices = [
         inv.current_power_price_p1, inv.current_power_price_p2, inv.current_power_price_p3,
@@ -94,11 +105,13 @@ export function crmToAletheiaInvoice(inv: CrmInvoiceData): AletheiaInvoiceData {
         tariff_type: detectTariffType(inv),
         contracted_power,
         energy_consumption,
+        ...(max_demand ? { max_demand } : {}),
         current_cost_power,
         current_cost_energy,
         current_cost_reactive,
         current_cost_rental,
         current_total_tax_excluded,
+        current_total_amount: inv.total_amount,
     };
 }
 
