@@ -1,5 +1,3 @@
-'use server';
-
 import { createClient } from '@/lib/supabase/server';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -154,8 +152,9 @@ export async function consolidateCupsInvoices(cups: string): Promise<AnnualConso
             totalAmount: n('total_amount'),
             reactiveEnergyCost: n('reactive_energy_cost') || n('reactive_cost'),
             excessPowerCost: n('excess_power_cost') || n('distribution_excess_cost'),
-            hasReactivePenalty: nb('forensic_details.reactive_penalty') ||
-                (n('reactive_energy_cost') > 0) || (n('reactive_cost') > 0),
+            hasReactivePenalty: Boolean(
+                (ext.forensic_details as Record<string, unknown> | null)?.reactive_penalty
+            ) || (n('reactive_energy_cost') > 0) || (n('reactive_cost') > 0),
             hasExcessPower: n('excess_power_cost') > 0 || n('distribution_excess_cost') > 0,
         });
     }

@@ -3,6 +3,8 @@ import { Document, Page, View, Text, StyleSheet, Image } from '@react-pdf/render
 import { InvoiceData, SavingsResult } from '@/types/crm';
 import { OptimizationRecommendation, AuditOpportunity } from '@/lib/aletheia/types';
 import { getMarketerLogo } from '@/lib/marketers/logos';
+import type { AnnualAuditResult } from '@/lib/aletheia/annualAudit';
+import type { AnnualConsolidatedProfile } from '@/lib/aletheia/annualConsolidation';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -12,6 +14,7 @@ interface Props {
     recommendations?: OptimizationRecommendation[];
     opportunities?: AuditOpportunity[];
     clientProfile?: { tags: string[]; sales_argument: string };
+    annualAudit?: { profile: AnnualConsolidatedProfile; audit: AnnualAuditResult } | null;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -288,6 +291,7 @@ export function ProposalPDFDocument({
     recommendations = [],
     opportunities = [],
     clientProfile,
+    annualAudit,
 }: Props) {
     const best = results[0];
     if (!best) return null;
@@ -621,6 +625,151 @@ export function ProposalPDFDocument({
                     <View style={s.footer} fixed>
                         <Text style={s.footerText}>Zinergia Consultoría Energética · {today}</Text>
                         <Text style={s.footerText}>Documento comercial confidencial. Los ahorros reales pueden variar.</Text>
+                        <Text style={s.footerText} render={({ pageNumber, totalPages }) =>
+                            `${pageNumber} / ${totalPages}`
+                        } />
+                    </View>
+                </Page>
+            )}
+
+            {/* ── Page 3: Auditoría Anual (solo si hay datos de ≥2 facturas) ── */}
+            {annualAudit && annualAudit.profile.monthsCovered >= 2 && (
+                <Page size="A4" style={s.page}>
+                    <View style={s.header}>
+                        <View style={s.brandBlock}>
+                            <Text style={s.brandName}>Zinergia</Text>
+                            <Text style={s.brandSub}>AUDITORÍA ANUAL · {annualAudit.profile.monthsCovered} FACTURAS</Text>
+                        </View>
+                        <View style={s.dateBlock}>
+                            <Text style={s.dateLabel}>{clientName}</Text>
+                            <Text style={s.dateValue}>{today}</Text>
+                        </View>
+                    </View>
+
+                    {/* Nivel de confianza + métricas anuales */}
+                    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                        <View style={{
+                            flex: 1, backgroundColor: C.slate100, borderRadius: 6, padding: 8,
+                        }}>
+                            <Text style={{ fontSize: 6, color: C.slate500, textTransform: 'uppercase', marginBottom: 4 }}>
+                                Nivel de análisis
+                            </Text>
+                            <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: C.indigo }}>
+                                {annualAudit.profile.confidenceLevel === 'certificado' ? 'Certificado'
+                                    : annualAudit.profile.confidenceLevel === 'fiable' ? 'Fiable'
+                                    : 'Estimación'}
+                            </Text>
+                            <Text style={{ fontSize: 7, color: C.slate700 }}>
+                                {annualAudit.profile.monthsCovered} meses · {annualAudit.profile.confidenceScore}% cobertura
+                            </Text>
+                        </View>
+                        <View style={{ flex: 1, backgroundColor: C.slate100, borderRadius: 6, padding: 8 }}>
+                            <Text style={{ fontSize: 6, color: C.slate500, textTransform: 'uppercase', marginBottom: 4 }}>
+                                Consumo anual real
+                            </Text>
+                            <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: C.slate900 }}>
+                                {Math.round(annualAudit.profile.totalEnergyKwh).toLocaleString('es-ES')} kWh
+                            </Text>
+                        </View>
+                        <View style={{ flex: 1, backgroundColor: C.slate100, borderRadius: 6, padding: 8 }}>
+                            <Text style={{ fontSize: 6, color: C.slate500, textTransform: 'uppercase', marginBottom: 4 }}>
+                                Gasto anual real
+                            </Text>
+                            <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: C.slate900 }}>
+                                {fmtEur(annualAudit.profile.annualTotalAmount)}
+                            </Text>
+                        </View>
+                        {annualAudit.audit.totalQuantifiedSavings > 0 && (
+                            <View style={{ flex: 1, backgroundColor: '#ecfdf5', borderRadius: 6, padding: 8, borderWidth: 1, borderColor: '#6ee7b7' }}>
+                                <Text style={{ fontSize: 6, color: C.emerald, textTransform: 'uppercase', marginBottom: 4 }}>
+                                    Ahorro total identificado
+                                </Text>
+                                <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: C.emerald }}>
+                                    {fmtEur(annualAudit.audit.totalQuantifiedSavings)}/año
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+
+                    {/* Hallazgos */}
+                    {annualAudit.audit.findings.length > 0 && (
+                        <>
+                            <Text style={s.sectionTitle}>Hallazgos de Optimización</Text>
+                            {annualAudit.audit.findings.map((finding, i) => {
+                                const sevColor = finding.severity === 'critical' ? '#dc2626'
+                                    : finding.severity === 'high' ? '#ea580c'
+                                    : finding.severity === 'medium' ? '#d97706'
+                                    : C.indigo;
+                                const sevBg = finding.severity === 'critical' ? '#fef2f2'
+                                    : finding.severity === 'high' ? '#fff7ed'
+                                    : finding.severity === 'medium' ? '#fffbeb'
+                                    : '#eef2ff';
+                                return (
+                                    <View key={i} style={{
+                                        backgroundColor: sevBg,
+                                        borderLeftWidth: 3, borderLeftColor: sevColor,
+                                        borderRadius: 4, padding: 8, marginBottom: 6,
+                                        flexDirection: 'row', gap: 8,
+                                    }}>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: sevColor, marginBottom: 2 }}>
+                                                {finding.title}
+                                            </Text>
+                                            <Text style={{ fontSize: 7, color: C.slate700, marginBottom: 3 }}>
+                                                {finding.description}
+                                            </Text>
+                                            <Text style={{ fontSize: 6, color: C.slate500, fontFamily: 'Helvetica-Oblique' }}>
+                                                Acción: {finding.actionLabel}
+                                            </Text>
+                                        </View>
+                                        {finding.annualSavingsEur > 0 && (
+                                            <View style={{ alignItems: 'flex-end', justifyContent: 'center', minWidth: 64 }}>
+                                                <Text style={{ fontSize: 6, color: C.emerald, textTransform: 'uppercase' }}>ahorro</Text>
+                                                <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: C.emerald }}>
+                                                    {fmtEur(finding.annualSavingsEur)}
+                                                </Text>
+                                                <Text style={{ fontSize: 6, color: C.emerald }}>/año</Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                );
+                            })}
+                        </>
+                    )}
+
+                    {/* Tabla de optimización de potencia */}
+                    {annualAudit.audit.powerOptimizationByPeriod && annualAudit.audit.powerOptimizationByPeriod.length > 0 && (
+                        <>
+                            <Text style={[s.sectionTitle, { marginTop: 8 }]}>Optimización de Potencia por Periodo</Text>
+                            <View style={{ borderWidth: 1, borderColor: C.slate200, borderRadius: 4, overflow: 'hidden' }}>
+                                <View style={{ flexDirection: 'row', backgroundColor: C.slate100, padding: 5 }}>
+                                    {['Periodo', 'Contratada (kW)', 'Pico real (kW)', 'Óptima (kW)', 'Ahorro/año'].map(h => (
+                                        <Text key={h} style={{ flex: 1, fontSize: 6, fontFamily: 'Helvetica-Bold', color: C.slate500, textTransform: 'uppercase' }}>
+                                            {h}
+                                        </Text>
+                                    ))}
+                                </View>
+                                {annualAudit.audit.powerOptimizationByPeriod.map((p, i) => (
+                                    <View key={i} style={{
+                                        flexDirection: 'row', padding: 5,
+                                        backgroundColor: i % 2 === 0 ? C.white : C.slate100,
+                                    }}>
+                                        <Text style={{ flex: 1, fontSize: 7, fontFamily: 'Helvetica-Bold' }}>{p.period}</Text>
+                                        <Text style={{ flex: 1, fontSize: 7 }}>{p.contracted.toFixed(1)}</Text>
+                                        <Text style={{ flex: 1, fontSize: 7 }}>{p.realPeak.toFixed(1)}{p.isFromMaximeter ? ' ↑' : ''}</Text>
+                                        <Text style={{ flex: 1, fontSize: 7, fontFamily: 'Helvetica-Bold', color: C.emerald }}>{p.optimal}</Text>
+                                        <Text style={{ flex: 1, fontSize: 7, fontFamily: 'Helvetica-Bold', color: C.emerald }}>
+                                            {p.savingsEur > 0 ? fmtEur(p.savingsEur) : '—'}
+                                        </Text>
+                                    </View>
+                                ))}
+                            </View>
+                        </>
+                    )}
+
+                    <View style={s.footer} fixed>
+                        <Text style={s.footerText}>Zinergia Consultoría Energética · {today}</Text>
+                        <Text style={s.footerText}>Auditoría basada en {annualAudit.profile.monthsCovered} facturas reales del suministro.</Text>
                         <Text style={s.footerText} render={({ pageNumber, totalPages }) =>
                             `${pageNumber} / ${totalPages}`
                         } />

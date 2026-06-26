@@ -4,7 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Upload, FileText, CheckCircle2, XCircle, Loader2,
-    X, ArrowRight, Layers, Trash2, Copy,
+    X, ArrowRight, Layers, Trash2, Copy, Award,
 } from 'lucide-react';
 import { useBatchSimulator, BatchItem } from '../hooks/useBatchSimulator';
 import { InvoiceData } from '@/types/crm';
@@ -97,6 +97,20 @@ export const SimulatorBatchUpload: React.FC<SimulatorBatchUploadProps> = ({ onLo
     const completedCount = items.filter(it => it.status === 'completed').length;
     const failedCount = items.filter(it => it.status === 'failed').length;
     const totalCount = items.length;
+
+    // Group completed items by CUPS to show annual audit opportunities
+    const cupGroups = React.useMemo(() => {
+        const completed = items.filter(it => it.status === 'completed' && it.data?.cups);
+        const map = new Map<string, { cups: string; clientName: string; items: typeof completed }>();
+        for (const item of completed) {
+            const cups = item.data!.cups!.trim().toUpperCase();
+            if (!map.has(cups)) {
+                map.set(cups, { cups, clientName: item.data!.client_name ?? cups.slice(0, 20), items: [] });
+            }
+            map.get(cups)!.items.push(item);
+        }
+        return [...map.values()].filter(g => g.items.length >= 2);
+    }, [items]);
 
     return (
         <motion.div
@@ -197,6 +211,34 @@ export const SimulatorBatchUpload: React.FC<SimulatorBatchUploadProps> = ({ onLo
                                 />
                             </div>
                         )}
+
+                        {/* CUPS groups — annual audit opportunity */}
+                        <AnimatePresence>
+                            {cupGroups.map(group => (
+                                <motion.div
+                                    key={group.cups}
+                                    initial={{ opacity: 0, y: -8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0 }}
+                                    className="flex items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2.5 mb-1"
+                                >
+                                    <Award size={15} className="text-indigo-500 shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-bold text-indigo-800 truncate">{group.clientName}</p>
+                                        <p className="text-[10px] text-indigo-600">
+                                            {group.items.length} facturas · Auditoría anual disponible
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => onLoadInvoice(group.items[group.items.length - 1].data!)}
+                                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white text-[10px] font-bold hover:bg-indigo-700 transition-colors shrink-0"
+                                    >
+                                        Ver análisis <ArrowRight size={10} />
+                                    </button>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
 
                         {/* Item list */}
                         <div className="space-y-2 max-h-96 overflow-y-auto pr-1">

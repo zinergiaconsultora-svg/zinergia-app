@@ -148,9 +148,12 @@ export function useSimulatorResultsActions({
         if (!requireSupervisedConfirmation('exportar el PDF')) return;
         setIsExporting(true);
         try {
-            const [{ pdf }, { ProposalPDFDocument }] = await Promise.all([
+            const [{ pdf }, { ProposalPDFDocument }, annualAuditMod] = await Promise.all([
                 import('@react-pdf/renderer'),
                 import('@/features/proposal/components/ProposalPDFDocument'),
+                invoiceData.cups
+                    ? import('@/app/actions/annualAudit').then(m => m.getAnnualAuditAction(invoiceData.cups!))
+                    : Promise.resolve(null),
             ]);
 
             const element = React.createElement(ProposalPDFDocument, {
@@ -159,6 +162,7 @@ export function useSimulatorResultsActions({
                 recommendations: optimizationRecommendations,
                 opportunities,
                 clientProfile,
+                annualAudit: annualAuditMod ?? null,
             });
 
             // @react-pdf/renderer pdf() accepts Document elements; cast needed as props differ

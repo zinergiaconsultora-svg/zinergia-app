@@ -278,7 +278,32 @@ export function AnnualAuditView({ cups }: Props) {
         );
     }
 
-    if (error || !data || data.profile.monthsCovered < 2) return null;
+    if (error) return null;
+
+    // Solo 1 factura: mostrar CTA para subir más del mismo CUPS
+    if (!data || data.profile.monthsCovered < 2) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-8 flex items-start gap-3 rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3"
+            >
+                <Award className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-indigo-800">
+                        Sube más facturas de este suministro para activar la Auditoría Anual
+                    </p>
+                    <p className="text-[11px] text-indigo-600 mt-0.5">
+                        Con 2+ facturas del mismo CUPS detectamos potencia sobrecontratada, energía reactiva
+                        recurrente y anomalías de facturación — con euros exactos y datos reales del año completo.
+                    </p>
+                </div>
+                <span className="shrink-0 text-[10px] font-bold text-indigo-500 bg-indigo-100 border border-indigo-200 rounded-full px-2 py-0.5 mt-0.5">
+                    1/12 meses
+                </span>
+            </motion.div>
+        );
+    }
 
     const { profile, audit } = data;
     const { confidenceLevel: level, confidenceScore: score, monthsCovered, missingSeasons } = profile;
