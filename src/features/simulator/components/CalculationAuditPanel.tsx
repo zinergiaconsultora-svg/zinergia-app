@@ -64,9 +64,13 @@ export function CalculationAuditPanel({ audit }: CalculationAuditPanelProps) {
                 <button
                     type="button"
                     onClick={() => setExpanded(v => !v)}
-                    className="flex items-center gap-2 w-full text-left text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-colors py-1"
+                    className={`flex items-center gap-2 w-full text-left text-xs font-bold transition-colors py-1.5 px-3 -mx-3 rounded-lg ${
+                        expanded
+                            ? 'text-indigo-700 bg-indigo-50'
+                            : 'text-indigo-600 hover:bg-indigo-50/60'
+                    }`}
                 >
-                    <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
                     {expanded ? 'Ocultar desglose' : `Ver desglose (${audit.lines.length} conceptos)`}
                 </button>
 
