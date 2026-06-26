@@ -261,6 +261,13 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                     )}
                 </motion.div>
 
+                <SupervisedConfirmationPanel
+                    value={supervisedConfirmation}
+                    onChange={setSupervisedConfirmation}
+                    recommendation={supervisedRecommendation}
+                    alertCount={selectedResult?.calculation_audit?.alerts?.length || 0}
+                />
+
                 {selectedResult && (
                     <DecisionCommandCenter
                         result={selectedResult}
@@ -382,14 +389,6 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                 {supervisedRecommendation && (
                     <SupervisedRecommendationPanel recommendation={supervisedRecommendation} />
                 )}
-
-                <SupervisedConfirmationPanel
-                    value={supervisedConfirmation}
-                    onChange={setSupervisedConfirmation}
-                    recommendation={supervisedRecommendation}
-                    alertCount={selectedResult?.calculation_audit?.alerts?.length || 0}
-                />
-
 
             </motion.div>
 
