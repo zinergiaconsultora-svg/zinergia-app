@@ -44,7 +44,7 @@ interface SimulatorFormProps {
 export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     data, onUpdate, onCompare, onBack, isAnalyzing, loadingMessage,
     powerType, onPowerTypeOverride, pdfUrl, isMockMode = false,
-    ocrDataConfirmed = false, onConfirmOcrData,
+    ocrJobId, ocrDataConfirmed = false, onConfirmOcrData,
 }) => {
     const [isConfirming, setIsConfirming] = useState(false);
     const [localConfirmed, setLocalConfirmed] = useState(false);
@@ -102,12 +102,12 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
         setDuplicateInfo(null);
         let cancelled = false;
         import('@/app/actions/ocr-jobs').then(({ checkDuplicateInvoice }) => {
-            checkDuplicateInvoice(data.cups!, data.invoice_date!).then(r => {
+            checkDuplicateInvoice(data.cups!, data.invoice_date!, ocrJobId ?? undefined).then(r => {
                 if (!cancelled) setDuplicateInfo(r ? { createdAt: r.createdAt, invoiceNumber: r.invoiceNumber } : null);
             }).catch(() => {});
         });
         return () => { cancelled = true; };
-    }, [data.cups, data.invoice_date, isMockMode]);
+    }, [data.cups, data.invoice_date, isMockMode, ocrJobId]);
 
     // ── Vinculación automática al cliente por CUPS ────────────────────────────
     const [cupsClient, setCupsClient] = useState<{ id: string; name: string } | null>(null);

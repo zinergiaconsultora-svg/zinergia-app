@@ -184,6 +184,7 @@ export async function getPreviousInvoiceData(
 export async function checkDuplicateInvoice(
     cups: string,
     invoiceDate: string,
+    excludeJobId?: string,
 ): Promise<{ jobId: string; createdAt: string; invoiceNumber: string | null } | null> {
     if (!cups || cups.length < 18) return null;
 
@@ -214,6 +215,8 @@ export async function checkDuplicateInvoice(
     if (error || !data) return null;
 
     for (const job of data) {
+        if (excludeJobId && job.id === excludeJobId) continue;
+
         const ext = job.extracted_data as Record<string, unknown> | null;
         if (!ext) continue;
 
