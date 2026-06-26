@@ -7,13 +7,18 @@ import { analyzeConsumption } from './consumptionProfile';
 import { AletheiaResult, InvoiceData, SimulationResult, TariffCandidate, TariffPeriod } from './types';
 import { simulateInvoiceComparison } from '@/lib/comparison/invoice-simulator';
 import { buildSupervisedRecommendations } from '@/lib/supervised/recommender';
+import type { ConversionMemory } from '@/lib/supervised/conversionMemory';
 
 export class AletheiaEngine {
 
     /**
      * Main simulation execution method
      */
-    static run(invoice: InvoiceData, tariffs: TariffCandidate[]): AletheiaResult {
+    static run(
+        invoice: InvoiceData,
+        tariffs: TariffCandidate[],
+        options?: { conversionMemory?: ConversionMemory | null; segment?: 'RESIDENCIAL' | 'PYME' | null },
+    ): AletheiaResult {
 
         // 1. Audit, Profile & Optimization
         const opportunities = Auditor.audit(invoice);
@@ -150,7 +155,8 @@ export class AletheiaEngine {
             criticalAlerts: result.invoice_simulation?.alerts.filter(alert => alert.level === 'critical').length || 0,
             warningAlerts: result.invoice_simulation?.alerts.filter(alert => alert.level === 'warning').length || 0,
             hasMissingCommission: result.candidate.commission_source !== 'tariff_commissions',
-        })));
+            offerType: result.candidate.type,
+        })), { conversionMemory: options?.conversionMemory, segment: options?.segment });
 
         return {
             analysis_meta: {

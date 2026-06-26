@@ -1,3 +1,9 @@
+import {
+    type ConversionMemory,
+    getConversionSignal,
+    conversionDelta,
+} from './conversionMemory';
+
 export type SupervisedRecommendationKind = 'max_savings' | 'balanced' | 'best_viable_commission';
 export type RecommendationConfidence = 'high' | 'medium' | 'low';
 
@@ -11,7 +17,12 @@ export interface SupervisedCandidate {
     criticalAlerts?: number;
     warningAlerts?: number;
     hasMissingCommission?: boolean;
+    /** Tipo de oferta — usado para cruzar con la memoria de conversión. */
+    offerType?: 'fixed' | 'indexed';
 }
+
+// Peso máximo del histórico de conversión sobre el score (se atenúa por confianza).
+const CONVERSION_MAX_WEIGHT = 0.15;
 
 export interface SupervisedRecommendation {
     kind: SupervisedRecommendationKind;
@@ -34,7 +45,10 @@ const COMMISSION_MIN_SAVINGS_RATIO = 0.65;
 
 export function buildSupervisedRecommendations(
     candidates: SupervisedCandidate[],
+    options?: { conversionMemory?: ConversionMemory | null; segment?: 'RESIDENCIAL' | 'PYME' | null },
 ): SupervisedRecommendationResult {
+    const conversionMemory = options?.conversionMemory ?? null;
+    const segment = options?.segment ?? null;
     const viable = candidates
         .filter(isCommerciallyDefensible)
         .sort((a, b) => b.annualSavings - a.annualSavings);
@@ -55,14 +69,14 @@ export function buildSupervisedRecommendations(
         'max_savings',
         'Maximo ahorro cliente',
         maxSavings,
-        scoreCandidate(maxSavings, bestSavings, bestCommission),
+        scoreCandidate(maxSavings, bestSavings, bestCommission, conversionMemory, segment),
         'Es la opcion que mas reduce el coste anual del cliente.',
     );
 
     const balancedPool = viable.filter(candidate =>
         candidate.annualSavings >= bestSavings * BALANCED_MIN_SAVINGS_RATIO
     );
-    const balanced = pickBestByScore(balancedPool, bestSavings, bestCommission);
+    const balanced = pickBestByScore(balancedPool, bestSavings, bestCommission, conversionMemory, segment);
 
     const commissionPool = viable.filter(candidate =>
         candidate.annualSavings >= bestSavings * COMMISSION_MIN_SAVINGS_RATIO &&
@@ -82,7 +96,7 @@ export function buildSupervisedRecommendations(
             'balanced',
             'Mejor equilibrio',
             balanced,
-            scoreCandidate(balanced, bestSavings, bestCommission),
+            scoreCandidate(balanced, bestSavings, bestCommission, conversionMemory, segment),
             balanced.id === maxSavings.id
                 ? 'Tambien es la mejor opcion equilibrada porque combina maximo ahorro y buena calidad comercial.'
                 : 'Mantiene un ahorro alto frente a la mejor opcion y mejora la oportunidad comercial.',
@@ -92,7 +106,7 @@ export function buildSupervisedRecommendations(
                 'best_viable_commission',
                 'Mejor comision viable',
                 bestCommissionCandidate,
-                scoreCandidate(bestCommissionCandidate, bestSavings, bestCommission),
+                scoreCandidate(bestCommissionCandidate, bestSavings, bestCommission, conversionMemory, segment),
                 'Prioriza la comision sin bajar del umbral minimo de ahorro defendible para el cliente.',
             )
             : null,
@@ -109,9 +123,12 @@ function pickBestByScore(
     candidates: SupervisedCandidate[],
     bestSavings: number,
     bestCommission: number,
+    conversionMemory?: ConversionMemory | null,
+    segment?: 'RESIDENCIAL' | 'PYME' | null,
 ): SupervisedCandidate {
     return [...candidates].sort((a, b) =>
-        scoreCandidate(b, bestSavings, bestCommission) - scoreCandidate(a, bestSavings, bestCommission)
+        scoreCandidate(b, bestSavings, bestCommission, conversionMemory, segment) -
+        scoreCandidate(a, bestSavings, bestCommission, conversionMemory, segment)
     )[0];
 }
 
@@ -128,13 +145,25 @@ function scoreCandidate(
     candidate: SupervisedCandidate,
     bestSavings: number,
     bestCommission: number,
+    conversionMemory?: ConversionMemory | null,
+    segment?: 'RESIDENCIAL' | 'PYME' | null,
 ): number {
     const savingsScore = clamp(candidate.annualSavings / bestSavings);
     const commissionScore = clamp((candidate.estimatedAgentCommission || 0) / bestCommission);
     const confidenceScore = getConfidenceScore(candidate);
     const riskPenalty = ((candidate.criticalAlerts || 0) * 0.35) + ((candidate.warningAlerts || 0) * 0.08);
 
-    return round4((savingsScore * 0.55) + (commissionScore * 0.25) + (confidenceScore * 0.2) - riskPenalty);
+    const baseScore = (savingsScore * 0.55) + (commissionScore * 0.25) + (confidenceScore * 0.2) - riskPenalty;
+
+    // Ajuste aprendido: histórico de conversión por comercializadora/tipo/segmento.
+    // Atenuado por confianza → con pocos datos el efecto es nulo (retrocompatible).
+    let conversionAdjustment = 0;
+    if (conversionMemory && candidate.offerType) {
+        const signal = getConversionSignal(conversionMemory, candidate.company, candidate.offerType, segment);
+        conversionAdjustment = conversionDelta(signal, CONVERSION_MAX_WEIGHT);
+    }
+
+    return round4(baseScore + conversionAdjustment);
 }
 
 function getConfidenceScore(candidate: SupervisedCandidate): number {

@@ -8,6 +8,37 @@ import { Normalizer } from '@/lib/aletheia/normalizer';
 import { AletheiaResult, TariffCandidate } from '@/lib/aletheia/types';
 import { Result, ok, err } from '@/lib/result';
 import { normalizeInvoiceData } from '@/lib/invoices/normalization';
+import { buildConversionMemory, type ConversionMemory, type ProposalOutcome } from '@/lib/supervised/conversionMemory';
+
+/**
+ * Carga la memoria de conversión desde el histórico de propuestas de la
+ * franquicia (RLS limita a las visibles del usuario). Cada propuesta aporta una
+ * señal de "elección del agente"; las aceptadas/rechazadas añaden el cierre.
+ * Agregación barata sobre offer_snapshot — no carga calculation_data.
+ */
+async function loadConversionMemory(
+    supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<ConversionMemory> {
+    const { data, error } = await supabase
+        .from('proposals')
+        .select('status, offer_snapshot')
+        .limit(2000);
+
+    if (error || !data) return buildConversionMemory([]);
+
+    const outcomes: ProposalOutcome[] = [];
+    for (const p of data) {
+        const snap = p.offer_snapshot as { marketer_name?: string; type?: string } | null;
+        const marketer = snap?.marketer_name;
+        if (!marketer) continue;
+        const offerType: 'fixed' | 'indexed' = snap?.type === 'indexed' ? 'indexed' : 'fixed';
+        outcomes.push({ marketer, offerType, signal: 'chosen' });
+        if (p.status === 'accepted') outcomes.push({ marketer, offerType, signal: 'won' });
+        else if (p.status === 'rejected') outcomes.push({ marketer, offerType, signal: 'lost' });
+    }
+
+    return buildConversionMemory(outcomes);
+}
 
 interface TariffRow {
     id: string;
@@ -148,8 +179,9 @@ export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: R
         });
         });
 
-        // 4. Run Engine
-        const result = AletheiaEngine.run(normalizedInvoice, candidates);
+        // 4. Cargar memoria de conversión (aprendizaje del histórico) y ejecutar el motor
+        const conversionMemory = await loadConversionMemory(supabase);
+        const result = AletheiaEngine.run(normalizedInvoice, candidates, { conversionMemory, segment });
 
         return ok(result);
 
