@@ -17,80 +17,62 @@ const KIND_ICON = {
 export function SupervisedRecommendationPanel({ recommendation }: SupervisedRecommendationPanelProps) {
     if (recommendation.recommendations.length === 0) {
         return (
-            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                <div className="flex items-center gap-2 font-semibold">
-                    <CircleAlert className="h-4 w-4" />
-                    Sin recomendacion comercial segura
-                </div>
-                <p className="mt-1 text-xs">{recommendation.guardrails[0]}</p>
+            <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+                <span className="font-semibold">Sin recomendación segura</span>
+                {recommendation.guardrails[0] && <span className="text-red-600">— {recommendation.guardrails[0]}</span>}
             </div>
         );
     }
 
+    const best = recommendation.recommendations[0];
+    const BestIcon = KIND_ICON[best.kind];
+    const commission = best.candidate.estimatedAgentCommission;
+
     return (
-        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
-                <div>
-                    <div className="flex items-center gap-2">
-                        <ShieldCheck className="h-5 w-5 text-emerald-600" />
-                        <h3 className="text-sm font-semibold text-slate-900">Recomendacion supervisada</h3>
-                    </div>
-                    <p className="mt-1 text-xs text-slate-500">
-                        Equilibra ahorro para el cliente, comision interna y calidad del calculo.
-                    </p>
+        <div className="mb-4 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            {/* Compact header */}
+            <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-slate-100">
+                <div className="flex items-center gap-2 min-w-0">
+                    <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <span className="text-xs font-extrabold text-slate-900">Recomendación</span>
+                    <span className="text-[10px] text-slate-400 hidden sm:inline">Uso interno</span>
                 </div>
-                <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                    Uso interno
-                </span>
+                {recommendation.guardrails.length > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-semibold text-amber-700 shrink-0">
+                        <CircleAlert className="h-2.5 w-2.5" />
+                        {recommendation.guardrails.length} aviso{recommendation.guardrails.length !== 1 ? 's' : ''}
+                    </span>
+                )}
             </div>
 
-            <div className="mt-4 grid gap-3 lg:grid-cols-3">
-                {recommendation.recommendations.map(item => {
-                    const Icon = KIND_ICON[item.kind];
-                    const commission = item.candidate.estimatedAgentCommission;
-
-                    const learnedFromHistory = !!item.conversion && item.conversion.confidence > 0 && item.conversion.score >= 0.55;
-
-                    return (
-                        <div key={`${item.kind}-${item.candidate.id}`} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-                            <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-                                <Icon className="h-4 w-4 text-emerald-600" />
-                                {item.title}
-                            </div>
-                            <div className="mt-2 text-sm font-semibold text-slate-900">
-                                {item.candidate.company} · {item.candidate.tariffName}
-                            </div>
-                            {learnedFromHistory && (
-                                <div
-                                    className="mt-2 inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700"
-                                    title={`El histórico de propuestas respalda esta opción (confianza ${Math.round(item.conversion!.confidence * 100)}%).`}
-                                >
-                                    💡 Recomendado por histórico
-                                </div>
-                            )}
-                            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                                <div>
-                                    <div className="text-slate-400">Ahorro</div>
-                                    <div className="font-semibold text-emerald-700">{item.candidate.annualSavings.toFixed(0)} €/ano</div>
-                                </div>
-                                <div>
-                                    <div className="text-slate-400">Comision</div>
-                                    <div className="font-semibold text-slate-900">
-                                        {commission === null || commission === undefined ? 'Pendiente' : `${commission.toFixed(0)} €`}
-                                    </div>
-                                </div>
-                            </div>
-                            <p className="mt-3 text-[11px] leading-snug text-slate-500">{item.reason}</p>
-                        </div>
-                    );
-                })}
+            {/* Best recommendation inline */}
+            <div className="flex items-center gap-4 px-4 py-2.5 flex-wrap">
+                <div className="flex items-center gap-2 min-w-0">
+                    <BestIcon className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    <span className="text-xs font-bold text-slate-800 truncate">{best.candidate.company} · {best.candidate.tariffName}</span>
+                </div>
+                <div className="flex items-center gap-4 text-xs shrink-0">
+                    <span>
+                        <span className="text-slate-400">Ahorro </span>
+                        <span className="font-bold text-emerald-700 tabular-nums">{best.candidate.annualSavings.toFixed(0)} €/año</span>
+                    </span>
+                    <span>
+                        <span className="text-slate-400">Comisión </span>
+                        <span className="font-bold text-slate-800 tabular-nums">
+                            {commission === null || commission === undefined ? 'Pendiente' : `${commission.toFixed(0)} €`}
+                        </span>
+                    </span>
+                </div>
+                <p className="text-[10px] text-slate-400 w-full">{best.reason}</p>
             </div>
 
+            {/* Guardrails — compact inline */}
             {recommendation.guardrails.length > 0 && (
-                <div className="mt-4 space-y-2">
+                <div className="px-4 pb-2.5 space-y-1">
                     {recommendation.guardrails.map(guardrail => (
-                        <div key={guardrail} className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                            <CircleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        <div key={guardrail} className="flex items-center gap-1.5 text-[10px] text-amber-700">
+                            <CircleAlert className="h-2.5 w-2.5 shrink-0" />
                             <span>{guardrail}</span>
                         </div>
                     ))}
