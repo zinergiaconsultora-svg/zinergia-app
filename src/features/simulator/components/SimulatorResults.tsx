@@ -569,72 +569,54 @@ function DecisionCommandCenter({
     const clientName = invoiceData?.client_name || 'Cliente sin nombre';
 
     return (
-        <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
-                <div className="relative overflow-hidden bg-slate-950 px-5 py-5 text-white">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.20),transparent_45%)]" />
-                    <div className="relative">
-                        <div className="mb-4 flex flex-wrap items-center gap-2">
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-emerald-200 ring-1 ring-white/10">
-                                <Target size={13} />
-                                Propuesta activa
-                            </span>
-                            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${quality.tone}`}>
-                                <QualityIcon size={13} />
-                                {quality.label}
-                            </span>
-                        </div>
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                            <div className="min-w-0">
-                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{clientName}</p>
-                                <h3 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">
-                                    {result.offer.marketer_name}
-                                </h3>
-                                <p className="mt-1 truncate text-sm text-slate-300">{result.offer.tariff_name}</p>
-                            </div>
-                            <div className="grid grid-cols-3 gap-3 sm:min-w-[340px]">
-                                <HeroMetric label="Actual" value={formatCurrency(currentPeriod, 0)} muted />
-                                <HeroMetric label="Simulada" value={formatCurrency(simulatedPeriod, 0)} />
-                                <HeroMetric label="Ahorro" value={formatCurrency(periodSavings, 0)} positive={periodSavings >= 0} />
-                            </div>
-                        </div>
+        <section className="mb-4 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            {/* Header: badges + client */}
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100">
+                <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="rounded-lg bg-emerald-50 p-1.5 text-emerald-600 shrink-0">
+                        <Target className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-xs font-extrabold text-slate-900 truncate">{result.offer.marketer_name} · <span className="font-semibold text-slate-500">{result.offer.tariff_name}</span></p>
+                        <p className="text-[10px] text-slate-400 truncate">{clientName}</p>
                     </div>
                 </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                        <Target size={10} />
+                        Activa
+                    </span>
+                    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${quality.tone}`}>
+                        <QualityIcon size={10} />
+                        {quality.label}
+                    </span>
+                </div>
+            </div>
 
-                <div className="px-5 py-5">
-                    <div className="grid grid-cols-2 gap-3">
-                        <DecisionMetric label="Ahorro anual" value={formatCurrency(result.annual_savings, 0)} strong />
-                        <DecisionMetric label="Mejora" value={`${result.savings_percent.toFixed(1)}%`} strong />
-                        <DecisionMetric label="Comisión" value={commission != null ? formatCurrency(commission, 0) : '—'} />
-                        <DecisionMetric label="Opciones válidas" value={String(optionCount)} />
-                    </div>
-                    <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 px-3 py-3">
-                        <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Argumento comercial</p>
-                        <p className="mt-1 text-sm leading-relaxed text-slate-700">{buildCommercialArgument(result)}</p>
-                    </div>
-                    <p className="mt-3 text-xs text-slate-500">{quality.detail}</p>
-                </div>
+            {/* Metrics strip */}
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-px bg-slate-100">
+                <HeroMetric label="Actual" value={formatCurrency(currentPeriod, 0)} muted />
+                <HeroMetric label="Simulada" value={formatCurrency(simulatedPeriod, 0)} />
+                <HeroMetric label="Ahorro periodo" value={formatCurrency(periodSavings, 0)} positive />
+                <HeroMetric label="Ahorro anual" value={formatCurrency(result.annual_savings, 0)} positive strong />
+                <HeroMetric label="Mejora" value={`${result.savings_percent.toFixed(1)}%`} positive strong />
+                <HeroMetric label="Comisión" value={commission != null ? formatCurrency(commission, 0) : '—'} />
+            </div>
+
+            {/* Commercial argument */}
+            <div className="px-4 py-2.5 border-t border-slate-100 bg-slate-50/50">
+                <p className="text-xs text-slate-600 leading-relaxed">{buildCommercialArgument(result)}</p>
+                <p className="mt-1 text-[10px] text-slate-400">{quality.detail} · {optionCount} opciones válidas</p>
             </div>
         </section>
     );
 }
 
-function HeroMetric({ label, value, muted = false, positive = false }: { label: string; value: string; muted?: boolean; positive?: boolean }) {
+function HeroMetric({ label, value, muted = false, positive = false, strong = false }: { label: string; value: string; muted?: boolean; positive?: boolean; strong?: boolean }) {
     return (
-        <div>
-            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</p>
-            <p className={`mt-1 text-lg font-black tabular-nums ${muted ? 'text-slate-400 line-through' : positive ? 'text-emerald-300' : 'text-white'}`}>
-                {value}
-            </p>
-        </div>
-    );
-}
-
-function DecisionMetric({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
-    return (
-        <div className="rounded-xl border border-slate-100 bg-white px-3 py-2">
+        <div className="bg-white px-3 py-2.5">
             <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{label}</p>
-            <p className={`mt-1 tabular-nums ${strong ? 'text-xl font-black text-emerald-700' : 'text-sm font-bold text-slate-800'}`}>
+            <p className={`mt-0.5 tabular-nums ${strong ? 'text-base font-black' : 'text-sm font-bold'} ${muted ? 'text-slate-400 line-through' : positive ? 'text-emerald-700' : 'text-slate-800'}`}>
                 {value}
             </p>
         </div>
