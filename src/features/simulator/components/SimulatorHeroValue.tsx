@@ -86,19 +86,14 @@ export default function SimulatorHeroValue({
             animate={{ opacity: 1, y: 0 }}
             className="mb-5 rounded-xl border overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm"
         >
-            {/* Header row: name + confirm */}
-            <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-slate-100 dark:border-slate-800">
-                <div className="min-w-0 flex items-center gap-3">
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
-                        {clientName || 'Cliente sin nombre'}
-                    </p>
-                    <p className="text-[10px] text-slate-400 truncate hidden sm:block">
-                        {companyName || 'Comercializadora'} · {tariffLabel}
-                    </p>
-                </div>
-                <div className="shrink-0">
-                    <AnimatePresence mode="wait">{confirmBtn}</AnimatePresence>
-                </div>
+            {/* Header row: name */}
+            <div className="flex items-center gap-3 px-4 py-2.5 border-b border-slate-100 dark:border-slate-800">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
+                    {clientName || 'Cliente sin nombre'}
+                </p>
+                <p className="text-[10px] text-slate-400 truncate hidden sm:block">
+                    {companyName || 'Comercializadora'} · {tariffLabel}
+                </p>
             </div>
 
             {/* Savings strip */}
