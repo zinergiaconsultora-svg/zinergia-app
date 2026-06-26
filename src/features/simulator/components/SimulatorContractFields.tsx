@@ -270,7 +270,7 @@ const SimulatorContractFields: React.FC<SimulatorContractFieldsProps> = ({
                             transition={{ duration: 0.2 }}
                             className="overflow-hidden"
                         >
-                            <div className="grid grid-cols-[1fr_auto_auto] gap-3 p-5 border-t border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/20">
+                            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-3 p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/20">
                                 <div data-field-status={isLowConfidence('invoice_number') ? 'warning' : undefined}>
                                     <Input label="Nº Factura"
                                         labelBadge={<ConfidencePill value={getConfidence('invoice_number')} />}

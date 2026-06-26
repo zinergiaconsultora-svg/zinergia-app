@@ -288,7 +288,7 @@ export default function PresentationModal({ results, invoiceData, recommendation
 
                                         <div className="border-t border-slate-700 pt-3">
                                             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Consumo por periodo</h4>
-                                            <div className="grid grid-cols-6 gap-2">
+                                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                                                 {[1, 2, 3, 4, 5, 6].map(p => {
                                                     const kwh = Number(invoiceData[`energy_p${p}` as keyof InvoiceData] || 0);
                                                     const kw = Number(invoiceData[`power_p${p}` as keyof InvoiceData] || 0);

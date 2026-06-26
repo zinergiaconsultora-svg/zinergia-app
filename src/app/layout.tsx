@@ -22,8 +22,9 @@ export const viewport: Viewport = {
     themeColor: "#4f46e5",
     width: "device-width",
     initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
+    // Permitir zoom: bloquearlo (maximumScale/userScalable:false) incumple WCAG 1.4.4
+    maximumScale: 5,
+    userScalable: true,
     viewportFit: "cover",
 };
 

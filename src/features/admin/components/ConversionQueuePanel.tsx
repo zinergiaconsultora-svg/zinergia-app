@@ -68,8 +68,8 @@ export default function ConversionQueuePanel() {
     return (
         <div className="flex flex-col gap-3">
             {/* Strip resumen */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3 flex-wrap gap-y-2 min-w-0">
                     <div className="text-center">
                         <span className="text-2xl font-black text-slate-800">{opps.length}</span>
                         <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold leading-tight">pendientes</p>
