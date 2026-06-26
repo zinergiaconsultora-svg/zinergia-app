@@ -129,169 +129,134 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                     ) : null;
                 })()}
 
-                {/* Header mejorado */}
+                {/* Header + actions toolbar */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="mb-6"
                 >
-                    {/* Title row */}
-                    <div className="flex items-start justify-between gap-3 mb-4">
-                        <div>
-                            <h2 className="font-display text-xl sm:text-2xl font-bold text-slate-900">Análisis Completo</h2>
-                            <p className="text-xs sm:text-sm text-slate-500 font-body mt-0.5">
-                                Mejores propuestas para tarifa <span className="font-semibold text-emerald-600">{powerType}</span>
-                            </p>
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <h2 className="text-sm font-extrabold text-slate-900">Análisis</h2>
+                            <span className="text-[10px] text-slate-400">Tarifa {powerType}</span>
                         </div>
                         <button
                             type="button"
                             onClick={onReset}
-                            className="flex items-center gap-1.5 text-slate-400 hover:text-emerald-600 font-medium text-xs sm:text-sm transition-colors rounded-lg px-2 py-1.5 shrink-0"
-                            aria-label="Comenzar nueva simulación"
+                            className="flex items-center gap-1 text-slate-400 hover:text-slate-600 text-xs transition-colors shrink-0"
                         >
-                            <ChevronLeft size={14} aria-hidden="true" />
-                            <span className="hidden sm:inline">Nueva simulación</span>
-                            <span className="sm:hidden">Volver</span>
+                            <ChevronLeft size={12} />
+                            Nueva
                         </button>
                     </div>
-                    {/* Action buttons row — wraps on mobile */}
+
                     {invoiceData && (
-                        <div className="flex flex-wrap gap-2">
-                                        {/* Presentation mode */}
+                        <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm flex-wrap">
+                            {/* Primary: Presentar */}
+                            <button
+                                type="button"
+                                onClick={() => setIsPresenting(true)}
+                                className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors rounded-lg px-3 py-2"
+                            >
+                                <Presentation size={13} />
+                                Presentar
+                            </button>
+
+                            {/* Primary: Guardar CRM */}
+                            <button
+                                type="button"
+                                onClick={handleSaveProposal}
+                                disabled={isSaving}
+                                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors rounded-lg px-3 py-2 disabled:opacity-50"
+                            >
+                                {isSaving
+                                    ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    : <Zap size={13} />
+                                }
+                                {isSaving ? 'Guardando...' : 'Guardar en CRM'}
+                            </button>
+
+                            {/* Separator */}
+                            <div className="w-px h-6 bg-slate-200 mx-0.5" />
+
+                            {/* Secondary: Comparar */}
+                            {invoiceData?.cups && (
                                 <button
                                     type="button"
-                                    onClick={() => setIsPresenting(true)}
-                                    className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-medium text-sm transition-colors rounded-lg px-3 py-2"
+                                    onClick={() => setIsComparing(true)}
+                                    className="flex items-center gap-1.5 text-slate-600 hover:bg-slate-100 text-xs font-medium transition-colors rounded-lg px-2.5 py-2"
                                 >
-                                    <Presentation size={15} />
-                                    <span className="hidden sm:inline">Presentar</span>
+                                    <GitCompare size={13} />
+                                    <span className="hidden sm:inline">Comparar</span>
                                 </button>
+                            )}
 
-                                {/* Compare with history */}
-                                {invoiceData?.cups && (
+                            {/* Secondary: Compartir */}
+                            {savedProposalId && (
+                                <div className="relative" ref={shareMenuRef}>
                                     <button
                                         type="button"
-                                        onClick={() => setIsComparing(true)}
-                                        className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white font-medium text-sm transition-colors rounded-lg px-3 py-2"
+                                        onClick={() => setShowShareMenu(v => !v)}
+                                        disabled={isGeneratingLink}
+                                        className="flex items-center gap-1.5 text-slate-600 hover:bg-slate-100 text-xs font-medium transition-colors rounded-lg px-2.5 py-2 disabled:opacity-50"
                                     >
-                                        <GitCompare size={15} />
-                                        <span className="hidden sm:inline">Comparar</span>
+                                        {isGeneratingLink
+                                            ? <div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                                            : <Share2 size={13} />
+                                        }
+                                        <span className="hidden sm:inline">Compartir</span>
                                     </button>
-                                )}
-
-                                <button
-                                    type="button"
-                                    onClick={handleSaveProposal}
-                                    disabled={isSaving}
-                                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm transition-colors focus-visible:ring-2 focus-visible:ring-indigo-400 rounded-lg px-3 py-2 font-display disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isSaving ? (
-                                        <>
-                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                            <span className="hidden sm:inline">Guardando...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Zap size={14} aria-hidden="true" />
-                                            <span className="hidden sm:inline">Guardar en CRM</span>
-                                            <span className="sm:hidden">Guardar</span>
-                                        </>
-                                    )}
-                                </button>
-                                {/* Share dropdown */}
-                                {savedProposalId && (
-                                    <div className="relative" ref={shareMenuRef}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowShareMenu(v => !v)}
-                                            disabled={isGeneratingLink}
-                                            className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white font-medium text-sm transition-colors rounded-lg px-4 py-2 font-display disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {isGeneratingLink ? (
-                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                            ) : (
-                                                <Share2 size={15} />
-                                            )}
-                                            Compartir
-                                        </button>
-                                        {showShareMenu && (
-                                            <div className="absolute left-0 top-full mt-1.5 w-52 bg-white rounded-xl border border-slate-200 shadow-xl z-20 overflow-hidden">
-                                                <button
-                                                    type="button"
-                                                    onClick={handleShareWhatsApp}
-                                                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-green-50 transition-colors"
-                                                >
-                                                    <MessageCircle size={14} className="text-green-500" />
-                                                    Enviar por WhatsApp
-                                                </button>
-                                                <div className="border-t border-slate-100" />
-                                                <button
-                                                    type="button"
-                                                    onClick={handleShareEmail}
-                                                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                                                >
-                                                    <Mail size={14} className="text-slate-400" />
-                                                    Enviar por email
-                                                </button>
-                                                <div className="border-t border-slate-100" />
-                                                <button
-                                                    type="button"
-                                                    onClick={handleCopyLink}
-                                                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                                                >
-                                                    {linkCopied
-                                                        ? <Check size={14} className="text-emerald-500" />
-                                                        : <Copy size={14} className="text-slate-400" />
-                                                    }
-                                                    {linkCopied ? '¡Copiado!' : 'Copiar enlace'}
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                {/* Export dropdown */}
-                                <div className="relative" ref={exportMenuRef}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowExportMenu(v => !v)}
-                                        disabled={isExporting}
-                                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm transition-colors focus-visible:ring-2 focus-visible:ring-emerald-400 rounded-lg px-3 py-2 font-display disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {isExporting ? (
-                                            <>
-                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                                Exportando...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Download size={16} />
-                                                Exportar
-                                                <ChevronDown size={13} className={`transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
-                                            </>
-                                        )}
-                                    </button>
-                                    {showExportMenu && (
-                                        <div className="absolute right-0 top-full mt-1.5 w-44 bg-white rounded-xl border border-slate-200 shadow-xl z-20 overflow-hidden">
-                                            <button
-                                                type="button"
-                                                onClick={() => { setShowExportMenu(false); handleExportPDF(); }}
-                                                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                                            >
-                                                <FileText size={14} className="text-slate-400" />
-                                                Propuesta PDF
+                                    {showShareMenu && (
+                                        <div className="absolute left-0 top-full mt-1.5 w-48 bg-white rounded-xl border border-slate-200 shadow-xl z-20 overflow-hidden">
+                                            <button type="button" onClick={handleShareWhatsApp}
+                                                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-700 hover:bg-green-50 transition-colors">
+                                                <MessageCircle size={13} className="text-green-500" /> WhatsApp
                                             </button>
                                             <div className="border-t border-slate-100" />
-                                            <button
-                                                type="button"
-                                                onClick={handleExportCSV}
-                                                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                                            >
-                                                <TableProperties size={14} className="text-slate-400" />
-                                                Comparativa CSV
+                                            <button type="button" onClick={handleShareEmail}
+                                                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">
+                                                <Mail size={13} className="text-slate-400" /> Email
+                                            </button>
+                                            <div className="border-t border-slate-100" />
+                                            <button type="button" onClick={handleCopyLink}
+                                                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">
+                                                {linkCopied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} className="text-slate-400" />}
+                                                {linkCopied ? 'Copiado' : 'Copiar enlace'}
                                             </button>
                                         </div>
                                     )}
                                 </div>
+                            )}
+
+                            {/* Secondary: Exportar */}
+                            <div className="relative" ref={exportMenuRef}>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowExportMenu(v => !v)}
+                                    disabled={isExporting}
+                                    className="flex items-center gap-1.5 text-slate-600 hover:bg-slate-100 text-xs font-medium transition-colors rounded-lg px-2.5 py-2 disabled:opacity-50"
+                                >
+                                    {isExporting
+                                        ? <div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                                        : <Download size={13} />
+                                    }
+                                    <span className="hidden sm:inline">{isExporting ? 'Exportando...' : 'Exportar'}</span>
+                                    {!isExporting && <ChevronDown size={11} className={`transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />}
+                                </button>
+                                {showExportMenu && (
+                                    <div className="absolute right-0 top-full mt-1.5 w-40 bg-white rounded-xl border border-slate-200 shadow-xl z-20 overflow-hidden">
+                                        <button type="button" onClick={() => { setShowExportMenu(false); handleExportPDF(); }}
+                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">
+                                            <FileText size={13} className="text-slate-400" /> PDF
+                                        </button>
+                                        <div className="border-t border-slate-100" />
+                                        <button type="button" onClick={handleExportCSV}
+                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">
+                                            <TableProperties size={13} className="text-slate-400" /> CSV
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </motion.div>
