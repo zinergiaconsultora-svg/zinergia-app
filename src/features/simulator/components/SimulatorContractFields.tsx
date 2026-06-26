@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import {
     Zap, User, Building2, Hash, Calendar, MapPin, Activity, Link2, UserCheck,
-    ChevronDown,
+    ChevronDown, FileText,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -225,56 +225,77 @@ const SimulatorContractFields: React.FC<SimulatorContractFieldsProps> = ({
             </div>
         </section>
 
-        {/* Factura — collapsible */}
+        {/* Factura — collapsible card */}
         <section>
-            <button type="button" onClick={() => setSecondaryExpanded(v => !v)}
-                className="flex items-center gap-2.5 mb-2 px-1 w-full text-left group"
-            >
-                <div className="w-1 h-4 bg-slate-300 dark:bg-slate-600 rounded-full" />
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex-1">
-                    Datos de la factura
-                    {!secondaryExpanded && (
-                        <span className="font-normal text-slate-300 dark:text-slate-600 ml-2 normal-case tracking-normal">
-                            Nº factura · Fecha · Periodo
-                        </span>
+            <div className="rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden transition-colors">
+                <button type="button" onClick={() => setSecondaryExpanded(v => !v)}
+                    className="w-full flex items-center gap-3 px-5 py-3.5 bg-slate-50/80 dark:bg-slate-900/30 hover:bg-slate-100/80 dark:hover:bg-slate-800/40 transition-colors text-left"
+                >
+                    <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/40 flex items-center justify-center shrink-0">
+                        <FileText size={14} className="text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Datos de la factura</p>
+                        {!secondaryExpanded && (
+                            <div className="flex items-center gap-3 mt-0.5">
+                                {data.invoice_number && (
+                                    <span className="text-xs text-slate-600 dark:text-slate-300 font-medium truncate">
+                                        Nº {data.invoice_number}
+                                    </span>
+                                )}
+                                {data.invoice_date && (
+                                    <span className="text-xs text-slate-400 dark:text-slate-500 truncate">
+                                        {data.invoice_date}
+                                    </span>
+                                )}
+                                {data.period_days && (
+                                    <span className="text-xs text-slate-400 dark:text-slate-500">
+                                        {data.period_days} días
+                                    </span>
+                                )}
+                                {!data.invoice_number && !data.invoice_date && (
+                                    <span className="text-xs text-slate-300 dark:text-slate-600 italic">Pulsa para rellenar</span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                    <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 shrink-0 ${secondaryExpanded ? 'rotate-180' : ''}`} />
+                </button>
+                <AnimatePresence>
+                    {secondaryExpanded && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                        >
+                            <div className="grid grid-cols-3 gap-4 p-5 border-t border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/20">
+                                <div data-field-status={isLowConfidence('invoice_number') ? 'warning' : undefined}>
+                                    <Input label="Nº Factura"
+                                        labelBadge={<ConfidencePill value={getConfidence('invoice_number')} />}
+                                        icon={<Hash size={15} />}
+                                        value={data.invoice_number ?? ''} onChange={e => onUpdate('invoice_number', e.target.value)}
+                                        warning={lowConfWarn('invoice_number') ?? (!data.invoice_number ? 'No encontrado' : undefined)}
+                                        action={pdfUrl && data.invoice_number ? <LocateButton onClick={() => locate(data.invoice_number)} lowConfidence={isLowConfidence('invoice_number')} /> : undefined}
+                                    />
+                                </div>
+                                <div data-field-status={isLowConfidence('invoice_date') ? 'warning' : undefined}>
+                                    <Input label="Fecha factura"
+                                        labelBadge={<ConfidencePill value={getConfidence('invoice_date')} />}
+                                        icon={<Calendar size={15} />}
+                                        value={data.invoice_date ?? ''} onChange={e => onUpdate('invoice_date', e.target.value)}
+                                        warning={lowConfWarn('invoice_date')}
+                                        action={pdfUrl && data.invoice_date ? <LocateButton onClick={() => locate(data.invoice_date)} lowConfidence={isLowConfidence('invoice_date')} /> : undefined}
+                                    />
+                                </div>
+                                <Input label="Días facturados" type="number" icon={<Calendar size={15} />}
+                                    value={data.period_days} onChange={e => onUpdate('period_days', parseInt(e.target.value) || 30)} />
+                            </div>
+                        </motion.div>
                     )}
-                </h3>
-                <ChevronDown size={13} className={`text-slate-400 transition-transform duration-200 ${secondaryExpanded ? 'rotate-180' : ''}`} />
-            </button>
-            <AnimatePresence>
-                {secondaryExpanded && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                    >
-                        <div className="grid grid-cols-3 gap-4 p-5 rounded-2xl bg-white/50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-800">
-                            <div data-field-status={isLowConfidence('invoice_number') ? 'warning' : undefined}>
-                                <Input label="Nº Factura"
-                                    labelBadge={<ConfidencePill value={getConfidence('invoice_number')} />}
-                                    icon={<Hash size={15} />}
-                                    value={data.invoice_number ?? ''} onChange={e => onUpdate('invoice_number', e.target.value)}
-                                    warning={lowConfWarn('invoice_number') ?? (!data.invoice_number ? 'No encontrado' : undefined)}
-                                    action={pdfUrl && data.invoice_number ? <LocateButton onClick={() => locate(data.invoice_number)} lowConfidence={isLowConfidence('invoice_number')} /> : undefined}
-                                />
-                            </div>
-                            <div data-field-status={isLowConfidence('invoice_date') ? 'warning' : undefined}>
-                                <Input label="Fecha factura"
-                                    labelBadge={<ConfidencePill value={getConfidence('invoice_date')} />}
-                                    icon={<Calendar size={15} />}
-                                    value={data.invoice_date ?? ''} onChange={e => onUpdate('invoice_date', e.target.value)}
-                                    warning={lowConfWarn('invoice_date')}
-                                    action={pdfUrl && data.invoice_date ? <LocateButton onClick={() => locate(data.invoice_date)} lowConfidence={isLowConfidence('invoice_date')} /> : undefined}
-                                />
-                            </div>
-                            <Input label="Días facturados" type="number" icon={<Calendar size={15} />}
-                                value={data.period_days} onChange={e => onUpdate('period_days', parseInt(e.target.value) || 30)} />
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                </AnimatePresence>
+            </div>
         </section>
     </div>
     );
