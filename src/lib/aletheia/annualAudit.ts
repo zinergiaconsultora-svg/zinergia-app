@@ -3,7 +3,7 @@ import type { AnnualConsolidatedProfile } from './annualConsolidation';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type FindingSeverity = 'critical' | 'high' | 'medium' | 'info';
-export type FindingCategory = 'potencia' | 'reactiva' | 'tarifa' | 'facturacion' | 'estacional';
+export type FindingCategory = 'potencia' | 'reactiva' | 'tarifa' | 'facturacion' | 'estacional' | 'precio';
 
 export interface AuditFinding {
     id: string;
@@ -74,6 +74,10 @@ export function auditAnnualProfile(profile: AnnualConsolidatedProfile): AnnualAu
     // 5. Seasonal guidance — what's missing for a full picture
     const seasonalResult = auditSeasonalCoverage(profile);
     if (seasonalResult) findings.push(seasonalResult);
+
+    // 6. Price/kWh evolution — rising or falling trend over the covered period
+    const priceResult = auditPriceEvolution(profile);
+    if (priceResult) findings.push(priceResult);
 
     // Sort by: severity first, then savings
     const sortOrder: Record<FindingSeverity, number> = {
@@ -321,6 +325,51 @@ function auditSeasonalCoverage(profile: AnnualConsolidatedProfile): AuditFinding
             'Estaciones cubiertas': `${4 - profile.missingSeasons.length}/4`,
             'Estaciones pendientes': missing,
             'Nivel de análisis actual': profile.confidenceLevel,
+        },
+    };
+}
+
+// ─── Finding: Price/kWh evolution ─────────────────────────────────────────────
+
+function auditPriceEvolution(profile: AnnualConsolidatedProfile): AuditFinding | null {
+    if (profile.monthsCovered < 3) return null;
+
+    const priceData = profile.months
+        .filter(m => m.totalEnergy > 0 && m.totalAmount > 0)
+        .map(m => ({ month: m.month, pricePerKwh: m.totalAmount / m.totalEnergy }))
+        .sort((a, b) => a.month.localeCompare(b.month));
+
+    if (priceData.length < 3) return null;
+
+    const mid = Math.floor(priceData.length / 2);
+    const avgFirst = priceData.slice(0, mid).reduce((s, p) => s + p.pricePerKwh, 0) / mid;
+    const avgRecent = priceData.slice(mid).reduce((s, p) => s + p.pricePerKwh, 0) / (priceData.length - mid);
+
+    const trendPct = ((avgRecent - avgFirst) / avgFirst) * 100;
+    if (Math.abs(trendPct) < 10) return null;
+
+    const isRising = trendPct > 0;
+    const annualImpact = Math.abs(Math.round((avgRecent - avgFirst) * profile.totalEnergyKwh));
+
+    return {
+        id: 'price-evolution',
+        category: 'precio',
+        severity: Math.abs(trendPct) > 25 ? 'high' : 'medium',
+        title: `Precio/kWh ${isRising ? 'en alza' : 'a la baja'}: ${isRising ? '+' : ''}${trendPct.toFixed(0)}%`,
+        description: `El coste medio por kWh ha ${isRising ? 'subido' : 'bajado'} de ${(avgFirst * 100).toFixed(1)} a ${(avgRecent * 100).toFixed(1)} cts/kWh en el periodo. A consumo constante supone ${annualImpact} €/año ${isRising ? 'adicionales' : 'de ahorro'}.`,
+        annualSavingsEur: isRising ? annualImpact : 0,
+        actionLabel: isRising
+            ? 'Renegociar precio o cambiar a tarifa indexada'
+            : 'Evolución favorable — confirmar origen del descenso',
+        actionDetail: isRising
+            ? `El precio/kWh lleva ${profile.monthsCovered} meses encareciéndose. Si la tendencia continúa, el cliente perderá poder adquisitivo sin cambiar nada. Revisar si la tarifa actual tiene precio fijo protegido o si está expuesta al mercado. Valorar indexado OMIE si el perfil de consumo es favorable.`
+            : `El precio/kWh ha mejorado — posiblemente por renegociación, cambio de tarifa o mercado más barato. Confirmar con el cliente el motivo y asegurarse de que la mejora se mantiene en el contrato actual.`,
+        confidence: profile.monthsCovered >= 4 ? 'alta' : 'media',
+        supportingData: {
+            'Precio inicial (media)': `${(avgFirst * 100).toFixed(1)} cts/kWh`,
+            'Precio reciente (media)': `${(avgRecent * 100).toFixed(1)} cts/kWh`,
+            'Variación': `${isRising ? '+' : ''}${trendPct.toFixed(0)}%`,
+            'Impacto anual estimado': `${isRising ? '+' : '-'}${annualImpact} €`,
         },
     };
 }

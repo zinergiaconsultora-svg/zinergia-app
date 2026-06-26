@@ -86,7 +86,10 @@ function confidenceLevel(monthsCovered: number): 'estimacion' | 'fiable' | 'cert
 }
 
 function confidenceScore(monthsCovered: number): number {
-    return Math.min(100, Math.round((monthsCovered / 12) * 100));
+    if (monthsCovered >= 4) return 100;
+    if (monthsCovered === 3) return 75;
+    if (monthsCovered === 2) return 50;
+    return 20;
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────

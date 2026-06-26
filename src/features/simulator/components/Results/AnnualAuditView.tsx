@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     AlertTriangle, Award, BarChart3, ChevronDown, ChevronRight,
-    Info, Leaf, TrendingDown, Zap, ClipboardList,
+    Info, Leaf, TrendingDown, TrendingUp, Zap, ClipboardList,
 } from 'lucide-react';
 import type { AnnualConsolidatedProfile, Season } from '@/lib/aletheia/annualConsolidation';
 import type { AuditFinding, AnnualAuditResult, PowerOptimizationPeriod } from '@/lib/aletheia/annualAudit';
@@ -34,6 +34,7 @@ const CATEGORY_ICON = {
     tarifa:      BarChart3,
     facturacion: ClipboardList,
     estacional:  Leaf,
+    precio:      TrendingUp,
 } as const;
 
 const SEASON_LABEL: Record<Season, string> = {
@@ -86,13 +87,17 @@ function SeasonalBar({ months }: { months: AnnualConsolidatedProfile['months'] }
     const maxEnergy = Math.max(...months.map(m => m.totalEnergy));
     const monthMap = new Map(months.map(m => [m.month, m]));
 
-    // Build a 12-month grid, filling gaps with null
-    const currentYear = new Date().getFullYear();
+    // Collect all years present in data, most recent first
+    const allYears = [...new Set(months.map(m => m.month.split('-')[0]))].sort().reverse();
+
+    // Build a 12-month grid, preferring most recent year for each calendar slot
     const grid = Array.from({ length: 12 }, (_, i) => {
-        const m = String(i + 1).padStart(2, '0');
-        const ym1 = `${currentYear}-${m}`;
-        const ym2 = `${currentYear - 1}-${m}`;
-        return monthMap.get(ym1) ?? monthMap.get(ym2) ?? null;
+        const pad = String(i + 1).padStart(2, '0');
+        for (const year of allYears) {
+            const entry = monthMap.get(`${year}-${pad}`);
+            if (entry) return entry;
+        }
+        return null;
     });
 
     return (
@@ -113,7 +118,7 @@ function SeasonalBar({ months }: { months: AnnualConsolidatedProfile['months'] }
                                     title={month ? `${formatMonth(month.month)}: ${Math.round(month.totalEnergy)} kWh` : MONTH_ABBR[i + 1]}
                                 />
                             </div>
-                            <span className="text-[8px] text-slate-300">{MONTH_ABBR[i + 1][0]}</span>
+                            <span className="text-[8px] text-slate-300">{MONTH_ABBR[i + 1].slice(0, 1)}</span>
                         </div>
                     );
                 })}
@@ -241,6 +246,28 @@ function FindingCard({ finding, powerPeriods, defaultOpen = false }: {
             </AnimatePresence>
         </motion.div>
     );
+}
+
+// ─── Executive summary ────────────────────────────────────────────────────────
+
+function buildExecutiveSummary(audit: AnnualAuditResult, profile: AnnualConsolidatedProfile): string {
+    const actionable = audit.findings.filter(f => f.severity !== 'info' && f.annualSavingsEur > 0);
+    const qualitative = audit.findings.filter(f => f.severity !== 'info' && f.annualSavingsEur === 0);
+    const savings = audit.totalQuantifiedSavings;
+    const top = audit.topPriority;
+
+    if (savings > 0 && top) {
+        const parts: string[] = [];
+        parts.push(`${actionable.length} oportunidad${actionable.length > 1 ? 'es' : ''} con ahorro cuantificado — ${fmtEur(savings)}/año recuperables.`);
+        parts.push(`Prioridad: ${top.title.toLowerCase().replace(/\.$/, '')}.`);
+        if (qualitative.length > 0)
+            parts.push(`Además ${qualitative.length} aspecto${qualitative.length > 1 ? 's' : ''} a revisar sin coste directo calculado.`);
+        return parts.join(' ');
+    }
+    if (audit.findings.length > 0) {
+        return `${audit.findings.length} aspecto${audit.findings.length > 1 ? 's' : ''} identificado${audit.findings.length > 1 ? 's' : ''} en este suministro. ${top ? `Principal: ${top.title.toLowerCase()}.` : ''}`;
+    }
+    return 'Suministro revisado — sin oportunidades significativas detectadas con los datos actuales.';
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -386,6 +413,16 @@ export function AnnualAuditView({ cups }: Props) {
 
                 {/* Right: audit findings */}
                 <div className="flex flex-col gap-3">
+                    {/* Executive summary */}
+                    {audit.findings.length > 0 && (
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <p className="text-xs text-slate-700 leading-relaxed">
+                                <span className="font-bold text-slate-900">Resumen · </span>
+                                {buildExecutiveSummary(audit, profile)}
+                            </p>
+                        </div>
+                    )}
+
                     {/* Total savings strip */}
                     {audit.totalQuantifiedSavings > 0 && (
                         <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
