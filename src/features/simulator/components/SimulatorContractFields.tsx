@@ -186,21 +186,60 @@ const SimulatorContractFields: React.FC<SimulatorContractFieldsProps> = ({
             </div>
         </section>
 
-        {/* Secondary fields — collapsible */}
+        {/* Titular — always visible */}
+        <section>
+            <SectionLabel color="bg-indigo-500" label="Titular del contrato" />
+            <div className="rounded-2xl bg-white/70 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5">
+                    <div className="sm:col-span-2" data-field-status={isLowConfidence('client_name') ? 'warning' : undefined}>
+                        <Input label="Nombre completo"
+                            labelBadge={<><ConfidencePill value={getConfidence('client_name')} /><CorrectionBadge stat={getFieldStat('client_name')} /></>}
+                            icon={<User size={15} />}
+                            value={data.client_name ?? ''} onChange={e => onUpdate('client_name', e.target.value)}
+                            placeholder="Nombre del titular"
+                            warning={lowConfWarn('client_name') ?? (data.client_name && data.client_name.length < 5 ? 'Nombre muy corto' : undefined)}
+                            action={pdfUrl && data.client_name ? <LocateButton onClick={() => locate(data.client_name)} lowConfidence={isLowConfidence('client_name')} /> : undefined}
+                        />
+                    </div>
+                    <div data-field-status={isLowConfidence('dni_cif') ? 'warning' : undefined}>
+                        <Input label="DNI / CIF"
+                            labelBadge={<><ConfidencePill value={getConfidence('dni_cif')} /><CorrectionBadge stat={getFieldStat('dni_cif')} /></>}
+                            icon={<Hash size={15} />}
+                            value={data.dni_cif ?? ''} onChange={e => onUpdate('dni_cif', e.target.value)}
+                            placeholder="Ej: 12345678A"
+                            warning={lowConfWarn('dni_cif')}
+                            action={pdfUrl && data.dni_cif ? <LocateButton onClick={() => locate(data.dni_cif)} lowConfidence={isLowConfidence('dni_cif')} /> : undefined}
+                        />
+                    </div>
+                    <div data-field-status={isLowConfidence('supply_address') ? 'warning' : undefined}>
+                        <Input label="Dirección de suministro"
+                            labelBadge={<ConfidencePill value={getConfidence('supply_address')} />}
+                            icon={<MapPin size={15} />}
+                            value={data.supply_address ?? ''} onChange={e => onUpdate('supply_address', e.target.value)}
+                            placeholder="Calle, número, CP, ciudad"
+                            warning={lowConfWarn('supply_address') ?? (data.supply_address && data.supply_address.length < 10 ? 'Parece incompleta' : undefined)}
+                            action={pdfUrl && data.supply_address ? <LocateButton onClick={() => locate(data.supply_address)} lowConfidence={isLowConfidence('supply_address')} /> : undefined}
+                        />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {/* Factura — collapsible */}
         <section>
             <button type="button" onClick={() => setSecondaryExpanded(v => !v)}
-                className="flex items-center gap-2 mb-2 px-1 w-full text-left group"
+                className="flex items-center gap-2.5 mb-2 px-1 w-full text-left group"
             >
                 <div className="w-1 h-4 bg-slate-300 dark:bg-slate-600 rounded-full" />
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex-1">
-                    Datos Secundarios
+                    Datos de la factura
                     {!secondaryExpanded && (
                         <span className="font-normal text-slate-300 dark:text-slate-600 ml-2 normal-case tracking-normal">
-                            Titular · Dirección · Fecha · Nº Factura
+                            Nº factura · Fecha · Periodo
                         </span>
                     )}
                 </h3>
-                <ChevronDown size={13} className={`text-slate-400 transition-transform ${secondaryExpanded ? 'rotate-180' : ''}`} />
+                <ChevronDown size={13} className={`text-slate-400 transition-transform duration-200 ${secondaryExpanded ? 'rotate-180' : ''}`} />
             </button>
             <AnimatePresence>
                 {secondaryExpanded && (
@@ -211,27 +250,7 @@ const SimulatorContractFields: React.FC<SimulatorContractFieldsProps> = ({
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                     >
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-2xl bg-white/50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-800">
-                            <div data-field-status={isLowConfidence('client_name') ? 'warning' : undefined}>
-                                <Input label="Titular / Cliente"
-                                    labelBadge={<><ConfidencePill value={getConfidence('client_name')} /><CorrectionBadge stat={getFieldStat('client_name')} /></>}
-                                    icon={<User size={15} />}
-                                    value={data.client_name ?? ''} onChange={e => onUpdate('client_name', e.target.value)}
-                                    placeholder="Nombre completo"
-                                    warning={lowConfWarn('client_name') ?? (data.client_name && data.client_name.length < 5 ? 'Nombre muy corto' : undefined)}
-                                    action={pdfUrl && data.client_name ? <LocateButton onClick={() => locate(data.client_name)} lowConfidence={isLowConfidence('client_name')} /> : undefined}
-                                />
-                            </div>
-                            <div data-field-status={isLowConfidence('dni_cif') ? 'warning' : undefined}>
-                                <Input label="DNI / CIF del titular"
-                                    labelBadge={<><ConfidencePill value={getConfidence('dni_cif')} /><CorrectionBadge stat={getFieldStat('dni_cif')} /></>}
-                                    icon={<Hash size={15} />}
-                                    value={data.dni_cif ?? ''} onChange={e => onUpdate('dni_cif', e.target.value)}
-                                    placeholder="Identificación del titular"
-                                    warning={lowConfWarn('dni_cif')}
-                                    action={pdfUrl && data.dni_cif ? <LocateButton onClick={() => locate(data.dni_cif)} lowConfidence={isLowConfidence('dni_cif')} /> : undefined}
-                                />
-                            </div>
+                        <div className="grid grid-cols-3 gap-4 p-5 rounded-2xl bg-white/50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-800">
                             <div data-field-status={isLowConfidence('invoice_number') ? 'warning' : undefined}>
                                 <Input label="Nº Factura"
                                     labelBadge={<ConfidencePill value={getConfidence('invoice_number')} />}
@@ -241,28 +260,17 @@ const SimulatorContractFields: React.FC<SimulatorContractFieldsProps> = ({
                                     action={pdfUrl && data.invoice_number ? <LocateButton onClick={() => locate(data.invoice_number)} lowConfidence={isLowConfidence('invoice_number')} /> : undefined}
                                 />
                             </div>
-                            <div data-field-status={isLowConfidence('supply_address') ? 'warning' : undefined}>
-                                <Input label="Dirección"
-                                    labelBadge={<ConfidencePill value={getConfidence('supply_address')} />}
-                                    icon={<MapPin size={15} />}
-                                    value={data.supply_address ?? ''} onChange={e => onUpdate('supply_address', e.target.value)}
-                                    warning={lowConfWarn('supply_address') ?? (data.supply_address && data.supply_address.length < 10 ? 'Parece incompleta' : undefined)}
-                                    action={pdfUrl && data.supply_address ? <LocateButton onClick={() => locate(data.supply_address)} lowConfidence={isLowConfidence('supply_address')} /> : undefined}
+                            <div data-field-status={isLowConfidence('invoice_date') ? 'warning' : undefined}>
+                                <Input label="Fecha factura"
+                                    labelBadge={<ConfidencePill value={getConfidence('invoice_date')} />}
+                                    icon={<Calendar size={15} />}
+                                    value={data.invoice_date ?? ''} onChange={e => onUpdate('invoice_date', e.target.value)}
+                                    warning={lowConfWarn('invoice_date')}
+                                    action={pdfUrl && data.invoice_date ? <LocateButton onClick={() => locate(data.invoice_date)} lowConfidence={isLowConfidence('invoice_date')} /> : undefined}
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <Input label="Días" type="number" icon={<Calendar size={15} />}
-                                    value={data.period_days} onChange={e => onUpdate('period_days', parseInt(e.target.value) || 30)} />
-                                <div data-field-status={isLowConfidence('invoice_date') ? 'warning' : undefined}>
-                                    <Input label="Fecha"
-                                        labelBadge={<ConfidencePill value={getConfidence('invoice_date')} />}
-                                        icon={<Calendar size={15} />}
-                                        value={data.invoice_date ?? ''} onChange={e => onUpdate('invoice_date', e.target.value)}
-                                        warning={lowConfWarn('invoice_date')}
-                                        action={pdfUrl && data.invoice_date ? <LocateButton onClick={() => locate(data.invoice_date)} lowConfidence={isLowConfidence('invoice_date')} /> : undefined}
-                                    />
-                                </div>
-                            </div>
+                            <Input label="Días facturados" type="number" icon={<Calendar size={15} />}
+                                value={data.period_days} onChange={e => onUpdate('period_days', parseInt(e.target.value) || 30)} />
                         </div>
                     </motion.div>
                 )}
