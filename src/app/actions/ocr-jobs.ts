@@ -17,6 +17,9 @@ export interface OcrJobRecord {
     error_message: string | null;
     attempts: number;
     client_id?: string | null;
+    agent_id?: string | null;
+    agent_name?: string | null;
+    agent_email?: string | null;
 }
 
 export async function getOcrJobHistory(limit = 20): Promise<OcrJobRecord[]> {
@@ -27,23 +30,48 @@ export async function getOcrJobHistory(limit = 20): Promise<OcrJobRecord[]> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('No autenticado');
 
-    // El admin ve la actividad global de toda la red; el resto, sus propias subidas.
-    // La RLS (rls_ocr_jobs_admin_all / rls_ocr_jobs_agent_select) garantiza el alcance,
-    // pero filtramos explícitamente por agente para los comerciales.
+    const isAdmin = role === 'admin';
+
+    // Admin ve toda la red (50 jobs); comercial ve sus propias subidas.
+    const effectiveLimit = isAdmin ? Math.max(limit, 50) : limit;
+
     let query = supabase
         .from('ocr_jobs')
-        .select('id, status, created_at, file_name, file_path, extracted_data, error_message, attempts')
+        .select('id, status, created_at, file_name, file_path, extracted_data, error_message, attempts, agent_id')
         .order('created_at', { ascending: false })
-        .limit(limit);
+        .limit(effectiveLimit);
 
-    if (role !== 'admin') {
+    if (!isAdmin) {
         query = query.eq('agent_id', user.id);
     }
 
     const { data, error } = await query;
-
     if (error) throw new Error(`Error obteniendo historial OCR: ${error.message}`);
-    return (data ?? []) as OcrJobRecord[];
+
+    const jobs = (data ?? []) as OcrJobRecord[];
+
+    // Para admin: enriquecer con nombre del agente haciendo join a profiles
+    if (isAdmin && jobs.length > 0) {
+        const agentIds = [...new Set(jobs.map(j => j.agent_id).filter(Boolean))] as string[];
+        if (agentIds.length > 0) {
+            const { data: profiles } = await supabase
+                .from('profiles')
+                .select('id, full_name, email')
+                .in('id', agentIds);
+
+            const profileMap = new Map<string, { full_name: string | null; email: string }>(
+                (profiles ?? []).map(p => [p.id, { full_name: p.full_name, email: p.email }])
+            );
+
+            return jobs.map(j => ({
+                ...j,
+                agent_name: j.agent_id ? (profileMap.get(j.agent_id)?.full_name ?? null) : null,
+                agent_email: j.agent_id ? (profileMap.get(j.agent_id)?.email ?? null) : null,
+            }));
+        }
+    }
+
+    return jobs;
 }
 
 export async function getOcrJobStatus(jobId: string): Promise<OcrJobRecord | null> {
