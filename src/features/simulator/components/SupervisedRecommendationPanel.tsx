@@ -49,6 +49,8 @@ export function SupervisedRecommendationPanel({ recommendation }: SupervisedReco
                     const Icon = KIND_ICON[item.kind];
                     const commission = item.candidate.estimatedAgentCommission;
 
+                    const learnedFromHistory = !!item.conversion && item.conversion.confidence > 0 && item.conversion.score >= 0.55;
+
                     return (
                         <div key={`${item.kind}-${item.candidate.id}`} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
                             <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
@@ -58,6 +60,14 @@ export function SupervisedRecommendationPanel({ recommendation }: SupervisedReco
                             <div className="mt-2 text-sm font-semibold text-slate-900">
                                 {item.candidate.company} · {item.candidate.tariffName}
                             </div>
+                            {learnedFromHistory && (
+                                <div
+                                    className="mt-2 inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700"
+                                    title={`El histórico de propuestas respalda esta opción (confianza ${Math.round(item.conversion!.confidence * 100)}%).`}
+                                >
+                                    💡 Recomendado por histórico
+                                </div>
+                            )}
                             <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                                 <div>
                                     <div className="text-slate-400">Ahorro</div>

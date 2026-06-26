@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildSupervisedRecommendations } from '../recommender';
+import { buildConversionMemory, type ProposalOutcome } from '../conversionMemory';
 
 describe('supervised recommender', () => {
     it('keeps max savings and surfaces a balanced option with stronger commission', () => {
@@ -96,5 +97,38 @@ describe('supervised recommender', () => {
 
         expect(result.recommendations).toHaveLength(0);
         expect(result.guardrails[0]).toContain('comercialmente defendible');
+    });
+});
+
+describe('supervised recommender — conversion signal exposure', () => {
+    const baseCandidate = {
+        id: 'a', tariffName: 'Tarifa A', company: 'NATURGY',
+        annualSavings: 300, annualCost: 1200, estimatedAgentCommission: 60,
+        offerType: 'fixed' as const,
+    };
+
+    it('leaves conversion undefined when no memory is provided', () => {
+        const result = buildSupervisedRecommendations([baseCandidate]);
+        expect(result.recommendations[0].conversion).toBeUndefined();
+    });
+
+    it('attaches a positive conversion signal when history favours the candidate', () => {
+        const outcomes: ProposalOutcome[] = Array.from({ length: 10 }, () => ({
+            marketer: 'NATURGY', offerType: 'fixed', signal: 'won',
+        }));
+        const memory = buildConversionMemory(outcomes);
+
+        const result = buildSupervisedRecommendations([baseCandidate], { conversionMemory: memory });
+
+        const rec = result.recommendations[0];
+        expect(rec.conversion).toBeDefined();
+        expect(rec.conversion!.confidence).toBeGreaterThan(0);
+        expect(rec.conversion!.score).toBeGreaterThan(0.55);
+    });
+
+    it('reports zero confidence for a marketer with no history', () => {
+        const memory = buildConversionMemory([{ marketer: 'ENDESA', offerType: 'fixed', signal: 'won' }]);
+        const result = buildSupervisedRecommendations([baseCandidate], { conversionMemory: memory });
+        expect(result.recommendations[0].conversion?.confidence).toBe(0);
     });
 });

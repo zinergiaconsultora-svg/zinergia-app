@@ -31,6 +31,8 @@ export interface SupervisedRecommendation {
     score: number;
     confidence: RecommendationConfidence;
     reason: string;
+    /** Señal del histórico de conversión para este candidato, si la hay. */
+    conversion?: { score: number; confidence: number };
 }
 
 export interface SupervisedRecommendationResult {
@@ -49,6 +51,10 @@ export function buildSupervisedRecommendations(
 ): SupervisedRecommendationResult {
     const conversionMemory = options?.conversionMemory ?? null;
     const segment = options?.segment ?? null;
+    const conversionFor = (c: SupervisedCandidate): { score: number; confidence: number } | undefined =>
+        conversionMemory && c.offerType
+            ? getConversionSignal(conversionMemory, c.company, c.offerType, segment)
+            : undefined;
     const viable = candidates
         .filter(isCommerciallyDefensible)
         .sort((a, b) => b.annualSavings - a.annualSavings);
@@ -71,6 +77,7 @@ export function buildSupervisedRecommendations(
         maxSavings,
         scoreCandidate(maxSavings, bestSavings, bestCommission, conversionMemory, segment),
         'Es la opcion que mas reduce el coste anual del cliente.',
+        conversionFor(maxSavings),
     );
 
     const balancedPool = viable.filter(candidate =>
@@ -100,6 +107,7 @@ export function buildSupervisedRecommendations(
             balanced.id === maxSavings.id
                 ? 'Tambien es la mejor opcion equilibrada porque combina maximo ahorro y buena calidad comercial.'
                 : 'Mantiene un ahorro alto frente a la mejor opcion y mejora la oportunidad comercial.',
+            conversionFor(balanced),
         ),
         bestCommissionCandidate
             ? makeRecommendation(
@@ -108,6 +116,7 @@ export function buildSupervisedRecommendations(
                 bestCommissionCandidate,
                 scoreCandidate(bestCommissionCandidate, bestSavings, bestCommission, conversionMemory, segment),
                 'Prioriza la comision sin bajar del umbral minimo de ahorro defendible para el cliente.',
+                conversionFor(bestCommissionCandidate),
             )
             : null,
     ]);
@@ -179,6 +188,7 @@ function makeRecommendation(
     candidate: SupervisedCandidate,
     score: number,
     reason: string,
+    conversion?: { score: number; confidence: number },
 ): SupervisedRecommendation {
     return {
         kind,
@@ -187,6 +197,7 @@ function makeRecommendation(
         score,
         confidence: score >= 0.8 ? 'high' : score >= 0.55 ? 'medium' : 'low',
         reason,
+        conversion,
     };
 }
 
