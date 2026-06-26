@@ -15,6 +15,7 @@ import {
     ArrowUpRight,
     BrainCircuit,
     Flame,
+    ClipboardList,
 } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -42,6 +43,15 @@ const ConversionQueuePanel = dynamic(() => import('./ConversionQueuePanel'), {
     loading: () => (
         <div className="space-y-2">
             {[1, 2, 3, 4].map(i => <div key={i} className="h-12 bg-slate-100/80 animate-pulse rounded-xl" />)}
+        </div>
+    ),
+});
+
+const AltaPendingPanel = dynamic(() => import('./AltaPendingPanel'), {
+    ssr: false,
+    loading: () => (
+        <div className="space-y-2">
+            {[1, 2, 3].map(i => <div key={i} className="h-12 bg-slate-100/80 animate-pulse rounded-xl" />)}
         </div>
     ),
 });
@@ -149,6 +159,22 @@ export default function AdminDashboard({ stats, franchises, unassignedAgents }: 
                         </div>
                     </div>
                     <ConversionQueuePanel />
+                </motion.div>
+
+                {/* ═══ EXPEDIENTES DE ALTA — sub-proceso post-propuesta ═══ */}
+                <motion.div variants={item} className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border-2 border-slate-100 dark:border-slate-700/50 shadow-lg p-5 hover:shadow-xl transition-all">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center shrink-0">
+                                <ClipboardList size={16} className="text-indigo-600 dark:text-indigo-400" />
+                            </div>
+                            <div>
+                                <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">Gestión de Altas</h2>
+                                <p className="text-[11px] text-slate-400">Propuestas aceptadas pendientes de tramitar el cambio de comercializadora</p>
+                            </div>
+                        </div>
+                    </div>
+                    <AltaPendingPanel />
                 </motion.div>
 
                 {/* KPI Grid */}
