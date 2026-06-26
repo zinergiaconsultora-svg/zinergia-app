@@ -4,6 +4,7 @@ import { StyleSheet } from '@react-pdf/renderer';
 export const BRAND_BLUE   = '#1b2641';
 export const BRAND_ORANGE = '#ff5722';
 export const EMERALD      = '#059669';
+export const EMERALD_TINT = '#ecfdf5';
 export const SLATE_100    = '#f1f5f9';
 export const SLATE_200    = '#e2e8f0';
 export const SLATE_400    = '#94a3b8';
@@ -113,6 +114,20 @@ export const s = StyleSheet.create({
     introHighlight: {
         fontFamily: 'Helvetica-Bold',
         color: BRAND_BLUE,
+    },
+    introTextCompact: {
+        fontSize: 10,
+        color: SLATE_700,
+        lineHeight: 1.6,
+        marginTop: 4,
+    },
+    priceRowCompact: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 6,
+        borderBottomWidth: 1,
+        borderBottomColor: SLATE_100,
     },
 
     // ── Comparison row (Side by Side minimalist)
@@ -403,4 +418,55 @@ export const s = StyleSheet.create({
         color: SLATE_400,
         fontFamily: 'Helvetica-Bold',
     },
+
+    // ── Ahorro en 3 horizontes
+    horizonRow: { flexDirection: 'row', gap: 10, marginBottom: 30 },
+    horizonCard: { flex: 1, borderWidth: 1, borderColor: SLATE_200, borderRadius: 8, padding: 12, alignItems: 'center' },
+    horizonCardHighlight: { flex: 1, backgroundColor: EMERALD_TINT, borderWidth: 1, borderColor: EMERALD, borderRadius: 8, padding: 12, alignItems: 'center' },
+    horizonLabel: { fontSize: 8, color: SLATE_500, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6, textAlign: 'center' },
+    horizonValue: { fontSize: 17, fontFamily: 'Helvetica-Bold', color: SLATE_900 },
+    horizonValueGreen: { fontSize: 20, fontFamily: 'Helvetica-Bold', color: EMERALD },
+
+    // ── Balanza antes / después
+    balanceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: SLATE_200, borderRadius: 10, paddingVertical: 18, paddingHorizontal: 16, marginBottom: 10 },
+    balanceSide: { flex: 1, alignItems: 'center' },
+    balanceLabel: { fontSize: 8, color: SLATE_500, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
+    balanceLogo: { width: 70, height: 24, objectFit: 'contain', marginBottom: 8 },
+    balanceMarketer: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: SLATE_700, marginBottom: 8, textAlign: 'center' },
+    balanceAmount: { fontSize: 22, fontFamily: 'Helvetica-Bold', color: SLATE_900 },
+    balanceAmountGreen: { fontSize: 22, fontFamily: 'Helvetica-Bold', color: EMERALD },
+    balanceCenter: { width: 40, alignItems: 'center' },
+    balanceArrow: { fontSize: 18, color: BRAND_ORANGE, fontFamily: 'Helvetica-Bold' },
+    balanceSavingsBar: { backgroundColor: EMERALD, borderRadius: 6, paddingVertical: 8, paddingHorizontal: 14, alignItems: 'center', marginBottom: 30 },
+    balanceSavingsText: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: WHITE },
+
+    // ── Datos de suministro
+    supplyBox: { backgroundColor: SLATE_100, borderRadius: 8, padding: 14, marginBottom: 30 },
+    supplyTitle: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: BRAND_BLUE, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 },
+    supplyGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+    supplyItem: { width: '50%', marginBottom: 10, paddingRight: 8 },
+    supplyKey: { fontSize: 7.5, color: SLATE_500, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+    supplyVal: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: SLATE_900 },
+
+    // ── Comparación enfrentada (dos columnas)
+    compareWrap: { flexDirection: 'row', gap: 14, marginBottom: 16 },
+    compareCol: { flex: 1, borderWidth: 1, borderColor: SLATE_200, borderRadius: 8 },
+    compareColHead: { backgroundColor: SLATE_100, paddingVertical: 8, paddingHorizontal: 12, borderTopLeftRadius: 8, borderTopRightRadius: 8 },
+    compareColHeadGreen: { backgroundColor: EMERALD_TINT, paddingVertical: 8, paddingHorizontal: 12, borderTopLeftRadius: 8, borderTopRightRadius: 8 },
+    compareColTitle: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: BRAND_BLUE },
+    compareColSub: { fontSize: 7.5, color: SLATE_500, marginTop: 2 },
+    compareRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: SLATE_100 },
+    compareKey: { fontSize: 8.5, color: SLATE_500, flex: 1 },
+    compareVal: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: SLATE_700 },
+    compareTotal: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, paddingHorizontal: 12, backgroundColor: SLATE_100, borderBottomLeftRadius: 8, borderBottomRightRadius: 8 },
+    compareTotalGreen: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, paddingHorizontal: 12, backgroundColor: EMERALD_TINT, borderBottomLeftRadius: 8, borderBottomRightRadius: 8 },
+    compareTotalLabel: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: SLATE_700 },
+    compareTotalVal: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: SLATE_900 },
+    compareTotalValGreen: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: EMERALD },
+
+    // ── Explicación de la tarifa
+    tariffHowText: { fontSize: 10, color: SLATE_500, lineHeight: 1.7, marginBottom: 14 },
+    advantageRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
+    advantageBullet: { fontSize: 10, color: EMERALD, fontFamily: 'Helvetica-Bold', marginRight: 8 },
+    advantageText: { fontSize: 10, color: SLATE_700, flex: 1, lineHeight: 1.5 },
 });

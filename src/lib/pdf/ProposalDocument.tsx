@@ -3,7 +3,7 @@ import { Document, Page, Text, View, Image } from '@react-pdf/renderer';
 import { Proposal } from '@/types/crm';
 import type { InvoiceSimulationResult } from '@/lib/comparison/invoice-simulator';
 import { s, SLATE_500, SLATE_700 } from './proposalPdfStyles';
-import { euro, euro2, pct, price, getPdfLogoSource, generateVerificationHash } from './proposalPdfHelpers';
+import { euro, euro2, pct, price, getPdfLogoSource, generateVerificationHash, offerValidityUntil, kw, kwh } from './proposalPdfHelpers';
 import { analyzeConsumption } from '@/lib/aletheia/consumptionProfile';
 import { crmToAletheiaInvoice } from '@/lib/aletheia/adapter';
 
@@ -11,6 +11,26 @@ const PROFILE_CLASS_LABEL: Record<string, string> = {
     flat: 'Perfil plano',
     moderate: 'Perfil mixto',
     peaky: 'Perfil picudo',
+};
+
+// Ventajas mostradas en la explicación de la tarifa, según su tipo.
+const TARIFF_ADVANTAGES: Record<'fixed' | 'indexed', { how: string; bullets: string[] }> = {
+    fixed: {
+        how: 'Pagas un precio cerrado por tu energía durante toda la vigencia del contrato. Sepas o no lo que hará el mercado, tu tarifa no cambia: máxima previsibilidad para tu negocio.',
+        bullets: [
+            'Precio de la energía fijo — sin sorpresas en los meses de mercado tensionado.',
+            'Factura predecible: facilita la previsión de tesorería.',
+            'Sin servicios ni mantenimientos ocultos en la factura.',
+        ],
+    },
+    indexed: {
+        how: 'Tu energía se paga según el precio real del mercado mayorista (OMIE) hora a hora. En un perfil de consumo adecuado, aprovecha las horas más baratas y reduce el coste medio del kWh.',
+        bullets: [
+            'Coste medio del kWh más bajo aprovechando las horas valle.',
+            'Transparencia total: pagas el precio real del mercado más un margen fijo.',
+            'Ideal para consumos con flexibilidad horaria.',
+        ],
+    },
 };
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -52,6 +72,28 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
         if (totalEnergy <= 0) return null;
         return analyzeConsumption(aletheiaInvoice);
     })();
+
+    // ── Datos del suministro (desde la factura analizada) ─────────────────────
+    const cd = proposal.calculation_data;
+    const cups = cd?.cups?.trim();
+    const supplyAddress = cd?.supply_address?.trim();
+    const currentTariffAccess = cd?.detected_tariff_type || cd?.forensic_details?.tariff_access || tariff;
+    const currentMarketer = cd?.company_name?.trim();
+    const currentLogo = currentMarketer ? getPdfLogoSource(currentMarketer) : null;
+    const powerVals = cd ? [cd.power_p1, cd.power_p2, cd.power_p3, cd.power_p4, cd.power_p5, cd.power_p6] : [];
+    const energyVals = cd ? [cd.energy_p1, cd.energy_p2, cd.energy_p3, cd.energy_p4, cd.energy_p5, cd.energy_p6] : [];
+    const activePeriods = powerVals.filter(v => (v || 0) > 0).length || 3;
+
+    // ── Ahorro en 3 horizontes ────────────────────────────────────────────────
+    const sixMonthSavings = savings / 2;
+
+    // ── Tipo de oferta y ventajas ─────────────────────────────────────────────
+    const offerType: 'fixed' | 'indexed' = proposal.offer_snapshot.type === 'indexed' ? 'indexed' : 'fixed';
+    const advantages = TARIFF_ADVANTAGES[offerType];
+    const contractDuration = proposal.offer_snapshot.contract_duration;
+
+    // ── Validez de la oferta ──────────────────────────────────────────────────
+    const validityUntil = offerValidityUntil(proposal.created_at, 15);
 
     // 5-year projection
     const projection = [1, 2, 3, 4, 5].map(yr => ({
@@ -98,103 +140,223 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
                         <Text style={s.heroSub}>Lo que equivale a un {pct(savingsPct)} menos en tu factura anual actual.</Text>
                     </View>
 
-                    {/* Intro */}
-                    <Text style={s.introText}>
-                        Tras analizar minuciosamente tus hábitos de consumo y la estructura de tu tarifa actual,{' '}
-                        hemos detectado que <Text style={s.introHighlight}>estás pagando {euro(currentCost)} al año cuando podrías pagar {euro(newCost)}.</Text>
-                        {' '}Esa diferencia representa capital inmovilizado que tu empresa podría reasignar a áreas estratégicas.
+                    {/* Ahorro en 3 horizontes */}
+                    <View style={s.horizonRow}>
+                        <View style={s.horizonCard}>
+                            <Text style={s.horizonLabel}>En esta factura</Text>
+                            <Text style={s.horizonValue}>{euro2(invoiceSavings)}</Text>
+                        </View>
+                        <View style={s.horizonCard}>
+                            <Text style={s.horizonLabel}>A los 6 meses</Text>
+                            <Text style={s.horizonValue}>{euro(sixMonthSavings)}</Text>
+                        </View>
+                        <View style={s.horizonCardHighlight}>
+                            <Text style={s.horizonLabel}>En un año</Text>
+                            <Text style={s.horizonValueGreen}>{euro(savings)}</Text>
+                        </View>
+                    </View>
+
+                    {/* Balanza: antes vs después */}
+                    <View style={s.balanceRow}>
+                        <View style={s.balanceSide}>
+                            <Text style={s.balanceLabel}>Ahora pagas (anual)</Text>
+                            {currentLogo ? (
+                                // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf Image no expone prop alt.
+                                <Image src={currentLogo} style={s.balanceLogo} />
+                            ) : (
+                                <Text style={s.balanceMarketer}>{currentMarketer || 'Tu comercializadora'}</Text>
+                            )}
+                            <Text style={s.balanceAmount}>{euro(currentCost)}</Text>
+                        </View>
+                        <View style={s.balanceCenter}>
+                            <Text style={s.balanceArrow}>›</Text>
+                        </View>
+                        <View style={s.balanceSide}>
+                            <Text style={s.balanceLabel}>Con Zinergia (anual)</Text>
+                            {logoSource ? (
+                                // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf Image no expone prop alt.
+                                <Image src={logoSource} style={s.balanceLogo} />
+                            ) : (
+                                <Text style={s.balanceMarketer}>{marketer}</Text>
+                            )}
+                            <Text style={s.balanceAmountGreen}>{euro(newCost)}</Text>
+                        </View>
+                    </View>
+                    <View style={s.balanceSavingsBar}>
+                        <Text style={s.balanceSavingsText}>
+                            Ahorras {euro(savings)} al año · {pct(savingsPct)} menos
+                        </Text>
+                    </View>
+
+                    {/* Datos del suministro analizado */}
+                    {(cups || supplyAddress) && (
+                        <View style={s.supplyBox}>
+                            <Text style={s.supplyTitle}>Datos del suministro analizado</Text>
+                            <View style={s.supplyGrid}>
+                                {cups && (
+                                    <View style={s.supplyItem}>
+                                        <Text style={s.supplyKey}>CUPS</Text>
+                                        <Text style={s.supplyVal}>{cups}</Text>
+                                    </View>
+                                )}
+                                {supplyAddress && (
+                                    <View style={s.supplyItem}>
+                                        <Text style={s.supplyKey}>Dirección de suministro</Text>
+                                        <Text style={s.supplyVal}>{supplyAddress}</Text>
+                                    </View>
+                                )}
+                                <View style={s.supplyItem}>
+                                    <Text style={s.supplyKey}>Tarifa de acceso</Text>
+                                    <Text style={s.supplyVal}>{currentTariffAccess}</Text>
+                                </View>
+                                {currentMarketer && (
+                                    <View style={s.supplyItem}>
+                                        <Text style={s.supplyKey}>Comercializadora actual</Text>
+                                        <Text style={s.supplyVal}>{currentMarketer}</Text>
+                                    </View>
+                                )}
+                                <View style={s.supplyItem}>
+                                    <Text style={s.supplyKey}>Periodo facturado</Text>
+                                    <Text style={s.supplyVal}>{periodDays} días</Text>
+                                </View>
+                                {powerVals.some(v => (v || 0) > 0) && (
+                                    <View style={s.supplyItem}>
+                                        <Text style={s.supplyKey}>Potencia contratada</Text>
+                                        <Text style={s.supplyVal}>
+                                            {powerVals.slice(0, activePeriods).map(v => kw(v)).join(' / ')} kW
+                                        </Text>
+                                    </View>
+                                )}
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Intro compacto */}
+                    <Text style={s.introTextCompact}>
+                        Tras analizar tu consumo y la estructura de tu tarifa actual, hemos detectado que{' '}
+                        <Text style={s.introHighlight}>estás pagando {euro(currentCost)} al año cuando podrías pagar {euro(newCost)}.</Text>
                     </Text>
 
-                    {/* Supervised invoice simulation */}
-                    <Text style={s.sectionTitle}>Simulación de Factura Optimizada</Text>
-                    <View style={s.simulationBox}>
-                        <View style={s.marketerHeader}>
-                            <View>
-                                <Text style={s.offerVal}>{marketer} — {tariff}</Text>
-                                <Text style={{ fontSize: 8, color: SLATE_500, marginTop: 4 }}>Período simulado: {periodDays} días</Text>
+                </View>
+
+                {/* Footer p1 */}
+                <View style={s.footer} fixed>
+                    <Text style={s.footerBrand}>ZINERGIA · Documento Analítico Confidencial</Text>
+                    <Text style={s.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
+                </View>
+
+            </Page>
+
+            {/* ═══════════════════════════════════════════════
+                PÁGINA 2 — Comparativa detallada
+            ═══════════════════════════════════════════════ */}
+            <Page size="A4" style={s.page}>
+
+                <View style={s.headerStrip}>
+                    <View>
+                        <Text style={s.logoText}>ZINERGIA</Text>
+                        <Text style={s.logoSub}>Consultora Energética</Text>
+                    </View>
+                    <View style={s.headerMeta}>
+                        <Text style={s.headerMetaHighlight}>Comparativa Detallada</Text>
+                        <Text style={s.headerMetaText}>Ref. {refId}</Text>
+                    </View>
+                </View>
+
+                <View style={s.body}>
+
+                    <Text style={s.sectionTitle}>Tu factura actual vs. con Zinergia</Text>
+
+                    {/* Comparación enfrentada */}
+                    <View style={s.compareWrap}>
+                        {/* Columna izquierda: factura actual */}
+                        <View style={s.compareCol}>
+                            <View style={s.compareColHead}>
+                                <Text style={s.compareColTitle}>Tu factura actual</Text>
+                                <Text style={s.compareColSub}>{currentMarketer || 'Comercializadora actual'} · {currentTariffAccess}</Text>
                             </View>
-                            {logoSource && (
-                                // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf Image no expone prop alt.
-                                <Image src={logoSource} style={s.marketerLogo} />
+                            <View style={s.compareRow}>
+                                <Text style={s.compareKey}>Periodo facturado</Text>
+                                <Text style={s.compareVal}>{periodDays} días</Text>
+                            </View>
+                            {powerVals.slice(0, activePeriods).map((v, i) => (
+                                <View key={`cp-pow-${i}`} style={s.compareRow}>
+                                    <Text style={s.compareKey}>Potencia P{i + 1}</Text>
+                                    <Text style={s.compareVal}>{kw(v)} kW</Text>
+                                </View>
+                            ))}
+                            {energyVals.slice(0, activePeriods).map((v, i) => (
+                                <View key={`cp-en-${i}`} style={s.compareRow}>
+                                    <Text style={s.compareKey}>Energía P{i + 1}</Text>
+                                    <Text style={s.compareVal}>{kwh(v)}</Text>
+                                </View>
+                            ))}
+                            <View style={s.compareTotal}>
+                                <Text style={s.compareTotalLabel}>Total factura actual</Text>
+                                <Text style={s.compareTotalVal}>{euro2(currentInvoiceEstimate)}</Text>
+                            </View>
+                        </View>
+
+                        {/* Columna derecha: con Zinergia */}
+                        <View style={s.compareCol}>
+                            <View style={s.compareColHeadGreen}>
+                                <Text style={s.compareColTitle}>Con Zinergia</Text>
+                                <Text style={s.compareColSub}>{marketer} · {tariff}</Text>
+                            </View>
+                            {calculationAudit ? (
+                                <>
+                                    {calculationAudit.lines.filter(line => Math.abs(line.amount) > 0.005).map(line => (
+                                        <View key={line.label} style={s.compareRow}>
+                                            <Text style={s.compareKey}>{line.label}</Text>
+                                            <Text style={s.compareVal}>{euro2(line.amount)}</Text>
+                                        </View>
+                                    ))}
+                                    <View style={s.compareRow}>
+                                        <Text style={s.compareKey}>Impuesto eléctrico</Text>
+                                        <Text style={s.compareVal}>{euro2(calculationAudit.electricityTax)}</Text>
+                                    </View>
+                                    <View style={s.compareRow}>
+                                        <Text style={s.compareKey}>IVA</Text>
+                                        <Text style={s.compareVal}>{euro2(calculationAudit.vat)}</Text>
+                                    </View>
+                                </>
+                            ) : (
+                                <View style={s.compareRow}>
+                                    <Text style={s.compareKey}>Coste optimizado del periodo</Text>
+                                    <Text style={s.compareVal}>{euro2(optimizedInvoiceEstimate)}</Text>
+                                </View>
                             )}
-                        </View>
-
-                        <View style={s.simulationCards}>
-                            <View style={s.simulationCard}>
-                                <Text style={s.simulationLabel}>Factura actual</Text>
-                                <Text style={s.simulationValue}>{euro2(currentInvoiceEstimate)}</Text>
-                            </View>
-                            <View style={s.simulationCard}>
-                                <Text style={s.simulationLabel}>Factura optimizada</Text>
-                                <Text style={s.simulationValue}>{euro2(optimizedInvoiceEstimate)}</Text>
-                            </View>
-                            <View style={s.simulationCard}>
-                                <Text style={s.simulationLabel}>Ahorro factura</Text>
-                                <Text style={s.simulationValueGreen}>{euro2(invoiceSavings)} · {pct(savingsPct)}</Text>
-                            </View>
-                            <View style={s.simulationCard}>
-                                <Text style={s.simulationLabel}>Ahorro anual</Text>
-                                <Text style={s.simulationValueGreen}>{euro2(savings)}</Text>
-                            </View>
-                        </View>
-
-                        {calculationAudit && (
-                            <View style={{ marginBottom: 10 }}>
-                                {calculationAudit.lines.filter(line => Math.abs(line.amount) > 0.005).map(line => (
-                                    <View key={line.label} style={s.offerRow}>
-                                        <Text style={s.offerKey}>{line.label}</Text>
-                                        <Text style={s.offerVal}>{euro2(line.amount)}</Text>
-                                    </View>
-                                ))}
-                                <View style={s.offerRow}>
-                                    <Text style={s.offerKey}>Subtotal antes de impuesto eléctrico</Text>
-                                    <Text style={s.offerVal}>{euro2(calculationAudit.subtotalBeforeTax)}</Text>
-                                </View>
-                                <View style={s.offerRow}>
-                                    <Text style={s.offerKey}>Impuesto eléctrico</Text>
-                                    <Text style={s.offerVal}>{euro2(calculationAudit.electricityTax)}</Text>
-                                </View>
-                                <View style={s.offerRow}>
-                                    <Text style={s.offerKey}>IVA</Text>
-                                    <Text style={s.offerVal}>{euro2(calculationAudit.vat)}</Text>
-                                </View>
-                            </View>
-                        )}
-
-                        <View style={s.priceGrid}>
-                            <View style={s.priceCol}>
-                                <Text style={s.priceTitle}>Precios nuevos energía</Text>
-                                {pricePeriods.map(period => (
-                                    <View key={`energy-${period}`} style={s.offerRow}>
-                                        <Text style={s.offerKey}>{period.toUpperCase()}</Text>
-                                        <Text style={s.offerVal}>{price(proposal.offer_snapshot.energy_price?.[period])}</Text>
-                                    </View>
-                                ))}
-                            </View>
-                            <View style={s.priceCol}>
-                                <Text style={s.priceTitle}>Precios nuevos potencia</Text>
-                                {pricePeriods.map(period => (
-                                    <View key={`power-${period}`} style={s.offerRow}>
-                                        <Text style={s.offerKey}>{period.toUpperCase()}</Text>
-                                        <Text style={s.offerVal}>{price(proposal.offer_snapshot.power_price?.[period], '€/kW día')}</Text>
-                                    </View>
-                                ))}
+                            <View style={s.compareTotalGreen}>
+                                <Text style={s.compareTotalLabel}>Total con Zinergia</Text>
+                                <Text style={s.compareTotalValGreen}>{euro2(optimizedInvoiceEstimate)}</Text>
                             </View>
                         </View>
                     </View>
 
-                    {/* Comparison before / after */}
-                    <View style={s.comparisonRow}>
-                        <View style={s.comparisonCard}>
-                            <Text style={s.comparisonLabel}>Situación actual (Anual)</Text>
-                            <Text style={s.comparisonAmount}>{euro(currentCost)}</Text>
-                            <Text style={s.comparisonSub}>Coste proyectado sin optimizar</Text>
-                        </View>
+                    <Text style={{ fontSize: 8, color: SLATE_500, marginBottom: 28 }}>
+                        Comparativa sobre el periodo facturado de {periodDays} días, a partir de los datos de tu factura. Estimación sin validez contractual.
+                    </Text>
 
-                        <View style={s.comparisonCard}>
-                            <Text style={s.comparisonLabel}>Con Zinergia (Anual)</Text>
-                            <Text style={s.comparisonAmountGreen}>{euro(newCost)}</Text>
-                            <Text style={s.comparisonSub}>Coste proyectado optimizado</Text>
+                    {/* Precios de la tarifa propuesta (solo periodos activos) */}
+                    <Text style={s.sectionTitle}>Precios de la tarifa propuesta</Text>
+                    <View style={[s.priceGrid, { marginBottom: 30 }]}>
+                        <View style={s.priceCol}>
+                            <Text style={s.priceTitle}>Energía (€/kWh)</Text>
+                            {pricePeriods.slice(0, activePeriods).map(period => (
+                                <View key={`energy-${period}`} style={s.priceRowCompact}>
+                                    <Text style={s.offerKey}>{period.toUpperCase()}</Text>
+                                    <Text style={s.offerVal}>{price(proposal.offer_snapshot.energy_price?.[period])}</Text>
+                                </View>
+                            ))}
+                        </View>
+                        <View style={s.priceCol}>
+                            <Text style={s.priceTitle}>Potencia (€/kW día)</Text>
+                            {pricePeriods.slice(0, activePeriods).map(period => (
+                                <View key={`power-${period}`} style={s.priceRowCompact}>
+                                    <Text style={s.offerKey}>{period.toUpperCase()}</Text>
+                                    <Text style={s.offerVal}>{price(proposal.offer_snapshot.power_price?.[period], '€/kW día')}</Text>
+                                </View>
+                            ))}
                         </View>
                     </View>
 
@@ -236,7 +398,7 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
             </Page>
 
             {/* ═══════════════════════════════════════════════
-                PÁGINA 2 — Análisis, proyección y cierre
+                PÁGINA 3 — Análisis, tarifa, proyección y cierre
             ═══════════════════════════════════════════════ */}
             <Page size="A4" style={s.page}>
 
@@ -246,7 +408,7 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
                         <Text style={s.logoSub}>Consultora Energética</Text>
                     </View>
                     <View style={s.headerMeta}>
-                        <Text style={s.headerMetaHighlight}>Proyección Estratégica</Text>
+                        <Text style={s.headerMetaHighlight}>Análisis y Proyección</Text>
                         <Text style={s.headerMetaText}>Ref. {refId}</Text>
                     </View>
                 </View>
@@ -296,10 +458,25 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
                         </>
                     )}
 
+                    {/* Explicación de la tarifa propuesta */}
+                    <Text style={s.sectionTitle}>Tu nueva tarifa: {tariff}</Text>
+                    <Text style={s.tariffHowText}>
+                        {advantages.how}
+                        {contractDuration ? ` Duración del contrato: ${contractDuration}.` : ''}
+                    </Text>
+                    <View style={{ marginBottom: 28 }}>
+                        {advantages.bullets.map((bullet, i) => (
+                            <View key={`adv-${i}`} style={s.advantageRow}>
+                                <Text style={s.advantageBullet}>✓</Text>
+                                <Text style={s.advantageText}>{bullet}</Text>
+                            </View>
+                        ))}
+                    </View>
+
                     {/* Opportunities */}
                     {opps.length > 0 && (
                         <>
-                            <Text style={s.sectionTitle}>Anomalías y Oportunidades Técnicas</Text>
+                            <Text style={s.sectionTitle} break>Anomalías y Oportunidades Técnicas</Text>
                             {opps.map((opp, i) => (
                                 <View key={i} style={s.oppCard}>
                                     <Text style={s.oppTitle}>{opp.type}</Text>
@@ -312,7 +489,7 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
                     )}
 
                     {/* 5-year projection */}
-                    <Text style={s.sectionTitle}>Horizonte Financiero a 5 Años</Text>
+                    <Text style={s.sectionTitle} break={opps.length === 0}>Horizonte Financiero a 5 Años</Text>
                     <View style={s.tableHeader}>
                         <Text style={s.tableHeaderCell}>Línea de Tiempo</Text>
                         <Text style={s.tableHeaderCell}>Coste Optimizado</Text>
@@ -351,17 +528,17 @@ export const ProposalDocument: React.FC<Props> = ({ proposal }) => {
                     <View style={s.ctaBox}>
                         <Text style={s.ctaTitle}>Siguiente Paso</Text>
                         <Text style={s.ctaBody}>
-                            Esta propuesta es vinculante con el mercado por 30 días. Tu agente asignado iniciará el cambio de contrato en 24 horas tras la firma digital, sin originar interrupciones en el suministro ni costes ocultos.
+                            Oferta válida hasta el {validityUntil}. Tu agente asignado iniciará el cambio de contrato en 24 horas tras la firma digital, sin interrupciones en el suministro ni costes ocultos.
                         </Text>
                     </View>
 
                 </View>
 
-                {/* Footer p2 */}
+                {/* Footer p3 */}
                 <View style={s.footer} fixed>
                     <Text style={s.footerDisclaimer}>
-                        Estimación fundamentada en métricas de consumo histórico provistas. Sujeto a variaciones técnicas regulatorias o de tarifa indexada según perfil horario de la CUR.
-                        {'\n'}Verificación: {verificationHash}
+                        Estudio comparativo a partir de los datos de la factura aportada. Estimación sin validez contractual; sujeta a variaciones regulatorias o de tarifa indexada según perfil horario.
+                        {'\n'}Oferta válida hasta el {validityUntil} · Verificación: {verificationHash}
                     </Text>
                     <Text style={s.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
                 </View>
