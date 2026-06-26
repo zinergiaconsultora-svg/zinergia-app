@@ -5,7 +5,10 @@ export const dynamic = 'force-dynamic';
 
 export default async function ClientsPage() {
     // getClientsAction decrypts CUPS / DNI server-side and enforces RLS by session.
-    const clients = await getClientsAction(20, 0);
-
-    return <ClientsView initialData={clients} />;
+    try {
+        const clients = await getClientsAction(20, 0);
+        return <ClientsView initialData={clients} />;
+    } catch {
+        return <ClientsView initialData={[]} />;
+    }
 }

@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/client';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Proposal, SavingsResult, InvoiceData } from '@/types/crm';
 import { AletheiaResult } from '@/lib/aletheia/types';
-import { getFranchiseId } from './shared';
+import { getFranchiseId, invalidateCacheByPrefix } from './shared';
 import { logger } from '@/lib/utils/logger';
 import { activitiesService } from './activities';
 import { updateProposalStatusAction } from '@/app/actions/proposals';
@@ -123,6 +123,7 @@ export const proposalService = {
                 .select()
                 .single();
             if (error) throw error;
+            invalidateCacheByPrefix('dashboard_stats_');
             return data as Proposal;
         }
 
@@ -133,6 +134,7 @@ export const proposalService = {
             .select()
             .single();
         if (error) throw error;
+        invalidateCacheByPrefix('dashboard_stats_');
         return data as Proposal;
     },
 
@@ -140,6 +142,7 @@ export const proposalService = {
         const supabase = createClient();
         const { error } = await supabase.from('proposals').delete().eq('id', id);
         if (error) throw error;
+        invalidateCacheByPrefix('dashboard_stats_');
     },
 
     async getRecentProposals(limit = 20, offset = 0) {

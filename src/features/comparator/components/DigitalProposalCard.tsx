@@ -16,6 +16,7 @@ interface DigitalProposalCardProps {
     initialNotes?: string;
     onNotesChange?: (notes: string) => void;
     invoiceData?: InvoiceData;
+    pdfApiUrl?: string;
 }
 
 export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
@@ -26,6 +27,7 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
     initialNotes,
     onNotesChange,
     invoiceData,
+    pdfApiUrl,
 }) => {
     const cardRef = useRef<HTMLDivElement>(null);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -48,6 +50,10 @@ export const DigitalProposalCard: React.FC<DigitalProposalCardProps> = ({
     };
 
     const handleDownloadPdf = async () => {
+        if (pdfApiUrl) {
+            window.open(pdfApiUrl, '_blank');
+            return;
+        }
         if (invoiceData) {
             setIsGeneratingPdf(true);
             try {

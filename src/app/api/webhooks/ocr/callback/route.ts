@@ -304,29 +304,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
         }
 
-        // 5a. Redact PII from extracted_data now that it's stored encrypted in clients.
-        // Keeps consumption/tariff data for calculations but removes personal identifiers.
-        if (status === 'completed' && clientId && invoiceData) {
-            try {
-                const PII_FIELDS = ['dni_cif', 'supply_address'] as const;
-                const redacted = { ...invoiceData };
-                for (const field of PII_FIELDS) {
-                    if (field in redacted) {
-                        redacted[field] = '[REDACTED]';
-                    }
-                }
-                if (redacted.cups && typeof redacted.cups === 'string' && (redacted.cups as string).length > 4) {
-                    redacted.cups = '****' + (redacted.cups as string).slice(-4);
-                }
-                await supabaseAdmin
-                    .from('ocr_jobs')
-                    .update({ extracted_data: redacted })
-                    .eq('id', job_id);
-            } catch {
-                log.warn({ jobId: job_id }, 'PII redaction from extracted_data failed (non-blocking)');
-            }
-        }
-
         // 5b. Auditoría de sistema: registrar el fallo de OCR en el timeline del lead.
         if (status === 'failed') {
             await writeLeadAuditEvent({

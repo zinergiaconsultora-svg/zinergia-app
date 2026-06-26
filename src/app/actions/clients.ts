@@ -487,7 +487,6 @@ export async function deleteClientAction(id: string): Promise<void> {
     if (error) throw new Error(`Error eliminando cliente: ${error.message}`);
 
     revalidatePath('/dashboard/clients');
-    revalidatePath('/dashboard');
 }
 
 // ── Registro de contacto / notas ─────────────────────────────────────────────

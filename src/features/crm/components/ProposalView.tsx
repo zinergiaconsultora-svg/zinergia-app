@@ -381,6 +381,7 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
                     onReset={() => router.push('/dashboard/simulator')}
                     onEmail={() => { /* Email already handled in Comparator logic */ }}
                     title={initialProposal ? "Estudio Personalizado" : "Mejor Opción Detectada"}
+                    pdfApiUrl={initialProposal ? `/api/proposal/${initialProposal.id}/pdf` : undefined}
                 />
             </div>
 
