@@ -270,27 +270,32 @@ const SimulatorContractFields: React.FC<SimulatorContractFieldsProps> = ({
                             transition={{ duration: 0.2 }}
                             className="overflow-hidden"
                         >
-                            <div className="grid grid-cols-3 gap-4 p-5 border-t border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/20">
+                            <div className="grid grid-cols-[1fr_auto_auto] gap-3 p-5 border-t border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/20">
                                 <div data-field-status={isLowConfidence('invoice_number') ? 'warning' : undefined}>
                                     <Input label="Nº Factura"
                                         labelBadge={<ConfidencePill value={getConfidence('invoice_number')} />}
                                         icon={<Hash size={15} />}
+                                        className="font-mono text-[13px] tracking-wide tabular-nums"
                                         value={data.invoice_number ?? ''} onChange={e => onUpdate('invoice_number', e.target.value)}
                                         warning={lowConfWarn('invoice_number') ?? (!data.invoice_number ? 'No encontrado' : undefined)}
                                         action={pdfUrl && data.invoice_number ? <LocateButton onClick={() => locate(data.invoice_number)} lowConfidence={isLowConfidence('invoice_number')} /> : undefined}
                                     />
                                 </div>
-                                <div data-field-status={isLowConfidence('invoice_date') ? 'warning' : undefined}>
+                                <div className="w-[140px]" data-field-status={isLowConfidence('invoice_date') ? 'warning' : undefined}>
                                     <Input label="Fecha factura"
                                         labelBadge={<ConfidencePill value={getConfidence('invoice_date')} />}
                                         icon={<Calendar size={15} />}
+                                        className="tabular-nums"
                                         value={data.invoice_date ?? ''} onChange={e => onUpdate('invoice_date', e.target.value)}
                                         warning={lowConfWarn('invoice_date')}
                                         action={pdfUrl && data.invoice_date ? <LocateButton onClick={() => locate(data.invoice_date)} lowConfidence={isLowConfidence('invoice_date')} /> : undefined}
                                     />
                                 </div>
-                                <Input label="Días facturados" type="number" icon={<Calendar size={15} />}
-                                    value={data.period_days} onChange={e => onUpdate('period_days', parseInt(e.target.value) || 30)} />
+                                <div className="w-[100px]">
+                                    <Input label="Días fact." type="number" icon={<Calendar size={15} />}
+                                        className="tabular-nums"
+                                        value={data.period_days} onChange={e => onUpdate('period_days', parseInt(e.target.value) || 30)} />
+                                </div>
                             </div>
                         </motion.div>
                     )}
