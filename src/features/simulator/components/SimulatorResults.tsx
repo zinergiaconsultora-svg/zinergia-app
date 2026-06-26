@@ -27,7 +27,6 @@ import { motion } from 'framer-motion';
 import { DemoModeAlert } from '@/components/ui/DemoModeAlert';
 import { Modal } from '@/components/ui/Modal';
 
-import { DigitalProposalCard } from '@/features/comparator/components/DigitalProposalCard';
 import { SavingsResult } from '@/types/crm';
 import { OptimizationRecommendation, AuditOpportunity } from '@/lib/aletheia/types';
 import { detectAnomalies } from '@/lib/anomalyDetector';
@@ -426,31 +425,7 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
                     alertCount={selectedResult?.calculation_audit?.alerts?.length || 0}
                 />
 
-                {/* Grid de resultados con stagger */}
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2, duration: 0.6 }}
-                    className="flex flex-col gap-2"
-                >
-                    {actionResults.filter(r => r.annual_savings > 0).map((result, idx) => (
-                        <motion.div
-                            key={result.offer.id}
-                            initial={{ opacity: 0, y: 15 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.06, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-                        >
-                            <DigitalProposalCard
-                                result={idx === 0 ? result : { ...result, optimization_result: undefined }}
-                                title={idx === 0 ? "Propuesta Activa" : `Alternativa ${idx}`}
-                                isSecondary={idx > 0}
-                                invoiceData={invoiceData}
-                                onReset={onReset}
-                                onEmail={() => setShowEmailModal(true)}
-                            />
-                        </motion.div>
-                    ))}
-                </motion.div>
+
             </motion.div>
 
             {/* Presentation Modal */}
