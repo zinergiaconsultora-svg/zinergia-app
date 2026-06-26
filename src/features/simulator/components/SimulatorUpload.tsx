@@ -154,9 +154,9 @@ export const SimulatorUpload: React.FC<SimulatorUploadProps> = ({
                     <button
                         type="button"
                         onClick={onBatchMode}
-                        className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-indigo-600 transition-colors font-medium"
+                        className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition-colors"
                     >
-                        <Layers size={12} />
+                        <Layers size={14} />
                         Procesar varias facturas a la vez
                     </button>
                 </div>
