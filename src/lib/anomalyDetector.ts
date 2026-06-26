@@ -226,9 +226,111 @@ export function detectAnomalies(data: InvoiceData, energyHistory?: EnergyHistory
         });
     }
 
+    // ─────────────────────────────────────────────
+    // 9. MEMORIA DEL SUMINISTRO (histórico del CUPS)
+    // ─────────────────────────────────────────────
+    anomalies.push(...detectSupplyMemoryAnomalies(totalEnergy, periodDays, energyHistory ?? []));
+
     // Ordenar: critical primero, luego warning, luego info
     const order: Record<AnomalySeverity, number> = { critical: 0, warning: 1, info: 2 };
     return anomalies.sort((a, b) => order[a.severity] - order[b.severity]);
+}
+
+// Umbrales de la memoria del suministro.
+const MEMORY = {
+    // Fuera de este múltiplo respecto a la media histórica → probable error de OCR.
+    OCR_OUTLIER_MULTIPLIER: 3,
+    // Salto significativo de consumo respecto a la media (±%).
+    CONSUMPTION_JUMP_RATIO: 0.4,
+    // Mínimo de meses de histórico para que la señal sea fiable.
+    MIN_HISTORY_FOR_JUMP: 2,
+    MIN_HISTORY_FOR_OUTLIER: 3,
+    MIN_HISTORY_FOR_TREND: 3,
+    // Período "normal" (fuera de esto el salto es esperable y no se evalúa).
+    PERIOD_NORMAL_MIN: 20,
+    PERIOD_NORMAL_MAX: 45,
+    // Crecimiento sostenido: último mes ≥ +20% sobre el primero de la ventana.
+    TREND_GROWTH_RATIO: 1.2,
+};
+
+/**
+ * Detecta anomalías comparando la factura actual con el histórico del mismo CUPS.
+ * Pura y testeable. La memoria del suministro permite:
+ *  - validar la calidad del OCR (lecturas muy fuera del patrón histórico),
+ *  - avisar de cambios significativos de consumo,
+ *  - señalar tendencias crecientes sostenidas como oportunidad comercial.
+ */
+export function detectSupplyMemoryAnomalies(
+    currentEnergy: number,
+    periodDays: number,
+    history: EnergyHistoryEntry[],
+): InvoiceAnomaly[] {
+    const anomalies: InvoiceAnomaly[] = [];
+    if (currentEnergy <= 0) return anomalies;
+
+    const avg = computeHistoricalAvg(history);
+    const isNormalPeriod = periodDays >= MEMORY.PERIOD_NORMAL_MIN && periodDays <= MEMORY.PERIOD_NORMAL_MAX;
+
+    // 1. Posible error de lectura OCR — consumo muy fuera del patrón histórico.
+    if (avg && history.length >= MEMORY.MIN_HISTORY_FOR_OUTLIER) {
+        const tooHigh = currentEnergy > avg * MEMORY.OCR_OUTLIER_MULTIPLIER;
+        const tooLow = currentEnergy < avg / MEMORY.OCR_OUTLIER_MULTIPLIER;
+        if (tooHigh || tooLow) {
+            anomalies.push({
+                id: 'ocr_consumption_outlier',
+                severity: 'critical',
+                title: 'Lectura fuera del patrón histórico',
+                description: `El consumo extraído (${currentEnergy.toFixed(0)} kWh) está muy lejos de la media de este CUPS (${avg.toFixed(0)} kWh).`,
+                context: historicalMultiplier(currentEnergy, avg),
+                action: 'Verificar la lectura del OCR en la factura original antes de comparar — posible error de extracción.',
+            });
+            return anomalies; // Si la lectura es sospechosa, no emitimos el resto de señales de memoria.
+        }
+    }
+
+    // 2. Salto de consumo significativo (solo en períodos de facturación normales).
+    if (avg && isNormalPeriod && history.length >= MEMORY.MIN_HISTORY_FOR_JUMP) {
+        const ratio = currentEnergy / avg;
+        if (ratio >= 1 + MEMORY.CONSUMPTION_JUMP_RATIO) {
+            anomalies.push({
+                id: 'consumption_jump_up',
+                severity: 'warning',
+                title: 'Subida de consumo respecto al histórico',
+                description: `El consumo es un ${Math.round((ratio - 1) * 100)}% superior a la media de este suministro.`,
+                context: historicalMultiplier(currentEnergy, avg),
+                action: 'Confirmar con el cliente si ha cambiado su actividad o si conviene revisar la lectura.',
+            });
+        } else if (ratio <= 1 - MEMORY.CONSUMPTION_JUMP_RATIO) {
+            anomalies.push({
+                id: 'consumption_jump_down',
+                severity: 'info',
+                title: 'Bajada de consumo respecto al histórico',
+                description: `El consumo es un ${Math.round((1 - ratio) * 100)}% inferior a la media de este suministro.`,
+                context: historicalMultiplier(currentEnergy, avg),
+                action: 'Verificar si es una factura de cierre o un cambio real de actividad antes de proyectar el ahorro anual.',
+            });
+        }
+    }
+
+    // 3. Tendencia creciente sostenida (oportunidad).
+    if (history.length >= MEMORY.MIN_HISTORY_FOR_TREND) {
+        const chronological = [...history].sort((a, b) => a.month.localeCompare(b.month));
+        const window = chronological.slice(-3);
+        const monotonicUp = window.every((e, i) => i === 0 || e.totalEnergy >= window[i - 1].totalEnergy);
+        const first = window[0].totalEnergy;
+        const last = window[window.length - 1].totalEnergy;
+        if (monotonicUp && first > 0 && last >= first * MEMORY.TREND_GROWTH_RATIO) {
+            anomalies.push({
+                id: 'consumption_trend_up',
+                severity: 'info',
+                title: 'Consumo creciente sostenido',
+                description: `El consumo ha subido un ${Math.round((last / first - 1) * 100)}% en los últimos ${window.length} períodos registrados.`,
+                action: 'Oportunidad: un cliente con consumo creciente gana más con la optimización. Reforzar el argumentario de ahorro.',
+            });
+        }
+    }
+
+    return anomalies;
 }
 
 export function getAnomalySummary(anomalies: InvoiceAnomaly[]): {
