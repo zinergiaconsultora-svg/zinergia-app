@@ -21,7 +21,7 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
 const cspDirectives = [
   "default-src 'self'",
   // 'unsafe-inline' required by Next.js runtime + Sentry; 'unsafe-eval' only in dev
-  `script-src 'self' 'unsafe-inline' ${process.env.NODE_ENV === 'development' ? "'unsafe-eval'" : ''} https://*.sentry.io https://unpkg.com`,
+  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' ${process.env.NODE_ENV === 'development' ? "'unsafe-eval'" : ''} https://*.sentry.io https://unpkg.com`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
   `img-src 'self' data: blob: https://i.pravatar.cc https://images.unsplash.com https://randomuser.me https://unpkg.com https://*.tile.openstreetmap.org https://${supabaseHost}`,
   `font-src 'self' https://fonts.gstatic.com`,

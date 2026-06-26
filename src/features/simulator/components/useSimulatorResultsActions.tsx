@@ -87,7 +87,10 @@ export function useSimulatorResultsActions({
     const handleGetShareUrl = async (): Promise<string | null> => {
         if (!requireSupervisedConfirmation('compartir la propuesta')) return null;
         if (shareUrl) return shareUrl;
-        if (!savedProposalId) return null;
+        if (!savedProposalId) {
+            toast.error('Guarda la propuesta en CRM antes de compartir.');
+            return null;
+        }
         setIsGeneratingLink(true);
         try {
             const { generatePublicLinkAction } = await import('@/app/actions/publicProposal');
