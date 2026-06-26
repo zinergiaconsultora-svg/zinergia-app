@@ -10,6 +10,8 @@ import {
     Layers,
     ArrowUpRight,
     Zap,
+    Upload,
+    Users,
 } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -142,6 +144,30 @@ export default function DashboardView() {
                     <h1 className="text-base lg:text-lg font-semibold text-slate-800 tracking-tight">
                         Hola, <span className="text-indigo-600">{firstName}.</span>
                     </h1>
+                </div>
+
+                {/* ── Acciones primarias del comercial ── */}
+                <div className="px-4 lg:px-0 grid grid-cols-2 gap-2.5">
+                    <Link
+                        href="/dashboard/simulator"
+                        className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.98] transition-all shadow-lg shadow-indigo-200"
+                    >
+                        <Upload size={18} className="shrink-0" />
+                        <div className="min-w-0">
+                            <p className="text-sm font-bold leading-tight">Nueva Factura</p>
+                            <p className="text-[10px] text-indigo-200 leading-tight">Subir y analizar</p>
+                        </div>
+                    </Link>
+                    <Link
+                        href="/dashboard/clients"
+                        className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/40 active:scale-[0.98] transition-all"
+                    >
+                        <Users size={18} className="shrink-0 text-indigo-400" />
+                        <div className="min-w-0">
+                            <p className="text-sm font-bold leading-tight">Nuevo Cliente</p>
+                            <p className="text-[10px] text-slate-400 leading-tight">Añadir a cartera</p>
+                        </div>
+                    </Link>
                 </div>
 
                 {/* Smart alerts */}

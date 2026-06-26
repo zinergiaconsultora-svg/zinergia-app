@@ -14,6 +14,7 @@ import {
     Layers,
     ArrowUpRight,
     BrainCircuit,
+    Flame,
 } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -34,6 +35,15 @@ const OcrJobsPanel = dynamic(() => import('@/features/crm/components/OcrJobsPane
 const AgentLeaderboard = dynamic(() => import('./AgentLeaderboard'), {
     ssr: false,
     loading: () => <div className="h-48 bg-slate-100/50 dark:bg-slate-800/30 animate-pulse rounded-2xl" />,
+});
+
+const ConversionQueuePanel = dynamic(() => import('./ConversionQueuePanel'), {
+    ssr: false,
+    loading: () => (
+        <div className="space-y-2">
+            {[1, 2, 3, 4].map(i => <div key={i} className="h-12 bg-slate-100/80 animate-pulse rounded-xl" />)}
+        </div>
+    ),
 });
 
 interface AdminDashboardProps {
@@ -123,6 +133,22 @@ export default function AdminDashboard({ stats, franchises, unassignedAgents }: 
                     <p className="text-sm text-slate-500 dark:text-slate-400 font-medium max-w-2xl">
                         Monitoriza la actividad en tiempo real, liquidaciones de comisiones y el rendimiento de la red comercial de Zinergia de un vistazo.
                     </p>
+                </motion.div>
+
+                {/* ═══ COLA DE CONVERSIÓN — elemento principal del admin ═══ */}
+                <motion.div variants={item} className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border-2 border-indigo-100 dark:border-indigo-900/50 shadow-lg shadow-indigo-100/30 p-5 hover:shadow-xl transition-all">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0">
+                                <Flame size={16} className="text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">Cola de Conversión</h2>
+                                <p className="text-[11px] text-slate-400">Facturas analizadas sin propuesta — ordenadas por potencial de ahorro</p>
+                            </div>
+                        </div>
+                    </div>
+                    <ConversionQueuePanel />
                 </motion.div>
 
                 {/* KPI Grid */}

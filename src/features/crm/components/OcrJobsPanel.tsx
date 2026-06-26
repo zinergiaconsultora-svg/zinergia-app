@@ -232,6 +232,7 @@ function JobRow({ job, expanded, setExpanded, retrying, handleRetry, formatDate 
 }
 
 export default function OcrJobsPanel() {
+    const router = useRouter();
     const [jobs, setJobs] = useState<OcrJobRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [retrying, setRetrying] = useState<string | null>(null);
@@ -292,13 +293,27 @@ export default function OcrJobsPanel() {
                             prev.map(j => j.id === updated.id ? { ...j, ...updated } : j)
                         );
                         if (updated.status === 'completed') {
-                            const clientName = (updated.extracted_data as Record<string, unknown>)?.client_name as string | undefined;
-                            toast.success(`OCR completado${clientName ? `: ${clientName}` : ''}`, {
-                                action: {
-                                    label: 'Ver',
-                                    onClick: () => setExpanded(updated.id),
-                                }
-                            });
+                            const ext = updated.extracted_data as Record<string, unknown> | null;
+                            const clientName = ext?.client_name as string | undefined;
+
+                            if (!isAdminView && ext) {
+                                // Comercial: navegar directo al comparador con los datos listos
+                                const payload = { ...ext };
+                                delete payload._confidence;
+                                sessionStorage.setItem('pendingInvoiceData', JSON.stringify({ data: payload, isMock: false }));
+                                toast.success(`Factura lista${clientName ? `: ${clientName}` : ''} — abriendo comparativa…`, {
+                                    duration: 3000,
+                                });
+                                setTimeout(() => router.push('/dashboard/comparator'), 800);
+                            } else {
+                                // Admin: solo notificación, no navegar (tiene la cola de conversión)
+                                toast.success(`OCR completado${clientName ? `: ${clientName}` : ''}`, {
+                                    action: {
+                                        label: 'Ver',
+                                        onClick: () => setExpanded(updated.id),
+                                    }
+                                });
+                            }
                         } else if (updated.status === 'failed') {
                             toast.error(`OCR fallido: ${updated.error_message || 'Error desconocido'}`);
                         }
