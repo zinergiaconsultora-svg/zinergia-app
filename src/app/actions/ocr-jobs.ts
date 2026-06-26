@@ -4,7 +4,7 @@ import { logger } from '@/lib/utils/logger';
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { requireServerRole } from '@/lib/auth/permissions';
+import { requireServerRole, getUserRole } from '@/lib/auth/permissions';
 import { env } from '@/lib/env';
 
 export interface OcrJobRecord {
@@ -20,18 +20,27 @@ export interface OcrJobRecord {
 }
 
 export async function getOcrJobHistory(limit = 20): Promise<OcrJobRecord[]> {
-    await requireServerRole(['admin', 'franchise', 'agent']);
-    const supabase = await createClient();
+    const role = await getUserRole();
+    if (!role) throw new Error('No autenticado');
 
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('No autenticado');
 
-    const { data, error } = await supabase
+    // El admin ve la actividad global de toda la red; el resto, sus propias subidas.
+    // La RLS (rls_ocr_jobs_admin_all / rls_ocr_jobs_agent_select) garantiza el alcance,
+    // pero filtramos explícitamente por agente para los comerciales.
+    let query = supabase
         .from('ocr_jobs')
         .select('id, status, created_at, file_name, file_path, extracted_data, error_message, attempts')
-        .eq('agent_id', user.id)
         .order('created_at', { ascending: false })
         .limit(limit);
+
+    if (role !== 'admin') {
+        query = query.eq('agent_id', user.id);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw new Error(`Error obteniendo historial OCR: ${error.message}`);
     return (data ?? []) as OcrJobRecord[];

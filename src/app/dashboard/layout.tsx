@@ -14,7 +14,7 @@ export default function DashboardLayout({
                 <NavigationTop />
                 <OnboardingWizard />
                 <main className="transition-all duration-300">
-                    <div className="max-w-[1700px] mx-auto px-0 py-0 md:p-8 lg:p-12 animate-in fade-in duration-500">
+                    <div className="max-w-[1700px] mx-auto px-0 py-0 md:px-6 md:py-5 lg:px-8 lg:py-6 animate-in fade-in duration-500">
                         {children}
                     </div>
                 </main>

@@ -134,20 +134,12 @@ export default function DashboardView() {
     if (loading) return <DashboardSkeleton />;
 
     return (
-        <div className="w-full bg-white lg:bg-slate-50 text-slate-600 font-sans overflow-x-hidden flex flex-col relative selection:bg-indigo-100">
+        <div className="w-full text-slate-600 font-sans overflow-x-hidden selection:bg-indigo-100">
 
-            <div className="flex-1 flex flex-col px-0 md:px-6 md:py-4 gap-0 md:gap-6 max-w-[1700px] mx-auto w-full">
-                {/* MOBILE HEADER */}
-                <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-slate-200">
-                    <div>
-                        <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide">Bienvenido</p>
-                        <h1 className="text-lg font-semibold text-slate-900">{firstName}</h1>
-                    </div>
-                </div>
-
-                {/* DESKTOP HEADER */}
-                <div className="hidden lg:flex items-center justify-between shrink-0 mb-2">
-                    <h1 className="text-xl font-semibold text-slate-800 tracking-tight">
+            <div className="flex flex-col gap-3 lg:gap-4 max-w-[1700px] mx-auto w-full">
+                {/* HEADER (mobile + desktop unified, compact) */}
+                <div className="flex items-center justify-between px-4 lg:px-0 pt-3 lg:pt-0">
+                    <h1 className="text-base lg:text-lg font-semibold text-slate-800 tracking-tight">
                         Hola, <span className="text-indigo-600">{firstName}.</span>
                     </h1>
                 </div>
@@ -158,13 +150,13 @@ export default function DashboardView() {
                 </div>
 
                 {/* KPIs */}
-                <div className="mx-4 lg:mx-0 mt-4 lg:mt-0">
+                <div className="px-4 lg:px-0">
                     {/* Mobile: horizontal scroll */}
-                    <div className="flex gap-3 overflow-x-auto pb-1 lg:hidden scrollbar-none snap-x snap-mandatory">
+                    <div className="flex gap-2.5 overflow-x-auto pb-1 lg:hidden scrollbar-none snap-x snap-mandatory">
                         <KpiChip label="Ahorro detectado" value={formatCurrency(stats.financials.total_detected)} />
                         <KpiChip label={`Objetivo ${goalProgress}%`} value={formatCurrency(monthlyGoal)} progress={goalProgress} />
                         <KpiChip label="Pipeline activo" value={formatCurrency(stats.financials.pipeline)} />
-                        <Link href="/dashboard/tariffs" className="snap-start shrink-0 bg-indigo-50 rounded-2xl border border-indigo-100 px-4 py-3 min-w-[140px] flex items-center gap-2 active:bg-indigo-100 transition-colors">
+                        <Link href="/dashboard/tariffs" className="snap-start shrink-0 bg-indigo-50 rounded-xl border border-indigo-100 px-4 py-2.5 min-w-[140px] flex items-center gap-2 active:bg-indigo-100 transition-colors">
                             <Zap size={16} className="text-indigo-500 shrink-0" />
                             <div>
                                 <p className="text-[11px] text-indigo-600 font-semibold">Ver Tarifas</p>
@@ -173,7 +165,7 @@ export default function DashboardView() {
                         </Link>
                     </div>
                     {/* Desktop: grid */}
-                    <div className="hidden lg:grid grid-cols-4 gap-4">
+                    <div className="hidden lg:grid grid-cols-4 gap-3">
                         <KpiCard label="Ahorro Detectado" value={formatCurrency(stats.financials.total_detected)} icon={TrendingUp} />
                         <KpiCard label="Objetivo Mensual" value={`${goalProgress}%`} subValue={formatCurrency(monthlyGoal)} icon={Target} progress={goalProgress} />
                         <KpiCard label="Pipeline Activo" value={formatCurrency(stats.financials.pipeline)} icon={Layers} />
@@ -182,82 +174,74 @@ export default function DashboardView() {
                             tabIndex={0}
                             onClick={() => router.push('/dashboard/tariffs')}
                             onKeyDown={(e) => { if (e.key === 'Enter') router.push('/dashboard/tariffs'); }}
-                            className="flex flex-col justify-between p-3 bg-indigo-50/80 rounded-2xl border border-indigo-100 hover:bg-indigo-100/60 transition-colors cursor-pointer h-full"
+                            className="flex items-center justify-between gap-2 px-4 py-2.5 bg-indigo-50/80 rounded-xl border border-indigo-100 hover:bg-indigo-100/60 transition-colors cursor-pointer"
                         >
-                            <div className="flex items-center justify-between text-indigo-400 mb-1">
-                                <span className="text-[9px] font-medium uppercase tracking-widest opacity-80">Tarifas</span>
-                                <Zap size={13} strokeWidth={1.5} className="opacity-70" />
-                            </div>
                             <div>
                                 <div className="text-sm font-semibold text-indigo-700 leading-tight">Ver precios</div>
                                 <div className="text-[9px] text-indigo-400 font-normal mt-0.5">y comisiones →</div>
                             </div>
+                            <Zap size={16} strokeWidth={1.5} className="text-indigo-400 shrink-0" />
                         </div>
                     </div>
                 </div>
 
-                {/* MAIN GRID */}
-                <div className="flex flex-col gap-4 px-4 lg:px-0">
+                {/* MAIN BENTO GRID — denso, ajustado a pantalla */}
+                <div className="px-4 lg:px-0 grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4 lg:auto-rows-[minmax(0,1fr)]">
 
-                    {/* ROW 1: Charts */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5 flex flex-col">
-                            <SectionHeader title="Tendencia de Ahorro" link="Ver Analytics" linkHref="/dashboard/analytics" />
-                            <div className="mt-4 h-[180px] w-full">
-                                <SavingsTrendChart data={stats.savingsTrend ?? []} />
-                            </div>
+                    {/* Tendencia de Ahorro — 7 cols */}
+                    <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-4 flex flex-col">
+                        <SectionHeader title="Tendencia de Ahorro" link="Ver Analytics" linkHref="/dashboard/analytics" />
+                        <div className="mt-2 h-[150px] lg:h-[160px] w-full">
+                            <SavingsTrendChart data={stats.savingsTrend ?? []} />
                         </div>
+                    </div>
 
-                        <div className="lg:col-span-1 bg-white rounded-2xl border border-slate-200 p-5 flex flex-col">
-                            <SectionHeader title="Distribución de Pipeline" />
-                            <div className="flex-1 relative min-h-[140px] flex items-center justify-center mt-2">
-                                <div className="h-full w-full max-h-[140px]">
-                                    <PipelinePieChart active={activeDeals} won={wonDeals} lost={lostDeals} />
-                                </div>
+                    {/* Distribución de Pipeline — 5 cols */}
+                    <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-4 flex flex-col">
+                        <SectionHeader title="Distribución de Pipeline" />
+                        <div className="flex items-center gap-3 mt-1 flex-1">
+                            <div className="h-[120px] w-[120px] shrink-0">
+                                <PipelinePieChart active={activeDeals} won={wonDeals} lost={lostDeals} />
                             </div>
-                            <div className="flex justify-between border-t border-slate-100 pt-3 mt-2">
-                                <div className="text-center">
-                                    <div className="text-[10px] uppercase text-slate-400 font-bold tracking-wider">Conversión</div>
-                                    <div className="text-sm font-bold text-emerald-600">{stats.financials.conversion_rate}%</div>
-                                </div>
-                                <div className="text-center">
-                                    <div className="text-[10px] uppercase text-slate-400 font-bold tracking-wider">Total Propuestas</div>
-                                    <div className="text-sm font-bold text-slate-700">{stats.recentProposals.length}</div>
-                                </div>
+                            <div className="flex-1 grid grid-cols-2 gap-2">
+                                <MiniStat label="Conversión" value={`${stats.financials.conversion_rate}%`} accent="emerald" />
+                                <MiniStat label="Propuestas" value={String(stats.recentProposals.length)} />
+                                <MiniStat label="Activas" value={String(activeDeals)} />
+                                <MiniStat label="Ganadas" value={String(wonDeals)} accent="emerald" />
                             </div>
                         </div>
                     </div>
 
-                    {/* ROW 2: Agenda + Renewals */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-                            <SectionHeader title="Mi Agenda Hoy" link="Tareas" linkHref="/dashboard/tasks" />
-                            <div className="mt-3">
-                                <AgendaToday />
-                            </div>
-                        </div>
-                        <div id="renewals" className="scroll-mt-24 bg-white rounded-2xl border border-slate-200 p-5">
-                            <RenewalsPanel />
+                    {/* Mi Agenda Hoy — 4 cols */}
+                    <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-4 flex flex-col max-h-[300px]">
+                        <SectionHeader title="Mi Agenda Hoy" link="Tareas" linkHref="/dashboard/tasks" />
+                        <div className="mt-2 flex-1 overflow-y-auto pr-1">
+                            <AgendaToday />
                         </div>
                     </div>
 
-                    {/* ROW 3: Recent Activity */}
-                    <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col max-h-[320px]">
+                    {/* Radar de Renovaciones — 4 cols */}
+                    <div id="renewals" className="lg:col-span-4 scroll-mt-24 bg-white rounded-2xl border border-slate-200 p-4 flex flex-col max-h-[300px]">
+                        <RenewalsPanel />
+                    </div>
+
+                    {/* Actividad Reciente — 4 cols */}
+                    <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-4 flex flex-col max-h-[300px]">
                         <SectionHeader title="Actividad Reciente" link="Ver Propuestas" linkHref="/dashboard/proposals" />
-                        <div className="flex-1 overflow-y-auto mt-4 space-y-2 pr-2">
+                        <div className="flex-1 overflow-y-auto mt-2 space-y-1.5 pr-1">
                             {stats.recentProposals.length === 0 ? (
                                 <p className="text-sm text-slate-400 text-center py-6">Sin actividad reciente</p>
                             ) : (
                                 stats.recentProposals.map((proposal) => (
-                                    <div key={proposal.id} onClick={() => router.push(`/dashboard/proposals/${proposal.id}`)} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-300 hover:bg-white cursor-pointer group transition-colors">
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <div className={`w-2 h-2 rounded-full ${proposal.status === 'accepted' ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
+                                    <div key={proposal.id} onClick={() => router.push(`/dashboard/proposals/${proposal.id}`)} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-300 hover:bg-white cursor-pointer group transition-colors">
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                            <div className={`w-2 h-2 rounded-full shrink-0 ${proposal.status === 'accepted' ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
                                             <div className="min-w-0">
-                                                <div className="text-sm font-medium text-slate-700 truncate group-hover:text-indigo-600">{proposal.client_name}</div>
+                                                <div className="text-xs font-medium text-slate-700 truncate group-hover:text-indigo-600">{proposal.client_name}</div>
                                                 <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{formatCurrency(proposal.annual_savings)}</div>
                                             </div>
                                         </div>
-                                        <ArrowUpRight size={14} className="text-slate-300 group-hover:text-indigo-500" />
+                                        <ArrowUpRight size={14} className="text-slate-300 group-hover:text-indigo-500 shrink-0" />
                                     </div>
                                 ))
                             )}
@@ -281,6 +265,15 @@ function SectionHeader({ title, link, linkHref }: { title: string; link?: string
                     {link}
                 </Link>
             )}
+        </div>
+    );
+}
+
+function MiniStat({ label, value, accent }: { label: string; value: string; accent?: 'emerald' }) {
+    return (
+        <div className="rounded-lg bg-slate-50 border border-slate-100 px-2.5 py-1.5">
+            <div className="text-[9px] uppercase text-slate-400 font-bold tracking-wider truncate">{label}</div>
+            <div className={`text-sm font-bold ${accent === 'emerald' ? 'text-emerald-600' : 'text-slate-700'}`}>{value}</div>
         </div>
     );
 }
