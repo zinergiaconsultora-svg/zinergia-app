@@ -120,13 +120,13 @@ export default function PublicProposalClient({ proposal, token }: Props) {
                             className="space-y-4"
                         >
                             {/* Hero savings */}
-                            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 text-center">
+                            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8 text-center">
                                 {proposal.client_name && (
                                     <p className="text-slate-400 text-sm mb-2">
                                         Estudio para <span className="text-white font-semibold">{proposal.client_name}</span>
                                     </p>
                                 )}
-                                <div className="text-6xl font-black text-white mb-1">
+                                <div className="text-5xl sm:text-6xl font-black text-white mb-1 break-words tabular-nums">
                                     {formatCurrency(proposal.annual_savings)}
                                 </div>
                                 <p className="text-indigo-400 font-semibold text-lg">de ahorro al año</p>

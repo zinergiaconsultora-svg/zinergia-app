@@ -33,7 +33,7 @@ export function CalculationAuditPanel({ audit }: CalculationAuditPanelProps) {
             </div>
 
             {/* Summary metrics row — always visible */}
-            <div className="grid grid-cols-4 gap-px bg-slate-100 border-y border-slate-100">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-slate-100 border-y border-slate-100">
                 <AuditMetric label="Factura actual" value={formatCurrency(audit.currentInvoiceTotal, 2)} muted />
                 <AuditMetric label="Total simulado" value={formatCurrency(audit.simulatedInvoiceTotal, 2)} strong />
                 <AuditMetric label="Ahorro periodo" value={formatCurrency(periodSaving, 2)} positive={periodSaving >= 0} />
