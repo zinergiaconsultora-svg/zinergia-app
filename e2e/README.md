@@ -65,6 +65,25 @@ Usuarios de prueba ya creados en staging:
 - La URL de producción solo debe usarse para smoke read-only sin fixtures
   mutables. La suite completa debe correr contra staging.
 
+### Aceptación pública mutable en staging
+
+Este test firma una propuesta y muta staging. Está protegido por opt-in:
+
+```powershell
+$env:E2E_ALLOW_STAGING_SEED="1"
+npm run test:e2e:seed-public-proposal -- --write-env
+Remove-Item Env:\E2E_ALLOW_STAGING_SEED
+
+$env:E2E_RUN_MUTATING_PUBLIC_PROPOSAL="1"
+npm run test:e2e:public-mutating
+Remove-Item Env:\E2E_RUN_MUTATING_PUBLIC_PROPOSAL
+```
+
+El spec se salta si falta el opt-in, si falta `E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN`
+o si `NEXT_PUBLIC_SUPABASE_URL` no apunta al proyecto staging
+`dnzytocmtmnptndeczny`. Antes de firmar, el seed resetea la propuesta mutable y
+limpia `network_commissions`, `tasks` y `contracts` asociados a ese fixture.
+
 ## Re-aplicar esquema a staging
 
 ```

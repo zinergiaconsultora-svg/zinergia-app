@@ -153,6 +153,23 @@
         "external_integration": false,
         "business_critical_calculation": true
       }
+    },
+    {
+      "id": "ZIN-SDD-010",
+      "slug": "mutating-public-proposal-e2e",
+      "description": "Validar en staging la aceptacion publica mutable: firma, propuesta aceptada, comision, tarea y contrato.",
+      "status": "done",
+      "sdd": true,
+      "priority": "high",
+      "risk": {
+        "data_schema": false,
+        "pii": true,
+        "auth_rls": true,
+        "public_surface": true,
+        "cron_or_service_role": true,
+        "external_integration": false,
+        "business_critical_calculation": true
+      }
     }
   ]
 }

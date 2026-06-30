@@ -53,10 +53,12 @@ function query(result: unknown = { data: null, error: null }) {
         insert: vi.fn(async () => result),
         upsert: vi.fn(async () => result),
         eq: vi.fn(() => q),
+        in: vi.fn(() => q),
         order: vi.fn(() => q),
         limit: vi.fn(() => q),
         maybeSingle: vi.fn(async () => result),
         single: vi.fn(async () => result),
+        then: vi.fn((resolve, reject) => Promise.resolve(result).then(resolve, reject)),
     };
     return q;
 }
@@ -123,6 +125,8 @@ describe('proposal status side effects', () => {
         const profileQueries = [
             query({ data: { role: 'agent', franchise_id: 'franchise-1' }, error: null }),
             query({ data: { franchise_id: 'franchise-1' }, error: null }),
+            query({ data: null, error: null }),
+            query({ data: [{ id: 'franchise-profile-1', role: 'franchise' }], error: null }),
         ];
         const proposalUpdate = query({ data: acceptedProposal, error: null });
         const existingCommission = query({ data: null, error: null });
@@ -150,6 +154,12 @@ describe('proposal status side effects', () => {
 
         await updateProposalStatusAction('proposal-1', 'accepted');
 
+        expect(existingCommission.upsert).toHaveBeenCalledWith(expect.objectContaining({
+            proposal_id: 'proposal-1',
+            agent_id: 'agent-1',
+            franchise_id: 'franchise-profile-1',
+            status: 'pending',
+        }), { onConflict: 'proposal_id', ignoreDuplicates: true });
         expect(tasksInsert.insert).toHaveBeenCalledTimes(1);
         expect(tasksInsert.insert).toHaveBeenCalledWith([
             expect.objectContaining({

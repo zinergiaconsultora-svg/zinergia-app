@@ -237,3 +237,34 @@ Residual notes:
 
 - No schema migration or Supabase type regeneration was needed.
 - Full mutating public proposal E2E remains a separate staging-only follow-up because it intentionally accepts a fixture and mutates staging data.
+
+## 2026-06-30 — mutating-public-proposal-e2e
+
+Status: done.
+
+Implemented:
+
+- Added a guarded staging-only Playwright spec for full public proposal acceptance with real signature interaction.
+- Added `test:e2e:public-mutating` with `--no-deps` so the public unauthenticated flow does not depend on admin/agent login setup.
+- Made the public proposal fixture seed reset proposal side effects in `network_commissions`, `tasks`, and `contracts`.
+- Hardened public acceptance context loading by fetching the agent profile separately instead of relying on a fragile PostgREST embedded relationship.
+- Fixed commission creation to resolve the franchise commission recipient as a `profiles.id` while preserving operational `franchises.id` on proposals/tasks/contracts.
+- Added staging reconciliation SQL scripts for existing local migrations that staging was missing while remote migration history blocks `db push`.
+
+Verification:
+
+- `node --check scripts/ensure-e2e-public-proposal.mjs` — passed.
+- `npm run test -- src/app/actions/__tests__/publicProposal.test.ts` — passed, 7 tests.
+- `npm run test -- src/app/actions/__tests__/proposals.test.ts src/app/actions/__tests__/publicProposal.test.ts` — passed, 8 tests.
+- `npx tsc --noEmit` — passed.
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `E2E_ALLOW_STAGING_SEED=1 npm run test:e2e:seed-public-proposal` — passed.
+- `E2E_RUN_MUTATING_PUBLIC_PROPOSAL=1 npm run test:e2e:public-mutating` — passed, 1 test.
+- `npm run lint` — passed with zero warnings.
+- `npm run test` — passed, 51 files and 368 tests.
+- `npm run build` — passed.
+
+Residual notes:
+
+- Staging still has historical migration drift; the reconciliation scripts are staging-only operational scripts, not new product schema migrations.
+- The focused Playwright run still prints the known Next/Node `DEP0190` webServer warning after success.

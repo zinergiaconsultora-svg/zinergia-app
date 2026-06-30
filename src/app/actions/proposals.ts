@@ -810,8 +810,14 @@ async function processCommissions(
             .eq('id', agentId)
             .single()
 
-        const franchiseId = proposal.franchise_id ?? profile?.franchise_id;
-        if (!franchiseId) return
+        const operationalFranchiseId = proposal.franchise_id ?? profile?.franchise_id;
+        if (!operationalFranchiseId) return
+
+        const commissionFranchiseProfileId = await resolveCommissionFranchiseProfileId(
+            supabase,
+            operationalFranchiseId,
+        );
+        if (!commissionFranchiseProfileId) return
 
         // Load active commission rule (falls back to defaults if table missing)
         const baseRule = await getActiveCommissionRule()
@@ -820,7 +826,7 @@ async function processCommissions(
         const { data: franchiseCfg } = await supabase
             .from('franchise_config')
             .select('royalty_percent')
-            .eq('franchise_id', franchiseId)
+            .eq('franchise_id', commissionFranchiseProfileId)
             .eq('active', true)
             .maybeSingle()
         const royaltyPercent: number | null = franchiseCfg?.royalty_percent ?? null
@@ -842,7 +848,7 @@ async function processCommissions(
         await supabase.from('network_commissions').upsert({
             proposal_id: proposal.id,
             agent_id: agentId,
-            franchise_id: franchiseId,
+            franchise_id: commissionFranchiseProfileId,
             agent_commission: resolvedCommission.agentCommission,
             franchise_commission: resolvedCommission.franchiseCommission,
             status: 'pending',
@@ -865,6 +871,31 @@ async function processCommissions(
         // Log and continue — commissions can be reprocessed manually if needed.
         logger.error('[updateProposalStatusAction] Commission processing failed', err)
     }
+}
+
+async function resolveCommissionFranchiseProfileId(
+    supabase: Pick<Awaited<ReturnType<typeof createClient>>, 'from'>,
+    operationalFranchiseId: string,
+): Promise<string | null> {
+    const { data: directProfile } = await supabase
+        .from('profiles')
+        .select('id, role')
+        .eq('id', operationalFranchiseId)
+        .in('role', ['franchise', 'admin'])
+        .maybeSingle();
+
+    if (directProfile?.id) return directProfile.id as string;
+
+    const { data: networkProfiles } = await supabase
+        .from('profiles')
+        .select('id, role')
+        .eq('franchise_id', operationalFranchiseId)
+        .in('role', ['franchise', 'admin']);
+
+    const profiles = (networkProfiles ?? []) as Array<{ id: string; role: string | null }>;
+    return profiles.find((profile) => profile.role === 'franchise')?.id
+        ?? profiles.find((profile) => profile.role === 'admin')?.id
+        ?? null;
 }
 
 const PROPOSAL_ACTIVITY_MAP: Record<string, { type: string; description_template: string }> = {

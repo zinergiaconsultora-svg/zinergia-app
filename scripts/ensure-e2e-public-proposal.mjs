@@ -151,6 +151,10 @@ async function upsertProposal({ agentProfile, clientId, token, resetAcceptance }
     };
 
     if (existing?.id) {
+        if (resetAcceptance) {
+            await resetProposalSideEffects(existing.id);
+        }
+
         const { error } = await supabase
             .from('proposals')
             .update(payload)
@@ -167,6 +171,19 @@ async function upsertProposal({ agentProfile, clientId, token, resetAcceptance }
 
     if (error) throw new Error(`Proposal insert failed for ${token}: ${error.message}`);
     return data.id;
+}
+
+async function resetProposalSideEffects(proposalId) {
+    const tables = ['network_commissions', 'tasks', 'contracts'];
+
+    for (const table of tables) {
+        const { error } = await supabase
+            .from(table)
+            .delete()
+            .eq('proposal_id', proposalId);
+
+        if (error) throw new Error(`Failed to reset ${table} for fixture proposal: ${error.message}`);
+    }
 }
 
 function writeTokenEnv() {
