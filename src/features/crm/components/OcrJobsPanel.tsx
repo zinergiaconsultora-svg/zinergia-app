@@ -330,7 +330,7 @@ export default function OcrJobsPanel() {
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };
-    }, [isAdminView, fetchJobs]);
+    }, [isAdminView, fetchJobs, router]);
 
     const handleRetry = useCallback(async (jobId: string) => {
         setRetrying(jobId);

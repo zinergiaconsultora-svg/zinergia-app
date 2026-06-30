@@ -51,6 +51,23 @@
         "external_integration": true,
         "business_critical_calculation": true
       }
+    },
+    {
+      "id": "ZIN-SDD-004",
+      "slug": "ci-warning-cleanup",
+      "description": "Eliminar warnings recurrentes de lint/CI sin cambiar comportamiento funcional.",
+      "status": "done",
+      "sdd": true,
+      "priority": "medium",
+      "risk": {
+        "data_schema": false,
+        "pii": false,
+        "auth_rls": false,
+        "public_surface": false,
+        "cron_or_service_role": false,
+        "external_integration": false,
+        "business_critical_calculation": false
+      }
     }
   ]
 }
