@@ -139,3 +139,24 @@ Verification:
 Residual notes:
 
 - No schema migration or Supabase type regeneration was needed.
+
+## 2026-06-30 — sdd-status-aware-validator
+
+Status: done.
+
+Implemented:
+
+- Made `sdd/scripts/validate-sdd.mjs` require spec artifacts according to feature lifecycle status.
+- Preserved required root file checks, valid status checks, and the single `in_progress` feature invariant.
+- Added focused Node tests for the status matrix and active-feature invariant.
+
+Verification:
+
+- `node --test sdd/scripts/validate-sdd.test.mjs` — passed, 5 tests.
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npm run lint` — passed with zero warnings.
+- `npx tsc --noEmit` — passed.
+
+Residual notes:
+
+- No product behavior, schema migration, or Supabase type regeneration was needed.

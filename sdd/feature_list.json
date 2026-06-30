@@ -85,6 +85,23 @@
         "external_integration": false,
         "business_critical_calculation": true
       }
+    },
+    {
+      "id": "ZIN-SDD-006",
+      "slug": "sdd-status-aware-validator",
+      "description": "Hacer que el validador SDD respete las puertas por estado sin exigir archivos futuros antes de tiempo.",
+      "status": "done",
+      "sdd": true,
+      "priority": "medium",
+      "risk": {
+        "data_schema": false,
+        "pii": false,
+        "auth_rls": false,
+        "public_surface": false,
+        "cron_or_service_role": false,
+        "external_integration": false,
+        "business_critical_calculation": false
+      }
     }
   ]
 }
