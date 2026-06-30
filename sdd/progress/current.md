@@ -1,7 +1,7 @@
 # Current SDD Work
 
-Active feature: `end-to-end-flow-integrity`
+Active feature: none
 
-Status: `done`
+Status: `idle`
 
-Next step: review, commit, and open PR for `end-to-end-flow-integrity`.
+Next step: select the next feature from `sdd/feature_list.json`.

@@ -73,6 +73,8 @@ docs
 resources
 !supabase/scripts/
 !supabase/scripts/**
+!sdd/scripts/
+!sdd/scripts/**
 
 nul
 
