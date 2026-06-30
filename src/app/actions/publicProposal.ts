@@ -5,8 +5,6 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { Proposal } from '@/types/crm';
-import { getActiveCommissionRule } from './commissionRules';
-import { resolveCommissionAmounts } from '@/lib/commissions/calculator';
 import { rateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
 import { requireServerRole } from '@/lib/auth/permissions';
@@ -331,7 +329,12 @@ export async function acceptPublicProposalAction(
         const { data: prop } = await adminClient
             .from('proposals')
             .select(`
+                id, client_id, agent_id, franchise_id, status, created_at, updated_at,
                 annual_savings, savings_percent, offer_annual_cost, offer_snapshot,
+                calculation_data, source_tariff_id, source_proposal_id, proposal_version,
+                price_snapshot, price_snapshot_at, pricing_status, repriced_at,
+                repricing_delta_eur, current_annual_cost, notes, optimization_result,
+                aletheia_summary, ocr_job_id,
                 clients(name, email),
                 profiles!proposals_agent_id_fkey(id, email, franchise_id)
             `)
@@ -348,58 +351,15 @@ export async function acceptPublicProposalAction(
 
     const clientName = clientData?.name ?? 'Cliente';
 
-    // Comisión — NO es best-effort: debe registrarse. Si falla, se reporta a
-    // Sentry y se loguea (la propuesta ya está aceptada). Idempotente vía el
-    // UNIQUE constraint en proposal_id.
-    if (agentProfile?.id && agentProfile?.franchise_id && propData?.annual_savings) {
+    if (propData) {
         try {
-            const { data: existingComm } = await adminClient
-                .from('network_commissions')
-                .select('id')
-                .eq('proposal_id', proposal.id)
-                .maybeSingle();
-
-            if (!existingComm) {
-                const baseRule = await getActiveCommissionRule();
-
-                // Apply per-franchise royalty override if configured
-                const { data: franchiseCfg } = await adminClient
-                    .from('franchise_config')
-                    .select('royalty_percent')
-                    .eq('franchise_id', agentProfile.franchise_id)
-                    .eq('active', true)
-                    .maybeSingle();
-
-                // La comisión la marca la TARIFA (offer.estimated_agent_commission):
-                // ese € es la comisión del agente; la franquicia toma su % encima.
-                // Si la tarifa no trae comisión, se recurre a la regla sobre el ahorro.
-                const royaltyPercent: number | null = franchiseCfg?.royalty_percent ?? null;
-                const offer = propData?.offer_snapshot as { estimated_agent_commission?: number | null } | null;
-                const resolvedCommission = resolveCommissionAmounts({
-                    annualSavings: propData.annual_savings as number | null | undefined,
-                    estimatedAgentCommission: offer?.estimated_agent_commission,
-                    baseRule,
-                    royaltyPercent,
-                });
-
-                // ignoreDuplicates: el UNIQUE constraint en proposal_id actúa como guardia atómica
-                const { error: commError } = await adminClient.from('network_commissions').upsert({
-                    proposal_id: proposal.id,
-                    agent_id: agentProfile.id,
-                    franchise_id: agentProfile.franchise_id,
-                    agent_commission: resolvedCommission.agentCommission,
-                    franchise_commission: resolvedCommission.franchiseCommission,
-                    status: 'pending',
-                }, { onConflict: 'proposal_id', ignoreDuplicates: true });
-                if (commError) throw commError;
-            }
+            const { finalizeAcceptedProposalSideEffects } = await import('./proposals');
+            await finalizeAcceptedProposalSideEffects(adminClient, propData as unknown as Proposal, agentProfile?.id);
         } catch (err) {
-            // La propuesta ya está aceptada; no revertimos, pero NO lo silenciamos:
-            // la comisión es dinero del agente y debe poder reconciliarse.
             Sentry.captureException(err, {
-                extra: { stage: 'accept-create-commission', proposalId: proposal.id, agentId: agentProfile.id },
+                extra: { stage: 'accept-finalize-side-effects', proposalId: proposal.id, agentId: agentProfile?.id },
             });
-            log.error({ err, proposalId: proposal.id, agentId: agentProfile.id }, 'commission creation failed after proposal accept');
+            log.error({ err, proposalId: proposal.id, agentId: agentProfile?.id }, 'proposal acceptance side effects failed');
         }
     }
 

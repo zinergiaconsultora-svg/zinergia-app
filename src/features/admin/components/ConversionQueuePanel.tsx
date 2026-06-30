@@ -36,8 +36,12 @@ export default function ConversionQueuePanel() {
     function handleAnalyze(opp: ConversionOpportunity) {
         const payload = { ...opp.extractedData };
         delete payload._confidence;
-        sessionStorage.setItem('pendingInvoiceData', JSON.stringify({ data: payload, isMock: false }));
-        router.push('/dashboard/comparator');
+        sessionStorage.setItem('pendingInvoiceData', JSON.stringify({
+            data: payload,
+            isMock: false,
+            ocrJobId: opp.jobId,
+        }));
+        router.push('/dashboard/simulator');
     }
 
     if (loading) {

@@ -4,6 +4,7 @@ import type { InvoiceData, SavingsResult } from '@/types/crm';
 const getFranchiseIdMock = vi.fn();
 const invalidateCacheByPrefixMock = vi.fn();
 const resolveOrCreateClientActionMock = vi.fn();
+const resolveOcrHandoffContextActionMock = vi.fn();
 const logActivityMock = vi.fn();
 const loggerWarnMock = vi.fn();
 const loggerErrorMock = vi.fn();
@@ -24,6 +25,10 @@ vi.mock('../shared', () => ({
 
 vi.mock('@/app/actions/clients', () => ({
     resolveOrCreateClientAction: resolveOrCreateClientActionMock,
+}));
+
+vi.mock('@/app/actions/ocr-handoff', () => ({
+    resolveOcrHandoffContextAction: resolveOcrHandoffContextActionMock,
 }));
 
 vi.mock('../activities', () => ({
@@ -108,6 +113,7 @@ describe('proposalService.logSimulation OCR provenance', () => {
         vi.clearAllMocks();
         getFranchiseIdMock.mockResolvedValue('franchise-1');
         getUserMock.mockResolvedValue({ data: { user: { id: 'agent-1' } } });
+        resolveOcrHandoffContextActionMock.mockResolvedValue(null);
         resolveOrCreateClientActionMock.mockResolvedValue('client-1');
         logActivityMock.mockResolvedValue(undefined);
     });
@@ -128,6 +134,10 @@ describe('proposalService.logSimulation OCR provenance', () => {
 
         await proposalService.logSimulation(invoiceData, bestResult, 'Cliente Demo', undefined, ocrJobId);
 
+        expect(resolveOcrHandoffContextActionMock).toHaveBeenCalledWith(ocrJobId);
+        expect(resolveOrCreateClientActionMock).toHaveBeenCalledWith(expect.objectContaining({
+            source_ocr_job_id: ocrJobId,
+        }));
         expect(proposalInsert.insert).toHaveBeenCalledWith(expect.objectContaining({
             client_id: 'client-1',
             franchise_id: 'franchise-1',

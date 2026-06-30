@@ -68,6 +68,23 @@
         "external_integration": false,
         "business_critical_calculation": false
       }
+    },
+    {
+      "id": "ZIN-SDD-005",
+      "slug": "end-to-end-flow-integrity",
+      "description": "Corregir cortes de flujo OCR -> simulador -> propuesta -> aceptacion para preservar rutas, trazabilidad, propietario y efectos comerciales.",
+      "status": "done",
+      "sdd": true,
+      "priority": "high",
+      "risk": {
+        "data_schema": false,
+        "pii": true,
+        "auth_rls": true,
+        "public_surface": true,
+        "cron_or_service_role": true,
+        "external_integration": false,
+        "business_critical_calculation": true
+      }
     }
   ]
 }

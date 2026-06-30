@@ -73,8 +73,12 @@ function JobDetail({ job }: { job: OcrJobRecord }) {
         if (!data) return;
         const invoicePayload = { ...data };
         delete invoicePayload._confidence;
-        sessionStorage.setItem('pendingInvoiceData', JSON.stringify({ data: invoicePayload, isMock: false }));
-        router.push('/dashboard/comparator');
+        sessionStorage.setItem('pendingInvoiceData', JSON.stringify({
+            data: invoicePayload,
+            isMock: false,
+            ocrJobId: job.id,
+        }));
+        router.push('/dashboard/simulator');
     };
 
     if (!data) return null;
@@ -300,11 +304,15 @@ export default function OcrJobsPanel() {
                                 // Comercial: navegar directo al comparador con los datos listos
                                 const payload = { ...ext };
                                 delete payload._confidence;
-                                sessionStorage.setItem('pendingInvoiceData', JSON.stringify({ data: payload, isMock: false }));
+                                sessionStorage.setItem('pendingInvoiceData', JSON.stringify({
+                                    data: payload,
+                                    isMock: false,
+                                    ocrJobId: updated.id,
+                                }));
                                 toast.success(`Factura lista${clientName ? `: ${clientName}` : ''} — abriendo comparativa…`, {
                                     duration: 3000,
                                 });
-                                setTimeout(() => router.push('/dashboard/comparator'), 800);
+                                setTimeout(() => router.push('/dashboard/simulator'), 800);
                             } else {
                                 // Admin: solo notificación, no navegar (tiene la cola de conversión)
                                 toast.success(`OCR completado${clientName ? `: ${clientName}` : ''}`, {

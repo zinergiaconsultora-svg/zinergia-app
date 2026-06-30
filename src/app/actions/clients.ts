@@ -607,6 +607,7 @@ export async function addClientNoteAction(id: string, note: string): Promise<voi
 
 const resolveClientSchema = z.object({
     client_id: z.uuid().optional().nullable(),
+    source_ocr_job_id: z.uuid().optional().nullable(),
     cups: z.string().trim().max(60).optional().nullable(),
     dni_cif: z.string().trim().max(40).optional().nullable(),
     name: z.string().trim().max(200).optional().nullable(),
@@ -631,16 +632,21 @@ export async function resolveOrCreateClientAction(input: ResolveClientInput): Pr
     const clean = parsed.data;
 
     const { supabase, userId, franchiseId } = await getSessionContext();
-    if (!franchiseId) throw new Error('No se encontró la franquicia del agente');
+    const { resolveOcrHandoffContextAction } = await import('./ocr-handoff');
+    const handoff = await resolveOcrHandoffContextAction(clean.source_ocr_job_id);
+    const effectiveFranchiseId = handoff?.franchiseId ?? franchiseId;
+    const effectiveOwnerId = handoff?.agentId ?? userId;
+    if (!effectiveFranchiseId) throw new Error('No se encontró la franquicia del agente');
 
     if (clean.client_id) return clean.client_id;
+    if (handoff?.clientId) return handoff.clientId;
 
     // Dedup by CUPS blind index, then DNI blind index.
     if (clean.cups?.trim()) {
         const { data } = await supabase
             .from('clients')
             .select('id')
-            .eq('franchise_id', franchiseId)
+            .eq('franchise_id', effectiveFranchiseId)
             .eq('cups_hash', hashCups(clean.cups))
             .maybeSingle();
         if (data?.id) return data.id;
@@ -649,7 +655,7 @@ export async function resolveOrCreateClientAction(input: ResolveClientInput): Pr
         const { data } = await supabase
             .from('clients')
             .select('id')
-            .eq('franchise_id', franchiseId)
+            .eq('franchise_id', effectiveFranchiseId)
             .eq('dni_cif_hash', hashDni(clean.dni_cif))
             .maybeSingle();
         if (data?.id) return data.id;
@@ -660,8 +666,8 @@ export async function resolveOrCreateClientAction(input: ResolveClientInput): Pr
         .from('clients')
         .insert({
             name: clean.name || 'Nuevo Cliente',
-            franchise_id: franchiseId,
-            owner_id: userId,
+            franchise_id: effectiveFranchiseId,
+            owner_id: effectiveOwnerId,
             segment: clean.segment ?? null,
             // type derivado del segmento elegido (PYME→company, residencial→residential).
             type: clean.segment === 'PYME' ? 'company' : 'residential',

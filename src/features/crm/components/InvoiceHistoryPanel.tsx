@@ -113,11 +113,16 @@ export default function InvoiceHistoryPanel({ clientId }: { clientId: string }) 
         .filter((v): v is number => typeof v === 'number')
         .reverse(); // cronológico
 
-    const handleComparar = (data: InvoiceData) => {
+    const handleComparar = (row: InvoiceRow) => {
+        const data = row.data;
         const payload = { ...data } as Record<string, unknown>;
         delete payload._confidence;
-        sessionStorage.setItem('pendingInvoiceData', JSON.stringify({ data: payload, isMock: false }));
-        router.push('/dashboard/comparator');
+        sessionStorage.setItem('pendingInvoiceData', JSON.stringify({
+            data: payload,
+            isMock: false,
+            ocrJobId: row.job.id,
+        }));
+        router.push('/dashboard/simulator');
     };
 
     return (
@@ -141,7 +146,8 @@ export default function InvoiceHistoryPanel({ clientId }: { clientId: string }) 
             </div>
 
             <div className="space-y-2">
-                {rows.map(({ job, data, anomalies }) => {
+                {rows.map((row) => {
+                    const { job, data, anomalies } = row;
                     const isOpen = expanded === job.id;
                     const invoiceDate = data.invoice_date
                         ? new Date(data.invoice_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -216,7 +222,7 @@ export default function InvoiceHistoryPanel({ clientId }: { clientId: string }) 
                                     {/* Acción */}
                                     <button
                                         type="button"
-                                        onClick={() => handleComparar(data)}
+                                        onClick={() => handleComparar(row)}
                                         className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-indigo-50 text-indigo-600 text-xs font-semibold hover:bg-indigo-100 transition-colors"
                                     >
                                         Cargar en comparador

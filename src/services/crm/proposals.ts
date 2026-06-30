@@ -15,6 +15,11 @@ function normalizeOcrJobId(ocrJobId?: string | null): string | null {
     return ocrJobId && UUID_RE.test(ocrJobId) ? ocrJobId : null;
 }
 
+async function resolveOcrHandoffContext(ocrJobId?: string | null) {
+    const { resolveOcrHandoffContextAction } = await import('@/app/actions/ocr-handoff');
+    return resolveOcrHandoffContextAction(ocrJobId);
+}
+
 export const proposalService = {
     async getProposalsByClient(clientId: string, serverClient?: SupabaseClient) {
         const supabase = serverClient || createClient();
@@ -48,16 +53,20 @@ export const proposalService = {
         ocrJobId?: string | null,
     ) {
         const supabase = createClient();
-        const franchiseId = await getFranchiseId(supabase);
+        const safeOcrJobId = normalizeOcrJobId(ocrJobId);
+        const handoff = await resolveOcrHandoffContext(safeOcrJobId);
+        const sessionFranchiseId = await getFranchiseId(supabase);
+        const franchiseId = handoff?.franchiseId ?? sessionFranchiseId;
         if (!franchiseId) throw new Error('Auth required');
         const { data: { user } } = await supabase.auth.getUser();
-        const ownerId = user?.id;
+        const ownerId = handoff?.agentId ?? user?.id;
 
         // 1. Resolve client — explicit id → dedup by CUPS/DNI blind index → create.
         // Delegated to a server action so CUPS/DNI are encrypted server-side and
         // deduplicated against the *_hash columns (browser has no encryption key).
         const clientId = await resolveOrCreateClientAction({
             client_id: invoiceData.client_id ?? null,
+            source_ocr_job_id: safeOcrJobId,
             cups: invoiceData.cups ?? null,
             dni_cif: invoiceData.dni_cif ?? null,
             name: clientName || invoiceData.client_name || invoiceData.company_name || 'Nuevo Cliente',
@@ -71,7 +80,6 @@ export const proposalService = {
             calculation_audit: bestResult.calculation_audit,
         } as Proposal['calculation_data'];
         const pricingDefaults = buildProposalPricingDefaults(bestResult, 'simulator');
-        const safeOcrJobId = normalizeOcrJobId(ocrJobId);
 
         const proposal: Partial<Proposal> = {
             client_id: clientId,
@@ -148,7 +156,9 @@ export const proposalService = {
 
     async saveProposal(proposal: Partial<Proposal>) {
         const supabase = createClient();
-        const franchiseId = await getFranchiseId(supabase);
+        const handoff = await resolveOcrHandoffContext(normalizeOcrJobId(proposal.ocr_job_id));
+        const sessionFranchiseId = await getFranchiseId(supabase);
+        const franchiseId = handoff?.franchiseId ?? sessionFranchiseId;
         if (!franchiseId) throw new Error('Auth required');
         const proposalWithPricing = withPricingDefaults(proposal);
 
@@ -167,7 +177,7 @@ export const proposalService = {
         const { data: { user } } = await supabase.auth.getUser();
         const { data, error } = await supabase
             .from('proposals')
-            .insert({ ...proposalWithPricing, franchise_id: franchiseId, agent_id: user?.id })
+            .insert({ ...proposalWithPricing, franchise_id: franchiseId, agent_id: handoff?.agentId ?? user?.id })
             .select()
             .single();
         if (error) throw error;
