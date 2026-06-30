@@ -5,8 +5,40 @@
  * Skips gracefully when credentials are not configured.
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { hasAgentCredentials } from './helpers/auth';
+
+const commercialNav = [
+    'Inicio',
+    'Clientes',
+    'Facturas',
+    'Propuestas',
+    'Simulador',
+    'Cartera',
+    'Ajustes',
+    'Tarifas',
+];
+
+const commercialRoutes = [
+    { path: '/dashboard/clients', url: /clients/, signal: /Clientes|Buscar por nombre/i },
+    { path: '/dashboard/invoices', url: /invoices/, signal: /Facturas de clientes|No hay facturas/i },
+    { path: '/dashboard/proposals', url: /proposals/, signal: /Propuestas|Nueva simulación|Buscar cliente/i },
+    { path: '/dashboard/simulator', url: /simulator/, signal: /Simulador de Facturas|Comparar varias|Guía de uso/i },
+    { path: '/dashboard/wallet', url: /wallet/, signal: /Mi Cartera|Saldo Disponible|Wallet Activa/i },
+    { path: '/dashboard/settings', url: /settings/, signal: /Configuración|Gestión de perfil/i },
+    { path: '/dashboard/tariffs', url: /tariffs/, signal: /Tarifas disponibles|Gestión de Tarifas|Buscar/i },
+];
+
+async function gotoRoute(page: Page, path: string) {
+    try {
+        await page.goto(path, { waitUntil: 'domcontentloaded' });
+    } catch (error) {
+        if (!(error instanceof Error) || !error.message.includes('ERR_ABORTED')) {
+            throw error;
+        }
+        await page.goto(path, { waitUntil: 'domcontentloaded' });
+    }
+}
 
 test.beforeEach(async ({ page }) => {
     if (!hasAgentCredentials()) {
@@ -18,33 +50,28 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('Dashboard layout', () => {
-    test('shows key navigation elements', async ({ page }) => {
-        // Should have the main dashboard content rendered
-        await expect(page.locator('main, [role="main"]').first()).toBeVisible();
+    test('shows commercial dashboard content and navigation', async ({ page }) => {
+        await expect(page.getByRole('heading', { name: /Ahorro Encontrado/i })).toBeVisible({ timeout: 10_000 });
+        await expect(page.getByRole('heading', { name: /Estado de Propuestas/i })).toBeVisible();
+
+        for (const label of commercialNav) {
+            await expect(page.getByRole('link', { name: label, exact: true })).toBeVisible();
+        }
+
+        await expect(page.getByRole('link', { name: /Admin Panel/i })).toHaveCount(0);
     });
 
-    test('navigates to Simulator page', async ({ page }) => {
-        await page.goto('/dashboard/simulator');
-        await expect(page).toHaveURL(/simulator/, { timeout: 10_000 });
-        // The simulator upload area should be visible
-        await expect(page.locator('main, [role="main"]').first()).toBeVisible();
-    });
+    for (const route of commercialRoutes) {
+        test(`renders ${route.path} with route-specific content`, async ({ page }) => {
+            await gotoRoute(page, route.path);
+            await expect(page).toHaveURL(route.url, { timeout: 10_000 });
+            await expect(page.locator('main').getByText(route.signal).first()).toBeVisible({ timeout: 15_000 });
+        });
+    }
 
-    test('navigates to Proposals page', async ({ page }) => {
-        await page.goto('/dashboard/proposals');
-        await expect(page).toHaveURL(/proposals/, { timeout: 10_000 });
-        await expect(page.locator('main, [role="main"]').first()).toBeVisible();
-    });
-
-    test('navigates to Clients page', async ({ page }) => {
-        await page.goto('/dashboard/clients');
-        await expect(page).toHaveURL(/clients/, { timeout: 10_000 });
-        await expect(page.locator('main, [role="main"]').first()).toBeVisible();
-    });
-
-    test('navigates to Network page', async ({ page }) => {
-        await page.goto('/dashboard/network');
-        await expect(page).toHaveURL(/network/, { timeout: 10_000 });
-        await expect(page.locator('main, [role="main"]').first()).toBeVisible();
+    test('commercial users cannot open admin content', async ({ page }) => {
+        await gotoRoute(page, '/admin');
+        await expect(page).not.toHaveURL(/\/admin$/, { timeout: 10_000 });
+        await expect(page.getByText(/Vista Global del Sistema|Cola de Conversión/i)).toHaveCount(0);
     });
 });

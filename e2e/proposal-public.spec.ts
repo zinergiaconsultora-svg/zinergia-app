@@ -25,6 +25,7 @@ test.describe('Public proposal — invalid token', () => {
             .catch(() => false);
 
         expect(is404 || hasNotFoundText).toBe(true);
+        await expect(page.getByRole('button', { name: /aceptar|firmar|contratar/i })).toHaveCount(0);
     });
 });
 

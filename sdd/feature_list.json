@@ -102,6 +102,23 @@
         "external_integration": false,
         "business_critical_calculation": false
       }
+    },
+    {
+      "id": "ZIN-SDD-007",
+      "slug": "production-flow-audit",
+      "description": "Auditar y reforzar pruebas del flujo operativo admin/comercial sin mutaciones peligrosas en produccion.",
+      "status": "done",
+      "sdd": true,
+      "priority": "high",
+      "risk": {
+        "data_schema": false,
+        "pii": true,
+        "auth_rls": true,
+        "public_surface": true,
+        "cron_or_service_role": false,
+        "external_integration": false,
+        "business_critical_calculation": true
+      }
     }
   ]
 }
