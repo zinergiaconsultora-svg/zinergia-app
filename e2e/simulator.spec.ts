@@ -144,11 +144,10 @@ test.describe('Simulator — proposal flow (requires pre-completed OCR job)', ()
     });
 
     test('public proposal page renders for a valid token', async ({ page }) => {
-        // This test requires a valid public_token in the DB.
-        // When E2E_PROPOSAL_TOKEN is set, it verifies the full public view.
-        const token = process.env.E2E_PROPOSAL_TOKEN;
+        // This test requires the deterministic staging fixture token.
+        const token = process.env.E2E_PUBLIC_PROPOSAL_TOKEN ?? process.env.E2E_PROPOSAL_TOKEN;
         if (!token) {
-            test.skip(true, 'E2E_PROPOSAL_TOKEN not set — skipping public proposal test');
+            test.skip(true, 'E2E_PUBLIC_PROPOSAL_TOKEN not set — skipping public proposal test');
         }
 
         // Public proposal pages are unauthenticated

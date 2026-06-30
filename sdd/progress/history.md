@@ -186,3 +186,28 @@ Residual notes:
 - Public proposal valid-token acceptance remains skipped because `E2E_PROPOSAL_TOKEN` is not configured; no real proposal was accepted or mutated in production.
 - The custom domain `https://www.zinergia.es` returned HTTP 200 but did not expose the app login form during this smoke run, so production flow verification used the Vercel app URL.
 - No schema migration or Supabase type regeneration was needed.
+
+## 2026-06-30 — public-proposal-e2e-fixture-flow
+
+Status: done.
+
+Implemented:
+
+- Added a guarded staging seed script for deterministic public proposal fixtures.
+- Added `test:e2e:seed-public-proposal` to create/refresh fixture rows and optionally write token variables to `.env.staging.local`.
+- Split E2E token intent into `E2E_PUBLIC_PROPOSAL_TOKEN` for read/signature-step smoke and `E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN` for future destructive acceptance tests.
+- Updated public proposal, simulator, and accessibility tests to prefer the new read-only token while accepting `E2E_PROPOSAL_TOKEN` as a temporary fallback.
+- Documented staging seed, token roles, and production smoke boundaries in `e2e/README.md`.
+
+Verification:
+
+- Staging fixture seed: `E2E_ALLOW_STAGING_SEED=1 npm run test:e2e:seed-public-proposal -- --write-env` — passed.
+- `npm run test:e2e -- e2e/proposal-public.spec.ts --project=chromium --reporter=list` — 6 passed.
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npm run lint` — passed with zero warnings.
+- `npx tsc --noEmit` — passed after removing stale generated `.next/` output.
+
+Residual notes:
+
+- Staging was behind the local migration baseline; `db push` is blocked by old remote migration history. The missing public proposal columns/policies and `proposals.notes` were reconciled directly in staging using existing repo migration intent so the E2E fixture can run. Production schema was not changed.
+- Playwright's local dev server printed `ECONNRESET` while shutting down after the passing public proposal run; the test result itself was green.

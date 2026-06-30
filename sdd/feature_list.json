@@ -119,6 +119,23 @@
         "external_integration": false,
         "business_critical_calculation": true
       }
+    },
+    {
+      "id": "ZIN-SDD-008",
+      "slug": "public-proposal-e2e-fixture-flow",
+      "description": "Hacer fluido y seguro el fixture E2E de propuesta publica valida en staging, separando lectura de aceptacion mutable.",
+      "status": "done",
+      "sdd": true,
+      "priority": "high",
+      "risk": {
+        "data_schema": false,
+        "pii": false,
+        "auth_rls": true,
+        "public_surface": true,
+        "cron_or_service_role": true,
+        "external_integration": false,
+        "business_critical_calculation": false
+      }
     }
   ]
 }
