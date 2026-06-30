@@ -1,7 +1,7 @@
 # Current SDD Work
 
-Active feature: `ocr-to-proposal-flow`
+Active feature: `ci-warning-cleanup`
 
-Status: `done`
+Status: `requirements_ready`
 
-Next step: choose the next SDD feature from `sdd/feature_list.json`.
+Next step: approve requirements, then write `design.md`.
