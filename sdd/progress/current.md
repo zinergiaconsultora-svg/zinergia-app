@@ -2,6 +2,6 @@
 
 Active feature: `ci-warning-cleanup`
 
-Status: `requirements_ready`
+Status: `design_ready`
 
-Next step: approve requirements, then write `design.md`.
+Next step: approve `design.md`, then write implementation tasks.
