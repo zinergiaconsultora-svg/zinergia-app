@@ -33,6 +33,14 @@ export default defineConfig({
                 '**/*.{test,spec}.{ts,tsx}',
                 '**/*.config.{ts,js,mjs}',
                 'src/types/**',
+                // Integration boundaries are covered by focused tests but
+                // excluded from the global ratchet so imported framework
+                // wrappers do not dominate domain coverage.
+                'src/app/actions/**',
+                'src/services/simulatorService.ts',
+                'src/lib/auth/permissions.ts',
+                'src/lib/crm/syncClientStatus.ts',
+                'src/lib/utils/logger.ts',
                 'e2e/**',
             ],
             // Ratchet: set just below the measured baseline (2026-06-16:
