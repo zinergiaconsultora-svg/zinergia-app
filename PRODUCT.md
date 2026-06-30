@@ -17,7 +17,7 @@ Professional energy SaaS. Clean, data-dense dashboard UI. Indigo/emerald accent 
 ## Tech stack
 - Next.js 15, React, TypeScript, Tailwind CSS
 - Supabase (Postgres + Auth + Storage)
-- Quicksand font family (400, 600 weights)
+- Nunito Sans font family (300-700 weights), tuned for a rounded Apple-like product UI
 - PWA enabled, mobile-first
 
 ## Key surfaces

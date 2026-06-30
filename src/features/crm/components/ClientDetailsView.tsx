@@ -27,6 +27,8 @@ import ActivityTimeline from './ActivityTimeline';
 import TasksPanel from './TasksPanel';
 import DocumentsPanel from './DocumentsPanel';
 import ContractsPanel from './ContractsPanel';
+import SupplyPointsPanel from './SupplyPointsPanel';
+import SwitchHistoryPanel from './SwitchHistoryPanel';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Proposal } from '@/types/crm';
 
@@ -338,9 +340,27 @@ export default function ClientDetailsView({ clientId }: { clientId: string }) {
                             )}
                         </div>
 
+                        {/* Puntos de Suministro (Multi-CUPS) */}
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-card">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Puntos de Suministro</h3>
+                                <Zap size={14} className="text-slate-400" />
+                            </div>
+                            <SupplyPointsPanel clientId={clientId} />
+                        </div>
+
                         {/* Contratos */}
                         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-card">
                             <ContractsPanel clientId={clientId} />
+                        </div>
+
+                        {/* Historial de Cambios */}
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-card">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Cambios de Comercializadora</h3>
+                                <TrendingDown size={14} className="text-slate-400" />
+                            </div>
+                            <SwitchHistoryPanel clientId={clientId} />
                         </div>
 
                         {/* Documentos */}

@@ -1,0 +1,56 @@
+{
+  "_comment": "Backlog SDD reforzado. Solo una feature puede estar in_progress a la vez.",
+  "features": [
+    {
+      "id": "ZIN-SDD-001",
+      "slug": "public-proposal-acceptance-security",
+      "description": "Endurecer el flujo publico de aceptacion de propuestas: validacion, rate limiting, firma, auditoria y no exposicion de PII.",
+      "status": "done",
+      "sdd": true,
+      "priority": "high",
+      "risk": {
+        "data_schema": false,
+        "pii": true,
+        "auth_rls": true,
+        "public_surface": true,
+        "cron_or_service_role": false,
+        "external_integration": false,
+        "business_critical_calculation": false
+      }
+    },
+    {
+      "id": "ZIN-SDD-002",
+      "slug": "commission-split-hardening",
+      "description": "Revisar y blindar calculo de comisiones entre admin, franquicia y agente.",
+      "status": "done",
+      "sdd": true,
+      "priority": "high",
+      "risk": {
+        "data_schema": true,
+        "pii": false,
+        "auth_rls": true,
+        "public_surface": false,
+        "cron_or_service_role": false,
+        "external_integration": false,
+        "business_critical_calculation": true
+      }
+    },
+    {
+      "id": "ZIN-SDD-003",
+      "slug": "ocr-to-proposal-flow",
+      "description": "Cerrar trazabilidad desde OCR de factura hasta comparativa, propuesta y registro comercial.",
+      "status": "done",
+      "sdd": true,
+      "priority": "medium",
+      "risk": {
+        "data_schema": true,
+        "pii": true,
+        "auth_rls": true,
+        "public_surface": false,
+        "cron_or_service_role": true,
+        "external_integration": true,
+        "business_critical_calculation": true
+      }
+    }
+  ]
+}

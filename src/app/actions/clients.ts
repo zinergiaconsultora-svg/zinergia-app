@@ -13,10 +13,11 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { requireServerRole } from '@/lib/auth/permissions';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import type { Client } from '@/types/crm';
+import type { Client, UserRole } from '@/types/crm';
 import {
     buildClientPiiColumns,
     hydrateClientRow,
@@ -70,11 +71,12 @@ async function getSessionContext() {
     if (!user) throw new Error('No autenticado');
     const { data: profile } = await supabase
         .from('profiles')
-        .select('franchise_id')
+        .select('franchise_id, role')
         .eq('id', user.id)
         .single();
     const franchiseId = profile?.franchise_id ?? null;
-    return { supabase, userId: user.id, franchiseId };
+    const role = (profile?.role as UserRole | undefined) ?? null;
+    return { supabase, userId: user.id, franchiseId, role };
 }
 
 function buildClientUpdatePayload(clean: Partial<ClientInput>): Record<string, unknown> {
@@ -474,19 +476,47 @@ export async function deleteClientAction(id: string): Promise<void> {
     await requireServerRole(['admin', 'franchise', 'agent']);
     if (!z.uuid().safeParse(id).success) throw new Error('ID de cliente inválido');
 
-    const { supabase } = await getSessionContext();
+    const { supabase, userId, role } = await getSessionContext();
 
-    // RGPD cascade: remove the invoice files from Drive before the DB cascade.
+    const { data: existing, error: existingError } = await supabase
+        .from('clients')
+        .select('id, owner_id')
+        .eq('id', id)
+        .maybeSingle();
+
+    if (existingError) throw new Error(`Error comprobando cliente: ${existingError.message}`);
+    if (!existing) throw new Error('No se encontró el cliente o no tienes permisos para eliminarlo');
+    if (role !== 'admin' && existing.owner_id !== userId) {
+        throw new Error('No tienes permisos para eliminar este cliente');
+    }
+
+    // RGPD cleanup: remove the invoice files from Drive before deleting the OCR rows.
     await purgeClientDriveFiles([id]);
 
-    const { error } = await supabase
+    const service = createServiceClient();
+    const { error: invoiceDeleteError } = await service
+        .from('ocr_jobs')
+        .delete()
+        .eq('client_id', id);
+
+    if (invoiceDeleteError) {
+        throw new Error(`Error eliminando facturas del cliente: ${invoiceDeleteError.message}`);
+    }
+
+    const { data: deleted, error } = await service
         .from('clients')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select('id')
+        .maybeSingle();
 
     if (error) throw new Error(`Error eliminando cliente: ${error.message}`);
+    if (!deleted) throw new Error('No se pudo eliminar el cliente. Revisa permisos o dependencias asociadas.');
 
     revalidatePath('/dashboard/clients');
+    revalidatePath('/dashboard');
+    revalidatePath('/dashboard/invoices');
+    revalidatePath('/admin/leads');
 }
 
 // ── Registro de contacto / notas ─────────────────────────────────────────────

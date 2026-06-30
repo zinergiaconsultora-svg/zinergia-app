@@ -11,9 +11,9 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                display: ['var(--font-sans)', 'sans-serif'],
+                display: ['var(--font-display)', 'sans-serif'],
                 sans: ['var(--font-sans)', 'sans-serif'],
-                mono: ['monospace'],
+                mono: ['var(--font-mono)', 'monospace'],
             },
             colors: {
                 background: "var(--background)",
@@ -99,6 +99,9 @@ export default {
                 'button': '0 2px 4px rgba(0, 0, 0, 0.05)',
                 'floating': '0 20px 40px -10px rgba(0, 0, 0, 0.04)',
                 'interaction': '0 8px 20px -5px rgba(0, 0, 0, 0.03)',
+                'floating-light': '0 8px 32px rgba(30, 41, 59, 0.06)',
+                'floating-medium': '0 12px 48px rgba(30, 41, 59, 0.08)',
+                'floating-deep': '0 16px 64px rgba(30, 41, 59, 0.12)',
             },
         },
     },

@@ -16,12 +16,21 @@ import {
     CheckCheck,
     BadgeCheck,
     Banknote,
+    RefreshCw,
+    History,
+    AlertTriangle,
 } from 'lucide-react';
 import { InvoiceData, SavingsResult, Client, Proposal, ProposalStatus } from '@/types/crm';
 import { crmService } from '@/services/crmService';
 import { getClientsAction } from '@/app/actions/clients';
 import { generatePublicLinkAction } from '@/app/actions/publicProposal';
-import { registerSaleAction, updateProposalStatusAction } from '@/app/actions/proposals';
+import {
+    getProposalPricingReviewAction,
+    recalculateProposalWithCurrentTariffsAction,
+    registerSaleAction,
+    updateProposalStatusAction,
+    type ProposalPricingReview,
+} from '@/app/actions/proposals';
 import { logProposalCreatedAction } from '@/app/actions/proposalActivities';
 import { formatCurrency } from '@/lib/utils/format';
 import { toast } from 'sonner';
@@ -58,6 +67,9 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
     const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
     const [saleNote, setSaleNote] = useState('');
     const [registeringSale, setRegisteringSale] = useState(false);
+    const [pricingReview, setPricingReview] = useState<ProposalPricingReview | null>(null);
+    const [pricingLoading, setPricingLoading] = useState(false);
+    const [recalculating, setRecalculating] = useState(false);
 
     useEffect(() => {
         if (initialProposal) {
@@ -93,6 +105,25 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
         }
         setLoading(false);
     }, [router, initialProposal]);
+
+    useEffect(() => {
+        if (!initialProposal) return;
+        let mounted = true;
+        setPricingLoading(true);
+        getProposalPricingReviewAction(initialProposal.id)
+            .then((review) => {
+                if (mounted) setPricingReview(review);
+            })
+            .catch((error) => {
+                logger.warn('Failed to review proposal pricing', error);
+            })
+            .finally(() => {
+                if (mounted) setPricingLoading(false);
+            });
+        return () => {
+            mounted = false;
+        };
+    }, [initialProposal]);
 
     const loadClients = async () => {
         try {
@@ -190,6 +221,24 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
             toast.error(error instanceof Error ? error.message : 'No se pudo registrar la venta.');
         } finally {
             setRegisteringSale(false);
+        }
+    };
+
+    const handleRecalculate = async () => {
+        if (!initialProposal) return;
+        setRecalculating(true);
+        try {
+            const result = await recalculateProposalWithCurrentTariffsAction(initialProposal.id);
+            const delta = Math.round(result.deltaAnnualSavings);
+            toast.success(delta === 0
+                ? 'Nueva versión creada con tarifas actuales.'
+                : `Nueva versión creada (${delta > 0 ? '+' : ''}${delta.toLocaleString('es-ES')} €/año).`);
+            router.push(`/dashboard/proposals/${result.proposal.id}`);
+            router.refresh();
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'No se pudo recalcular la propuesta.');
+        } finally {
+            setRecalculating(false);
         }
     };
 
@@ -340,6 +389,71 @@ export default function ProposalView({ initialProposal }: ProposalViewProps) {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {initialProposal && (
+                <div className="max-w-4xl mx-auto px-4 pt-4 print:hidden">
+                    <div className={`border rounded-2xl p-4 flex flex-col sm:flex-row gap-3 sm:items-center ${
+                        pricingReview?.status === 'outdated' || pricingReview?.status === 'missing'
+                            ? 'bg-amber-50 border-amber-200'
+                            : pricingReview?.status === 'locked'
+                                ? 'bg-emerald-50 border-emerald-100'
+                                : 'bg-white border-slate-200'
+                    }`}>
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                            pricingReview?.status === 'outdated' || pricingReview?.status === 'missing'
+                                ? 'bg-amber-100 text-amber-700'
+                                : pricingReview?.status === 'locked'
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : 'bg-indigo-50 text-indigo-600'
+                        }`}>
+                            {pricingReview?.status === 'outdated' || pricingReview?.status === 'missing'
+                                ? <AlertTriangle size={16} />
+                                : pricingReview?.status === 'locked'
+                                    ? <BadgeCheck size={16} />
+                                    : <History size={16} />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-xs font-bold text-slate-900">
+                                    {pricingLoading
+                                        ? 'Revisando tarifas'
+                                        : pricingReview?.status === 'outdated'
+                                            ? 'Tarifas nuevas disponibles'
+                                            : pricingReview?.status === 'locked'
+                                                ? 'Precio firmado bloqueado'
+                                                : pricingReview?.status === 'manual'
+                                                    ? 'Propuesta manual'
+                                                    : 'Precio guardado'}
+                                </p>
+                                <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-bold text-slate-500">
+                                    v{pricingReview?.proposal_version ?? initialProposal.proposal_version ?? 1}
+                                </span>
+                                {(pricingReview?.price_snapshot_at || initialProposal.price_snapshot_at) && (
+                                    <span className="text-[10px] font-medium text-slate-400">
+                                        {new Date(pricingReview?.price_snapshot_at || initialProposal.price_snapshot_at || '').toLocaleDateString('es-ES')}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-[11px] text-slate-500 mt-1">
+                                {pricingLoading
+                                    ? 'Comprobando si el catalogo ha cambiado desde que se creo esta propuesta.'
+                                    : pricingReview?.message || 'La propuesta conserva la tarifa y los importes exactos del dia en que se creo.'}
+                            </p>
+                        </div>
+                        {pricingReview?.can_recalculate && status !== 'accepted' && (
+                            <button
+                                type="button"
+                                onClick={handleRecalculate}
+                                disabled={recalculating}
+                                className="h-9 px-3 rounded-lg bg-slate-900 text-white text-xs font-bold flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors disabled:opacity-60"
+                            >
+                                {recalculating ? <div className="w-3.5 h-3.5 rounded-full border-2 border-white/60 border-t-transparent animate-spin" /> : <RefreshCw size={14} />}
+                                <span>Nueva version</span>
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Firma digital — solo visible si la propuesta fue firmada */}
             {initialProposal?.signature_data && (

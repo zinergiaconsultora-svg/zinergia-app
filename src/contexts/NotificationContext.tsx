@@ -3,11 +3,11 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useTransition } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
-    AppNotification,
     getNotificationsAction,
     markNotificationReadAction,
     markAllReadAction,
 } from '@/app/actions/notifications';
+import type { AppNotification } from '@/app/actions/notifications';
 import { logger } from '@/lib/utils/logger';
 
 interface NotificationContextValue {
@@ -42,7 +42,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const refresh = useCallback(() => {
         getNotificationsAction()
             .then(data => { setNotifications(data); setLoaded(true); })
-            .catch((e) => { logger.error('Failed to fetch notifications', e); setLoaded(true); });
+            .catch((e) => { logger.warn('Failed to fetch notifications', { error: e }); setLoaded(true); });
     }, []);
 
     useEffect(() => {
@@ -81,12 +81,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     const markRead = useCallback((id: string) => {
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-        startTransition(() => { markNotificationReadAction(id).catch((e) => logger.error('Failed to mark notification read', e)); });
+        startTransition(() => { markNotificationReadAction(id).catch((e) => logger.warn('Failed to mark notification read', { error: e })); });
     }, [startTransition]);
 
     const markAllRead = useCallback(() => {
         setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-        startTransition(() => { markAllReadAction().catch((e) => logger.error('Failed to mark all read', e)); });
+        startTransition(() => { markAllReadAction().catch((e) => logger.warn('Failed to mark all read', { error: e })); });
     }, [startTransition]);
 
     return (

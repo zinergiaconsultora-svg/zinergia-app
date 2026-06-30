@@ -1,8 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Proposal } from '@/types/crm';
-import { acceptPublicProposalAction, trackPublicProposalViewAction } from '@/app/actions/publicProposal';
+import {
+    acceptPublicProposalAction,
+    trackPublicProposalViewAction,
+    type PublicProposal,
+} from '@/app/actions/publicProposal';
 import confetti from 'canvas-confetti';
 import dynamic from 'next/dynamic';
 
@@ -16,10 +19,6 @@ import {
     Loader2, AlertCircle, PenLine, User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-interface PublicProposal extends Proposal {
-    client_name?: string;
-}
 
 interface Props {
     proposal: PublicProposal;

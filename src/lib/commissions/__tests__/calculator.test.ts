@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     applyFranchiseOverride,
     calculateCommissionSplit,
+    resolveCommissionAmounts,
     validateCommissionRule,
     type CommissionRuleInput,
 } from '../calculator';
@@ -229,5 +230,112 @@ describe('applyFranchiseOverride', () => {
         expect(split.agent_commission).toBeCloseTo(36, 1);
         expect(split.franchise_profit).toBeCloseTo(84, 1);
         expect(split.hq_royalty).toBe(30);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// resolveCommissionAmounts
+// ---------------------------------------------------------------------------
+
+describe('resolveCommissionAmounts', () => {
+    it('uses a fixed tariff commission when present', () => {
+        const result = resolveCommissionAmounts({
+            annualSavings: 1000,
+            estimatedAgentCommission: 250,
+            baseRule: DEFAULT_RULE,
+            royaltyPercent: null,
+        });
+
+        expect(result).toEqual({
+            agentCommission: 250,
+            franchiseCommission: 0,
+            points: 50,
+            source: 'tariff_fixed',
+        });
+    });
+
+    it('applies franchise royalty to fixed tariff commission', () => {
+        const result = resolveCommissionAmounts({
+            annualSavings: 1000,
+            estimatedAgentCommission: 250,
+            baseRule: DEFAULT_RULE,
+            royaltyPercent: 20,
+        });
+
+        expect(result.agentCommission).toBe(250);
+        expect(result.franchiseCommission).toBe(50);
+        expect(result.points).toBe(50);
+        expect(result.source).toBe('tariff_fixed');
+    });
+
+    it('supports 100% franchise royalty on fixed tariff commission', () => {
+        const result = resolveCommissionAmounts({
+            annualSavings: 1000,
+            estimatedAgentCommission: 250,
+            baseRule: DEFAULT_RULE,
+            royaltyPercent: 100,
+        });
+
+        expect(result.agentCommission).toBe(250);
+        expect(result.franchiseCommission).toBe(250);
+        expect(result.source).toBe('tariff_fixed');
+    });
+
+    it('falls back to savings-rule split when fixed tariff commission is absent', () => {
+        const result = resolveCommissionAmounts({
+            annualSavings: 1000,
+            estimatedAgentCommission: null,
+            baseRule: DEFAULT_RULE,
+            royaltyPercent: null,
+        });
+
+        expect(result.agentCommission).toBe(45);
+        expect(result.franchiseCommission).toBe(75);
+        expect(result.points).toBe(50);
+        expect(result.source).toBe('savings_rule');
+    });
+
+    it('applies franchise override to savings-rule fallback', () => {
+        const result = resolveCommissionAmounts({
+            annualSavings: 1000,
+            estimatedAgentCommission: 0,
+            baseRule: DEFAULT_RULE,
+            royaltyPercent: 20,
+        });
+
+        expect(result.agentCommission).toBe(36);
+        expect(result.franchiseCommission).toBe(84);
+        expect(result.source).toBe('savings_rule');
+    });
+
+    it('supports zero annual savings in fallback mode', () => {
+        const result = resolveCommissionAmounts({
+            annualSavings: 0,
+            estimatedAgentCommission: undefined,
+            baseRule: DEFAULT_RULE,
+            royaltyPercent: null,
+        });
+
+        expect(result.agentCommission).toBe(0);
+        expect(result.franchiseCommission).toBe(0);
+        expect(result.source).toBe('savings_rule');
+    });
+
+    it('rejects negative fixed tariff commission', () => {
+        expect(() => resolveCommissionAmounts({
+            annualSavings: 1000,
+            estimatedAgentCommission: -1,
+            baseRule: DEFAULT_RULE,
+            royaltyPercent: null,
+        })).toThrow(/estimatedAgentCommission/);
+    });
+
+    it('rejects negative annual savings', () => {
+        expect(() => resolveCommissionAmounts({
+            annualSavings: -1,
+            estimatedAgentCommission: null,
+            baseRule: DEFAULT_RULE,
+            royaltyPercent: null,
+        })).toThrow(/annualSavings/);
     });
 });

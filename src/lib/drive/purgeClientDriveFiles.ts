@@ -1,8 +1,7 @@
 /**
  * RGPD cascade (wired) — deletes the Drive invoice files belonging to a set of
- * clients about to be erased. MUST run BEFORE the DB delete, because
- * ocr_jobs.client_id is ON DELETE CASCADE: once the client row goes, the
- * drive_file_ids are gone with it.
+ * clients about to be erased. MUST run BEFORE deleting the linked ocr_jobs,
+ * because the rows contain the Drive file ids needed for the purge.
  *
  * Best-effort and audited: each deletion writes an audit_logs entry; failures
  * are counted (the reconciliation job cleans up any stragglers).
