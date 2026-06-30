@@ -6,8 +6,8 @@ import { OptimizationRecommendation, AuditOpportunity } from '@/lib/aletheia/typ
 import { SupervisedRecommendationResult } from '@/lib/supervised/recommender';
 import { createClient } from '@/lib/supabase/client';
 import { markOcrJobFailed, getOcrJobStatus } from '@/app/actions/ocr-jobs';
-import { getMarketerLogo } from '@/lib/marketers/logos';
 import { normalizeInvoiceData } from '@/lib/invoices/normalization';
+import { buildProposalPricingDefaults, mapAletheiaProposalToSavingsResult } from '@/lib/proposals/pricing';
 
 type Step = 1 | 2 | 3;
 
@@ -446,36 +446,9 @@ export function useSimulator() {
             const aletheiaResult = result.data;
 
             // Map Aletheia Result to legacy SavingsResult for UI compatibility
-            const mappedResults: SavingsResult[] = aletheiaResult.top_proposals.map(p => {
-                // Reconstruct Offer object from Candidate
-                const offer: SavingsResult['offer'] = {
-                    id: p.candidate.id,
-                    marketer_name: p.candidate.company,
-                    tariff_name: p.candidate.name,
-                    logo_color: p.candidate.logo_color || 'bg-blue-600',
-                    logo_url: getMarketerLogo(p.candidate.company),
-                    type: p.candidate.type,
-                    contract_duration: '12 meses', // Default or from candidate
-                    power_price: p.candidate.power_price,
-                    energy_price: p.candidate.energy_price,
-                    surplus_compensation_price: p.candidate.surplus_compensation_price,
-                    estimated_agent_commission: p.candidate.estimated_agent_commission,
-                    fixed_fee: p.candidate.fixed_fee
-                };
-
-                return {
-                    offer: offer,
-                    current_annual_cost: aletheiaResult.current_status.annual_projected_cost,
-                    offer_annual_cost: p.annual_cost_total,
-                    annual_savings: p.annual_savings,
-                    savings_percent: aletheiaResult.current_status.annual_projected_cost > 0
-                        ? (p.annual_savings / aletheiaResult.current_status.annual_projected_cost) * 100
-                        : 0,
-                    calculation_audit: p.invoice_simulation,
-                    // If we want to show optimization details, we can map them here from opportunities
-                    optimization_result: undefined
-                };
-            });
+            const mappedResults: SavingsResult[] = aletheiaResult.top_proposals.map(p =>
+                mapAletheiaProposalToSavingsResult(p, aletheiaResult)
+            );
 
             // Dispatch optimization recommendations
             dispatch({ type: 'SET_OPTIMIZATION_RECOMMENDATIONS', payload: aletheiaResult.optimization_recommendations || [] });
@@ -498,18 +471,23 @@ export function useSimulator() {
                             state.invoiceData,
                             bestResult,
                             state.invoiceData.client_name,
-                            aletheiaResult
+                            aletheiaResult,
+                            state.ocrJobId
                         );
                         dispatch({ type: 'SET_SAVED_PROPOSAL_ID', payload: savedProposal.id });
 
                         // 2. Log the next two if they exist
                         if (mappedResults.length > 1) {
+                            const realOcrJobId = state.ocrJobId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(state.ocrJobId)
+                                ? state.ocrJobId
+                                : null;
                             for (let i = 1; i < mappedResults.length; i++) {
                                 const result = mappedResults[i];
                                 await crmService.saveProposal({
                                     client_id: savedProposal.client_id,
+                                    ocr_job_id: realOcrJobId,
                                     status: 'draft',
-                                    offer_snapshot: result.offer,
+                                    ...buildProposalPricingDefaults(result, 'simulator'),
                                     calculation_data: {
                                         ...state.invoiceData,
                                         calculation_audit: result.calculation_audit,
@@ -544,7 +522,7 @@ export function useSimulator() {
             console.error('Comparison failed', error);
             dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Error al realizar la comparación' });
         }
-    }, [state.invoiceData, state.isMockMode]);
+    }, [state.invoiceData, state.isMockMode, state.ocrJobId]);
 
     const goBackToStep1 = useCallback(() => {
         dispatch({ type: 'GO_BACK_TO_STEP1' });

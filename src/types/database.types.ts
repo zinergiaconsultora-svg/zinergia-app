@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       academy_resources: {
@@ -104,61 +129,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_franchise_client_stats"
             referencedColumns: ["franchise_id"]
-          },
-        ]
-      }
-      lead_audit_events: {
-        Row: {
-          actor_id: string | null
-          created_at: string
-          detail: string | null
-          event_type: string
-          id: string
-          job_id: string
-          metadata: Json
-          title: string
-        }
-        Insert: {
-          actor_id?: string | null
-          created_at?: string
-          detail?: string | null
-          event_type: string
-          id?: string
-          job_id: string
-          metadata?: Json
-          title: string
-        }
-        Update: {
-          actor_id?: string | null
-          created_at?: string
-          detail?: string | null
-          event_type?: string
-          id?: string
-          job_id?: string
-          metadata?: Json
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lead_audit_events_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lead_audit_events_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
-            referencedRelation: "v_franchise_client_stats"
-            referencedColumns: ["franchise_id"]
-          },
-          {
-            foreignKeyName: "lead_audit_events_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "ocr_jobs"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -652,6 +622,13 @@ export type Database = {
             referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "commission_tracking_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals_alta"
+            referencedColumns: ["id"]
+          },
         ]
       }
       contracts: {
@@ -746,6 +723,13 @@ export type Database = {
             columns: ["proposal_id"]
             isOneToOne: false
             referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals_alta"
             referencedColumns: ["id"]
           },
         ]
@@ -915,6 +899,42 @@ export type Database = {
         }
         Relationships: []
       }
+      integration_credentials: {
+        Row: {
+          access_token: string | null
+          access_token_expires_at: string | null
+          created_at: string
+          encrypted_refresh_token: string
+          id: string
+          last_error: string | null
+          provider: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          access_token_expires_at?: string | null
+          created_at?: string
+          encrypted_refresh_token: string
+          id?: string
+          last_error?: string | null
+          provider: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          access_token_expires_at?: string | null
+          created_at?: string
+          encrypted_refresh_token?: string
+          id?: string
+          last_error?: string | null
+          provider?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           agent_id: string
@@ -1051,44 +1071,71 @@ export type Database = {
           },
         ]
       }
-      integration_credentials: {
+      lead_audit_events: {
         Row: {
-          access_token: string | null
-          access_token_expires_at: string | null
+          actor_id: string | null
           created_at: string
-          encrypted_refresh_token: string
+          detail: string | null
+          event_type: string
           id: string
-          last_error: string | null
-          provider: string
-          status: string
-          updated_at: string
+          job_id: string
+          metadata: Json
+          title: string
         }
         Insert: {
-          access_token?: string | null
-          access_token_expires_at?: string | null
+          actor_id?: string | null
           created_at?: string
-          encrypted_refresh_token: string
+          detail?: string | null
+          event_type: string
           id?: string
-          last_error?: string | null
-          provider: string
-          status?: string
-          updated_at?: string
+          job_id: string
+          metadata?: Json
+          title: string
         }
         Update: {
-          access_token?: string | null
-          access_token_expires_at?: string | null
+          actor_id?: string | null
           created_at?: string
-          encrypted_refresh_token?: string
+          detail?: string | null
+          event_type?: string
           id?: string
-          last_error?: string | null
-          provider?: string
-          status?: string
-          updated_at?: string
+          job_id?: string
+          metadata?: Json
+          title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "lead_audit_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_audit_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "lead_audit_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_registry"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "lead_audit_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "ocr_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lv_zinergia_tarifas: {
         Row: {
+          catalog_version: number
           codigo_producto: string | null
           company: string
           connection_fee: number | null
@@ -1097,6 +1144,8 @@ export type Database = {
           contract_duration: string | null
           created_at: string | null
           description: string | null
+          effective_from: string
+          effective_to: string | null
           energy_price_p1: number
           energy_price_p2: number
           energy_price_p3: number
@@ -1117,6 +1166,7 @@ export type Database = {
           power_price_p4: number
           power_price_p5: number
           power_price_p6: number
+          price_fingerprint: string | null
           supply_type: string
           surplus_compensation_price: number
           tariff_name: string
@@ -1126,6 +1176,7 @@ export type Database = {
           variable_price_kwh_gas: number
         }
         Insert: {
+          catalog_version?: number
           codigo_producto?: string | null
           company: string
           connection_fee?: number | null
@@ -1134,6 +1185,8 @@ export type Database = {
           contract_duration?: string | null
           created_at?: string | null
           description?: string | null
+          effective_from?: string
+          effective_to?: string | null
           energy_price_p1?: number
           energy_price_p2?: number
           energy_price_p3?: number
@@ -1154,6 +1207,7 @@ export type Database = {
           power_price_p4?: number
           power_price_p5?: number
           power_price_p6?: number
+          price_fingerprint?: string | null
           supply_type?: string
           surplus_compensation_price?: number
           tariff_name: string
@@ -1163,6 +1217,7 @@ export type Database = {
           variable_price_kwh_gas?: number
         }
         Update: {
+          catalog_version?: number
           codigo_producto?: string | null
           company?: string
           connection_fee?: number | null
@@ -1171,6 +1226,8 @@ export type Database = {
           contract_duration?: string | null
           created_at?: string | null
           description?: string | null
+          effective_from?: string
+          effective_to?: string | null
           energy_price_p1?: number
           energy_price_p2?: number
           energy_price_p3?: number
@@ -1191,6 +1248,7 @@ export type Database = {
           power_price_p4?: number
           power_price_p5?: number
           power_price_p6?: number
+          price_fingerprint?: string | null
           supply_type?: string
           surplus_compensation_price?: number
           tariff_name?: string
@@ -1292,6 +1350,13 @@ export type Database = {
             columns: ["proposal_id"]
             isOneToOne: true
             referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_commissions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: true
+            referencedRelation: "proposals_alta"
             referencedColumns: ["id"]
           },
         ]
@@ -1411,6 +1476,13 @@ export type Database = {
             referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "next_actions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals_alta"
+            referencedColumns: ["id"]
+          },
         ]
       }
       notifications: {
@@ -1494,6 +1566,8 @@ export type Database = {
           lost_reason: string | null
           permanence_reminded_at: string | null
           permanence_until: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           status: string
           updated_at: string
         }
@@ -1526,6 +1600,8 @@ export type Database = {
           lost_reason?: string | null
           permanence_reminded_at?: string | null
           permanence_until?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: string
           updated_at?: string
         }
@@ -1558,6 +1634,8 @@ export type Database = {
           lost_reason?: string | null
           permanence_reminded_at?: string | null
           permanence_until?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: string
           updated_at?: string
         }
@@ -1573,6 +1651,13 @@ export type Database = {
             foreignKeyName: "ocr_jobs_duplicate_of_fkey"
             columns: ["duplicate_of"]
             isOneToOne: false
+            referencedRelation: "invoice_registry"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "ocr_jobs_duplicate_of_fkey"
+            columns: ["duplicate_of"]
+            isOneToOne: false
             referencedRelation: "ocr_jobs"
             referencedColumns: ["id"]
           },
@@ -1582,6 +1667,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "franchises"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocr_jobs_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocr_jobs_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
           },
         ]
       }
@@ -1638,6 +1737,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "franchises"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocr_training_examples_ocr_job_id_fkey"
+            columns: ["ocr_job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_registry"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "ocr_training_examples_ocr_job_id_fkey"
@@ -1710,6 +1816,7 @@ export type Database = {
           company_name: string | null
           company_type: string | null
           created_at: string | null
+          drive_folder_id: string | null
           email: string | null
           fiscal_address: string | null
           fiscal_city: string | null
@@ -1719,7 +1826,6 @@ export type Database = {
           fiscal_verified: boolean | null
           fiscal_verified_at: string | null
           franchise_id: string | null
-          drive_folder_id: string | null
           full_name: string | null
           iban: string | null
           id: string
@@ -1738,6 +1844,7 @@ export type Database = {
           company_name?: string | null
           company_type?: string | null
           created_at?: string | null
+          drive_folder_id?: string | null
           email?: string | null
           fiscal_address?: string | null
           fiscal_city?: string | null
@@ -1747,7 +1854,6 @@ export type Database = {
           fiscal_verified?: boolean | null
           fiscal_verified_at?: string | null
           franchise_id?: string | null
-          drive_folder_id?: string | null
           full_name?: string | null
           iban?: string | null
           id: string
@@ -1766,6 +1872,7 @@ export type Database = {
           company_name?: string | null
           company_type?: string | null
           created_at?: string | null
+          drive_folder_id?: string | null
           email?: string | null
           fiscal_address?: string | null
           fiscal_city?: string | null
@@ -1775,7 +1882,6 @@ export type Database = {
           fiscal_verified?: boolean | null
           fiscal_verified_at?: string | null
           franchise_id?: string | null
-          drive_folder_id?: string | null
           full_name?: string | null
           iban?: string | null
           id?: string
@@ -1806,29 +1912,100 @@ export type Database = {
           },
         ]
       }
+      proposal_alta_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          detail: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          proposal_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          detail?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          proposal_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          detail?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          proposal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_alta_events_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_alta_events_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals_alta"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals: {
         Row: {
           accepted_date: string | null
           agent_id: string | null
           aletheia_summary: Json | null
+          alta_completada_at: string | null
+          alta_completada_by: string | null
+          alta_rejected_at: string | null
+          alta_rejection_note: string | null
+          alta_rejection_reason: string | null
+          alta_requested_at: string | null
+          alta_requested_by: string | null
+          alta_status: Database["public"]["Enums"]["alta_status_enum"] | null
           annual_savings: number
           calculation_data: Json
           client_id: string
           close_probability: number | null
+          consent_confirmed_at: string | null
+          consent_confirmed_by: string | null
           created_at: string | null
           current_annual_cost: number
           followup_3d_at: string | null
           followup_7d_at: string | null
           franchise_id: string | null
           id: string
+          ocr_job_id: string | null
           offer_annual_cost: number
           offer_snapshot: Json
           optimization_result: Json | null
+          price_snapshot: Json
+          price_snapshot_at: string
+          pricing_status: string
           probability_score: number | null
+          proposal_version: number
+          public_accepted_at: string | null
+          public_expires_at: string | null
+          public_token: string | null
           rejected_date: string | null
           rejection_reason: string | null
+          repriced_at: string | null
+          repricing_delta_eur: number | null
           savings_percent: number
           sent_date: string | null
+          sepa_confirmed_at: string | null
+          signature_data: string | null
+          signed_at: string | null
+          signed_name: string | null
+          source_proposal_id: string | null
+          source_tariff_id: string | null
           status: string | null
           updated_at: string | null
         }
@@ -1836,24 +2013,50 @@ export type Database = {
           accepted_date?: string | null
           agent_id?: string | null
           aletheia_summary?: Json | null
+          alta_completada_at?: string | null
+          alta_completada_by?: string | null
+          alta_rejected_at?: string | null
+          alta_rejection_note?: string | null
+          alta_rejection_reason?: string | null
+          alta_requested_at?: string | null
+          alta_requested_by?: string | null
+          alta_status?: Database["public"]["Enums"]["alta_status_enum"] | null
           annual_savings: number
           calculation_data: Json
           client_id: string
           close_probability?: number | null
+          consent_confirmed_at?: string | null
+          consent_confirmed_by?: string | null
           created_at?: string | null
           current_annual_cost: number
           followup_3d_at?: string | null
           followup_7d_at?: string | null
           franchise_id?: string | null
           id?: string
+          ocr_job_id?: string | null
           offer_annual_cost: number
           offer_snapshot: Json
           optimization_result?: Json | null
+          price_snapshot?: Json
+          price_snapshot_at?: string
+          pricing_status?: string
           probability_score?: number | null
+          proposal_version?: number
+          public_accepted_at?: string | null
+          public_expires_at?: string | null
+          public_token?: string | null
           rejected_date?: string | null
           rejection_reason?: string | null
+          repriced_at?: string | null
+          repricing_delta_eur?: number | null
           savings_percent: number
           sent_date?: string | null
+          sepa_confirmed_at?: string | null
+          signature_data?: string | null
+          signed_at?: string | null
+          signed_name?: string | null
+          source_proposal_id?: string | null
+          source_tariff_id?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -1861,24 +2064,50 @@ export type Database = {
           accepted_date?: string | null
           agent_id?: string | null
           aletheia_summary?: Json | null
+          alta_completada_at?: string | null
+          alta_completada_by?: string | null
+          alta_rejected_at?: string | null
+          alta_rejection_note?: string | null
+          alta_rejection_reason?: string | null
+          alta_requested_at?: string | null
+          alta_requested_by?: string | null
+          alta_status?: Database["public"]["Enums"]["alta_status_enum"] | null
           annual_savings?: number
           calculation_data?: Json
           client_id?: string
           close_probability?: number | null
+          consent_confirmed_at?: string | null
+          consent_confirmed_by?: string | null
           created_at?: string | null
           current_annual_cost?: number
           followup_3d_at?: string | null
           followup_7d_at?: string | null
           franchise_id?: string | null
           id?: string
+          ocr_job_id?: string | null
           offer_annual_cost?: number
           offer_snapshot?: Json
           optimization_result?: Json | null
+          price_snapshot?: Json
+          price_snapshot_at?: string
+          pricing_status?: string
           probability_score?: number | null
+          proposal_version?: number
+          public_accepted_at?: string | null
+          public_expires_at?: string | null
+          public_token?: string | null
           rejected_date?: string | null
           rejection_reason?: string | null
+          repriced_at?: string | null
+          repricing_delta_eur?: number | null
           savings_percent?: number
           sent_date?: string | null
+          sepa_confirmed_at?: string | null
+          signature_data?: string | null
+          signed_at?: string | null
+          signed_name?: string | null
+          source_proposal_id?: string | null
+          source_tariff_id?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -1895,6 +2124,48 @@ export type Database = {
             columns: ["franchise_id"]
             isOneToOne: false
             referencedRelation: "franchises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_ocr_job_id_fkey"
+            columns: ["ocr_job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_registry"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "proposals_ocr_job_id_fkey"
+            columns: ["ocr_job_id"]
+            isOneToOne: false
+            referencedRelation: "ocr_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_source_proposal_id_fkey"
+            columns: ["source_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_source_proposal_id_fkey"
+            columns: ["source_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals_alta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_source_tariff_id_fkey"
+            columns: ["source_tariff_id"]
+            isOneToOne: false
+            referencedRelation: "lv_zinergia_tarifas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_source_tariff_id_fkey"
+            columns: ["source_tariff_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_tariffs"
             referencedColumns: ["id"]
           },
         ]
@@ -2014,6 +2285,13 @@ export type Database = {
             referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "renewal_opportunities_original_proposal_id_fkey"
+            columns: ["original_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals_alta"
+            referencedColumns: ["id"]
+          },
         ]
       }
       sips_consents: {
@@ -2125,6 +2403,155 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      supply_points: {
+        Row: {
+          address: string | null
+          annual_consumption_kwh: number | null
+          city: string | null
+          client_id: string
+          contracted_power: Json | null
+          created_at: string
+          cups: string | null
+          cups_ciphertext: string | null
+          cups_hash: string | null
+          cups_last4: string | null
+          current_marketer: string | null
+          current_tariff: string | null
+          id: string
+          is_primary: boolean
+          supply_type: string
+          updated_at: string
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          annual_consumption_kwh?: number | null
+          city?: string | null
+          client_id: string
+          contracted_power?: Json | null
+          created_at?: string
+          cups?: string | null
+          cups_ciphertext?: string | null
+          cups_hash?: string | null
+          cups_last4?: string | null
+          current_marketer?: string | null
+          current_tariff?: string | null
+          id?: string
+          is_primary?: boolean
+          supply_type?: string
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          annual_consumption_kwh?: number | null
+          city?: string | null
+          client_id?: string
+          contracted_power?: Json | null
+          created_at?: string
+          cups?: string | null
+          cups_ciphertext?: string | null
+          cups_hash?: string | null
+          cups_last4?: string | null
+          current_marketer?: string | null
+          current_tariff?: string | null
+          id?: string
+          is_primary?: boolean
+          supply_type?: string
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_points_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      switch_events: {
+        Row: {
+          annual_savings: number | null
+          client_id: string
+          created_at: string
+          cups: string | null
+          cups_ciphertext: string | null
+          cups_hash: string | null
+          cups_last4: string | null
+          id: string
+          new_annual_cost: number | null
+          new_marketer: string
+          new_tariff: string | null
+          notes: string | null
+          previous_annual_cost: number | null
+          previous_marketer: string | null
+          previous_tariff: string | null
+          proposal_id: string | null
+          reason: string | null
+          supply_point_id: string | null
+          switch_date: string
+        }
+        Insert: {
+          annual_savings?: number | null
+          client_id: string
+          created_at?: string
+          cups?: string | null
+          cups_ciphertext?: string | null
+          cups_hash?: string | null
+          cups_last4?: string | null
+          id?: string
+          new_annual_cost?: number | null
+          new_marketer: string
+          new_tariff?: string | null
+          notes?: string | null
+          previous_annual_cost?: number | null
+          previous_marketer?: string | null
+          previous_tariff?: string | null
+          proposal_id?: string | null
+          reason?: string | null
+          supply_point_id?: string | null
+          switch_date?: string
+        }
+        Update: {
+          annual_savings?: number | null
+          client_id?: string
+          created_at?: string
+          cups?: string | null
+          cups_ciphertext?: string | null
+          cups_hash?: string | null
+          cups_last4?: string | null
+          id?: string
+          new_annual_cost?: number | null
+          new_marketer?: string
+          new_tariff?: string | null
+          notes?: string | null
+          previous_annual_cost?: number | null
+          previous_marketer?: string | null
+          previous_tariff?: string | null
+          proposal_id?: string | null
+          reason?: string | null
+          supply_point_id?: string | null
+          switch_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "switch_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "switch_events_supply_point_id_fkey"
+            columns: ["supply_point_id"]
+            isOneToOne: false
+            referencedRelation: "supply_points"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tariff_commissions: {
         Row: {
@@ -2266,6 +2693,13 @@ export type Database = {
             columns: ["proposal_id"]
             isOneToOne: false
             referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals_alta"
             referencedColumns: ["id"]
           },
         ]
@@ -2454,44 +2888,6 @@ export type Database = {
       }
     }
     Views: {
-      invoice_registry: {
-        Row: {
-          agent_id: string | null
-          agent_name: string | null
-          archived_in_drive: boolean | null
-          closed: boolean | null
-          closed_at: string | null
-          commission_amount: number | null
-          compania_contratada: string | null
-          compared_at: string | null
-          comercializadora_actual: string | null
-          created_at: string | null
-          cups: string | null
-          drive_synced_at: string | null
-          drive_view_link: string | null
-          franchise_id: string | null
-          franchise_name: string | null
-          importe_total: string | null
-          job_id: string | null
-          lost: boolean | null
-          lost_reason: string | null
-          ocr_status: string | null
-          permanencia_hasta: string | null
-          process_status: string | null
-          tarifa_actual: string | null
-          tarifa_contratada: string | null
-          titular: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ocr_jobs_franchise_id_fkey"
-            columns: ["franchise_id"]
-            isOneToOne: false
-            referencedRelation: "franchises"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       franchise_wallet: {
         Row: {
           balance_available: number | null
@@ -2517,6 +2913,94 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_franchise_client_stats"
             referencedColumns: ["franchise_id"]
+          },
+        ]
+      }
+      invoice_registry: {
+        Row: {
+          agent_id: string | null
+          agent_name: string | null
+          annual_savings: number | null
+          archived_in_drive: boolean | null
+          closed: boolean | null
+          closed_at: string | null
+          comercializadora_actual: string | null
+          commission_amount: number | null
+          compania_contratada: string | null
+          compared_at: string | null
+          created_at: string | null
+          cups: string | null
+          drive_synced_at: string | null
+          drive_view_link: string | null
+          franchise_id: string | null
+          franchise_name: string | null
+          has_proposal: boolean | null
+          importe_total: string | null
+          job_id: string | null
+          lost: boolean | null
+          lost_reason: string | null
+          ocr_status: string | null
+          period_days: string | null
+          permanencia_hasta: string | null
+          process_status: string | null
+          reviewed_at: string | null
+          savings_percent: number | null
+          tarifa_actual: string | null
+          tarifa_contratada: string | null
+          titular: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ocr_jobs_franchise_id_fkey"
+            columns: ["franchise_id"]
+            isOneToOne: false
+            referencedRelation: "franchises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposals_alta: {
+        Row: {
+          agent_email: string | null
+          agent_id: string | null
+          agent_name: string | null
+          alta_completada_at: string | null
+          alta_rejected_at: string | null
+          alta_rejection_note: string | null
+          alta_rejection_reason: string | null
+          alta_requested_at: string | null
+          alta_requested_by: string | null
+          alta_status: Database["public"]["Enums"]["alta_status_enum"] | null
+          annual_savings: number | null
+          calculation_data: Json | null
+          client_email: string | null
+          client_id: string | null
+          client_name: string | null
+          consent_confirmed_at: string | null
+          created_at: string | null
+          current_annual_cost: number | null
+          franchise_id: string | null
+          id: string | null
+          offer_annual_cost: number | null
+          offer_snapshot: Json | null
+          sepa_confirmed_at: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_franchise_id_fkey"
+            columns: ["franchise_id"]
+            isOneToOne: false
+            referencedRelation: "franchises"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2659,13 +3143,14 @@ export type Database = {
         Args: never
         Returns: {
           agent_id: string
-          agent_name: string | null
+          agent_name: string
           commission: number
           lost: number
           open_leads: number
           won: number
         }[]
       }
+      get_lead_analytics: { Args: never; Returns: Json }
       get_lead_metrics: { Args: never; Returns: Json }
       get_monthly_metrics: {
         Args: { p_months?: number }
@@ -2693,7 +3178,12 @@ export type Database = {
       is_superadmin: { Args: never; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      alta_status_enum:
+        | "pendiente_consent"
+        | "lista_admin"
+        | "en_alta"
+        | "activada"
+        | "rechazada"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2819,7 +3309,18 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  public: {
+  graphql_public: {
     Enums: {},
+  },
+  public: {
+    Enums: {
+      alta_status_enum: [
+        "pendiente_consent",
+        "lista_admin",
+        "en_alta",
+        "activada",
+        "rechazada",
+      ],
+    },
   },
 } as const

@@ -6,7 +6,7 @@ import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { Proposal } from '@/types/crm';
 import { getActiveCommissionRule } from './commissionRules';
-import { calculateCommissionSplit, applyFranchiseOverride } from '@/lib/commissions/calculator';
+import { resolveCommissionAmounts } from '@/lib/commissions/calculator';
 import { rateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
 import { requireServerRole } from '@/lib/auth/permissions';
@@ -23,6 +23,26 @@ const LINK_TTL_DAYS = 30;
 const SIGNATURE_DATA_MAX_BYTES = 250_000;
 const acceptLimiter = rateLimit({ windowMs: 10 * 60_000, max: 10 });
 const viewLimiter = rateLimit({ windowMs: 60_000, max: 20 });
+const PUBLIC_LINK_UNAVAILABLE_MESSAGE = 'No hemos podido abrir esta propuesta. Contacta con tu asesor.';
+const PUBLIC_ACCEPT_VALIDATION_MESSAGE = 'Revisa la firma y el nombre antes de continuar.';
+
+export type PublicProposal = Pick<Proposal,
+    'id'
+    | 'status'
+    | 'created_at'
+    | 'public_expires_at'
+    | 'public_accepted_at'
+    | 'offer_snapshot'
+    | 'current_annual_cost'
+    | 'offer_annual_cost'
+    | 'annual_savings'
+    | 'savings_percent'
+    | 'notes'
+    | 'optimization_result'
+    | 'aletheia_summary'
+> & {
+    client_name?: string;
+};
 
 function generateToken(): string {
     // Token URL-safe de 32 bytes → 43 chars base64url
@@ -110,7 +130,7 @@ export async function generatePublicLinkAction(proposalId: string): Promise<{ to
  * Obtiene una propuesta por token público — sin autenticación.
  * Usa el cliente anon (respeta RLS pública).
  */
-export async function getPublicProposalAction(token: string): Promise<Proposal & { client_name?: string } | null> {
+export async function getPublicProposalAction(token: string): Promise<PublicProposal | null> {
     if (!tokenSchema.safeParse(token).success) return null;
 
     const supabase = await createClient();
@@ -119,7 +139,7 @@ export async function getPublicProposalAction(token: string): Promise<Proposal &
         .from('proposals')
         .select(`
             id, status, created_at, public_expires_at, public_accepted_at,
-            offer_snapshot, calculation_data,
+            offer_snapshot,
             current_annual_cost, offer_annual_cost, annual_savings, savings_percent,
             notes, optimization_result, aletheia_summary,
             clients(name)
@@ -136,7 +156,7 @@ export async function getPublicProposalAction(token: string): Promise<Proposal &
     return {
         ...data,
         client_name: (data.clients as unknown as { name: string } | null)?.name,
-    } as unknown as Proposal & { client_name?: string };
+    } as unknown as PublicProposal;
 }
 
 /**
@@ -205,19 +225,19 @@ export async function acceptPublicProposalAction(
     signedName?: string,
 ): Promise<{ success: boolean; message: string }> {
     if (!tokenSchema.safeParse(token).success) {
-        return { success: false, message: 'Enlace inválido.' };
+        return { success: false, message: PUBLIC_LINK_UNAVAILABLE_MESSAGE };
     }
     const rl = acceptLimiter.check(`${await getServerActionClientKey()}:${token}`);
     if (!rl.allowed) {
         return { success: false, message: 'Demasiados intentos. Espera unos minutos y vuelve a probar.' };
     }
 
-    const cleanSignedName = signedName?.trim();
-    if (cleanSignedName !== undefined && cleanSignedName.length > 200) {
-        return { success: false, message: 'Nombre demasiado largo.' };
+    const cleanSignedName = signedName?.trim() ?? '';
+    if (cleanSignedName.length < 2 || cleanSignedName.length > 200) {
+        return { success: false, message: PUBLIC_ACCEPT_VALIDATION_MESSAGE };
     }
-    if (signatureData !== undefined && !isValidSignatureData(signatureData)) {
-        return { success: false, message: 'Firma inválida o demasiado grande.' };
+    if (!signatureData || !isValidSignatureData(signatureData)) {
+        return { success: false, message: PUBLIC_ACCEPT_VALIDATION_MESSAGE };
     }
 
     const adminClient = createServiceClient();
@@ -230,13 +250,13 @@ export async function acceptPublicProposalAction(
         .maybeSingle();
 
     if (fetchError || !proposal) {
-        return { success: false, message: 'Propuesta no encontrada o enlace inválido.' };
+        return { success: false, message: PUBLIC_LINK_UNAVAILABLE_MESSAGE };
     }
     if (proposal.public_accepted_at) {
         return { success: true, message: 'Esta propuesta ya fue aceptada anteriormente.' };
     }
     if (proposal.status !== 'sent') {
-        return { success: false, message: 'Esta propuesta no está disponible para aceptar.' };
+        return { success: false, message: PUBLIC_LINK_UNAVAILABLE_MESSAGE };
     }
     if (new Date(proposal.public_expires_at) < new Date()) {
         return { success: false, message: 'El enlace ha expirado. Contacta con tu asesor.' };
@@ -245,18 +265,36 @@ export async function acceptPublicProposalAction(
     const now = new Date().toISOString();
     const updatePayload: Record<string, unknown> = {
         status: 'accepted',
+        pricing_status: 'locked',
         public_accepted_at: now,
         signed_at: now,
     };
-    if (signatureData) updatePayload.signature_data = signatureData;
-    if (cleanSignedName) updatePayload.signed_name = cleanSignedName;
+    updatePayload.signature_data = signatureData;
+    updatePayload.signed_name = cleanSignedName;
 
-    const { error } = await adminClient
+    const { data: updatedProposal, error } = await adminClient
         .from('proposals')
         .update(updatePayload)
-        .eq('id', proposal.id);
+        .eq('id', proposal.id)
+        .eq('status', 'sent')
+        .is('public_accepted_at', null)
+        .select('id')
+        .maybeSingle();
 
     if (error) return { success: false, message: 'Error al procesar la aceptación.' };
+    if (!updatedProposal) {
+        const { data: latestProposal } = await adminClient
+            .from('proposals')
+            .select('public_accepted_at, status')
+            .eq('id', proposal.id)
+            .maybeSingle();
+
+        if (latestProposal?.public_accepted_at || latestProposal?.status === 'accepted') {
+            return { success: true, message: 'Esta propuesta ya fue aceptada anteriormente.' };
+        }
+
+        return { success: false, message: PUBLIC_LINK_UNAVAILABLE_MESSAGE };
+    }
 
     // Log the acceptance event
     try {
@@ -272,9 +310,13 @@ export async function acceptPublicProposalAction(
                 franchise_id: propForActivity.franchise_id,
                 type: 'proposal_accepted',
                 description: signedName
-                    ? `El cliente ${signedName} ha aceptado y firmado la propuesta.`
+                    ? `El cliente ${cleanSignedName} ha aceptado y firmado la propuesta.`
                     : 'El cliente ha aceptado la propuesta.',
-                metadata: { proposal_id: proposal.id },
+                metadata: {
+                    proposal_id: proposal.id,
+                    source: 'public_portal',
+                    accepted_at: now,
+                },
             });
         }
     } catch (actErr) {
@@ -333,28 +375,20 @@ export async function acceptPublicProposalAction(
                 // Si la tarifa no trae comisión, se recurre a la regla sobre el ahorro.
                 const royaltyPercent: number | null = franchiseCfg?.royalty_percent ?? null;
                 const offer = propData?.offer_snapshot as { estimated_agent_commission?: number | null } | null;
-                const tariffCommission = Number(offer?.estimated_agent_commission ?? 0);
-                const round2 = (n: number) => Math.round(n * 100) / 100;
-
-                let agentCommission: number;
-                let franchiseCommission: number;
-                if (tariffCommission > 0) {
-                    agentCommission = round2(tariffCommission);
-                    franchiseCommission = round2(tariffCommission * ((royaltyPercent ?? 0) / 100));
-                } else {
-                    const rule = applyFranchiseOverride(baseRule, royaltyPercent);
-                    const split = calculateCommissionSplit(propData.annual_savings as number, rule);
-                    agentCommission = split.agent_commission;
-                    franchiseCommission = split.franchise_profit;
-                }
+                const resolvedCommission = resolveCommissionAmounts({
+                    annualSavings: propData.annual_savings as number | null | undefined,
+                    estimatedAgentCommission: offer?.estimated_agent_commission,
+                    baseRule,
+                    royaltyPercent,
+                });
 
                 // ignoreDuplicates: el UNIQUE constraint en proposal_id actúa como guardia atómica
                 const { error: commError } = await adminClient.from('network_commissions').upsert({
                     proposal_id: proposal.id,
                     agent_id: agentProfile.id,
                     franchise_id: agentProfile.franchise_id,
-                    agent_commission: agentCommission,
-                    franchise_commission: franchiseCommission,
+                    agent_commission: resolvedCommission.agentCommission,
+                    franchise_commission: resolvedCommission.franchiseCommission,
                     status: 'pending',
                 }, { onConflict: 'proposal_id', ignoreDuplicates: true });
                 if (commError) throw commError;
@@ -403,7 +437,7 @@ export async function acceptPublicProposalAction(
                     offer_annual_cost: propData.offer_annual_cost as number,
                     offer_snapshot: propData.offer_snapshot as { marketer_name: string; tariff_name: string },
                 },
-                signedName,
+                cleanSignedName,
             );
         }
     } catch (err) {

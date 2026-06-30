@@ -88,7 +88,7 @@ export const NavigationTop = () => {
 
             {/* Desktop floating nav */}
             <div className="hidden lg:block max-w-[1600px] mx-auto px-8 pointer-events-auto">
-                <nav className="rounded-2xl border border-slate-200 flex items-center justify-between px-5 py-1.5 md:px-7 bg-white/90 backdrop-blur-lg shadow-sm">
+                <nav className="glass-premium rounded-full flex items-center justify-between px-5 py-1.5 md:px-7 shadow-floating-medium border-white/40">
 
                     {/* Logo Section */}
                     <div className="flex items-center gap-8">
@@ -109,10 +109,10 @@ export const NavigationTop = () => {
                                     <a
                                         href="/admin"
                                         aria-label="Admin Panel"
-                                        className={`relative flex items-center justify-center w-11 h-11 rounded-2xl transition-colors duration-300 ${
+                                        className={`relative flex items-center justify-center w-11 h-11 rounded-full transition-all duration-300 ${
                                             pathname.startsWith('/admin')
-                                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                                                : 'text-indigo-400 hover:bg-indigo-50/50 hover:text-indigo-600'
+                                                ? 'bg-gradient-to-br from-brand-blue to-slate-800 text-white shadow-floating-light'
+                                                : 'text-indigo-500 hover:bg-indigo-50/30 hover:text-brand-blue hover:scale-105'
                                         }`}
                                         title="Admin Panel"
                                     >
@@ -191,7 +191,7 @@ export const NavigationTop = () => {
                                     {isAdmin ? (
                                         /* Admin: solo sus herramientas */
                                         <>
-                                            <Link href="/admin" onClick={(event) => handleMobileNavigation(event, '/admin')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-colors active:scale-95 ${pathname.startsWith('/admin') ? 'bg-white text-indigo-600 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
+                                            <Link href="/admin" onClick={(event) => handleMobileNavigation(event, '/admin')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-colors active:scale-95 ${pathname.startsWith('/admin') ? 'bg-white text-brand-blue shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
                                                 <Shield size={22} strokeWidth={1.5} />
                                                 <span className="text-[11px] font-medium">Admin</span>
                                             </Link>
@@ -245,8 +245,8 @@ export const NavigationTop = () => {
                         /* Admin: tabs simplificados */
                         <>
                             <Link href="/admin" onClick={(event) => handleMobileNavigation(event, '/admin')} className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors">
-                                <Shield size={24} strokeWidth={pathname.startsWith('/admin') ? 2 : 1.5} className={pathname.startsWith('/admin') ? 'text-indigo-600' : 'text-[#8e8e93]'} />
-                                <span className={`text-[10px] font-medium ${pathname.startsWith('/admin') ? 'text-indigo-600' : 'text-[#8e8e93]'}`}>Admin</span>
+                                <Shield size={24} strokeWidth={pathname.startsWith('/admin') ? 2 : 1.5} className={pathname.startsWith('/admin') ? 'text-brand-blue' : 'text-[#8e8e93]'} />
+                                <span className={`text-[10px] font-medium ${pathname.startsWith('/admin') ? 'text-brand-blue' : 'text-[#8e8e93]'}`}>Admin</span>
                             </Link>
                             <Link href="/dashboard/tariffs" onClick={(event) => handleMobileNavigation(event, '/dashboard/tariffs')} className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors">
                                 <Receipt size={24} strokeWidth={pathname.startsWith('/dashboard/tariffs') ? 2 : 1.5} className={pathname.startsWith('/dashboard/tariffs') ? 'text-energy-500' : 'text-[#8e8e93]'} />
@@ -317,8 +317,8 @@ function NavIconLink({ href, label, icon: Icon, pathname, hoveredItem, setHovere
     const isSimulador = label === 'Simulador';
 
     const containerClass = isSimulador
-        ? `relative flex items-center justify-center w-12 h-12 rounded-[18px] transition-colors ${isActive ? 'bg-rose-500 text-white' : 'bg-rose-50 text-rose-500 hover:bg-rose-100'}`
-        : `relative flex items-center justify-center w-11 h-11 rounded-[16px] transition-colors ${isActive ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`;
+        ? `relative flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 ${isActive ? 'bg-gradient-to-r from-energy-500 to-energy-600 text-white shadow-floating-light scale-105' : 'bg-energy-50/50 text-energy-500 hover:bg-energy-100/80 hover:scale-105'}`
+        : `relative flex items-center justify-center w-11 h-11 rounded-full transition-all duration-300 ${isActive ? 'bg-gradient-to-br from-brand-blue to-slate-800 text-white shadow-floating-light' : 'text-slate-500 hover:bg-slate-100/50 hover:text-slate-900 hover:scale-105'}`;
 
     return (
         <div className="relative group" onMouseEnter={() => setHoveredItem(label)} onMouseLeave={() => setHoveredItem(null)}>

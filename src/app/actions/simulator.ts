@@ -9,6 +9,7 @@ import { AletheiaResult, TariffCandidate } from '@/lib/aletheia/types';
 import { Result, ok, err } from '@/lib/result';
 import { normalizeInvoiceData } from '@/lib/invoices/normalization';
 import { buildConversionMemory, type ConversionMemory, type ProposalOutcome } from '@/lib/supervised/conversionMemory';
+import { buildTariffPriceFingerprint } from '@/lib/proposals/pricing';
 
 /**
  * Carga la memoria de conversión desde el histórico de propuestas de la
@@ -62,6 +63,10 @@ interface TariffRow {
     energy_price_p4: number;
     energy_price_p5: number;
     energy_price_p6: number;
+    catalog_version?: number | null;
+    effective_from?: string | null;
+    effective_to?: string | null;
+    price_fingerprint?: string | null;
 }
 
 interface TariffCommissionRow {
@@ -88,6 +93,7 @@ export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: R
         // We use the same query as crmService but adapted for internal use
         // Note: Using 'lv_zinergia_tarifas' as the source of truth
         const baseTariffSelect = 'id, company, tariff_name, tariff_type, modelo, logo_color, offer_type, fixed_fee, power_price_p1, power_price_p2, power_price_p3, power_price_p4, power_price_p5, power_price_p6, energy_price_p1, energy_price_p2, energy_price_p3, energy_price_p4, energy_price_p5, energy_price_p6';
+        const snapshotTariffSelect = `${baseTariffSelect}, surplus_compensation_price, catalog_version, effective_from, effective_to, price_fingerprint`;
 
         // Filtrar el catálogo por el segmento elegido por el usuario (RESIDENCIAL/PYME),
         // que coincide con lv_zinergia_tarifas.tipo_cliente. Sustituye la heurística
@@ -104,7 +110,11 @@ export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: R
             return segment ? q.eq('tipo_cliente', segment) : q;
         };
 
-        let tariffResponse = await buildTariffQuery(`${baseTariffSelect}, surplus_compensation_price`) as unknown as TariffResponse;
+        let tariffResponse = await buildTariffQuery(snapshotTariffSelect) as unknown as TariffResponse;
+
+        if (tariffResponse.error && isMissingOptionalTariffColumn(tariffResponse.error.message)) {
+            tariffResponse = await buildTariffQuery(`${baseTariffSelect}, surplus_compensation_price`) as unknown as TariffResponse;
+        }
 
         if (tariffResponse.error && tariffResponse.error.message.includes('surplus_compensation_price')) {
             tariffResponse = await buildTariffQuery(baseTariffSelect) as unknown as TariffResponse;
@@ -146,6 +156,23 @@ export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: R
         // 2. Map DB Tariffs to Aletheia Candidates
         const candidates: TariffCandidate[] = tariffData.map(t => {
             const estimatedCommission = estimateTariffCommission(t, commissionRows, normalizedInvoice.annual_consumption_mwh);
+            const powerPrice = {
+                p1: Number(t.power_price_p1 || 0),
+                p2: Number(t.power_price_p2 || 0),
+                p3: Number(t.power_price_p3 || 0),
+                p4: Number(t.power_price_p4 || 0),
+                p5: Number(t.power_price_p5 || 0),
+                p6: Number(t.power_price_p6 || 0),
+            };
+            const energyPrice = {
+                p1: Number(t.energy_price_p1 || 0),
+                p2: Number(t.energy_price_p2 || 0),
+                p3: Number(t.energy_price_p3 || 0),
+                p4: Number(t.energy_price_p4 || 0),
+                p5: Number(t.energy_price_p5 || 0),
+                p6: Number(t.energy_price_p6 || 0),
+            };
+
             return ({
             id: t.id,
             name: t.tariff_name,
@@ -156,26 +183,26 @@ export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: R
             modelo: t.modelo,
             permanence_months: 0, // Default to 0 if not in DB, or parse 'contract_duration' if it contains numbers
             // Mapping prices directly
-            power_price: {
-                p1: Number(t.power_price_p1 || 0),
-                p2: Number(t.power_price_p2 || 0),
-                p3: Number(t.power_price_p3 || 0),
-                p4: Number(t.power_price_p4 || 0),
-                p5: Number(t.power_price_p5 || 0),
-                p6: Number(t.power_price_p6 || 0),
-            },
-            energy_price: {
-                p1: Number(t.energy_price_p1 || 0),
-                p2: Number(t.energy_price_p2 || 0),
-                p3: Number(t.energy_price_p3 || 0),
-                p4: Number(t.energy_price_p4 || 0),
-                p5: Number(t.energy_price_p5 || 0),
-                p6: Number(t.energy_price_p6 || 0),
-            },
+            power_price: powerPrice,
+            energy_price: energyPrice,
             fixed_fee: Number(t.fixed_fee || 0),
             surplus_compensation_price: Number(t.surplus_compensation_price || 0),
             estimated_agent_commission: estimatedCommission,
             commission_source: estimatedCommission === null ? 'missing' : 'tariff_commissions',
+            catalog_version: t.catalog_version ?? null,
+            effective_from: t.effective_from ?? null,
+            effective_to: t.effective_to ?? null,
+            price_fingerprint: t.price_fingerprint ?? buildTariffPriceFingerprint({
+                id: t.id,
+                company: t.company,
+                tariff_name: t.tariff_name,
+                type: (t.offer_type as 'fixed' | 'indexed') || 'fixed',
+                fixed_fee: Number(t.fixed_fee || 0),
+                surplus_compensation_price: Number(t.surplus_compensation_price || 0),
+                power_price: powerPrice,
+                energy_price: energyPrice,
+                catalog_version: t.catalog_version ?? null,
+            }),
         });
         });
 
@@ -189,6 +216,16 @@ export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: R
         logger.error('Aletheia: Critical Fault', e);
         return err(`Error crítico en el motor de cálculo: ${(e as Error).message}`);
     }
+}
+
+function isMissingOptionalTariffColumn(message: string): boolean {
+    return [
+        'surplus_compensation_price',
+        'catalog_version',
+        'effective_from',
+        'effective_to',
+        'price_fingerprint',
+    ].some(column => message.includes(column));
 }
 
 async function fetchCommissionRows(

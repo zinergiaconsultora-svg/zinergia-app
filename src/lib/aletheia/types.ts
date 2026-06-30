@@ -59,6 +59,10 @@ export interface TariffCandidate {
     modelo?: string | null;
     estimated_agent_commission?: number | null;
     commission_source?: 'tariff_commissions' | 'missing';
+    catalog_version?: number | null;
+    effective_from?: string | null;
+    effective_to?: string | null;
+    price_fingerprint?: string | null;
 }
 
 export interface AuditOpportunity {

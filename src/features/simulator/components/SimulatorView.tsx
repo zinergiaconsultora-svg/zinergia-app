@@ -64,16 +64,16 @@ export const SimulatorView = () => {
                     <div className="flex justify-end gap-2 mb-3">
                         <Link
                             href="/dashboard/comparar-multiple"
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-indigo-600 transition-colors border border-slate-200 hover:border-indigo-300 px-3 py-1.5 rounded-full bg-white/60 hover:bg-white shadow-sm"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-energy-600 hover:border-energy-200/40 hover:scale-105 transition-all duration-300 border border-white/20 px-4 py-2 rounded-full glass-premium bg-white/40 shadow-floating-light hover:shadow-floating-medium"
                         >
-                            <span className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[9px] font-black">+</span>
+                            <span className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center text-[9px] font-bold text-slate-500">+</span>
                             Comparar varias
                         </Link>
                         <Link
                             href="/dashboard/simulator/guia"
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-emerald-600 transition-colors border border-slate-200 hover:border-emerald-300 px-3 py-1.5 rounded-full bg-white/60 hover:bg-white shadow-sm"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-emerald-600 hover:border-emerald-200/40 hover:scale-105 transition-all duration-300 border border-white/20 px-4 py-2 rounded-full glass-premium bg-white/40 shadow-floating-light hover:shadow-floating-medium"
                         >
-                            <span className="w-4 h-4 rounded-full bg-slate-200 hover:bg-emerald-100 flex items-center justify-center text-[9px] font-black">?</span>
+                            <span className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center text-[9px] font-bold text-slate-500">?</span>
                             Guía de uso
                         </Link>
                     </div>

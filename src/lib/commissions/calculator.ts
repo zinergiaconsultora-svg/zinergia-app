@@ -40,6 +40,20 @@ export interface CommissionSplit {
     readonly points: number;
 }
 
+export interface ResolveCommissionInput {
+    readonly annualSavings: number | null | undefined;
+    readonly estimatedAgentCommission: number | null | undefined;
+    readonly baseRule: CommissionRuleInput;
+    readonly royaltyPercent: number | null | undefined;
+}
+
+export interface ResolvedCommission {
+    readonly agentCommission: number;
+    readonly franchiseCommission: number;
+    readonly points: number;
+    readonly source: 'tariff_fixed' | 'savings_rule';
+}
+
 /** Validation error description. */
 export interface ValidationError {
     readonly field: string;
@@ -134,6 +148,52 @@ export function validateCommissionRule(
     }
 
     return errors;
+}
+
+/**
+ * Resolve persisted commission amounts from either a tariff-fixed commission or
+ * the legacy savings-based commission rule. This is pure so public and
+ * authenticated acceptance paths cannot drift.
+ */
+export function resolveCommissionAmounts({
+    annualSavings,
+    estimatedAgentCommission,
+    baseRule,
+    royaltyPercent,
+}: ResolveCommissionInput): ResolvedCommission {
+    const savings = annualSavings ?? 0;
+    if (savings < 0) {
+        throw new RangeError(`annualSavings must be ≥ 0, got ${savings}`);
+    }
+
+    const fixedCommission = estimatedAgentCommission ?? 0;
+    if (fixedCommission < 0) {
+        throw new RangeError(`estimatedAgentCommission must be ≥ 0, got ${fixedCommission}`);
+    }
+
+    if (fixedCommission > 0) {
+        const royalty = royaltyPercent ?? 0;
+        if (royalty < 0 || royalty > 100) {
+            throw new RangeError(`royaltyPercent must be 0–100, got ${royalty}`);
+        }
+
+        return {
+            agentCommission: round2(fixedCommission),
+            franchiseCommission: round2(fixedCommission * (royalty / 100)),
+            points: Math.round(baseRule.points_per_win),
+            source: 'tariff_fixed',
+        };
+    }
+
+    const rule = applyFranchiseOverride(baseRule, royaltyPercent);
+    const split = calculateCommissionSplit(savings, rule);
+
+    return {
+        agentCommission: split.agent_commission,
+        franchiseCommission: split.franchise_profit,
+        points: split.points,
+        source: 'savings_rule',
+    };
 }
 
 /**

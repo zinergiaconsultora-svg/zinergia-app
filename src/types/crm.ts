@@ -143,6 +143,7 @@ export interface TariffPrice {
 
 export interface Offer {
     id: string;
+    tariff_id?: string | null;
     marketer_name: string;
     tariff_name: string;
     logo_color: string; // Hex code or Tailwind class precursor
@@ -154,6 +155,11 @@ export interface Offer {
     surplus_compensation_price?: number;
     estimated_agent_commission?: number | null;
     contract_duration: string;
+    tariff_catalog_version?: number | null;
+    tariff_effective_from?: string | null;
+    tariff_effective_to?: string | null;
+    price_fingerprint?: string | null;
+    snapshot_at?: string | null;
 }
 
 export interface SavingsResult {
@@ -172,6 +178,18 @@ export interface SavingsResult {
 }
 
 export type ProposalStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
+export type ProposalPricingStatus = 'snapshot' | 'current' | 'outdated' | 'recalculated' | 'manual' | 'locked';
+
+export interface ProposalPriceSnapshot {
+    captured_at: string;
+    source: 'simulator' | 'manual' | 'reprice' | 'backfill';
+    tariff_id?: string | null;
+    offer: Offer;
+    current_annual_cost: number;
+    offer_annual_cost: number;
+    annual_savings: number;
+    savings_percent: number;
+}
 
 export interface Proposal {
     id: string;
@@ -183,6 +201,15 @@ export interface Proposal {
     status: ProposalStatus;
     offer_snapshot: Offer; // Full copy of offer at time of generation
     calculation_data: InvoiceData;
+    source_tariff_id?: string | null;
+    source_proposal_id?: string | null;
+    proposal_version?: number;
+    price_snapshot?: ProposalPriceSnapshot | Record<string, unknown> | null;
+    price_snapshot_at?: string | null;
+    pricing_status?: ProposalPricingStatus;
+    ocr_job_id?: string | null;
+    repriced_at?: string | null;
+    repricing_delta_eur?: number | null;
     current_annual_cost: number;
     offer_annual_cost: number;
     annual_savings: number;

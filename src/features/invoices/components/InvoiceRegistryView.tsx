@@ -234,10 +234,9 @@ export default function InvoiceRegistryView({
     return (
         <div className="max-w-3xl mx-auto px-4 py-6 pb-28">
             <header className="mb-5">
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Facturas</h1>
+                <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Facturas de clientes</h1>
                 <p className="text-sm text-slate-500">
-                    Cada factura subida es un <span className="font-semibold text-sky-700">lead</span>. Pasa a{' '}
-                    <span className="font-semibold text-emerald-700">cliente</span> cuando el admin confirma que aceptó la oferta.
+                    Solo se muestran facturas vinculadas a clientes activos. Si eliminas un cliente, sus facturas salen de este listado.
                 </p>
             </header>
 
@@ -251,8 +250,8 @@ export default function InvoiceRegistryView({
                 <EmptyState
                     icon={FileText}
                     tone="energy"
-                    title="Aún no hay facturas"
-                    description="Cuando subas una factura aparecerá aquí con su estado y su archivo en Drive."
+                    title="No hay facturas de clientes"
+                    description="Cuando analices una factura y se guarde el cliente, aparecerá aquí con su estado y archivo."
                 />
             ) : (
                 <div className="space-y-3">

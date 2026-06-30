@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireServerRole } from '@/lib/auth/permissions'
 import { revalidatePath } from 'next/cache'
+import { buildTariffPriceFingerprint } from '@/lib/proposals/pricing'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -23,6 +24,7 @@ export interface TarifaRow {
     energy_price_p4: number; energy_price_p5: number; energy_price_p6: number
     connection_fee: number
     fixed_fee: number
+    surplus_compensation_price: number
     consumption_min_kwh: number
     consumption_max_kwh: number
     fixed_annual_fee_gas: number
@@ -30,6 +32,10 @@ export interface TarifaRow {
     logo_color: string | null
     notes: string | null
     is_active: boolean
+    catalog_version: number
+    effective_from: string
+    effective_to: string | null
+    price_fingerprint: string | null
     created_at: string
     updated_at: string
 }
@@ -74,7 +80,29 @@ export async function upsertTarifa(data: Partial<TarifaRow>): Promise<TarifaRow>
     await requireServerRole(['admin'])
 
     const supabase = await createClient()
-    const payload = { ...data, updated_at: new Date().toISOString() }
+    const now = new Date().toISOString()
+    const today = now.slice(0, 10)
+    const { data: existing, error: existingError } = data.id
+        ? await supabase.from('lv_zinergia_tarifas').select('*').eq('id', data.id).maybeSingle()
+        : { data: null, error: null }
+    if (existingError) throw new Error('Error al cargar la tarifa actual')
+
+    const merged = { ...((existing as Partial<TarifaRow> | null) ?? {}), ...data }
+    const nextFingerprint = tariffFingerprint(merged)
+    const computedPreviousFingerprint = existing ? tariffFingerprint(existing as Partial<TarifaRow>) : null
+    const storedPreviousFingerprint = existing ? ((existing as TarifaRow).price_fingerprint ?? computedPreviousFingerprint) : null
+    const pricesChanged = existing ? nextFingerprint !== computedPreviousFingerprint : false
+    const nextCatalogVersion = existing
+        ? (pricesChanged ? Number((existing as TarifaRow).catalog_version || 1) + 1 : Number((existing as TarifaRow).catalog_version || 1))
+        : Number(data.catalog_version || 1)
+
+    const payload = {
+        ...data,
+        catalog_version: nextCatalogVersion,
+        effective_from: data.effective_from ?? (existing as TarifaRow | null)?.effective_from ?? today,
+        price_fingerprint: pricesChanged ? nextFingerprint : (storedPreviousFingerprint ?? nextFingerprint),
+        updated_at: now,
+    }
     delete (payload as Partial<TarifaRow>).created_at
 
     const { data: row, error } = data.id
@@ -125,14 +153,25 @@ export async function bulkUpsertTarifasAction(
     const errors: string[] = []
     const toUpsert: object[] = []
     const now = new Date().toISOString()
+    const today = now.slice(0, 10)
+
+    const { data: existingTariffs } = await supabase
+        .from('lv_zinergia_tarifas')
+        .select('*')
+        .eq('supply_type', supplyType)
+    const existingByKey = new Map(
+        ((existingTariffs ?? []) as TarifaRow[]).map(row => [tariffKey(row.company, row.tariff_name, row.supply_type), row])
+    )
 
     rows.forEach((row, idx) => {
         const rowNum = idx + 2
         if (!row.company?.trim()) { errors.push(`Fila ${rowNum}: falta compañía`); return }
         if (!row.tariff_name?.trim()) { errors.push(`Fila ${rowNum}: falta nombre de tarifa`); return }
-        toUpsert.push({
-            company: row.company.trim(),
-            tariff_name: row.tariff_name.trim(),
+        const company = row.company.trim()
+        const tariffName = row.tariff_name.trim()
+        const payload: Partial<TarifaRow> = {
+            company,
+            tariff_name: tariffName,
             tariff_type: row.tariff_type ?? null,
             supply_type: supplyType,
             modelo: row.modelo ?? null,
@@ -153,6 +192,7 @@ export async function bulkUpsertTarifasAction(
             energy_price_p6: Number(row.energy_price_p6) || 0,
             connection_fee: Number(row.connection_fee) || 0,
             fixed_fee: Number(row.fixed_fee) || 0,
+            surplus_compensation_price: Number(row.surplus_compensation_price) || 0,
             consumption_min_kwh: Number(row.consumption_min_kwh) || 0,
             consumption_max_kwh: Number(row.consumption_max_kwh) || 999999,
             fixed_annual_fee_gas: Number(row.fixed_annual_fee_gas) || 0,
@@ -160,7 +200,19 @@ export async function bulkUpsertTarifasAction(
             notes: row.notes ?? null,
             is_active: row.is_active !== false,
             updated_at: now,
-        })
+        }
+        const existing = existingByKey.get(tariffKey(company, tariffName, supplyType))
+        const nextFingerprint = tariffFingerprint(payload)
+        const computedPreviousFingerprint = existing ? tariffFingerprint(existing) : null
+        const storedPreviousFingerprint = existing?.price_fingerprint ?? computedPreviousFingerprint
+        const pricesChanged = existing ? nextFingerprint !== computedPreviousFingerprint : false
+        payload.catalog_version = existing
+            ? (pricesChanged ? Number(existing.catalog_version || 1) + 1 : Number(existing.catalog_version || 1))
+            : Number(row.catalog_version || 1)
+        payload.effective_from = row.effective_from ?? existing?.effective_from ?? today
+        payload.effective_to = row.effective_to ?? existing?.effective_to ?? null
+        payload.price_fingerprint = pricesChanged ? nextFingerprint : (storedPreviousFingerprint ?? nextFingerprint)
+        toUpsert.push(payload)
     })
 
     let upserted = 0
@@ -238,4 +290,35 @@ export async function saveCollaboratorPct(pct: number): Promise<void> {
         .eq('is_active', true)
     if (error) throw new Error('Error al guardar el porcentaje de colaborador')
     revalidatePath('/dashboard/tariffs')
+}
+
+function tariffFingerprint(row: Partial<TarifaRow>): string {
+    return buildTariffPriceFingerprint({
+        id: row.id,
+        company: row.company,
+        tariff_name: row.tariff_name,
+        type: row.offer_type,
+        fixed_fee: Number(row.fixed_fee || 0),
+        surplus_compensation_price: Number(row.surplus_compensation_price || 0),
+        power_price: {
+            p1: Number(row.power_price_p1 || 0),
+            p2: Number(row.power_price_p2 || 0),
+            p3: Number(row.power_price_p3 || 0),
+            p4: Number(row.power_price_p4 || 0),
+            p5: Number(row.power_price_p5 || 0),
+            p6: Number(row.power_price_p6 || 0),
+        },
+        energy_price: {
+            p1: Number(row.energy_price_p1 || 0),
+            p2: Number(row.energy_price_p2 || 0),
+            p3: Number(row.energy_price_p3 || 0),
+            p4: Number(row.energy_price_p4 || 0),
+            p5: Number(row.energy_price_p5 || 0),
+            p6: Number(row.energy_price_p6 || 0),
+        },
+    });
+}
+
+function tariffKey(company: string, tariffName: string, supplyType: string): string {
+    return `${company.trim()}::${tariffName.trim()}::${supplyType}`;
 }

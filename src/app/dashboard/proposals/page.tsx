@@ -9,6 +9,7 @@ import {
     MoreHorizontal, Send, RotateCcw,
     ArrowUpRight, LayoutGrid, List, SlidersHorizontal,
     CheckSquare, Square, ArrowUpDown, Download,
+    AlertTriangle, History,
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -78,7 +79,8 @@ export default function ProposalsPage() {
         const totalSavings = proposals.filter(p => p.status === 'accepted').reduce((s, p) => s + (p.annual_savings ?? 0), 0);
         const conversionPct = proposals.length > 0 ? Math.round((accepted / proposals.length) * 100) : 0;
         const pendingFollowUps = proposals.filter(p => { const d = getPendingDays(p); return d !== null && d >= 3; }).length;
-        return { total: proposals.length, draft, sent, accepted, rejected, totalSavings, conversionPct, pendingFollowUps };
+        const pricingReviews = proposals.filter(p => p.pricing_status === 'outdated').length;
+        return { total: proposals.length, draft, sent, accepted, rejected, totalSavings, conversionPct, pendingFollowUps, pricingReviews };
     }, [proposals]);
 
     const filtered = useMemo(() => {
@@ -221,6 +223,11 @@ export default function ProposalsPage() {
                         {stats.pendingFollowUps > 0 && (
                             <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-full text-[10px] font-bold text-amber-700">
                                 <Bell size={10} /> {stats.pendingFollowUps} seguimiento{stats.pendingFollowUps > 1 ? 's' : ''}
+                            </span>
+                        )}
+                        {stats.pricingReviews > 0 && (
+                            <span className="flex items-center gap-1 px-2 py-0.5 bg-orange-50 border border-orange-200 rounded-full text-[10px] font-bold text-orange-700">
+                                <AlertTriangle size={10} /> {stats.pricingReviews} revisar tarifa{stats.pricingReviews > 1 ? 's' : ''}
                             </span>
                         )}
                     </div>
@@ -453,6 +460,7 @@ export default function ProposalsPage() {
                                                         {pendingDays}d
                                                     </span>
                                                 )}
+                                                <ProposalPricingBadge proposal={p} />
                                             </td>
                                             <td className="px-3 py-3 text-xs text-slate-500 whitespace-nowrap">
                                                 {new Date(p.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
@@ -563,6 +571,7 @@ export default function ProposalsPage() {
                                             <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md border ${sc.cls}`}>
                                                 {sc.icon} {sc.label}
                                             </span>
+                                            <ProposalPricingBadge proposal={p} />
                                             {pendingDays !== null && pendingDays >= 3 && (
                                                 <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md border ${pendingDays >= 7 ? 'bg-red-50 text-red-600 border-red-200' : 'bg-amber-50 text-amber-600 border-amber-200'}`}>
                                                     {pendingDays}d
@@ -644,4 +653,24 @@ export default function ProposalsPage() {
             />
         </div>
     );
+}
+
+function ProposalPricingBadge({ proposal }: { proposal: Proposal }) {
+    if (proposal.pricing_status === 'outdated') {
+        return (
+            <span className="inline-flex items-center gap-1 ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded-md border bg-orange-50 text-orange-700 border-orange-200">
+                <AlertTriangle size={9} /> Revisar tarifa
+            </span>
+        );
+    }
+
+    if ((proposal.proposal_version ?? 1) > 1) {
+        return (
+            <span className="inline-flex items-center gap-1 ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded-md border bg-indigo-50 text-indigo-700 border-indigo-200">
+                <History size={9} /> v{proposal.proposal_version}
+            </span>
+        );
+    }
+
+    return null;
 }

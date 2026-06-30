@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  /* Tipografía Fina y Redondeada */
-  --font-sans: "Quicksand", ui-sans-serif, system-ui, sans-serif;
+  /* Tipografía productiva: redondeada, fina y cercana a SF Pro */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", sans-serif;
+  --font-mono: "DM Mono", "Fira Code", monospace;
 
   /* Standardized Fluid Breakpoints */
   --breakpoint-xs: 380px;
@@ -71,6 +73,19 @@
   --color-primary: #1e293b;
   --color-accent-start: #3b82f6;
   --color-accent-end: #8b5cf6;
+
+  /* Remapeo estratégico de Indigo a la paleta oficial de Zinergia (Fintech Premium) */
+  --color-indigo-50: #f0f5ff;
+  --color-indigo-100: #e0ebff;
+  --color-indigo-200: #c2d7ff;
+  --color-indigo-300: #94b9ff;
+  --color-indigo-400: #5c91ff;
+  --color-indigo-500: #3b82f6;   /* Electric Blue (Highlight/Focus) */
+  --color-indigo-600: #1b2641;   /* Brand Deep Blue (Primary Actions) */
+  --color-indigo-700: #161e34;
+  --color-indigo-800: #111728;
+  --color-indigo-900: #0b0e1b;
+  --color-indigo-950: #05060d;
 }
 
 :root {
@@ -94,9 +109,15 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-variant-numeric: tabular-nums;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -104,13 +125,7 @@ body {
   color-scheme: dark;
 }
 
-.dark .glass-premium {
-  background: rgba(28, 28, 30, 0.65);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow:
-    0 4px 30px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
+
 
 .dark .glass-dark {
   background: rgba(28, 28, 30, 0.75);
@@ -159,23 +174,32 @@ body {
 
 /* Base Typography Overrides with Fluid Scales */
 h1 {
+  font-family: var(--font-display);
   font-size: var(--font-size-3xl);
-  font-weight: 400; /* Reducido de 800 para estética fina */
+  font-weight: 500;
   letter-spacing: -0.025em;
-  line-height: 1.1;
+  letter-spacing: -0.018em;
+  line-height: 1.12;
+  text-wrap: balance;
 }
 
 h2 {
+  font-family: var(--font-display);
   font-size: var(--font-size-2xl);
-  font-weight: 300; /* Reducido de 700 para estética fina */
-  letter-spacing: -0.015em;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  letter-spacing: -0.012em;
   line-height: 1.2;
+  text-wrap: balance;
 }
 
 h3 {
+  font-family: var(--font-display);
   font-size: var(--font-size-xl);
-  font-weight: 300; /* Reducido de 600 para estética fina */
+  font-weight: 500;
+  letter-spacing: -0.015em;
   line-height: 1.3;
+  text-wrap: balance;
 }
 
 /* Layout Container Utilities */
@@ -184,10 +208,16 @@ h3 {
   max-width: 1536px;
 }
 
-/* Premium UI Utilities (Refactored to Solid SaaS Style) */
+/* Premium UI Utilities (Antigravity Glassmorphism) */
 .glass-premium {
-  @apply bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800;
-  box-shadow: none;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 12px 48px rgba(30, 41, 59, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .animate-slide-up {
@@ -255,7 +285,7 @@ body {
   /* Anula pull-to-refresh y goma elástica del root */
   overscroll-behavior-y: none !important;
   -webkit-overflow-scrolling: touch;
-  
+
   /* Deshabilita la lupa al dejar apretado y menú de guardado de imagen nativo */
   -webkit-touch-callout: none;
 }
@@ -396,25 +426,35 @@ a, button, nav, header, img, svg {
 }
 
 /* ========================================
-   GLASSMORPHISM MEJORADO (Refactored to Solid)
+   GLASSMORPHISM MEJORADO (Antigravity)
    ======================================== */
 .glass-premium {
-  background: #ffffff;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  border-right: 1px solid #e2e8f0;
-  box-shadow: none;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 12px 48px rgba(30, 41, 59, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dark .glass-premium {
-  background: #0f172a;
-  border-right: 1px solid #1e293b;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 12px 48px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .glass-dark {
-  background: #0f172a;
-  border: 1px solid #1e293b;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
 }
 
 /* ========================================

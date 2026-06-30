@@ -1,0 +1,8 @@
+-- Advisor: extension_in_public for pg_net.
+--
+-- We intentionally do not drop/recreate pg_net. Postgres reports:
+--   ERROR 0A000: extension "pg_net" does not support SET SCHEMA
+--
+-- The project does not reference pg_net from application SQL and pg_net's
+-- operational functions live in the net schema. Treat the advisor as managed
+-- platform debt unless Supabase provides a supported migration path.

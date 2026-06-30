@@ -115,6 +115,7 @@ export async function getInvoicesAction(limit = 20, offset = 0): Promise<Invoice
     const { data, error } = await supabase
         .from('invoice_registry')
         .select('*')
+        .eq('has_proposal', true)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 

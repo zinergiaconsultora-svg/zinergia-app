@@ -58,7 +58,7 @@ export function useClients(initialData?: Client[]) {
             const data = await getClientKpisAction();
             setKpis(data);
         } catch (err) {
-            logger.error('Error loading KPIs:', err);
+            logger.warn('Error loading KPIs:', { error: err });
         } finally {
             setKpisLoading(false);
         }
@@ -96,6 +96,11 @@ export function useClients(initialData?: Client[]) {
         await Promise.all([loadClients(), loadKpis()]);
     }, [loadClients, loadKpis]);
 
+    const removeClient = useCallback((id: string) => {
+        setClients(prev => prev.filter(client => client.id !== id));
+        setOffset(prev => Math.max(0, prev - 1));
+    }, []);
+
     useEffect(() => {
         if (!initialData) loadClients();
         loadKpis();
@@ -110,6 +115,7 @@ export function useClients(initialData?: Client[]) {
         searchTerm,
         search,
         refresh,
+        removeClient,
         loadMore,
         kpis,
         kpisLoading,

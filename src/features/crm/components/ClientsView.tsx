@@ -2,7 +2,10 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Plus, Search, User, LayoutGrid, Columns3, TrendingUp, Users, Target, Activity, FileUp, SlidersHorizontal } from 'lucide-react';
-import { getClientScoresAction, type ClientScore } from '@/app/actions/clientScores';
+import { getClientScoresAction } from '@/app/actions/clientScores';
+import { getClientsWithEnergyStageAction } from '@/app/actions/energy';
+import type { ClientScore } from '@/lib/crm/clientScoring';
+import type { ClientEnergyData } from '@/types/energy';
 import { useClients } from '../hooks/useClients';
 import ClientCard from './ClientCard';
 import ClientQuickActions from './ClientQuickActions';
@@ -22,7 +25,7 @@ const CsvImportModal = dynamic(() => import('./CsvImportModal'), {
     loading: () => null
 });
 
-const PipelineView = dynamic(() => import('./PipelineView'), {
+const EnergyPipelineView = dynamic(() => import('./EnergyPipelineView'), {
     ssr: false,
     loading: () => <div className="h-[500px] bg-white/20 rounded-2xl animate-pulse" />
 });
@@ -33,7 +36,7 @@ interface ClientsViewProps {
     initialData?: Client[];
 }
 
-type ViewMode = 'list' | 'pipeline';
+type ViewMode = 'list' | 'energy';
 type SortOption = 'created_at' | 'name' | 'status';
 
 const STATUS_FILTERS: { value: ClientStatus | 'all'; label: string; emoji: string }[] = [
@@ -48,11 +51,11 @@ const STATUS_FILTERS: { value: ClientStatus | 'all'; label: string; emoji: strin
 export default function ClientsView({ initialData }: ClientsViewProps) {
     const {
         clients, loading, loadingMore, hasMore, searching,
-        searchTerm, search, refresh, loadMore, kpis, kpisLoading,
+        searchTerm, search, refresh, removeClient, loadMore, kpis, kpisLoading,
     } = useClients(initialData);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isCsvImportOpen, setIsCsvImportOpen] = useState(false);
-    const [viewMode, setViewMode] = useState<ViewMode>('pipeline');
+    const [viewMode, setViewMode] = useState<ViewMode>('energy');
     const [statusFilter, setStatusFilter] = useState<ClientStatus | 'all'>('all');
     const [sortBy, setSortBy] = useState<SortOption>('created_at');
     const [filterSupplier, setFilterSupplier] = useState('');
@@ -61,6 +64,7 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
     const [showFilters, setShowFilters] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [scores, setScores] = useState<Map<string, ClientScore>>(new Map());
+    const [energyData, setEnergyData] = useState<ClientEnergyData[]>([]);
     // Timestamp de corte para "sin contactar hace X días". Se calcula en el
     // manejador del select (evento), no en render, para no llamar a Date.now()
     // durante el render (regla react-hooks/purity). 0 = filtro desactivado.
@@ -72,6 +76,29 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
             .then(list => setScores(new Map(list.map(s => [s.clientId, s]))))
             .catch(() => { /* non-fatal */ });
     }, [clients]);
+
+    const loadEnergyData = useCallback(async () => {
+        try {
+            const data = await getClientsWithEnergyStageAction();
+            setEnergyData(data);
+        } catch {
+            setEnergyData([]);
+        }
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        getClientsWithEnergyStageAction()
+            .then(data => {
+                if (!cancelled) setEnergyData(data);
+            })
+            .catch(() => {
+                if (!cancelled) setEnergyData([]);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const filteredClients = useMemo(() => {
         let result = [...clients];
@@ -138,6 +165,53 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
     }, [filteredClients]);
 
     const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+    const handleRefresh = useCallback(async () => {
+        await Promise.all([refresh(), loadEnergyData()]);
+    }, [loadEnergyData, refresh]);
+    const handleDeleted = useCallback((id: string) => {
+        removeClient(id);
+        setEnergyData(prev => prev.filter(item => item.clientId !== id));
+    }, [removeClient]);
+
+    const filteredEnergyData = useMemo(() => {
+        let result = [...energyData];
+
+        const q = searchTerm.trim().toLowerCase();
+        if (q) {
+            result = result.filter(item =>
+                item.clientName.toLowerCase().includes(q)
+                || (item.cups ?? '').toLowerCase().includes(q)
+                || (item.phone ?? '').toLowerCase().includes(q)
+                || (item.currentSupplier ?? '').toLowerCase().includes(q)
+            );
+        }
+
+        if (filterSupplier.trim()) {
+            const supplier = filterSupplier.trim().toLowerCase();
+            result = result.filter(item => (item.currentSupplier ?? '').toLowerCase().includes(supplier));
+        }
+
+        if (filterMinBill) {
+            const min = parseFloat(filterMinBill);
+            if (!Number.isNaN(min)) result = result.filter(item => (item.averageMonthlyBill ?? 0) >= min);
+        }
+
+        if (coldCutoff > 0) {
+            result = result.filter(item => {
+                const ref = item.lastContactDate ?? item.updatedAt;
+                return ref ? new Date(ref).getTime() <= coldCutoff : true;
+            });
+        }
+
+        result.sort((a, b) => {
+            if (sortBy === 'name') return a.clientName.localeCompare(b.clientName);
+            return new Date(b.updatedAt ?? 0).getTime() - new Date(a.updatedAt ?? 0).getTime();
+        });
+
+        return result;
+    }, [coldCutoff, energyData, filterMinBill, filterSupplier, searchTerm, sortBy]);
+
+    const visibleCount = viewMode === 'energy' ? filteredEnergyData.length : filteredClients.length;
 
     return (
         <div className="min-h-screen relative overflow-hidden font-sans selection:bg-energy-500/30 selection:text-energy-900 pb-20">
@@ -280,13 +354,13 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                                 <LayoutGrid size={16} />
                             </button>
                             <button
-                                onClick={() => setViewMode('pipeline')}
+                                onClick={() => setViewMode('energy')}
                                 className={`p-1.5 rounded-md transition-all ${
-                                    viewMode === 'pipeline'
+                                    viewMode === 'energy'
                                         ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-700 dark:text-white'
                                         : 'text-slate-400 hover:text-slate-600'
                                 }`}
-                                title="Vista pipeline"
+                                title="Pipeline energético"
                             >
                                 <Columns3 size={16} />
                             </button>
@@ -294,7 +368,7 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
 
                         {/* Results count */}
                         <span className="text-[10px] font-medium text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full">
-                            {filteredClients.length} {filteredClients.length === 1 ? 'cliente' : 'clientes'}
+                            {visibleCount} {visibleCount === 1 ? 'cliente' : 'clientes'}
                         </span>
 
                         {/* Mobile filters toggle */}
@@ -357,14 +431,16 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                 </div>
 
                 {/* BULK ACTIONS BAR */}
-                <BulkActions
-                    clients={filteredClients}
-                    selectedIds={selectedIds}
-                    onToggle={toggleSelect}
-                    onSelectAll={selectAll}
-                    onClearSelection={clearSelection}
-                    onRefresh={refresh}
-                />
+                {viewMode === 'list' && (
+                    <BulkActions
+                        clients={filteredClients}
+                        selectedIds={selectedIds}
+                        onToggle={toggleSelect}
+                        onSelectAll={selectAll}
+                        onClearSelection={clearSelection}
+                        onRefresh={handleRefresh}
+                    />
+                )}
 
                 {/* Select All Link */}
                 {viewMode === 'list' && filteredClients.length > 0 && !loading && (
@@ -378,9 +454,9 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                     </div>
                 )}
 
-                {/* CONTENT: List or Pipeline */}
-                {viewMode === 'pipeline' ? (
-                    <PipelineView clients={filteredClients} onStatusChange={refresh} />
+                {/* CONTENT: List or Energy Pipeline */}
+                {viewMode === 'energy' ? (
+                    <EnergyPipelineView energyData={filteredEnergyData} onRefresh={handleRefresh} />
                 ) : (
                     <div
                         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
@@ -435,7 +511,7 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
                                     })()}
                                     {/* Quick actions menu */}
                                     <div className="absolute top-3.5 right-3.5 z-20">
-                                        <ClientQuickActions client={client} onChanged={refresh} />
+                                        <ClientQuickActions client={client} onChanged={handleRefresh} onDeleted={handleDeleted} />
                                     </div>
                                     <ClientCard client={client} />
                                 </div>
@@ -468,13 +544,13 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
             <CreateClientModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                onSuccess={refresh}
+                onSuccess={handleRefresh}
             />
 
             {isCsvImportOpen && (
                 <CsvImportModal
                     onClose={() => setIsCsvImportOpen(false)}
-                    onSuccess={refresh}
+                    onSuccess={handleRefresh}
                 />
             )}
         </div>

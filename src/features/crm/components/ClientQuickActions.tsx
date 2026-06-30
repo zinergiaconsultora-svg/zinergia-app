@@ -18,6 +18,7 @@ const CreateClientModal = dynamic(() => import('./CreateClientModal'), { ssr: fa
 interface ClientQuickActionsProps {
     client: Client;
     onChanged: () => void;
+    onDeleted?: (id: string) => void;
     /** 'card' = light icon button; 'pipeline' = compact muted button. */
     variant?: 'card' | 'pipeline';
 }
@@ -39,7 +40,7 @@ const CONTACT_CHANNELS: { value: LogContactInput['channel']; label: string; icon
 
 type Overlay = null | 'edit' | 'contact' | 'delete';
 
-export default function ClientQuickActions({ client, onChanged, variant = 'card' }: ClientQuickActionsProps) {
+export default function ClientQuickActions({ client, onChanged, onDeleted, variant = 'card' }: ClientQuickActionsProps) {
     const router = useRouter();
     const btnRef = useRef<HTMLButtonElement>(null);
     const [menuOpen, setMenuOpen] = useState(false);
@@ -126,6 +127,7 @@ export default function ClientQuickActions({ client, onChanged, variant = 'card'
             await deleteClientAction(client.id);
             toast.success('Cliente eliminado');
             setOverlay(null);
+            onDeleted?.(client.id);
             onChanged();
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'No se pudo eliminar');

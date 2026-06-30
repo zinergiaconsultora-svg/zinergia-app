@@ -5,15 +5,23 @@ import { logger } from '@/lib/utils/logger'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { Proposal } from '@/types/crm'
+import { InvoiceData, Proposal } from '@/types/crm'
 import { getActiveCommissionRule } from './commissionRules'
 import { createNotificationInternal } from './notifications'
 import { requireServerRole } from '@/lib/auth/permissions'
-import { calculateCommissionSplit, applyFranchiseOverride } from '@/lib/commissions/calculator'
+import { resolveCommissionAmounts } from '@/lib/commissions/calculator'
 import { writeLeadAuditEvent } from '@/lib/audit/leadAuditLog'
 import { syncClientStatusFromLeads } from '@/lib/crm/syncClientStatus'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { LeadProposalSummary } from './invoices'
+import { calculateAletheiaSavings } from './simulator'
+import {
+    buildProposalPricingDefaults,
+    buildTariffPriceFingerprint,
+    getSourceTariffId,
+    isCatalogTariffId,
+    mapAletheiaProposalToSavingsResult,
+} from '@/lib/proposals/pricing'
 
 /**
  * Updates a proposal's status and, if moving to 'accepted',
@@ -25,6 +33,11 @@ import type { LeadProposalSummary } from './invoices'
 export interface ProposalHistoryItem {
     id: string;
     created_at: string;
+    source_proposal_id?: string | null;
+    proposal_version?: number | null;
+    pricing_status?: string | null;
+    price_snapshot_at?: string | null;
+    repricing_delta_eur?: number | null;
     current_annual_cost: number;
     offer_annual_cost: number;
     annual_savings: number;
@@ -70,7 +83,7 @@ export async function getProposalHistoryByCupsAction(cups: string): Promise<Prop
 
     let query = supabase
         .from('proposals')
-        .select('id, created_at, current_annual_cost, offer_annual_cost, annual_savings, savings_percent, offer_snapshot, calculation_data')
+        .select('id, created_at, source_proposal_id, proposal_version, pricing_status, price_snapshot_at, repricing_delta_eur, current_annual_cost, offer_annual_cost, annual_savings, savings_percent, offer_snapshot, calculation_data')
         .order('created_at', { ascending: false })
         .limit(20)
 
@@ -141,6 +154,13 @@ export async function createCustomLeadProposalAction(
         custom_proposal: true,
         custom_proposal_notes: parsed.data.notes || null,
     } as unknown as Proposal['calculation_data'];
+    const pricingDefaults = buildProposalPricingDefaults({
+        offer: offerSnapshot,
+        current_annual_cost: parsed.data.currentAnnualCost,
+        offer_annual_cost: parsed.data.offerAnnualCost,
+        annual_savings: annualSavings,
+        savings_percent: savingsPercent,
+    }, 'manual');
 
     const { data: proposal, error } = await supabase
         .from('proposals')
@@ -149,8 +169,13 @@ export async function createCustomLeadProposalAction(
             franchise_id: job.franchise_id,
             agent_id: job.agent_id,
             status: 'draft',
-            offer_snapshot: offerSnapshot,
+            offer_snapshot: pricingDefaults.offer_snapshot,
             calculation_data: calculationData,
+            source_tariff_id: pricingDefaults.source_tariff_id,
+            proposal_version: pricingDefaults.proposal_version,
+            price_snapshot: pricingDefaults.price_snapshot,
+            price_snapshot_at: pricingDefaults.price_snapshot_at,
+            pricing_status: 'manual',
             current_annual_cost: parsed.data.currentAnnualCost,
             offer_annual_cost: parsed.data.offerAnnualCost,
             annual_savings: annualSavings,
@@ -231,7 +256,7 @@ export async function updateProposalStatusAction(
     // 1. Update status — filtrar por agent_id excepto para admin/franchise
     const query = supabase
         .from('proposals')
-        .update({ status })
+        .update(status === 'accepted' ? { status, pricing_status: 'locked' } : { status })
         .eq('id', id)
 
     // Agentes solo pueden modificar sus propias propuestas
@@ -242,7 +267,7 @@ export async function updateProposalStatusAction(
     }
 
     const { data: proposal, error } = await query
-        .select('id, client_id, franchise_id, created_at, status, offer_snapshot, calculation_data, current_annual_cost, offer_annual_cost, annual_savings, savings_percent, notes, optimization_result, aletheia_summary')
+        .select('id, client_id, franchise_id, agent_id, created_at, updated_at, status, offer_snapshot, calculation_data, source_tariff_id, source_proposal_id, proposal_version, price_snapshot, price_snapshot_at, pricing_status, repriced_at, repricing_delta_eur, current_annual_cost, offer_annual_cost, annual_savings, savings_percent, notes, optimization_result, aletheia_summary')
         .single()
 
     if (error) throw new Error('Error al actualizar la propuesta');
@@ -284,6 +309,203 @@ export async function updateProposalStatusAction(
     revalidatePath(`/dashboard/proposals/${id}`)
     revalidatePath('/dashboard')
     return proposal as Proposal
+}
+
+type PricingReviewStatus = 'current' | 'outdated' | 'manual' | 'locked' | 'missing';
+
+export interface ProposalPricingReview {
+    status: PricingReviewStatus;
+    message: string;
+    proposal_version: number;
+    price_snapshot_at: string | null;
+    current_catalog_version: number | null;
+    current_tariff_label: string | null;
+    can_recalculate: boolean;
+}
+
+interface TariffCatalogRow {
+    id: string;
+    company: string;
+    tariff_name: string;
+    tariff_type: string | null;
+    offer_type: string | null;
+    fixed_fee: number | null;
+    surplus_compensation_price: number | null;
+    power_price_p1: number;
+    power_price_p2: number;
+    power_price_p3: number;
+    power_price_p4: number;
+    power_price_p5: number;
+    power_price_p6: number;
+    energy_price_p1: number;
+    energy_price_p2: number;
+    energy_price_p3: number;
+    energy_price_p4: number;
+    energy_price_p5: number;
+    energy_price_p6: number;
+    catalog_version: number | null;
+    effective_from: string | null;
+    effective_to: string | null;
+    price_fingerprint: string | null;
+}
+
+export async function getProposalPricingReviewAction(proposalId: string): Promise<ProposalPricingReview> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+    const idResult = z.uuid().safeParse(proposalId);
+    if (!idResult.success) throw new Error('ID de propuesta inválido');
+
+    const supabase = await createClient();
+    const { proposal } = await loadScopedProposal(supabase, idResult.data);
+    const version = proposal.proposal_version ?? 1;
+
+    if (proposal.status === 'accepted' || proposal.pricing_status === 'locked' || proposal.signed_at) {
+        return {
+            status: 'locked',
+            message: 'Propuesta firmada: precios bloqueados para conservar el histórico.',
+            proposal_version: version,
+            price_snapshot_at: proposal.price_snapshot_at ?? proposal.created_at ?? null,
+            current_catalog_version: proposal.offer_snapshot?.tariff_catalog_version ?? null,
+            current_tariff_label: proposal.offer_snapshot ? `${proposal.offer_snapshot.marketer_name} · ${proposal.offer_snapshot.tariff_name}` : null,
+            can_recalculate: false,
+        };
+    }
+
+    const sourceTariffId = proposal.source_tariff_id ?? getSourceTariffId(proposal.offer_snapshot);
+    if (!sourceTariffId && !proposal.offer_snapshot?.marketer_name) {
+        return {
+            status: 'manual',
+            message: 'Propuesta manual: no hay tarifa de catálogo asociada.',
+            proposal_version: version,
+            price_snapshot_at: proposal.price_snapshot_at ?? proposal.created_at ?? null,
+            current_catalog_version: null,
+            current_tariff_label: null,
+            can_recalculate: true,
+        };
+    }
+
+    const currentTariff = await findCurrentTariffForProposal(supabase, proposal);
+    if (!currentTariff) {
+        return {
+            status: 'missing',
+            message: 'No encuentro esta tarifa activa en el catálogo actual.',
+            proposal_version: version,
+            price_snapshot_at: proposal.price_snapshot_at ?? proposal.created_at ?? null,
+            current_catalog_version: null,
+            current_tariff_label: null,
+            can_recalculate: true,
+        };
+    }
+
+    const snapshotFingerprint = proposal.offer_snapshot?.price_fingerprint
+        ?? buildTariffPriceFingerprint(proposal.offer_snapshot ?? {});
+    const currentFingerprint = fingerprintFromTariffRow(currentTariff);
+    const status: PricingReviewStatus = snapshotFingerprint === currentFingerprint ? 'current' : 'outdated';
+
+    return {
+        status,
+        message: status === 'current'
+            ? 'La propuesta coincide con el catálogo actual.'
+            : 'Hay precios más recientes en el catálogo. Crea una nueva versión antes de enviarla.',
+        proposal_version: version,
+        price_snapshot_at: proposal.price_snapshot_at ?? proposal.created_at ?? null,
+        current_catalog_version: currentTariff.catalog_version ?? null,
+        current_tariff_label: `${currentTariff.company} · ${currentTariff.tariff_name}`,
+        can_recalculate: true,
+    };
+}
+
+export async function recalculateProposalWithCurrentTariffsAction(proposalId: string): Promise<{
+    proposal: Proposal;
+    deltaAnnualSavings: number;
+}> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+    const idResult = z.uuid().safeParse(proposalId);
+    if (!idResult.success) throw new Error('ID de propuesta inválido');
+
+    const supabase = await createClient();
+    const { proposal, userId, profile } = await loadScopedProposal(supabase, idResult.data);
+
+    if (proposal.status === 'accepted' || proposal.pricing_status === 'locked' || proposal.signed_at) {
+        throw new Error('Esta propuesta ya está firmada. Sus precios quedan bloqueados en el histórico.');
+    }
+
+    const calculationData = proposal.calculation_data as InvoiceData;
+    const currentResult = await calculateAletheiaSavings(calculationData);
+    if (!currentResult.success) throw new Error(currentResult.error);
+
+    const bestProposal = currentResult.data.top_proposals[0];
+    if (!bestProposal) throw new Error('No hay tarifas activas para recalcular esta propuesta.');
+
+    const savingsResult = mapAletheiaProposalToSavingsResult(bestProposal, currentResult.data);
+    const enrichedCalculationData = {
+        ...calculationData,
+        calculation_audit: savingsResult.calculation_audit,
+    } as Proposal['calculation_data'];
+    const pricingDefaults = buildProposalPricingDefaults(savingsResult, 'reprice');
+    const nextVersion = (proposal.proposal_version ?? 1) + 1;
+    const deltaAnnualSavings = round2(savingsResult.annual_savings - (proposal.annual_savings ?? 0));
+
+    const { data: newProposal, error } = await supabase
+        .from('proposals')
+        .insert({
+            client_id: proposal.client_id,
+            franchise_id: proposal.franchise_id ?? profile.franchise_id,
+            agent_id: proposal.agent_id ?? userId,
+            status: 'draft',
+            offer_snapshot: pricingDefaults.offer_snapshot,
+            calculation_data: enrichedCalculationData,
+            current_annual_cost: savingsResult.current_annual_cost,
+            offer_annual_cost: savingsResult.offer_annual_cost,
+            annual_savings: savingsResult.annual_savings,
+            savings_percent: savingsResult.savings_percent,
+            optimization_result: savingsResult.optimization_result ?? null,
+            aletheia_summary: proposal.aletheia_summary ?? null,
+            source_tariff_id: pricingDefaults.source_tariff_id,
+            source_proposal_id: proposal.id,
+            proposal_version: nextVersion,
+            price_snapshot: pricingDefaults.price_snapshot,
+            price_snapshot_at: pricingDefaults.price_snapshot_at,
+            pricing_status: 'current',
+            notes: proposal.notes
+                ? `${proposal.notes}\n\nVersión ${nextVersion} recalculada con tarifas actuales.`
+                : `Versión ${nextVersion} recalculada con tarifas actuales.`,
+        })
+        .select('*, clients(name)')
+        .single();
+
+    if (error) throw new Error(`Error creando la nueva versión: ${error.message}`);
+
+    await supabase
+        .from('proposals')
+        .update({
+            pricing_status: 'outdated',
+            repriced_at: new Date().toISOString(),
+            repricing_delta_eur: deltaAnnualSavings,
+        })
+        .eq('id', proposal.id);
+
+    try {
+        await supabase.from('client_activities').insert({
+            client_id: proposal.client_id,
+            agent_id: userId,
+            franchise_id: proposal.franchise_id ?? profile.franchise_id,
+            type: 'proposal_created',
+            description: `Propuesta v${nextVersion} recalculada con tarifas actuales`,
+            metadata: {
+                source_proposal_id: proposal.id,
+                new_proposal_id: (newProposal as Proposal).id,
+                delta_annual_savings: deltaAnnualSavings,
+            },
+        });
+    } catch {
+        // Non-critical: the versioned proposal is already created.
+    }
+
+    revalidatePath('/dashboard/proposals');
+    revalidatePath(`/dashboard/proposals/${proposal.id}`);
+    revalidatePath(`/dashboard/proposals/${(newProposal as Proposal).id}`);
+    revalidatePath(`/dashboard/clients/${proposal.client_id}`);
+    return { proposal: newProposal as Proposal, deltaAnnualSavings };
 }
 
 /**
@@ -336,6 +558,117 @@ export async function registerSaleAction(proposalId: string, note: string): Prom
 
     revalidatePath('/dashboard/wallet')
     return proposal
+}
+
+const TARIFF_CATALOG_SELECT = 'id, company, tariff_name, tariff_type, offer_type, fixed_fee, surplus_compensation_price, power_price_p1, power_price_p2, power_price_p3, power_price_p4, power_price_p5, power_price_p6, energy_price_p1, energy_price_p2, energy_price_p3, energy_price_p4, energy_price_p5, energy_price_p6, catalog_version, effective_from, effective_to, price_fingerprint';
+
+async function loadScopedProposal(
+    supabase: Awaited<ReturnType<typeof createClient>>,
+    proposalId: string,
+): Promise<{
+    proposal: Proposal;
+    userId: string;
+    profile: { role: string; franchise_id: string | null };
+}> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('No autenticado');
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, franchise_id')
+        .eq('id', user.id)
+        .single();
+
+    if (!profile) throw new Error('Perfil no encontrado');
+
+    let query = supabase
+        .from('proposals')
+        .select('*, clients(name)')
+        .eq('id', proposalId);
+
+    if (profile.role === 'agent') {
+        query = query.eq('agent_id', user.id) as typeof query;
+    } else if (profile.role === 'franchise') {
+        query = query.eq('franchise_id', profile.franchise_id) as typeof query;
+    }
+
+    const { data, error } = await query.maybeSingle();
+    if (error) throw new Error(`Error cargando propuesta: ${error.message}`);
+    if (!data) throw new Error('Propuesta no encontrada');
+
+    return {
+        proposal: data as Proposal,
+        userId: user.id,
+        profile: profile as { role: string; franchise_id: string | null },
+    };
+}
+
+async function findCurrentTariffForProposal(
+    supabase: Awaited<ReturnType<typeof createClient>>,
+    proposal: Proposal,
+): Promise<TariffCatalogRow | null> {
+    const offer = proposal.offer_snapshot;
+    const sourceTariffId = proposal.source_tariff_id ?? getSourceTariffId(offer);
+
+    if (isCatalogTariffId(sourceTariffId)) {
+        const { data, error } = await supabase
+            .from('lv_zinergia_tarifas')
+            .select(TARIFF_CATALOG_SELECT)
+            .eq('id', sourceTariffId)
+            .eq('is_active', true)
+            .limit(1)
+            .maybeSingle();
+        if (error) throw new Error(`Error consultando tarifa actual: ${error.message}`);
+        if (data) return data as TariffCatalogRow;
+    }
+
+    if (!offer?.marketer_name || !offer?.tariff_name) return null;
+
+    const { data, error } = await supabase
+        .from('lv_zinergia_tarifas')
+        .select(TARIFF_CATALOG_SELECT)
+        .eq('company', offer.marketer_name)
+        .eq('tariff_name', offer.tariff_name)
+        .eq('is_active', true)
+        .eq('supply_type', 'electricity')
+        .order('catalog_version', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (error) throw new Error(`Error consultando tarifa actual: ${error.message}`);
+    return data as TariffCatalogRow | null;
+}
+
+function fingerprintFromTariffRow(tariff: TariffCatalogRow): string {
+    return tariff.price_fingerprint ?? buildTariffPriceFingerprint({
+        id: tariff.id,
+        company: tariff.company,
+        tariff_name: tariff.tariff_name,
+        type: (tariff.offer_type as 'fixed' | 'indexed') || 'fixed',
+        fixed_fee: Number(tariff.fixed_fee || 0),
+        surplus_compensation_price: Number(tariff.surplus_compensation_price || 0),
+        power_price: {
+            p1: Number(tariff.power_price_p1 || 0),
+            p2: Number(tariff.power_price_p2 || 0),
+            p3: Number(tariff.power_price_p3 || 0),
+            p4: Number(tariff.power_price_p4 || 0),
+            p5: Number(tariff.power_price_p5 || 0),
+            p6: Number(tariff.power_price_p6 || 0),
+        },
+        energy_price: {
+            p1: Number(tariff.energy_price_p1 || 0),
+            p2: Number(tariff.energy_price_p2 || 0),
+            p3: Number(tariff.energy_price_p3 || 0),
+            p4: Number(tariff.energy_price_p4 || 0),
+            p5: Number(tariff.energy_price_p5 || 0),
+            p6: Number(tariff.energy_price_p6 || 0),
+        },
+        catalog_version: tariff.catalog_version ?? null,
+    });
+}
+
+function round2(value: number): number {
+    return Math.round(value * 100) / 100;
 }
 
 async function createStatusNotification(
@@ -475,29 +808,15 @@ async function processCommissions(
             .maybeSingle()
         const royaltyPercent: number | null = franchiseCfg?.royalty_percent ?? null
 
-        // Commission amount comes from the TARIFF (offer.estimated_agent_commission):
-        // that fixed € is the agent's commission. The franchise takes its configured
-        // % on top. Legacy offers without a tariff commission fall back to the old
-        // savings × rule split so nothing is lost.
+        // Commission amount comes from the shared resolver so public and
+        // authenticated acceptance paths cannot drift.
         const offer = proposal.offer_snapshot as { estimated_agent_commission?: number | null } | null
-        const tariffCommission = Number(offer?.estimated_agent_commission ?? 0)
-        const round2 = (n: number) => Math.round(n * 100) / 100
-
-        let agentCommission: number
-        let franchiseCommission: number
-        let pointsToAward: number
-
-        if (tariffCommission > 0) {
-            agentCommission = round2(tariffCommission)
-            franchiseCommission = round2(tariffCommission * ((royaltyPercent ?? 0) / 100))
-            pointsToAward = Math.round(baseRule.points_per_win)
-        } else {
-            const rule = applyFranchiseOverride(baseRule, royaltyPercent)
-            const split = calculateCommissionSplit(proposal.annual_savings || 0, rule)
-            agentCommission = split.agent_commission
-            franchiseCommission = split.franchise_profit
-            pointsToAward = split.points
-        }
+        const resolvedCommission = resolveCommissionAmounts({
+            annualSavings: proposal.annual_savings,
+            estimatedAgentCommission: offer?.estimated_agent_commission,
+            baseRule,
+            royaltyPercent,
+        })
 
         // Upsert con ignoreDuplicates: si dos requests concurrentes llegan al mismo tiempo,
         // el UNIQUE constraint en proposal_id garantiza que solo uno insertará. El otro
@@ -507,8 +826,8 @@ async function processCommissions(
             proposal_id: proposal.id,
             agent_id: user.id,
             franchise_id: profile.franchise_id,
-            agent_commission: agentCommission,
-            franchise_commission: franchiseCommission,
+            agent_commission: resolvedCommission.agentCommission,
+            franchise_commission: resolvedCommission.franchiseCommission,
             status: 'pending',
         }, { onConflict: 'proposal_id', ignoreDuplicates: true })
 
@@ -521,7 +840,7 @@ async function processCommissions(
 
         await supabase.from('user_points').upsert({
             user_id: user.id,
-            points: (current?.points || 0) + pointsToAward,
+            points: (current?.points || 0) + resolvedCommission.points,
             last_updated: new Date().toISOString(),
         })
     } catch (err) {

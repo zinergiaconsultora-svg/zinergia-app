@@ -4,8 +4,6 @@ import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { computeClientScore, type ClientScore } from '@/lib/crm/clientScoring';
 
-export type { ClientScore };
-
 const clientIdsSchema = z.array(z.uuid()).min(1).max(500);
 
 /**

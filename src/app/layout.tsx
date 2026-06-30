@@ -1,20 +1,33 @@
 import type { Metadata, Viewport } from "next";
-import { Quicksand } from "next/font/google";
+import { Plus_Jakarta_Sans, Inter, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { Toaster } from "sonner";
 import { PwaRegister } from "@/components/PwaRegister";
 
-// Load only weight 500 as default — renders FOUT-free at standard weight
-// 300 and 600 load lazily via CSS font-weight fallback
-const quicksand = Quicksand({
-    variable: "--font-sans",
+const displayFont = Plus_Jakarta_Sans({
+    variable: "--font-display",
     subsets: ["latin"],
-    weight: ["400", "600"],
+    weight: ["400", "500", "600"],
     display: "swap",
     preload: true,
-    adjustFontFallback: true,
+});
+
+const sansFont = Inter({
+    variable: "--font-sans",
+    subsets: ["latin"],
+    weight: ["300", "400", "500", "600"],
+    display: "swap",
+    preload: true,
+});
+
+const monoFont = DM_Mono({
+    variable: "--font-mono",
+    subsets: ["latin"],
+    weight: ["400", "500"],
+    display: "swap",
+    preload: true,
 });
 
 
@@ -120,7 +133,7 @@ export default function RootLayout({
                 />
             </head>
             <body
-                className={`${quicksand.variable} antialiased font-light`}
+                className={`${sansFont.variable} ${displayFont.variable} ${monoFont.variable} antialiased`}
                 suppressHydrationWarning
             >
                 <div className="bg-noise" aria-hidden="true" />
@@ -135,4 +148,3 @@ export default function RootLayout({
         </html>
     );
 }
-
