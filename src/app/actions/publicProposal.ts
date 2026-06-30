@@ -335,15 +335,23 @@ export async function acceptPublicProposalAction(
                 price_snapshot, price_snapshot_at, pricing_status, repriced_at,
                 repricing_delta_eur, current_annual_cost, notes, optimization_result,
                 aletheia_summary, ocr_job_id,
-                clients(name, email),
-                profiles!proposals_agent_id_fkey(id, email, franchise_id)
+                clients(name, email)
             `)
             .eq('id', proposal.id)
             .maybeSingle();
 
         propData = prop as Record<string, unknown> | null;
-        agentProfile = propData?.profiles as { id: string; email?: string; franchise_id?: string } | null;
         clientData = propData?.clients as { name?: string; email?: string } | null;
+
+        const agentId = propData?.agent_id as string | undefined;
+        if (agentId) {
+            const { data: profile } = await adminClient
+                .from('profiles')
+                .select('id, email, franchise_id')
+                .eq('id', agentId)
+                .maybeSingle();
+            agentProfile = profile as { id: string; email?: string; franchise_id?: string } | null;
+        }
     } catch (err) {
         Sentry.captureException(err, { extra: { stage: 'accept-fetch-context', proposalId: proposal.id } });
         log.error({ err, proposalId: proposal.id }, 'failed to load proposal context after accept');

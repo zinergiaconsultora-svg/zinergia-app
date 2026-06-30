@@ -242,8 +242,11 @@ describe('public proposal actions', () => {
                 aletheia_summary: null,
                 ocr_job_id: null,
                 clients: { name: 'Cliente Demo', email: null },
-                profiles: { id: 'agent-1', email: 'agent@example.com', franchise_id: 'franchise-1' },
             },
+            error: null,
+        });
+        const profileContext = selectQuery({
+            data: { id: 'agent-1', email: 'agent@example.com', franchise_id: 'franchise-1' },
             error: null,
         });
         const proposalQueries = [proposalFetch, activityContext, proposalContext];
@@ -256,6 +259,7 @@ describe('public proposal actions', () => {
                     update: proposalUpdate.update,
                 };
             }
+            if (table === 'profiles') return { select: vi.fn(() => profileContext) };
             if (table === 'client_activities') return activityInsert;
             return insertQuery();
         });
