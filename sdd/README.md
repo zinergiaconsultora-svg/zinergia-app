@@ -27,6 +27,10 @@ Usa `sdd: true` si el cambio toca cualquiera de estas areas:
 
 Usa `sdd: false` para cambios pequenos, copy, ajustes visuales locales o fixes triviales sin impacto funcional.
 
+## Regla de alcance
+
+Cada feature SDD se trabaja en su propia rama y su propio PR. Solo se permite mezclar areas como UI, DB, seguridad, pricing o integraciones cuando el diseno lo justifica como una unica feature indivisible. Todo trabajo descubierto durante la implementacion debe registrarse como follow-up o nueva feature.
+
 ## Verificar el arnes
 
 ```powershell

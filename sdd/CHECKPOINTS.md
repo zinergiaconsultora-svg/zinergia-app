@@ -8,6 +8,7 @@ Una feature SDD de Zinergia solo esta terminada cuando todos los puntos aplicabl
 - [ ] Cada requisito tiene al menos un test o una justificacion explicita de verificacion manual.
 - [ ] La experiencia queda validada para los roles afectados: Admin, Franchise, Agent o cliente publico.
 - [ ] Los casos de error principales muestran mensajes utiles sin filtrar PII.
+- [ ] El PR contiene una sola feature SDD o el `design.md` justifica explicitamente por que el alcance debe ir junto.
 
 ## Seguridad y datos
 
@@ -35,3 +36,4 @@ Una feature SDD de Zinergia solo esta terminada cuando todos los puntos aplicabl
 - [ ] La feature cambia a `done` en `sdd/feature_list.json`.
 - [ ] El resultado queda registrado en `sdd/progress/history.md`.
 - [ ] Se documentan riesgos residuales, follow-ups y verificaciones no ejecutadas.
+- [ ] Los follow-ups descubiertos se registran como nuevas features o tareas, no como cambios ocultos dentro del PR.

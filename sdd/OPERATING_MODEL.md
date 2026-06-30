@@ -20,6 +20,15 @@ La fuente de verdad vive en archivos markdown dentro de `sdd/`, no en el chat.
 10. Puerta 3: revision de tests, seguridad y resultado.
 11. Registrar cierre en `progress/history.md`.
 
+## Regla estricta de trabajo
+
+- Solo puede haber una feature SDD activa por rama.
+- Cada feature SDD debe cerrarse en un PR propio.
+- No se puede mezclar UI, DB, seguridad, pricing o integraciones en el mismo PR salvo que el `design.md` lo declare como parte necesaria de la misma feature.
+- No se implementa codigo antes de que existan `requirements.md`, `design.md` y `tasks.md`.
+- No se mergea si falta actualizar `feature_list.json`, `tasks.md` y `progress/history.md`.
+- Si una feature descubre trabajo adicional, se registra como follow-up o nueva feature; no se mete de forma silenciosa en el mismo PR.
+
 ## Puertas obligatorias
 
 ### Puerta 0: Clasificacion
