@@ -145,8 +145,8 @@ test.describe('a11y — Public proposal @a11y', () => {
     });
 
     test('valid token proposal has no critical/serious axe violations', async ({ page }) => {
-        const token = process.env.E2E_PROPOSAL_TOKEN;
-        if (!token) test.skip(true, 'E2E_PROPOSAL_TOKEN not set');
+        const token = process.env.E2E_PUBLIC_PROPOSAL_TOKEN ?? process.env.E2E_PROPOSAL_TOKEN;
+        if (!token) test.skip(true, 'E2E_PUBLIC_PROPOSAL_TOKEN not set');
 
         await page.goto(`/p/${token}`);
         await page.waitForLoadState('networkidle');
@@ -164,8 +164,8 @@ test.describe('a11y — Public proposal @a11y', () => {
     });
 
     test('proposal page has main landmark and h1', async ({ page }) => {
-        const token = process.env.E2E_PROPOSAL_TOKEN;
-        if (!token) test.skip(true, 'E2E_PROPOSAL_TOKEN not set');
+        const token = process.env.E2E_PUBLIC_PROPOSAL_TOKEN ?? process.env.E2E_PROPOSAL_TOKEN;
+        if (!token) test.skip(true, 'E2E_PUBLIC_PROPOSAL_TOKEN not set');
 
         await page.goto(`/p/${token}`);
         await page.waitForLoadState('networkidle');

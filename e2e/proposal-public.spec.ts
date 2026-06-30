@@ -6,13 +6,17 @@
  *
  * Edge cases covered:
  *  - Invalid/expired token → 404 or error state
- *  - Valid proposal renders accept button + savings data
+ *  - Valid staging fixture proposal renders accept button + savings data
  */
 
 import { test, expect } from '@playwright/test';
 
 // Override: public proposal page is unauthenticated
 test.use({ storageState: { cookies: [], origins: [] } });
+
+function publicProposalToken(): string | undefined {
+    return process.env.E2E_PUBLIC_PROPOSAL_TOKEN ?? process.env.E2E_PROPOSAL_TOKEN;
+}
 
 test.describe('Public proposal — invalid token', () => {
     test('returns 404 or error page for an invalid token', async ({ page }) => {
@@ -29,35 +33,36 @@ test.describe('Public proposal — invalid token', () => {
     });
 });
 
-test.describe('Public proposal — valid token (requires E2E_PROPOSAL_TOKEN)', () => {
+test.describe('Public proposal — valid staging fixture token', () => {
     test.beforeEach(async () => {
-        if (!process.env.E2E_PROPOSAL_TOKEN) {
-            test.skip(true, 'E2E_PROPOSAL_TOKEN not set');
+        if (!publicProposalToken()) {
+            test.skip(true, 'E2E_PUBLIC_PROPOSAL_TOKEN not set. Run npm run test:e2e:seed-public-proposal against staging.');
         }
     });
 
     test('renders proposal summary with annual savings', async ({ page }) => {
-        await page.goto(`/p/${process.env.E2E_PROPOSAL_TOKEN}`);
+        await page.goto(`/p/${publicProposalToken()}`);
         await expect(
-            page.getByText(/ahorro anual|ahorro estimado/i)
+            page.getByText(/de ahorro al año|ahorro estimado/i)
         ).toBeVisible({ timeout: 10_000 });
     });
 
     test('shows an accept / firma button', async ({ page }) => {
-        await page.goto(`/p/${process.env.E2E_PROPOSAL_TOKEN}`);
+        await page.goto(`/p/${publicProposalToken()}`);
         const acceptBtn = page.getByRole('button', { name: /aceptar|firmar|contratar/i });
         await expect(acceptBtn).toBeVisible({ timeout: 10_000 });
     });
 
-    test('accept button triggers signature flow', async ({ page }) => {
-        await page.goto(`/p/${process.env.E2E_PROPOSAL_TOKEN}`);
+    test('accept button opens signature flow without confirming acceptance', async ({ page }) => {
+        await page.goto(`/p/${publicProposalToken()}`);
         const acceptBtn = page.getByRole('button', { name: /aceptar|firmar|contratar/i });
         await acceptBtn.click();
 
-        // The signature canvas or confirmation modal should appear
+        // Stop at the signature step. Do not click "Confirmar firma" in the read-only smoke path.
         const signatureArea = page
             .locator('canvas')
             .or(page.getByText(/firma|signature|confirmación/i));
         await expect(signatureArea.first()).toBeVisible({ timeout: 10_000 });
+        await expect(page.getByRole('button', { name: /confirmar firma/i })).toBeDisabled();
     });
 });
