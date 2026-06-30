@@ -10,7 +10,35 @@ import { test, expect } from '@playwright/test';
 const hasAdminCredentials = () =>
     !!(process.env.E2E_ADMIN_EMAIL && process.env.E2E_ADMIN_PASSWORD);
 
-test.beforeEach(async () => {
+const adminNav = [
+    /Dashboard/i,
+    /Leads/i,
+    /Drive/i,
+    /Reporting/i,
+    /Agentes/i,
+    /Academy/i,
+    /RGPD/i,
+    /Audit/i,
+    /KPIs/i,
+    /Facturación/i,
+];
+
+const adminRoutes = [
+    { path: '/admin/leads', url: /leads/, signal: /Leads|Colas de trabajo|Buscar titular/i },
+    { path: '/admin/drive', url: /drive/, signal: /Panel de salud de Drive|Archivado de facturas/i },
+    { path: '/admin/reporting', url: /reporting/, signal: /Reporting|Comisiones|Propuestas/i },
+    { path: '/admin/agents', url: /agents/, signal: /Agentes|Buscar por nombre o email/i },
+    { path: '/admin/academy', url: /academy/, signal: /Recursos Academy|Manual de Bienvenida/i },
+    { path: '/admin/rgpd', url: /rgpd/, signal: /RGPD|clientes próximos|eliminaciones/i },
+    { path: '/admin/audit', url: /audit/, signal: /Audit Log|Todas/i },
+    { path: '/admin/business-metrics', url: /business-metrics/, signal: /Business KPIs|Embudo de conversión|últimos 30 días/i },
+];
+
+test.beforeEach(async ({}, testInfo) => {
+    if (testInfo.project.name !== 'chromium-admin') {
+        test.skip(true, 'Admin tests run only in the chromium-admin project');
+    }
+
     if (!hasAdminCredentials()) {
         test.skip(true, 'Admin credentials not configured — skipping admin tests');
     }
@@ -24,45 +52,23 @@ test.describe('Admin panel navigation', () => {
 
     test('renders admin dashboard with nav links', async ({ page }) => {
         await page.goto('/admin');
-        await expect(page.getByRole('link', { name: /reporting/i })).toBeVisible();
-        await expect(page.getByRole('link', { name: /agentes/i })).toBeVisible();
-        await expect(page.getByRole('link', { name: /audit/i })).toBeVisible();
-        await expect(page.getByRole('link', { name: /kpis/i })).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Vista Global del Sistema/i })).toBeVisible({ timeout: 10_000 });
+        await expect(page.getByRole('heading', { name: /Cola de Conversión/i })).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Gestión de Altas/i })).toBeVisible();
+
+        const adminHeaderNav = page.locator('header nav');
+        for (const label of adminNav) {
+            await expect(adminHeaderNav.getByRole('link', { name: label })).toBeVisible();
+        }
     });
 
-    test('Audit log page loads and shows filter buttons', async ({ page }) => {
-        await page.goto('/admin/audit');
-        await expect(page).toHaveURL(/audit/);
-        // Filter buttons should render (at minimum "Todas")
-        await expect(page.getByRole('button', { name: /todas/i })).toBeVisible({ timeout: 10_000 });
-    });
-
-    test('Business KPIs page loads and shows funnel section', async ({ page }) => {
-        await page.goto('/admin/business-metrics');
-        await expect(page).toHaveURL(/business-metrics/);
-        // The funnel section heading
-        await expect(
-            page.getByText(/embudo de conversión|últimos 30 días/i)
-        ).toBeVisible({ timeout: 10_000 });
-    });
-
-    test('RGPD panel loads', async ({ page }) => {
-        await page.goto('/admin/rgpd');
-        await expect(page).toHaveURL(/rgpd/);
-        await expect(page.locator('main, [role="main"]').first()).toBeVisible();
-    });
-
-    test('Agents page loads', async ({ page }) => {
-        await page.goto('/admin/agents');
-        await expect(page).toHaveURL(/agents/);
-        await expect(page.locator('main, [role="main"]').first()).toBeVisible();
-    });
-
-    test('Reporting page loads', async ({ page }) => {
-        await page.goto('/admin/reporting');
-        await expect(page).toHaveURL(/reporting/);
-        await expect(page.locator('main, [role="main"]').first()).toBeVisible();
-    });
+    for (const route of adminRoutes) {
+        test(`renders ${route.path} with route-specific content`, async ({ page }) => {
+            await page.goto(route.path);
+            await expect(page).toHaveURL(route.url, { timeout: 10_000 });
+            await expect(page.getByText(route.signal).first()).toBeVisible({ timeout: 15_000 });
+        });
+    }
 });
 
 test.describe('Admin access control', () => {
@@ -71,6 +77,7 @@ test.describe('Admin access control', () => {
         await page.context().clearCookies();
         await page.goto('/admin');
         // Should redirect to login
-        await expect(page).toHaveURL('/', { timeout: 10_000 });
+        await expect(page).toHaveURL(/\/(\?redirect_to=%2Fadmin)?$/, { timeout: 10_000 });
+        await expect(page.getByText(/Vista Global del Sistema|Cola de Conversión/i)).toHaveCount(0);
     });
 });

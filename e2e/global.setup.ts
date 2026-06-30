@@ -64,9 +64,11 @@ setup('authenticate as admin', async ({ page }) => {
     await page.getByLabel(/contraseña|password/i).fill(password);
     await page.getByRole('button', { name: /entrar|iniciar|sign in|login/i }).click();
 
-    // Admin gets redirected to /admin
-    await page.waitForURL('**/admin**', { timeout: 15_000 });
-    await expect(page).toHaveURL(/admin/);
+    // Some deployments land on /dashboard first; the real admin assertion is
+    // that the authenticated account can open protected /admin content.
+    await expect(page).toHaveURL(/\/(admin|dashboard)/, { timeout: 15_000 });
+    await page.goto('/admin');
+    await expect(page).toHaveURL(/admin/, { timeout: 10_000 });
 
     await page.context().storageState({ path: path.join(AUTH_DIR, 'admin.json') });
 });

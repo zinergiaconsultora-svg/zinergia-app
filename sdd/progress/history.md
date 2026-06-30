@@ -160,3 +160,29 @@ Verification:
 Residual notes:
 
 - No product behavior, schema migration, or Supabase type regeneration was needed.
+
+## 2026-06-30 — production-flow-audit
+
+Status: done.
+
+Implemented:
+
+- Added SDD requirements, design, and tasks for production role-flow auditing.
+- Hardened commercial E2E smoke checks with route-specific assertions for dashboard, clients, invoices, proposals, simulator, wallet, settings, tariffs, and admin-access denial.
+- Hardened admin E2E smoke checks with route-specific assertions for dashboard, leads, drive, reporting, agents, academy, RGPD, audit, business metrics, and unauthenticated admin redirect.
+- Made admin setup validate protected `/admin` access even when login first lands on `/dashboard`.
+- Confirmed invalid public proposal tokens do not expose accept/sign/contract actions.
+
+Verification:
+
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npm run lint` — passed with zero warnings.
+- `npx tsc --noEmit` — passed.
+- Production smoke on `https://zinergia-app.vercel.app`: `npx playwright test e2e/admin.spec.ts --project=chromium-admin --reporter=list` — 13 passed.
+- Production smoke on `https://zinergia-app.vercel.app`: `npx playwright test e2e/dashboard.spec.ts e2e/proposal-public.spec.ts --project=chromium --reporter=list` — 12 passed, 3 skipped.
+
+Residual notes:
+
+- Public proposal valid-token acceptance remains skipped because `E2E_PROPOSAL_TOKEN` is not configured; no real proposal was accepted or mutated in production.
+- The custom domain `https://www.zinergia.es` returned HTTP 200 but did not expose the app login form during this smoke run, so production flow verification used the Vercel app URL.
+- No schema migration or Supabase type regeneration was needed.
