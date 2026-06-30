@@ -250,7 +250,7 @@ function FindingCard({ finding, powerPeriods, defaultOpen = false }: {
 
 // ─── Executive summary ────────────────────────────────────────────────────────
 
-function buildExecutiveSummary(audit: AnnualAuditResult, profile: AnnualConsolidatedProfile): string {
+function buildExecutiveSummary(audit: AnnualAuditResult): string {
     const actionable = audit.findings.filter(f => f.severity !== 'info' && f.annualSavingsEur > 0);
     const qualitative = audit.findings.filter(f => f.severity !== 'info' && f.annualSavingsEur === 0);
     const savings = audit.totalQuantifiedSavings;
@@ -418,7 +418,7 @@ export function AnnualAuditView({ cups }: Props) {
                         <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                             <p className="text-xs text-slate-700 leading-relaxed">
                                 <span className="font-bold text-slate-900">Resumen · </span>
-                                {buildExecutiveSummary(audit, profile)}
+                                {buildExecutiveSummary(audit)}
                             </p>
                         </div>
                     )}

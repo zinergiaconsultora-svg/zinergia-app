@@ -2,6 +2,6 @@
 
 Active feature: `ci-warning-cleanup`
 
-Status: `tasks_ready`
+Status: `done`
 
-Next step: implement tasks, verify, and close feature.
+Next step: open the next SDD feature from `sdd/feature_list.json`.

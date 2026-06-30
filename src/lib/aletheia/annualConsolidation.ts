@@ -133,7 +133,6 @@ export async function consolidateCupsInvoices(cups: string): Promise<AnnualConso
         if (byMonth.has(ym)) continue;
 
         const n = (k: string) => Number(ext[k] ?? 0);
-        const nb = (k: string) => Boolean(ext[k]);
         const nn = (k: string) => (ext[k] != null ? Number(ext[k]) : null);
 
         const totalEnergy = [1,2,3,4,5,6].reduce((s, p) => s + n(`energy_p${p}`), 0);

@@ -44,9 +44,6 @@ const APPROX_POWER_PRICE: Record<string, number> = {
     p1: 0.0567, p2: 0.0339, p3: 0.0225, p4: 0.0225, p5: 0.0225, p6: 0.0148,
 };
 
-// Reactive energy compensation price (€/kVARh) — regulated
-const REACTIVE_PRICE_EUR_KVARH = 0.041624;
-
 // Safety margin for power reduction recommendation (85/105 rule buffer)
 const POWER_SAFETY_MARGIN = 1.05;
 

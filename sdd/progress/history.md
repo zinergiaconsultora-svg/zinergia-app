@@ -87,3 +87,26 @@ Residual notes:
 
 - `SUPABASE_ACCESS_TOKEN` was not available in the shell, so `src/types/database.types.ts` was updated locally for the new field instead of regenerated from the remote project.
 - `npx supabase db push` was not run from this session; apply the migration in the normal Supabase workflow before deploy.
+
+## 2026-06-30 — ci-warning-cleanup
+
+Status: done.
+
+Implemented:
+
+- Added `router` to the `OcrJobsPanel` realtime effect dependencies.
+- Removed the unused `profile` parameter from `buildExecutiveSummary(...)` and its call site.
+- Removed unused Simulator Hero imports, derived values, and dead confirmation JSX local.
+- Removed unused Aletheia helper/constant dead code.
+
+Verification:
+
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npm run lint` — passed with zero warnings.
+- `npx tsc --noEmit` — passed.
+- `npm run test` — 50 files passed, 367 tests passed.
+
+Residual notes:
+
+- `npm run build` was not run locally because this feature only removes lint warnings and dead code; CI build will still run on PR.
+- No schema migration or type regeneration was needed.

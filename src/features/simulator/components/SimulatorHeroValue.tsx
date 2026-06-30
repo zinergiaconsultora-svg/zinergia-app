@@ -2,10 +2,10 @@
 
 import React from 'react';
 import {
-    TrendingDown, ArrowRight, Loader2, ShieldCheck, AlertTriangle,
-    CheckCircle2, Clock,
+    TrendingDown, ArrowRight, Loader2,
+    Clock,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 const FMT_EUR = (n: number) =>
     new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
@@ -37,48 +37,14 @@ interface SimulatorHeroValueProps {
 export default function SimulatorHeroValue({
     clientName, companyName, tariffLabel,
     livePreview, livePreviewLoading, currentAnnualCost,
-    validation, ocrDataConfirmed, localConfirmed,
-    isConfirming, onConfirm, estimatedReviewTime,
+    validation, estimatedReviewTime,
 }: SimulatorHeroValueProps) {
-    const confirmed = ocrDataConfirmed || localConfirmed;
-    const hasErrors = validation.errorCount > 0;
-    const hasPending = validation.yellowFields > 0 || validation.redFields > 0;
-    const allGreen = !hasPending && !hasErrors && validation.greenFields > 0;
-
     const bestAnnualCost = (currentAnnualCost && livePreview)
         ? currentAnnualCost - livePreview.annualSaving
         : null;
     const savingsPct = (currentAnnualCost && livePreview && currentAnnualCost > 0)
         ? Math.round((livePreview.annualSaving / currentAnnualCost) * 100)
         : null;
-
-    const confirmBtn = confirmed ? (
-        <motion.div key="done" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-[11px] font-semibold">
-            <CheckCircle2 size={12} /> Confirmado
-        </motion.div>
-    ) : allGreen ? (
-        <motion.button key="go" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-            onClick={onConfirm} disabled={isConfirming}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[11px] font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-60 shadow-sm shadow-emerald-500/20">
-            {isConfirming ? <Loader2 size={11} className="animate-spin" /> : <ShieldCheck size={11} />}
-            {isConfirming ? 'Guardando...' : 'Confirmar datos'}
-        </motion.button>
-    ) : (
-        <motion.button key="review" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-            onClick={onConfirm} disabled={isConfirming || hasErrors}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors disabled:opacity-60 ${
-                hasErrors
-                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
-                    : 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-emerald-700 dark:hover:bg-emerald-400'
-            }`}
-            title={hasErrors ? `Resuelve ${validation.redFields} error${validation.redFields !== 1 ? 'es' : ''} para confirmar` : undefined}>
-            {isConfirming ? <Loader2 size={11} className="animate-spin" /> : hasErrors ? <AlertTriangle size={11} /> : <ShieldCheck size={11} />}
-            {isConfirming ? 'Guardando...' : hasErrors ? `${validation.redFields} error${validation.redFields !== 1 ? 'es' : ''}` : `Confirmar (${validation.yellowFields})`}
-        </motion.button>
-    );
 
     return (
         <motion.div
