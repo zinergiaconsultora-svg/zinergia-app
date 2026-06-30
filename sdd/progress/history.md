@@ -110,3 +110,32 @@ Residual notes:
 
 - `npm run build` was not run locally because this feature only removes lint warnings and dead code; CI build will still run on PR.
 - No schema migration or type regeneration was needed.
+
+## 2026-06-30 — end-to-end-flow-integrity
+
+Status: done.
+
+Implemented:
+
+- Replaced stale `/dashboard/comparator` navigation with `/dashboard/simulator`.
+- Added OCR handoff metadata so existing OCR jobs carry `ocrJobId` into simulator state.
+- Added `resolveOcrHandoffContextAction(...)` to validate OCR job ownership server-side.
+- Preserved original OCR job agent/franchise ownership when simulator proposals are persisted.
+- Passed `source_ocr_job_id` into encrypted client resolution so admin conversions do not create clients under the wrong owner/franchise.
+- Shared accepted-proposal side effects with public proposal acceptance via `finalizeAcceptedProposalSideEffects(...)`.
+- Updated focused proposal and public acceptance tests.
+
+Verification:
+
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npm run test -- src/services/crm/__tests__/proposals.test.ts` — 1 file passed, 2 tests passed.
+- `npm run test -- src/app/actions/__tests__/publicProposal.test.ts` — 1 file passed, 7 tests passed.
+- `npx tsc --noEmit` — passed.
+- `npm run lint` — passed with zero warnings.
+- `npm run test` — 50 files passed, 367 tests passed.
+- `npm run test:coverage` — 50 files passed, 367 tests passed; coverage thresholds passed.
+- `npm run build` — passed.
+
+Residual notes:
+
+- No schema migration or Supabase type regeneration was needed.

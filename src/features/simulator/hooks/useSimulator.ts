@@ -167,6 +167,12 @@ function simulatorReducer(state: SimulatorState, action: SimulatorAction): Simul
 const OCR_REALTIME_TIMEOUT_MS = 300_000; // 5 minutos — N8N puede tardar si estaba inactivo
 const OCR_SLOW_WARNING_MS = 60_000;    // Aviso al usuario al minuto
 
+interface PendingInvoiceHandoff {
+    data: InvoiceData;
+    isMock: boolean;
+    ocrJobId?: string | null;
+}
+
 export function useSimulator() {
     const [state, dispatch] = useReducer(simulatorReducer, initialState);
     const activeChannelRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null);
@@ -201,8 +207,11 @@ export function useSimulator() {
         if (raw) {
             sessionStorage.removeItem('pendingInvoiceData');
             try {
-                const { data, isMock } = JSON.parse(raw) as { data: InvoiceData; isMock: boolean };
+                const { data, isMock, ocrJobId } = JSON.parse(raw) as PendingInvoiceHandoff;
                 dispatch({ type: 'SET_MOCK_MODE', payload: isMock });
+                if (ocrJobId) {
+                    dispatch({ type: 'SET_OCR_JOB_ID', payload: ocrJobId });
+                }
                 dispatch({ type: 'SET_INVOICE_DATA', payload: data });
             } catch {
                 // Malformed entry — ignore

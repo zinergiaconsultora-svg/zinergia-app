@@ -11,6 +11,10 @@ const applyFranchiseOverrideMock = vi.fn();
 const captureExceptionMock = vi.fn();
 const loggerWarnMock = vi.fn();
 const loggerErrorMock = vi.fn();
+const finalizeAcceptedProposalSideEffectsMock = vi.fn();
+const sendPushToUserMock = vi.fn();
+const sendAgentAcceptanceEmailMock = vi.fn();
+const sendClientAcceptanceEmailMock = vi.fn();
 
 vi.mock('next/headers', () => ({ headers: headersMock }));
 vi.mock('next/cache', () => ({ revalidatePath: revalidatePathMock }));
@@ -29,6 +33,19 @@ vi.mock('@/lib/auth/permissions', () => ({
 
 vi.mock('../commissionRules', () => ({
     getActiveCommissionRule: getActiveCommissionRuleMock,
+}));
+
+vi.mock('../proposals', () => ({
+    finalizeAcceptedProposalSideEffects: finalizeAcceptedProposalSideEffectsMock,
+}));
+
+vi.mock('@/lib/push/sendPush', () => ({
+    sendPushToUser: sendPushToUserMock,
+}));
+
+vi.mock('../email', () => ({
+    sendAgentAcceptanceEmail: sendAgentAcceptanceEmailMock,
+    sendClientAcceptanceEmail: sendClientAcceptanceEmailMock,
 }));
 
 vi.mock('@/lib/commissions/calculator', () => ({
@@ -88,6 +105,10 @@ describe('public proposal actions', () => {
         getActiveCommissionRuleMock.mockResolvedValue({});
         applyFranchiseOverrideMock.mockImplementation((rule) => rule);
         calculateCommissionSplitMock.mockReturnValue({ agent_commission: 10, franchise_profit: 2 });
+        finalizeAcceptedProposalSideEffectsMock.mockResolvedValue(undefined);
+        sendPushToUserMock.mockResolvedValue(undefined);
+        sendAgentAcceptanceEmailMock.mockResolvedValue(undefined);
+        sendClientAcceptanceEmailMock.mockResolvedValue(undefined);
     });
 
     it('does not query the database for invalid public proposal tokens', async () => {
@@ -195,12 +216,33 @@ describe('public proposal actions', () => {
         });
         const proposalContext = selectQuery({
             data: {
+                id: 'proposal-1',
+                client_id: 'client-1',
+                agent_id: 'agent-1',
+                franchise_id: 'franchise-1',
+                status: 'accepted',
+                created_at: '2026-06-30T10:00:00.000Z',
+                updated_at: '2026-06-30T10:01:00.000Z',
                 annual_savings: null,
                 savings_percent: 20,
+                current_annual_cost: 1200,
                 offer_annual_cost: 900,
                 offer_snapshot: { marketer_name: 'Zin Tarifa', tariff_name: 'Plan' },
+                calculation_data: null,
+                source_tariff_id: null,
+                source_proposal_id: null,
+                proposal_version: 1,
+                price_snapshot: null,
+                price_snapshot_at: null,
+                pricing_status: 'locked',
+                repriced_at: null,
+                repricing_delta_eur: null,
+                notes: null,
+                optimization_result: null,
+                aletheia_summary: null,
+                ocr_job_id: null,
                 clients: { name: 'Cliente Demo', email: null },
-                profiles: null,
+                profiles: { id: 'agent-1', email: 'agent@example.com', franchise_id: 'franchise-1' },
             },
             error: null,
         });
@@ -248,6 +290,11 @@ describe('public proposal actions', () => {
         expect(metadata).not.toHaveProperty('signature_data');
         expect(metadata).not.toHaveProperty('ip');
         expect(metadata).not.toHaveProperty('user_agent');
+        expect(finalizeAcceptedProposalSideEffectsMock).toHaveBeenCalledWith(
+            expect.any(Object),
+            expect.objectContaining({ id: 'proposal-1', status: 'accepted', agent_id: 'agent-1' }),
+            'agent-1',
+        );
     });
 
     it('returns stable success for already accepted proposals without updating', async () => {

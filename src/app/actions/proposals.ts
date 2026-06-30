@@ -272,10 +272,9 @@ export async function updateProposalStatusAction(
 
     if (error) throw new Error('Error al actualizar la propuesta');
 
-    // 2. Trigger commission processing only on 'accepted'
+    // 2. Trigger acceptance side effects only on 'accepted'
     if (status === 'accepted') {
-        await processCommissions(supabase, proposal as Proposal)
-        await autoCloseLeadOnAcceptance(supabase, proposal as Proposal, user.id)
+        await finalizeAcceptedProposalSideEffects(supabase, proposal as Proposal, user.id)
     }
 
     // 3. Create in-app notification for the agent
@@ -294,21 +293,38 @@ export async function updateProposalStatusAction(
             status,
         })
 
-        if (status === 'accepted') {
-            await autoCreateContract(supabase, {
-                clientId: proposal.client_id,
-                proposalId: proposal.id,
-                franchiseId: profile.franchise_id,
-                agentId: user.id,
-                proposal: proposal as Proposal
-            })
-        }
     }
 
     revalidatePath('/dashboard/proposals')
     revalidatePath(`/dashboard/proposals/${id}`)
     revalidatePath('/dashboard')
     return proposal as Proposal
+}
+
+export async function finalizeAcceptedProposalSideEffects(
+    supabase: Pick<Awaited<ReturnType<typeof createClient>>, 'from'>,
+    proposal: Proposal,
+    actorId?: string,
+): Promise<void> {
+    const agentId = proposal.agent_id ?? actorId;
+    if (!proposal.client_id || !agentId) return;
+
+    await processCommissions(supabase, proposal);
+    await autoCloseLeadOnAcceptance(supabase, proposal, actorId ?? agentId);
+    await generateFollowUpTasks(supabase, {
+        clientId: proposal.client_id,
+        proposalId: proposal.id,
+        franchiseId: proposal.franchise_id ?? undefined,
+        agentId,
+        status: 'accepted',
+    });
+    await autoCreateContract(supabase, {
+        clientId: proposal.client_id,
+        proposalId: proposal.id,
+        franchiseId: proposal.franchise_id ?? undefined,
+        agentId,
+        proposal,
+    });
 }
 
 type PricingReviewStatus = 'current' | 'outdated' | 'manual' | 'locked' | 'missing';
@@ -717,7 +733,7 @@ async function createStatusNotification(
 }
 
 async function autoCloseLeadOnAcceptance(
-    supabase: Awaited<ReturnType<typeof createClient>>,
+    supabase: Pick<Awaited<ReturnType<typeof createClient>>, 'from'>,
     proposal: Proposal,
     actorId: string,
 ) {
@@ -771,7 +787,7 @@ async function autoCloseLeadOnAcceptance(
 }
 
 async function processCommissions(
-    supabase: Awaited<ReturnType<typeof createClient>>,
+    supabase: Pick<Awaited<ReturnType<typeof createClient>>, 'from'>,
     proposal: Proposal
 ) {
     try {
@@ -784,17 +800,17 @@ async function processCommissions(
 
         if (existing) return // Already processed — idempotent
 
-        // Get the seller (current user) and their profile
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
+        const agentId = proposal.agent_id;
+        if (!agentId) return
 
         const { data: profile } = await supabase
             .from('profiles')
-            .select('franchise_id, role')
-            .eq('id', user.id)
+            .select('franchise_id')
+            .eq('id', agentId)
             .single()
 
-        if (!profile?.franchise_id) return
+        const franchiseId = proposal.franchise_id ?? profile?.franchise_id;
+        if (!franchiseId) return
 
         // Load active commission rule (falls back to defaults if table missing)
         const baseRule = await getActiveCommissionRule()
@@ -803,7 +819,7 @@ async function processCommissions(
         const { data: franchiseCfg } = await supabase
             .from('franchise_config')
             .select('royalty_percent')
-            .eq('franchise_id', profile.franchise_id)
+            .eq('franchise_id', franchiseId)
             .eq('active', true)
             .maybeSingle()
         const royaltyPercent: number | null = franchiseCfg?.royalty_percent ?? null
@@ -824,8 +840,8 @@ async function processCommissions(
         // garantía real.
         await supabase.from('network_commissions').upsert({
             proposal_id: proposal.id,
-            agent_id: user.id,
-            franchise_id: profile.franchise_id,
+            agent_id: agentId,
+            franchise_id: franchiseId,
             agent_commission: resolvedCommission.agentCommission,
             franchise_commission: resolvedCommission.franchiseCommission,
             status: 'pending',
@@ -835,11 +851,11 @@ async function processCommissions(
         const { data: current } = await supabase
             .from('user_points')
             .select('points')
-            .eq('user_id', user.id)
+            .eq('user_id', agentId)
             .maybeSingle()
 
         await supabase.from('user_points').upsert({
-            user_id: user.id,
+            user_id: agentId,
             points: (current?.points || 0) + resolvedCommission.points,
             last_updated: new Date().toISOString(),
         })
@@ -857,7 +873,7 @@ const PROPOSAL_ACTIVITY_MAP: Record<string, { type: string; description_template
 }
 
 async function logProposalActivity(
-    supabase: Awaited<ReturnType<typeof createClient>>,
+    supabase: Pick<Awaited<ReturnType<typeof createClient>>, 'from'>,
     proposal: Proposal,
     agentId: string,
     status: Proposal['status']
@@ -891,7 +907,7 @@ async function logProposalActivity(
 }
 
 async function generateFollowUpTasks(
-    supabase: Awaited<ReturnType<typeof createClient>>,
+    supabase: Pick<Awaited<ReturnType<typeof createClient>>, 'from'>,
     data: {
         clientId: string;
         proposalId: string;
@@ -977,7 +993,7 @@ async function generateFollowUpTasks(
 }
 
 async function autoCreateContract(
-    supabase: Awaited<ReturnType<typeof createClient>>,
+    supabase: Pick<Awaited<ReturnType<typeof createClient>>, 'from'>,
     data: {
         clientId: string;
         proposalId: string;
