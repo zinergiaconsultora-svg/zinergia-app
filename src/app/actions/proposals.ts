@@ -283,8 +283,9 @@ export async function updateProposalStatusAction(
     // 4. Log activity on the client timeline
     await logProposalActivity(supabase, proposal as Proposal, user.id, status)
 
-    // 5. Auto-generate follow-up tasks & Contracts
-    if (proposal.client_id) {
+    // 5. Auto-generate follow-up tasks for non-accepted statuses. Accepted
+    // side effects are handled by finalizeAcceptedProposalSideEffects above.
+    if (proposal.client_id && status !== 'accepted') {
         await generateFollowUpTasks(supabase, {
             clientId: proposal.client_id,
             proposalId: proposal.id,

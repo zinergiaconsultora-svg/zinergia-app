@@ -211,3 +211,29 @@ Residual notes:
 
 - Staging was behind the local migration baseline; `db push` is blocked by old remote migration history. The missing public proposal columns/policies and `proposals.notes` were reconciled directly in staging using existing repo migration intent so the E2E fixture can run. Production schema was not changed.
 - Playwright's local dev server printed `ECONNRESET` while shutting down after the passing public proposal run; the test result itself was green.
+
+## 2026-06-30 — acceptance-side-effects-idempotency
+
+Status: done.
+
+Implemented:
+
+- Audited authenticated proposal acceptance side effects after reviewing the OCR -> proposal -> firma -> comision chain.
+- Found and fixed duplicate accepted follow-up task creation: `updateProposalStatusAction(..., 'accepted')` now lets `finalizeAcceptedProposalSideEffects` own accepted tasks/contracts/commissions.
+- Added a focused regression test proving authenticated acceptance creates the documentation task only once.
+- Kept public acceptance behavior unchanged; it still uses the shared finalizer after atomic signature acceptance.
+
+Verification:
+
+- `npm run test -- src/app/actions/__tests__/proposals.test.ts` — initially failed with 2 task inserts, then passed after the fix.
+- `npm run test -- src/app/actions/__tests__/publicProposal.test.ts src/app/actions/__tests__/proposals.test.ts` — passed, 8 tests.
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npm run lint` — passed with zero warnings.
+- `npx tsc --noEmit` — passed.
+- `npm run test` — passed, 51 files and 368 tests.
+- `npm run build` — passed.
+
+Residual notes:
+
+- No schema migration or Supabase type regeneration was needed.
+- Full mutating public proposal E2E remains a separate staging-only follow-up because it intentionally accepts a fixture and mutates staging data.

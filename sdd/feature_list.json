@@ -136,6 +136,23 @@
         "external_integration": false,
         "business_critical_calculation": false
       }
+    },
+    {
+      "id": "ZIN-SDD-009",
+      "slug": "acceptance-side-effects-idempotency",
+      "description": "Asegurar que aceptar una propuesta ejecuta una sola vez los efectos de negocio: comision, cierre de lead, tareas y contrato.",
+      "status": "done",
+      "sdd": true,
+      "priority": "high",
+      "risk": {
+        "data_schema": false,
+        "pii": true,
+        "auth_rls": true,
+        "public_surface": true,
+        "cron_or_service_role": false,
+        "external_integration": false,
+        "business_critical_calculation": true
+      }
     }
   ]
 }
