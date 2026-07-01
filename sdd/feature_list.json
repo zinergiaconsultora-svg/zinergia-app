@@ -170,6 +170,40 @@
         "external_integration": false,
         "business_critical_calculation": true
       }
+    },
+    {
+      "id": "ZIN-SDD-011",
+      "slug": "staging-migration-history-reconciliation",
+      "description": "Auditar y reconciliar el historial de migraciones de staging para recuperar un flujo Supabase reproducible.",
+      "status": "done",
+      "sdd": true,
+      "priority": "high",
+      "risk": {
+        "data_schema": true,
+        "pii": false,
+        "auth_rls": true,
+        "public_surface": false,
+        "cron_or_service_role": true,
+        "external_integration": false,
+        "business_critical_calculation": false
+      }
+    },
+    {
+      "id": "ZIN-SDD-012",
+      "slug": "public-acceptance-switch-trigger-fix",
+      "description": "Corregir el trigger de switch events que bloquea la aceptacion publica de propuestas al referenciar una columna inexistente.",
+      "status": "done",
+      "sdd": true,
+      "priority": "high",
+      "risk": {
+        "data_schema": true,
+        "pii": false,
+        "auth_rls": false,
+        "public_surface": true,
+        "cron_or_service_role": false,
+        "external_integration": false,
+        "business_critical_calculation": true
+      }
     }
   ]
 }
