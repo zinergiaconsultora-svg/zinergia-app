@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { Task, TaskStatus, TaskPriority } from '@/types/crm';
 import { tasksService } from '@/services/crm/tasks';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { buildTasksEmptyState } from './emptyState';
 
 const STATUS_TABS: { value: TaskStatus | 'all'; label: string }[] = [
     { value: 'all', label: 'Todas' },
@@ -112,6 +113,7 @@ export default function TasksPage() {
         { label: 'Vencidas', value: stats.overdue, icon: AlertTriangle, color: 'text-red-600' },
         { label: 'Completadas', value: stats.completed, icon: CheckCircle2, color: 'text-emerald-600' },
     ];
+    const emptyState = buildTasksEmptyState(filter);
 
     return (
         <div className="p-6 max-w-7xl mx-auto">
@@ -163,7 +165,16 @@ export default function TasksPage() {
             ) : tasks.length === 0 ? (
                 <div className="text-center p-12 text-slate-400">
                     <ListTodo className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>No hay tareas{filter !== 'all' ? ` con este filtro` : ''}</p>
+                    <h2 className="text-base font-semibold text-slate-700">{emptyState.title}</h2>
+                    <p className="mt-2 mx-auto max-w-md text-sm leading-6">{emptyState.description}</p>
+                    <button
+                        type="button"
+                        onClick={() => setShowCreateModal(true)}
+                        className="mt-5 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                    >
+                        <Plus className="w-4 h-4" />
+                        {emptyState.actionLabel}
+                    </button>
                 </div>
             ) : (
                 <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">

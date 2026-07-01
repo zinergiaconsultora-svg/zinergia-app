@@ -493,6 +493,23 @@
         "external_integration": false,
         "business_critical_calculation": false
       }
+    },
+    {
+      "id": "ZIN-SDD-030",
+      "slug": "tasks-empty-guidance",
+      "description": "Aclarar el siguiente paso comercial cuando la cola de tareas no tiene resultados.",
+      "status": "done",
+      "sdd": true,
+      "priority": "medium",
+      "risk": {
+        "data_schema": false,
+        "pii": false,
+        "auth_rls": false,
+        "public_surface": false,
+        "cron_or_service_role": false,
+        "external_integration": false,
+        "business_critical_calculation": false
+      }
     }
   ]
 }
