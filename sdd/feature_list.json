@@ -226,7 +226,7 @@
       "id": "ZIN-SDD-014",
       "slug": "lead-analytics-helper-permission",
       "description": "Corregir get_lead_analytics para usar el helper privado de admin tras el hardening de funciones publicas.",
-      "status": "in_progress",
+      "status": "done",
       "sdd": true,
       "priority": "medium",
       "risk": {
