@@ -26,6 +26,7 @@ import {
     type SortKey,
     type SortDir,
 } from './proposalsListShared';
+import { buildProposalsEmptyState } from './emptyState';
 import { DeleteConfirmDialog, BulkActionDialog } from './ProposalConfirmDialogs';
 
 export default function ProposalsPage() {
@@ -203,6 +204,12 @@ export default function ProposalsPage() {
     };
 
     const hasActiveFilters = dateFrom || dateTo || minSavings || marketerFilter;
+    const hasSearch = !!search.trim();
+    const emptyState = buildProposalsEmptyState({
+        statusFilter,
+        hasSearch,
+        hasAdvancedFilters: !!hasActiveFilters,
+    });
 
     const clearFilters = () => {
         setDateFrom(''); setDateTo(''); setMinSavings(''); setMarketerFilter('');
@@ -386,17 +393,17 @@ export default function ProposalsPage() {
                 <div className="bg-white rounded-2xl p-16 text-center border border-slate-100 shadow-sm">
                     <FileText size={36} className="mx-auto text-slate-200 mb-4" />
                     <h3 className="text-lg font-bold text-slate-900 mb-1">
-                        {search || statusFilter !== 'all' || hasActiveFilters ? 'Sin resultados' : 'Sin propuestas todavía'}
+                        {emptyState.title}
                     </h3>
                     <p className="text-slate-500 text-sm mb-6">
-                        {search || statusFilter !== 'all' || hasActiveFilters ? 'Prueba con otros filtros' : 'Inicia una simulación para generar la primera'}
+                        {emptyState.description}
                     </p>
-                    {(search || statusFilter !== 'all' || hasActiveFilters) ? (
+                    {emptyState.actionKind === 'clear-filters' ? (
                         <button type="button" onClick={() => { setSearch(''); setStatusFilter('all'); clearFilters(); }}
-                            className="text-indigo-500 text-sm font-semibold hover:underline">Limpiar filtros</button>
+                            className="text-indigo-500 text-sm font-semibold hover:underline">{emptyState.actionLabel}</button>
                     ) : (
                         <Link href="/dashboard/simulator" className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all text-sm">
-                            Abrir Simulador
+                            {emptyState.actionLabel}
                         </Link>
                     )}
                 </div>
