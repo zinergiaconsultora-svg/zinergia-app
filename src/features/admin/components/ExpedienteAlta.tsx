@@ -167,6 +167,9 @@ function RejectModal({ proposalId, onClose, onRejected }: RejectModalProps) {
     const [reason, setReason] = useState<RejectionReason>('otro');
     const [note, setNote] = useState('');
     const [loading, setLoading] = useState(false);
+    const titleId = 'reject-alta-title';
+    const reasonId = 'reject-alta-reason';
+    const noteId = 'reject-alta-note';
 
     async function submit() {
         setLoading(true);
@@ -181,16 +184,22 @@ function RejectModal({ proposalId, onClose, onRejected }: RejectModalProps) {
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+        >
             <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-rose-100 p-6 flex flex-col gap-4">
                 <div className="flex items-center gap-2">
                     <XCircle size={18} className="text-rose-500 shrink-0" />
-                    <h3 className="text-sm font-bold text-slate-800">Rechazar alta</h3>
+                    <h3 id={titleId} className="text-sm font-bold text-slate-800">Rechazar alta</h3>
                 </div>
 
                 <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Motivo</label>
+                    <label htmlFor={reasonId} className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Motivo</label>
                     <select
+                        id={reasonId}
                         value={reason}
                         onChange={e => setReason(e.target.value as RejectionReason)}
                         className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
@@ -202,8 +211,9 @@ function RejectModal({ proposalId, onClose, onRejected }: RejectModalProps) {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Nota (opcional)</label>
+                    <label htmlFor={noteId} className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Nota (opcional)</label>
                     <textarea
+                        id={noteId}
                         value={note}
                         onChange={e => setNote(e.target.value)}
                         maxLength={500}
