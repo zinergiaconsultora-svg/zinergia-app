@@ -268,3 +268,52 @@ Residual notes:
 
 - Staging still has historical migration drift; the reconciliation scripts are staging-only operational scripts, not new product schema migrations.
 - The focused Playwright run still prints the known Next/Node `DEP0190` webServer warning after success.
+
+## 2026-07-01 — staging-migration-history-reconciliation
+
+Status: done.
+
+Implemented:
+
+- Created the SDD spec for staging migration history reconciliation.
+- Captured the local migration source of truth and documented the known remote-only migration versions from the previous staging `db push` failure.
+- Verified production/linked history remained read-only; no production mutation was attempted.
+- Documented the safe staging repair procedure with `migration list`, `db push --dry-run`, `migration repair --status reverted`, and post-repair verification.
+- Reconciled staging history by reverting remote-only missing-source migration versions.
+- Applied pending local migrations to staging and resolved stale staging-only view/policy conflicts.
+- Relinked the repo back to production after staging verification.
+
+Verification:
+
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npx supabase migration list --linked` against staging — local and remote aligned through `20260630131500`.
+- `npx supabase db push --dry-run --linked` against staging — `Remote database is up to date.`
+
+Residual notes:
+
+- A database password was pasted in chat during the operator flow; rotate it if it is still active.
+- The local repo is linked back to production (`gmjgkzaxmkaggsyczwcm`), so future staging work should explicitly relink staging first.
+
+## 2026-07-01 — public-acceptance-switch-trigger-fix
+
+Status: done.
+
+Implemented:
+
+- Investigated the failing staging mutating public proposal E2E after migration reconciliation.
+- Found the root cause: `public.auto_log_switch_event()` referenced `NEW.closed_company`, but the trigger runs on `public.proposals` and that column exists on `ocr_jobs`, not `proposals`.
+- Added `20260630230425_fix_auto_switch_event_marketer.sql` to derive `new_marketer` from `offer_snapshot` with a safe fallback.
+- Applied the migration to staging and relinked the repo back to production.
+
+Verification:
+
+- `npx supabase db push --dry-run --linked` against staging — listed only `20260630230425_fix_auto_switch_event_marketer.sql` before applying.
+- `npx supabase db push --linked` against staging — applied the migration.
+- `npx supabase db push --dry-run --linked` against staging — `Remote database is up to date.`
+- `E2E_ALLOW_STAGING_SEED=1 npm run test:e2e:seed-public-proposal -- --write-env` — passed.
+- `E2E_RUN_MUTATING_PUBLIC_PROPOSAL=1 npm run test:e2e:public-mutating` — passed, 1 test.
+
+Residual notes:
+
+- The local repo was relinked to production (`gmjgkzaxmkaggsyczwcm`) after staging verification.
+- The known Playwright webServer `DEP0190` warning still appears after successful E2E runs.
