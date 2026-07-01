@@ -498,3 +498,29 @@ Verification:
 Residual notes:
 
 - This is a presentation-only UX improvement; no schema, Supabase, auth, or proposal mutation behavior changed.
+
+## 2026-07-01 — tasks-empty-guidance
+
+Status: done.
+
+Implemented:
+
+- Added ZIN-SDD-030 for commercial tasks empty-state guidance.
+- Added `buildTasksEmptyState(...)` to distinguish the first task state and empty status queues.
+- Updated `/dashboard/tasks` empty state to guide agents toward creating the next follow-up.
+- Preserved existing task loading, error retry, filters, creation modal, delete, and completion toggle behavior.
+- Added focused tests for the copy selection helper.
+
+Verification:
+
+- `npx vitest run src/app/dashboard/tasks/__tests__/emptyState.test.ts` — passed, 3 tests.
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npx tsc --noEmit` — passed.
+- `npm run lint` — passed with zero warnings.
+- `npm run test` — passed, 56 files and 387 tests.
+- `npm run test:coverage` — passed, thresholds met.
+- `npm run build` — passed.
+
+Residual notes:
+
+- This is a presentation-only UX improvement; no schema, Supabase, auth, or task mutation behavior changed.
