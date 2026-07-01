@@ -5,7 +5,7 @@
  * Verifies: dashboard, audit log, KPIs, RGPD panel, agent management.
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/runtime';
 
 const hasAdminCredentials = () =>
     !!(process.env.E2E_ADMIN_EMAIL && process.env.E2E_ADMIN_PASSWORD);
@@ -48,6 +48,7 @@ test.describe('Admin panel navigation', () => {
     test('redirects to /admin for admin users', async ({ page }) => {
         await page.goto('/dashboard');
         await expect(page).toHaveURL(/admin/, { timeout: 10_000 });
+        await expect(page.getByRole('heading', { name: /Vista Global del Sistema/i })).toBeVisible({ timeout: 15_000 });
     });
 
     test('renders admin dashboard with nav links', async ({ page }) => {

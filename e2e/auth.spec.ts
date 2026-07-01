@@ -5,7 +5,7 @@
  * These run WITHOUT pre-authenticated state so we can test the login form itself.
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/runtime';
 
 // Override: these tests start unauthenticated
 test.use({ storageState: { cookies: [], origins: [] } });
