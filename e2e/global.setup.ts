@@ -64,11 +64,22 @@ setup('authenticate as admin', async ({ page }) => {
     await page.getByLabel(/contraseña|password/i).fill(password);
     await page.getByRole('button', { name: /entrar|iniciar|sign in|login/i }).click();
 
-    // Some deployments land on /dashboard first; the real admin assertion is
-    // that the authenticated account can open protected /admin content.
+    // Some deployments land on /dashboard first, while others already finish on
+    // /admin. Avoid restarting the same navigation because production can abort
+    // the duplicate document request while the admin shell is already visible.
     await expect(page).toHaveURL(/\/(admin|dashboard)/, { timeout: 15_000 });
-    await page.goto('/admin');
-    await expect(page).toHaveURL(/admin/, { timeout: 10_000 });
+    if (!/\/admin(?:[/?#]|$)/.test(new URL(page.url()).pathname)) {
+        try {
+            await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (!message.includes('net::ERR_ABORTED')) {
+                throw error;
+            }
+        }
+    }
+    await expect(page).toHaveURL(/\/admin(?:[/?#]|$)/, { timeout: 10_000 });
+    await expect(page.getByRole('heading', { name: /Zinergia SuperAdmin/i })).toBeVisible({ timeout: 10_000 });
 
     await page.context().storageState({ path: path.join(AUTH_DIR, 'admin.json') });
 });

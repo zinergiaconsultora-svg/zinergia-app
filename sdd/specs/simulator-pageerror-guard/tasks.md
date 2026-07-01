@@ -16,3 +16,5 @@
   - Traceability: `REQ-005`.
 - [x] 5. Validate with focused E2E, full E2E, and lint.
   - Traceability: `REQ-004`.
+- [x] 6. Harden production admin setup so smoke tests do not re-trigger an already completed `/admin` navigation.
+  - Traceability: `REQ-004`, `REQ-005`.
