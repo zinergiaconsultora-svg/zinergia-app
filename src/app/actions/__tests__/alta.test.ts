@@ -110,4 +110,67 @@ describe('alta admin actions', () => {
         expect(rejectUpdate.eq).toHaveBeenCalledWith('status', 'accepted');
         expect(reopenUpdate.eq).toHaveBeenCalledWith('status', 'accepted');
     });
+
+    it('revalidates admin and dashboard paths after successful alta transitions', async () => {
+        const auth = { getUser: vi.fn(async () => ({ data: { user: { id: 'admin-1' } } })) };
+        const confirmUpdate = query({ data: [{ id: 'proposal-1' }], error: null });
+        const requestRead = query({
+            data: {
+                status: 'accepted',
+                alta_status: 'lista_admin',
+                consent_confirmed_at: '2026-07-01T10:00:00.000Z',
+            },
+            error: null,
+        });
+        const requestUpdate = query({ data: [{ id: 'proposal-1' }], error: null });
+        const completeUpdate = query({ data: [{ id: 'proposal-1' }], error: null });
+        const rejectUpdate = query({ data: [{ id: 'proposal-1' }], error: null });
+        const reopenRead = query({
+            data: {
+                status: 'accepted',
+                alta_status: 'rechazada',
+                consent_confirmed_at: '2026-07-01T10:00:00.000Z',
+            },
+            error: null,
+        });
+        const reopenUpdate = query({ data: [{ id: 'proposal-1' }], error: null });
+        const proposalCalls = [
+            confirmUpdate,
+            requestRead,
+            requestUpdate,
+            completeUpdate,
+            rejectUpdate,
+            reopenRead,
+            reopenUpdate,
+        ];
+        const from = vi.fn((table: string) => {
+            if (table === 'proposals') {
+                return proposalCalls.shift() ?? query({ data: null, error: null });
+            }
+            return query({ data: null, error: null });
+        });
+        createClientMock.mockResolvedValue({ auth, from });
+
+        const { confirmConsent, requestAlta, completeAlta, rejectAlta, reopenAlta } = await import('../alta');
+
+        await confirmConsent('proposal-1', true);
+        await requestAlta('proposal-1');
+        await completeAlta('proposal-1');
+        await rejectAlta({ proposalId: '11111111-1111-4111-8111-111111111111', reason: 'otro' });
+        await reopenAlta('proposal-1');
+
+        expect(revalidatePathMock).toHaveBeenCalledTimes(10);
+        expect(revalidatePathMock.mock.calls).toEqual([
+            ['/admin'],
+            ['/dashboard'],
+            ['/admin'],
+            ['/dashboard'],
+            ['/admin'],
+            ['/dashboard'],
+            ['/admin'],
+            ['/dashboard'],
+            ['/admin'],
+            ['/dashboard'],
+        ]);
+    });
 });
