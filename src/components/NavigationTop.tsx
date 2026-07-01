@@ -94,7 +94,7 @@ export const NavigationTop = () => {
                     <div className="flex items-center gap-8">
                         <Link href="/dashboard" className="transition-transform active:scale-95 flex flex-col items-start">
                             <ZinergiaLogo className="w-16 md:w-20" />
-                            <span className="text-[9px] text-slate-400/70 font-mono tracking-tight leading-none -mt-0.5 pl-0.5">
+                            <span className="sr-only">
                                 {process.env.NEXT_PUBLIC_APP_VERSION}
                             </span>
                         </Link>

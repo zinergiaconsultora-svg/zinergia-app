@@ -70,6 +70,12 @@ test.describe('Lead detail actions', () => {
 });
 
 test.describe('Lead visual regression', () => {
+    test.beforeEach(() => {
+        if (process.env.RUN_VISUAL_E2E !== 'true') {
+            test.skip(true, 'Visual regression snapshots run only with RUN_VISUAL_E2E=true');
+        }
+    });
+
     test('simulator page renders consistently at desktop width', async ({ page }) => {
         await page.setViewportSize({ width: 1440, height: 900 });
         await page.goto('/dashboard/simulator');

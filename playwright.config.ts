@@ -22,8 +22,8 @@ export default defineConfig({
     forbidOnly: !!process.env.CI,
     /* Retry flaky tests on CI only */
     retries: process.env.CI ? 2 : 0,
-    /* Limit parallelism on CI */
-    workers: process.env.CI ? 1 : undefined,
+    /* Keep the local dev server responsive while exercising authenticated routes. */
+    workers: process.env.CI ? 1 : 2,
 
     reporter: [
         ['list'],
@@ -77,7 +77,7 @@ export default defineConfig({
               // Runs the app against the STAGING Supabase project (never prod).
               command: 'npm run dev:staging',
               url: 'http://localhost:3000',
-              reuseExistingServer: true,
+              reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === 'true',
               timeout: 120_000,
           },
 });

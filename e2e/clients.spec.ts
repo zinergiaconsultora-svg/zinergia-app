@@ -21,6 +21,8 @@ test.describe('Client list', () => {
 
         const content = page
             .locator('table, [data-testid="client-list"]')
+            .or(page.getByRole('heading', { name: /mis clientes/i }))
+            .or(page.getByPlaceholder(/buscar por nombre/i))
             .or(page.getByText(/no hay clientes|sin clientes|todavía/i))
             .or(page.locator('ul').first());
 

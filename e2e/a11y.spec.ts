@@ -93,7 +93,7 @@ test.describe('a11y — Simulator @a11y', () => {
 
     test('has no critical/serious axe violations on /dashboard/simulator', async ({ page }) => {
         await page.goto('/dashboard/simulator');
-        await page.waitForLoadState('networkidle');
+        await expect(page.getByRole('heading', { name: /simulador de facturas/i })).toBeVisible({ timeout: 10_000 });
 
         const results = await new AxeBuilder({ page })
             .withTags(['wcag2a', 'wcag2aa'])
@@ -116,7 +116,7 @@ test.describe('a11y — Simulator @a11y', () => {
 
     test('simulator page has a visible h1', async ({ page }) => {
         await page.goto('/dashboard/simulator');
-        const h1 = page.locator('h1').first();
+        const h1 = page.getByRole('heading', { level: 1 }).first();
         await expect(h1).toBeVisible({ timeout: 5_000 });
         const text = await h1.textContent();
         expect(text?.trim().length).toBeGreaterThan(0);
@@ -129,8 +129,9 @@ test.describe('a11y — Public proposal @a11y', () => {
     test.use({ storageState: { cookies: [], origins: [] } });
 
     test('invalid token page has no critical/serious axe violations', async ({ page }) => {
-        await page.goto('/p/00000000-0000-0000-0000-000000000000');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/p/00000000-0000-0000-0000-000000000000', { waitUntil: 'domcontentloaded' });
+        await expect(page.getByRole('heading', { name: /página no encontrada|no encontrada|404/i })).toBeVisible({ timeout: 10_000 });
+        await page.waitForLoadState('networkidle').catch(() => {});
 
         const results = await new AxeBuilder({ page })
             .withTags(['wcag2a', 'wcag2aa'])

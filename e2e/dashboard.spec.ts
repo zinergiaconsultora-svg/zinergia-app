@@ -31,12 +31,14 @@ const commercialRoutes = [
 
 async function gotoRoute(page: Page, path: string) {
     try {
-        await page.goto(path, { waitUntil: 'domcontentloaded' });
+        await page.goto(path, { waitUntil: 'commit', timeout: 30_000 });
+        await page.waitForLoadState('domcontentloaded', { timeout: 15_000 }).catch(() => {});
     } catch (error) {
         if (!(error instanceof Error) || !error.message.includes('ERR_ABORTED')) {
             throw error;
         }
-        await page.goto(path, { waitUntil: 'domcontentloaded' });
+        await page.goto(path, { waitUntil: 'commit', timeout: 30_000 });
+        await page.waitForLoadState('domcontentloaded', { timeout: 15_000 }).catch(() => {});
     }
 }
 
