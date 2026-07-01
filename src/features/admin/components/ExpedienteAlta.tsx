@@ -257,8 +257,28 @@ export default function ExpedienteAlta({ expediente, onRefresh }: ExpedienteAlta
     const [events, setEvents] = useState<AltaEvent[]>([]);
     const [showHistory, setShowHistory] = useState(false);
 
+    const refreshEvents = useCallback(async () => {
+        try {
+            setEvents(await getAltaEvents(expediente.id));
+        } catch {
+            setEvents([]);
+        }
+    }, [expediente.id]);
+
     useEffect(() => {
-        getAltaEvents(expediente.id).then(setEvents).catch(() => setEvents([]));
+        let cancelled = false;
+
+        getAltaEvents(expediente.id)
+            .then(nextEvents => {
+                if (!cancelled) setEvents(nextEvents);
+            })
+            .catch(() => {
+                if (!cancelled) setEvents([]);
+            });
+
+        return () => {
+            cancelled = true;
+        };
     }, [expediente.id, expediente.altaStatus]);
 
     const run = useCallback(async (action: () => Promise<{ ok: boolean; error?: string }>, label: string) => {
@@ -268,9 +288,10 @@ export default function ExpedienteAlta({ expediente, onRefresh }: ExpedienteAlta
         if (!res.ok) {
             toast.error(res.error ?? 'Error');
         } else {
+            await refreshEvents();
             onRefresh();
         }
-    }, [onRefresh]);
+    }, [onRefresh, refreshEvents]);
 
     const status = expediente.altaStatus;
     const statusMeta = status ? STATUS_BAR[status] : null;
@@ -302,7 +323,11 @@ export default function ExpedienteAlta({ expediente, onRefresh }: ExpedienteAlta
                 <RejectModal
                     proposalId={expediente.id}
                     onClose={() => setShowReject(false)}
-                    onRejected={() => { setShowReject(false); onRefresh(); }}
+                    onRejected={() => {
+                        setShowReject(false);
+                        void refreshEvents();
+                        onRefresh();
+                    }}
                 />
             )}
 

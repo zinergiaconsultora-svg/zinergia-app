@@ -357,6 +357,23 @@
         "external_integration": false,
         "business_critical_calculation": true
       }
+    },
+    {
+      "id": "ZIN-SDD-022",
+      "slug": "alta-history-local-refresh",
+      "description": "Refrescar el historial visible del expediente de alta inmediatamente tras una accion admin exitosa.",
+      "status": "done",
+      "sdd": true,
+      "priority": "medium",
+      "risk": {
+        "data_schema": false,
+        "pii": true,
+        "auth_rls": true,
+        "public_surface": false,
+        "cron_or_service_role": false,
+        "external_integration": false,
+        "business_critical_calculation": false
+      }
     }
   ]
 }
