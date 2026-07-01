@@ -392,3 +392,30 @@ Verification:
 Residual notes:
 
 - A first full `npm run test` attempt was run in parallel with `npm run build` and one existing test timed out; rerunning the test suite alone passed cleanly.
+
+## 2026-07-01 — github-actions-node24-actions
+
+Status: done.
+
+Implemented:
+
+- Added ZIN-SDD-026 for the GitHub Actions Node runtime warning cleanup.
+- Updated all `actions/checkout@v4` references to `actions/checkout@v6`.
+- Updated all `actions/setup-node@v4` references to `actions/setup-node@v6`.
+- Preserved `NODE_VERSION: '20.x'` for application commands, keeping the app on the existing supported Next.js 16 runtime.
+- Preserved npm caching and Vercel deploy commands, including `--archive=tgz`.
+
+Verification:
+
+- `rg -n "actions/(checkout|setup-node)@|NODE_VERSION|archive=tgz|vercel deploy --prebuilt" .github/workflows/ci-cd.yml` — confirmed updated action versions and preserved deploy commands.
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npx tsc --noEmit` — passed.
+- `npm run lint` — passed with zero warnings.
+- `npm run test` — passed, 53 files and 378 tests.
+- `npm run test:coverage` — passed, thresholds met.
+- `npm run build` — passed.
+
+Residual notes:
+
+- Documentation check: current GitHub Actions examples use newer checkout/setup-node actions, `actions/checkout` v5+ uses Node 24 internally, and `actions/setup-node` v6 preserves `node-version` plus npm cache inputs.
+- Next.js 16 requires Node.js `>=20.9.0`; this iteration intentionally did not change the app command runtime from `20.x`.
