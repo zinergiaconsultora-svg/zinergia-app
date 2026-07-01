@@ -446,3 +446,29 @@ Residual notes:
 
 - Documentation check: GitHub Actions workflow commands support `::warning` annotations; step exit codes determine failed vs passed step display.
 - PR CI is the definitive verification that the advisory warning replaces the previous failed-step annotation.
+
+## 2026-07-01 — admin-leads-empty-guidance
+
+Status: done.
+
+Implemented:
+
+- Added ZIN-SDD-028 for admin leads empty-state guidance.
+- Added `buildAdminLeadsEmptyState(...)` to select queue-specific or outcome-specific operational copy.
+- Updated `/admin/leads` empty state to explain whether a queue is healthy and what the admin can review next.
+- Kept filters, queue buttons, bulk actions, detail drawer, and mutations unchanged.
+- Added focused tests for copy selection without Supabase or browser credentials.
+
+Verification:
+
+- `npx vitest run src/features/admin/leads/__tests__/emptyState.test.ts` — passed, 3 tests.
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npx tsc --noEmit` — passed.
+- `npm run lint` — passed with zero warnings.
+- `npm run test` — passed, 54 files and 381 tests.
+- `npm run test:coverage` — passed, thresholds met.
+- `npm run build` — passed.
+
+Residual notes:
+
+- This is a presentation-only UX improvement; no schema, Supabase, or auth behavior changed.

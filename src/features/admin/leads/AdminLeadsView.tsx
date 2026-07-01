@@ -14,6 +14,7 @@ import { BulkActionsBar, type AgentOption } from './BulkActionsBar';
 import { LeadRow } from './LeadRow';
 import { LostModal } from './LostModal';
 import { sortByPriority } from './priority';
+import { buildAdminLeadsEmptyState } from './emptyState';
 import {
     getInvoiceFileUrlAction,
     type AdminLeadFilters,
@@ -81,6 +82,7 @@ export default function AdminLeadsView({
     const outcome = filters.outcome ?? 'open';
     const activeQueue = filters.queue;
     const displayLeads = sortMode === 'priority' ? sortByPriority(leads) : leads;
+    const emptyState = buildAdminLeadsEmptyState(filters);
 
     function updateFilters(patch: Partial<AdminLeadFilters>) {
         const next = { ...filters, ...patch };
@@ -238,7 +240,11 @@ export default function AdminLeadsView({
             ) : leads.length === 0 ? (
                 <div className="text-center py-16 text-slate-400">
                     <Inbox size={36} className="mx-auto mb-3 opacity-60" />
-                    <p className="font-medium text-slate-500">No hay leads en este filtro.</p>
+                    <h2 className="text-base font-extrabold text-slate-700">{emptyState.title}</h2>
+                    <p className="mt-1 text-sm text-slate-500">{emptyState.description}</p>
+                    {emptyState.actionHint && (
+                        <p className="mx-auto mt-2 max-w-md text-[12px] leading-relaxed text-slate-400">{emptyState.actionHint}</p>
+                    )}
                 </div>
             ) : (
                 <div className={`space-y-3 ${bulk.selectedIds.size > 0 ? 'pb-24' : ''}`}>

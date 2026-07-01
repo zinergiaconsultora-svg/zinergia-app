@@ -459,6 +459,23 @@
         "external_integration": true,
         "business_critical_calculation": false
       }
+    },
+    {
+      "id": "ZIN-SDD-028",
+      "slug": "admin-leads-empty-guidance",
+      "description": "Aclarar el siguiente paso operativo cuando una cola o filtro de leads admin no tiene resultados.",
+      "status": "done",
+      "sdd": true,
+      "priority": "medium",
+      "risk": {
+        "data_schema": false,
+        "pii": false,
+        "auth_rls": false,
+        "public_surface": false,
+        "cron_or_service_role": false,
+        "external_integration": false,
+        "business_critical_calculation": false
+      }
     }
   ]
 }
