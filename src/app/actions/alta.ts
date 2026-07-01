@@ -35,6 +35,11 @@ async function writeAltaEvent(
     }
 }
 
+function revalidateAltaPaths(): void {
+    revalidatePath('/admin');
+    revalidatePath('/dashboard');
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type AltaStatus =
@@ -214,7 +219,7 @@ export async function confirmConsent(proposalId: string, sepa: boolean): Promise
     }
 
     await writeAltaEvent(proposalId, user.id, 'consent_confirmed', sepa ? 'Contrato + SEPA' : 'Contrato (sin SEPA)');
-    revalidatePath('/dashboard');
+    revalidateAltaPaths();
     return { ok: true };
 }
 
@@ -260,7 +265,7 @@ export async function requestAlta(proposalId: string): Promise<{ ok: boolean; er
     }
 
     await writeAltaEvent(proposalId, user.id, 'alta_requested', 'SLA de 10 días hábiles iniciado');
-    revalidatePath('/dashboard');
+    revalidateAltaPaths();
     return { ok: true };
 }
 
@@ -289,7 +294,7 @@ export async function completeAlta(proposalId: string): Promise<{ ok: boolean; e
     }
 
     await writeAltaEvent(proposalId, user.id, 'alta_completed', 'Cliente activado por la distribuidora');
-    revalidatePath('/dashboard');
+    revalidateAltaPaths();
     return { ok: true };
 }
 
@@ -335,7 +340,7 @@ export async function rejectAlta(input: z.infer<typeof rejectSchema>): Promise<{
     }
 
     await writeAltaEvent(proposalId, user?.id ?? null, 'alta_rejected', note?.trim() || undefined, { reason });
-    revalidatePath('/dashboard');
+    revalidateAltaPaths();
     return { ok: true };
 }
 
@@ -384,6 +389,6 @@ export async function reopenAlta(proposalId: string): Promise<{ ok: boolean; err
     }
 
     await writeAltaEvent(proposalId, user.id, 'alta_reopened', `Reabierto a estado: ${target}`);
-    revalidatePath('/dashboard');
+    revalidateAltaPaths();
     return { ok: true };
 }
