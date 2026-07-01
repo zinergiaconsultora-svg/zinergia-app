@@ -58,6 +58,18 @@ test.describe('Simulator — file upload', () => {
     });
 
     test('rejects non-PDF/image files with validation feedback', async ({ page }, testInfo) => {
+        const runtimeErrors: string[] = [];
+        page.on('pageerror', (error) => {
+            runtimeErrors.push(error.stack || error.message);
+        });
+        page.on('console', (message) => {
+            if (message.type() !== 'error') return;
+            const text = message.text();
+            if (/Rendered more hooks|Uncaught Error/i.test(text)) {
+                runtimeErrors.push(text);
+            }
+        });
+
         await interceptOcrWebhook(page);
         await page.goto('/dashboard/simulator');
         await selectResidentialSegment(page);
@@ -77,6 +89,9 @@ test.describe('Simulator — file upload', () => {
                 .or(page.locator('[role="alert"]'));
             await expect(feedback.first()).toBeVisible({ timeout: 5_000 });
         }
+
+        await page.waitForTimeout(500);
+        expect(runtimeErrors, `Unexpected runtime errors:\n${runtimeErrors.join('\n\n')}`).toEqual([]);
     });
 
     test('accepts a PDF file and shows processing state', async ({ page }, testInfo) => {
