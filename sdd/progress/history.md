@@ -292,7 +292,9 @@ Verification:
 Residual notes:
 
 - A database password was pasted in chat during the operator flow; rotate it if it is still active.
-- The local repo is linked back to production (`gmjgkzaxmkaggsyczwcm`), so future staging work should explicitly relink staging first.
+- Production was reconciled after PR #61 merged: remote-only missing-source history was reverted, already-materialized `20260616090000` through `20260626220000` versions were marked applied after a read-only schema check, and `20260630230425_fix_auto_switch_event_marketer.sql` was applied.
+- Final production verification returned `Remote database is up to date.`
+- The local repo is linked to production (`gmjgkzaxmkaggsyczwcm`), so future staging work should explicitly relink staging first.
 
 ## 2026-07-01 — public-acceptance-switch-trigger-fix
 
@@ -315,5 +317,6 @@ Verification:
 
 Residual notes:
 
-- The local repo was relinked to production (`gmjgkzaxmkaggsyczwcm`) after staging verification.
+- The migration was later applied to production after production migration history was reconciled; final production `db push --dry-run` returned `Remote database is up to date.`
+- The local repo is linked to production (`gmjgkzaxmkaggsyczwcm`) after verification.
 - The known Playwright webServer `DEP0190` warning still appears after successful E2E runs.
