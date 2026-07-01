@@ -365,3 +365,30 @@ Verification:
 Residual notes:
 
 - The definitive production deploy verification happens on the post-merge `main` workflow because production deploy is intentionally skipped on PR branches.
+
+## 2026-07-01 — alta-reject-modal-focus
+
+Status: done.
+
+Implemented:
+
+- Added ZIN-SDD-025 for keyboard focus management in the alta rejection modal.
+- Moved initial focus to the rejection reason select when the dialog opens.
+- Trapped Tab and Shift+Tab navigation inside the dialog controls.
+- Closed the dialog on Escape without submitting rejection data.
+- Restored focus to the "Rechazar alta" opener when the dialog closes.
+- Added a focused regression test for keyboard focus cycling and Escape behavior.
+
+Verification:
+
+- `npx vitest run src/features/admin/components/__tests__/ExpedienteAlta.test.tsx` — passed, 5 tests.
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npx tsc --noEmit` — passed.
+- `npm run lint` — passed with zero warnings.
+- `npm run test` — passed, 53 files and 378 tests.
+- `npm run test:coverage` — passed, thresholds met.
+- `npm run build` — passed.
+
+Residual notes:
+
+- A first full `npm run test` attempt was run in parallel with `npm run build` and one existing test timed out; rerunning the test suite alone passed cleanly.
