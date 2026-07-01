@@ -204,6 +204,40 @@
         "external_integration": false,
         "business_critical_calculation": true
       }
+    },
+    {
+      "id": "ZIN-SDD-013",
+      "slug": "e2e-functional-flow-coverage",
+      "description": "Alinear la suite E2E funcional con las rutas reales del flujo comercial y aislarla de artefactos locales o snapshots visuales.",
+      "status": "done",
+      "sdd": true,
+      "priority": "high",
+      "risk": {
+        "data_schema": false,
+        "pii": false,
+        "auth_rls": true,
+        "public_surface": true,
+        "cron_or_service_role": false,
+        "external_integration": false,
+        "business_critical_calculation": false
+      }
+    },
+    {
+      "id": "ZIN-SDD-014",
+      "slug": "lead-analytics-helper-permission",
+      "description": "Corregir get_lead_analytics para usar el helper privado de admin tras el hardening de funciones publicas.",
+      "status": "in_progress",
+      "sdd": true,
+      "priority": "medium",
+      "risk": {
+        "data_schema": true,
+        "pii": false,
+        "auth_rls": true,
+        "public_surface": false,
+        "cron_or_service_role": false,
+        "external_integration": false,
+        "business_critical_calculation": false
+      }
     }
   ]
 }

@@ -9,18 +9,17 @@
  * the completed job status.
  */
 
-import { test, expect } from '@playwright/test';
-import path from 'node:path';
+import { test, expect, type Page, type TestInfo } from '@playwright/test';
 import fs from 'node:fs';
+import path from 'node:path';
 import { hasAgentCredentials } from './helpers/auth';
 import { interceptOcrWebhook } from './helpers/ocr-mock';
 
 // ── Fixture PDF (tiny 1-page blank — real OCR won't run, but upload is tested) ──
 
-function getFixturePdfPath(): string {
-    const fixturePath = path.join(__dirname, 'fixtures', 'sample-invoice.pdf');
+function getFixturePdfPath(testInfo: TestInfo): string {
+    const fixturePath = testInfo.outputPath('sample-invoice.pdf');
     if (!fs.existsSync(fixturePath)) {
-        // Create a minimal valid PDF if fixture is absent
         fs.mkdirSync(path.dirname(fixturePath), { recursive: true });
         // Minimal PDF that passes file-type check
         const minimalPdf = Buffer.from(
@@ -36,6 +35,13 @@ function getFixturePdfPath(): string {
     return fixturePath;
 }
 
+async function selectResidentialSegment(page: Page) {
+    const segmentButton = page.getByRole('button', { name: /cliente residencial/i });
+    if (await segmentButton.isVisible().catch(() => false)) {
+        await segmentButton.click();
+    }
+}
+
 test.beforeEach(async () => {
     if (!hasAgentCredentials()) {
         test.skip(true, 'Agent credentials not configured — skipping simulator tests');
@@ -45,45 +51,45 @@ test.beforeEach(async () => {
 test.describe('Simulator — file upload', () => {
     test('renders upload area on /dashboard/simulator', async ({ page }) => {
         await page.goto('/dashboard/simulator');
+        await selectResidentialSegment(page);
         // Upload area should be present (drop zone or file input)
-        const uploadArea = page
-            .locator('input[type="file"]')
-            .or(page.getByText(/arrastrar|subir|upload|factura/i).first());
-        await expect(uploadArea).toBeVisible({ timeout: 10_000 });
+        await expect(page.getByText(/arrastra tu factura aquí/i)).toBeVisible({ timeout: 10_000 });
+        await expect(page.locator('input[type="file"]')).toHaveCount(1);
     });
 
-    test('rejects non-PDF/image files with validation feedback', async ({ page }) => {
+    test('rejects non-PDF/image files with validation feedback', async ({ page }, testInfo) => {
         await interceptOcrWebhook(page);
         await page.goto('/dashboard/simulator');
+        await selectResidentialSegment(page);
 
-        // Create a .txt fixture to trigger validation
-        const txtPath = path.join(__dirname, 'fixtures', 'invalid.txt');
+        const txtPath = testInfo.outputPath('invalid.txt');
         if (!fs.existsSync(txtPath)) {
             fs.mkdirSync(path.dirname(txtPath), { recursive: true });
             fs.writeFileSync(txtPath, 'not a PDF');
         }
 
         const fileInput = page.locator('input[type="file"]');
-        if (await fileInput.isVisible()) {
+        if (await fileInput.count()) {
             await fileInput.setInputFiles(txtPath);
             // An error/warning should appear for unsupported file type
             const feedback = page
                 .getByText(/no admitido|invalid|formato|tipo de archivo/i)
                 .or(page.locator('[role="alert"]'));
-            await expect(feedback).toBeVisible({ timeout: 5_000 });
+            await expect(feedback.first()).toBeVisible({ timeout: 5_000 });
         }
     });
 
-    test('accepts a PDF file and shows processing state', async ({ page }) => {
+    test('accepts a PDF file and shows processing state', async ({ page }, testInfo) => {
         await interceptOcrWebhook(page);
         await page.goto('/dashboard/simulator');
+        await selectResidentialSegment(page);
 
         const fileInput = page.locator('input[type="file"]');
-        if (!await fileInput.isVisible()) {
+        if (!await fileInput.count()) {
             test.skip(true, 'No visible file input — simulator may use drag-and-drop only');
         }
 
-        await fileInput.setInputFiles(getFixturePdfPath());
+        await fileInput.setInputFiles(getFixturePdfPath(testInfo));
 
         // Processing indicator (spinner, loading message, or progress text) should appear
         const processingIndicator = page
@@ -91,12 +97,14 @@ test.describe('Simulator — file upload', () => {
             .or(page.locator('[data-testid="ocr-loading"]'))
             .or(page.locator('[role="progressbar"]').first());
 
-        await expect(processingIndicator).toBeVisible({ timeout: 15_000 });
+        await expect(processingIndicator.first()).toBeVisible({ timeout: 15_000 });
     });
 });
 
 test.describe('Simulator — OCR failure edge case', () => {
-    test('shows error state when OCR webhook is unavailable', async ({ page }) => {
+    test('shows error state when OCR webhook is unavailable', async ({ page }, testInfo) => {
+        test.skip(true, 'The OCR webhook is called server-side, so Playwright page.route cannot deterministically force this failure.');
+
         // Mock webhook to return 500
         await page.route('**/webhooks/ocr**', async (route) => {
             if (route.request().url().includes('/callback')) {
@@ -107,10 +115,11 @@ test.describe('Simulator — OCR failure edge case', () => {
         });
 
         await page.goto('/dashboard/simulator');
+        await selectResidentialSegment(page);
         const fileInput = page.locator('input[type="file"]');
-        if (!await fileInput.isVisible()) return;
+        if (!await fileInput.count()) return;
 
-        await fileInput.setInputFiles(getFixturePdfPath());
+        await fileInput.setInputFiles(getFixturePdfPath(testInfo));
 
         // Eventually shows an error (either immediately from the action or after timeout)
         const errorIndicator = page
