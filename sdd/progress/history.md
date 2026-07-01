@@ -320,3 +320,28 @@ Residual notes:
 - The migration was later applied to production after production migration history was reconciled; final production `db push --dry-run` returned `Remote database is up to date.`
 - The local repo is linked to production (`gmjgkzaxmkaggsyczwcm`) after verification.
 - The known Playwright webServer `DEP0190` warning still appears after successful E2E runs.
+
+## 2026-07-01 — alta-reject-modal-accessibility
+
+Status: done.
+
+Implemented:
+
+- Added ZIN-SDD-023 for the reject alta modal accessibility follow-up.
+- Added dialog semantics to the reject modal with `role="dialog"`, `aria-modal`, and `aria-labelledby`.
+- Associated the visible `Motivo` and `Nota (opcional)` labels with their select and textarea controls.
+- Updated the component regression to query the modal and fields by accessible role/name.
+
+Verification:
+
+- `npx vitest run src/features/admin/components/__tests__/ExpedienteAlta.test.tsx` — passed, 4 tests.
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npx tsc --noEmit` — passed.
+- `npm run lint` — passed.
+- `npm run test` — passed, 53 files and 377 tests.
+- `npm run test:coverage` — passed.
+- `npm run build` — passed.
+
+Residual notes:
+
+- Full browser validation of the live admin modal still depends on an authenticated admin session plus an existing alta expediente; the committed regression covers the accessible names and unchanged payload behavior deterministically.

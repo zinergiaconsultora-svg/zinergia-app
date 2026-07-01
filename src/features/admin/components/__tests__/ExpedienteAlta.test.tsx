@@ -195,8 +195,9 @@ describe('ExpedienteAlta', () => {
         const { unmount: unmountReject } = render(<ExpedienteAlta expediente={expediente()} onRefresh={onRejectRefresh} />);
 
         fireEvent.click(screen.getByRole('button', { name: /rechazar alta/i }));
-        fireEvent.change(screen.getByRole('combobox'), { target: { value: 'deuda_pendiente' } });
-        fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Factura pendiente' } });
+        expect(screen.getByRole('dialog', { name: /rechazar alta/i })).toBeTruthy();
+        fireEvent.change(screen.getByLabelText(/motivo/i), { target: { value: 'deuda_pendiente' } });
+        fireEvent.change(screen.getByLabelText(/nota \(opcional\)/i), { target: { value: 'Factura pendiente' } });
         fireEvent.click(screen.getByRole('button', { name: /confirmar rechazo/i }));
 
         await waitFor(() => {
