@@ -228,10 +228,13 @@ export async function requestAlta(proposalId: string): Promise<{ ok: boolean; er
     // Guard: consent must be confirmed first
     const { data: proposal } = await supabase
         .from('proposals')
-        .select('alta_status, consent_confirmed_at')
+        .select('status, alta_status, consent_confirmed_at')
         .eq('id', proposalId)
         .single();
 
+    if (proposal?.status !== 'accepted') {
+        return { ok: false, error: 'Solo se puede solicitar el alta de una propuesta aceptada.' };
+    }
     if (!proposal?.consent_confirmed_at) {
         return { ok: false, error: 'El consentimiento del cliente no está confirmado.' };
     }
@@ -247,6 +250,7 @@ export async function requestAlta(proposalId: string): Promise<{ ok: boolean; er
             alta_requested_by: user.id,
         })
         .eq('id', proposalId)
+        .eq('status', 'accepted')
         .eq('alta_status', 'lista_admin')
         .select('id');
 
@@ -275,6 +279,7 @@ export async function completeAlta(proposalId: string): Promise<{ ok: boolean; e
             alta_completada_by: user.id,
         })
         .eq('id', proposalId)
+        .eq('status', 'accepted')
         .eq('alta_status', 'en_alta')
         .select('id');
 
@@ -320,6 +325,7 @@ export async function rejectAlta(input: z.infer<typeof rejectSchema>): Promise<{
             alta_rejection_note: note ?? null,
         })
         .eq('id', proposalId)
+        .eq('status', 'accepted')
         .in('alta_status', ['pendiente_consent', 'lista_admin', 'en_alta'])
         .select('id');
 
@@ -345,10 +351,13 @@ export async function reopenAlta(proposalId: string): Promise<{ ok: boolean; err
 
     const { data: proposal } = await supabase
         .from('proposals')
-        .select('alta_status, consent_confirmed_at')
+        .select('status, alta_status, consent_confirmed_at')
         .eq('id', proposalId)
         .single();
 
+    if (proposal?.status !== 'accepted') {
+        return { ok: false, error: 'Solo se pueden reabrir altas de propuestas aceptadas.' };
+    }
     if (proposal?.alta_status !== 'rechazada') {
         return { ok: false, error: 'Solo se pueden reabrir expedientes rechazados.' };
     }
@@ -365,6 +374,7 @@ export async function reopenAlta(proposalId: string): Promise<{ ok: boolean; err
             alta_rejection_note: null,
         })
         .eq('id', proposalId)
+        .eq('status', 'accepted')
         .eq('alta_status', 'rechazada')
         .select('id');
 
