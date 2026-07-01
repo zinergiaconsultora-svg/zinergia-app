@@ -345,3 +345,23 @@ Verification:
 Residual notes:
 
 - Full browser validation of the live admin modal still depends on an authenticated admin session plus an existing alta expediente; the committed regression covers the accessible names and unchanged payload behavior deterministically.
+
+## 2026-07-01 — vercel-archive-deploy
+
+Status: done.
+
+Implemented:
+
+- Investigated the failed post-merge production deploy for PR #74.
+- Confirmed the failure was Vercel CLI upload limiting: `api-upload-free` over 5000 uploaded files.
+- Added `--archive=tgz` to both production and preview `vercel deploy --prebuilt` commands in GitHub Actions, following Vercel CLI docs.
+
+Verification:
+
+- `rg -n "vercel deploy --prebuilt" .github/workflows/ci-cd.yml` — both commands include `--archive=tgz`.
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- PR #75 CI passed lint/typecheck, unit coverage, security, build and Vercel preview.
+
+Residual notes:
+
+- The definitive production deploy verification happens on the post-merge `main` workflow because production deploy is intentionally skipped on PR branches.

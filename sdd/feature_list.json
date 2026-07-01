@@ -391,6 +391,23 @@
         "external_integration": false,
         "business_critical_calculation": false
       }
+    },
+    {
+      "id": "ZIN-SDD-024",
+      "slug": "vercel-archive-deploy",
+      "description": "Evitar fallos de deploy Vercel por limite de uploads usando archivo tgz en CI.",
+      "status": "done",
+      "sdd": true,
+      "priority": "high",
+      "risk": {
+        "data_schema": false,
+        "pii": false,
+        "auth_rls": false,
+        "public_surface": false,
+        "cron_or_service_role": false,
+        "external_integration": true,
+        "business_critical_calculation": false
+      }
     }
   ]
 }
