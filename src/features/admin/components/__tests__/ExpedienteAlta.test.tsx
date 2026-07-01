@@ -232,4 +232,32 @@ describe('ExpedienteAlta', () => {
         });
         expect(onReopenRefresh).toHaveBeenCalledTimes(1);
     });
+
+    it('keeps keyboard focus inside the rejection modal and closes it with Escape', async () => {
+        mocks.getAltaEvents.mockResolvedValue([]);
+        const onRefresh = vi.fn();
+        render(<ExpedienteAlta expediente={expediente()} onRefresh={onRefresh} />);
+
+        const rejectButton = screen.getByRole('button', { name: /rechazar alta/i });
+        fireEvent.click(rejectButton);
+
+        const dialog = screen.getByRole('dialog', { name: /rechazar alta/i });
+        const reasonSelect = screen.getByLabelText(/motivo/i);
+        const confirmButton = screen.getByRole('button', { name: /confirmar rechazo/i });
+
+        await waitFor(() => {
+            expect(document.activeElement).toBe(reasonSelect);
+        });
+
+        fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true });
+        expect(document.activeElement).toBe(confirmButton);
+
+        fireEvent.keyDown(dialog, { key: 'Tab' });
+        expect(document.activeElement).toBe(reasonSelect);
+
+        fireEvent.keyDown(dialog, { key: 'Escape' });
+        expect(screen.queryByRole('dialog', { name: /rechazar alta/i })).toBeNull();
+        expect(mocks.rejectAlta).not.toHaveBeenCalled();
+        expect(document.activeElement).toBe(rejectButton);
+    });
 });

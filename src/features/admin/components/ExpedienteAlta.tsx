@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, type KeyboardEvent, type RefObject } from 'react';
 import {
     CheckCircle2,
     Copy,
@@ -161,15 +161,60 @@ interface RejectModalProps {
     proposalId: string;
     onClose: () => void;
     onRejected: () => void;
+    openerRef: RefObject<HTMLButtonElement | null>;
 }
 
-function RejectModal({ proposalId, onClose, onRejected }: RejectModalProps) {
+function RejectModal({ proposalId, onClose, onRejected, openerRef }: RejectModalProps) {
     const [reason, setReason] = useState<RejectionReason>('otro');
     const [note, setNote] = useState('');
     const [loading, setLoading] = useState(false);
+    const dialogRef = useRef<HTMLDivElement | null>(null);
+    const reasonRef = useRef<HTMLSelectElement | null>(null);
     const titleId = 'reject-alta-title';
     const reasonId = 'reject-alta-reason';
     const noteId = 'reject-alta-note';
+
+    useEffect(() => {
+        const opener = openerRef.current;
+        reasonRef.current?.focus({ preventScroll: true });
+
+        return () => {
+            if (opener?.isConnected) {
+                opener.focus({ preventScroll: true });
+            }
+        };
+    }, [openerRef]);
+
+    function getFocusableElements(): HTMLElement[] {
+        return Array.from(
+            dialogRef.current?.querySelectorAll<HTMLElement>(
+                'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+            ) ?? [],
+        );
+    }
+
+    function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            onClose();
+            return;
+        }
+
+        if (event.key !== 'Tab') return;
+
+        const focusable = getFocusableElements();
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (!first || !last) return;
+
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    }
 
     async function submit() {
         setLoading(true);
@@ -185,9 +230,11 @@ function RejectModal({ proposalId, onClose, onRejected }: RejectModalProps) {
 
     return (
         <div
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
+            onKeyDown={handleKeyDown}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
         >
             <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-rose-100 p-6 flex flex-col gap-4">
@@ -199,6 +246,7 @@ function RejectModal({ proposalId, onClose, onRejected }: RejectModalProps) {
                 <div className="flex flex-col gap-1">
                     <label htmlFor={reasonId} className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Motivo</label>
                     <select
+                        ref={reasonRef}
                         id={reasonId}
                         value={reason}
                         onChange={e => setReason(e.target.value as RejectionReason)}
@@ -266,6 +314,7 @@ export default function ExpedienteAlta({ expediente, onRefresh }: ExpedienteAlta
     const [sepaChecked, setSepaChecked] = useState(!!expediente.sepaConfirmedAt);
     const [events, setEvents] = useState<AltaEvent[]>([]);
     const [showHistory, setShowHistory] = useState(false);
+    const rejectButtonRef = useRef<HTMLButtonElement | null>(null);
 
     const refreshEvents = useCallback(async () => {
         try {
@@ -332,6 +381,7 @@ export default function ExpedienteAlta({ expediente, onRefresh }: ExpedienteAlta
             {showReject && (
                 <RejectModal
                     proposalId={expediente.id}
+                    openerRef={rejectButtonRef}
                     onClose={() => setShowReject(false)}
                     onRejected={() => {
                         setShowReject(false);
@@ -355,6 +405,7 @@ export default function ExpedienteAlta({ expediente, onRefresh }: ExpedienteAlta
                         </div>
                         {!isTerminal && (
                             <button
+                                ref={rejectButtonRef}
                                 type="button"
                                 onClick={() => setShowReject(true)}
                                 className="text-[11px] font-medium text-rose-400 hover:text-rose-600 transition-colors"
