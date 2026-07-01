@@ -1000,6 +1000,21 @@ async function generateFollowUpTasks(
     }
 
     if (data.status === 'accepted') {
+        try {
+            const { data: existingDocumentationTask } = await supabase
+                .from('tasks')
+                .select('id')
+                .eq('proposal_id', data.proposalId)
+                .eq('type', 'documentation')
+                .eq('auto_generated', true)
+                .limit(1)
+                .maybeSingle();
+
+            if (existingDocumentationTask) return;
+        } catch {
+            // Non-critical: task creation is best-effort and must not block acceptance.
+        }
+
         tasks.push({
             agent_id: data.agentId,
             franchise_id: data.franchiseId,
