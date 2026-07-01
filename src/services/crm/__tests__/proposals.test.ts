@@ -175,3 +175,66 @@ describe('proposalService.logSimulation OCR provenance', () => {
         expect(fromMock).not.toHaveBeenCalledWith('ocr_jobs');
     });
 });
+
+describe('proposalService.saveProposal simulator persistence', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        getFranchiseIdMock.mockResolvedValue('franchise-1');
+        getUserMock.mockResolvedValue({ data: { user: { id: 'agent-1' } } });
+        resolveOcrHandoffContextActionMock.mockResolvedValue(null);
+    });
+
+    it('preserves OCR provenance and pricing snapshots for secondary simulator proposals', async () => {
+        const proposalInsert = insertSelectSingle({
+            data: { id: 'proposal-2', client_id: 'client-1' },
+            error: null,
+        });
+        fromMock.mockImplementation((table: string) => {
+            if (table === 'proposals') return proposalInsert;
+            throw new Error(`Unexpected table ${table}`);
+        });
+        const { proposalService } = await import('../proposals');
+        const ocrJobId = '33333333-3333-4333-8333-333333333333';
+
+        await proposalService.saveProposal({
+            client_id: 'client-1',
+            ocr_job_id: ocrJobId,
+            status: 'draft',
+            offer_snapshot: bestResult.offer,
+            calculation_data: ({
+                ...invoiceData,
+                calculation_audit: bestResult.calculation_audit,
+            } as unknown) as InvoiceData,
+            current_annual_cost: bestResult.current_annual_cost,
+            offer_annual_cost: bestResult.offer_annual_cost,
+            annual_savings: bestResult.annual_savings,
+            savings_percent: bestResult.savings_percent,
+            optimization_result: bestResult.optimization_result,
+        });
+
+        expect(resolveOcrHandoffContextActionMock).toHaveBeenCalledWith(ocrJobId);
+        expect(proposalInsert.insert).toHaveBeenCalledWith(expect.objectContaining({
+            client_id: 'client-1',
+            franchise_id: 'franchise-1',
+            agent_id: 'agent-1',
+            ocr_job_id: ocrJobId,
+            status: 'draft',
+            offer_snapshot: expect.objectContaining({
+                marketer_name: 'Nueva Energia',
+                tariff_name: 'Plan Fijo',
+                snapshot_at: expect.any(String),
+                price_fingerprint: expect.any(String),
+            }),
+            source_tariff_id: bestResult.offer.id,
+            price_snapshot: expect.objectContaining({
+                source: 'simulator',
+                tariff_id: bestResult.offer.id,
+                annual_savings: bestResult.annual_savings,
+            }),
+            price_snapshot_at: expect.any(String),
+            pricing_status: 'current',
+            proposal_version: 1,
+        }));
+        expect(invalidateCacheByPrefixMock).toHaveBeenCalledWith('dashboard_stats_');
+    });
+});
