@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:prod-smoke": "powershell -ExecutionPolicy Bypass -File scripts/e2e-prod-smoke.ps1",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:public-mutating": "playwright test e2e/proposal-public-mutating.spec.ts --project=chromium --no-deps --reporter=list",
