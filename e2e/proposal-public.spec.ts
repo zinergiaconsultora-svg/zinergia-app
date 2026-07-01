@@ -9,7 +9,7 @@
  *  - Valid staging fixture proposal renders accept button + savings data
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/runtime';
 
 const STAGING_PROJECT_REF = 'dnzytocmtmnptndeczny';
 const STAGING_FIXTURE_TOKEN_PREFIX = 'e2e-';

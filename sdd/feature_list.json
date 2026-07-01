@@ -255,6 +255,23 @@
         "external_integration": false,
         "business_critical_calculation": false
       }
+    },
+    {
+      "id": "ZIN-SDD-016",
+      "slug": "simulator-pageerror-guard",
+      "description": "Hacer que la suite E2E falle ante errores runtime del navegador, incluyendo la subida invalida en simulador.",
+      "status": "done",
+      "sdd": true,
+      "priority": "medium",
+      "risk": {
+        "data_schema": false,
+        "pii": false,
+        "auth_rls": false,
+        "public_surface": false,
+        "cron_or_service_role": false,
+        "external_integration": false,
+        "business_critical_calculation": false
+      }
     }
   ]
 }

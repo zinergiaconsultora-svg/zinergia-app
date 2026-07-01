@@ -6,7 +6,7 @@
  * Runs with authenticated agent storage state.
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/runtime';
 import { hasAgentCredentials } from './helpers/auth';
 
 test.beforeEach(async () => {

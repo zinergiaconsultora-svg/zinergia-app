@@ -5,7 +5,8 @@
  * Skips gracefully when credentials are not configured.
  */
 
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect } from './fixtures/runtime';
 import { hasAgentCredentials } from './helpers/auth';
 
 const commercialNav = [

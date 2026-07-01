@@ -5,7 +5,8 @@
  * E2E_RUN_MUTATING_PUBLIC_PROPOSAL=1.
  */
 
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './fixtures/runtime';
 import { execFileSync } from 'node:child_process';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 

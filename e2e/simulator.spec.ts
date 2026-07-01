@@ -9,7 +9,8 @@
  * the completed job status.
  */
 
-import { test, expect, type Page, type TestInfo } from '@playwright/test';
+import { type Page, type TestInfo } from '@playwright/test';
+import { test, expect } from './fixtures/runtime';
 import fs from 'node:fs';
 import path from 'node:path';
 import { hasAgentCredentials } from './helpers/auth';

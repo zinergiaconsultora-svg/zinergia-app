@@ -16,7 +16,7 @@
  *   pnpm test:e2e
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/runtime';
 import AxeBuilder from '@axe-core/playwright';
 import { hasAgentCredentials } from './helpers/auth';
 
