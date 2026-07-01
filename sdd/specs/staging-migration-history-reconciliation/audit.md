@@ -10,7 +10,7 @@ Status: `done`
 
 The repo has a complete local migration source under `supabase/migrations/`. Staging migration history was reconciled on 2026-07-01 and the pending local migrations were applied to staging.
 
-No production migration history was mutated. After staging verification, the repo was linked back to production (`gmjgkzaxmkaggsyczwcm`).
+After PR #61 was merged, production history was reconciled with the same controlled process: remote-only missing-source versions were reverted, already-materialized local versions were marked applied after a read-only schema check, and only the new trigger fix migration was pushed.
 
 ## Local Source Of Truth
 
@@ -70,9 +70,40 @@ During the push, staging had a few pre-existing objects. These were resolved by 
 - `npx supabase db push --dry-run --linked` returned `Remote database is up to date.`
 - The repo was relinked back to production with `npx supabase link --project-ref gmjgkzaxmkaggsyczwcm`.
 
+## Production Reconciliation
+
+Target:
+
+- Project ref: `gmjgkzaxmkaggsyczwcm`
+- Project name: `proyectozinergia`
+
+Production initially had remote-only history rows that were not represented in `supabase/migrations/`. They were removed from production history with `npx supabase migration repair --status reverted ... --linked`.
+
+After that repair, production still had local-only versions from `20260616090000` through `20260626220000` because later `20260629...` migrations were already present remotely. A read-only schema check verified the expected columns, tables and functions from those intermediate migrations existed, so the following versions were marked applied rather than re-running potentially destructive SQL:
+
+```text
+20260616090000 20260616120000 20260617120000 20260623120000 20260623140000
+20260623150000 20260623160000 20260623170000 20260623180000 20260623190000
+20260624100347 20260624140000 20260624150000 20260624160000 20260625000000
+20260625100000 20260626000000 20260626100000 20260626200000 20260626210000
+20260626220000
+```
+
+Then `npx supabase db push --dry-run --linked` listed only:
+
+```text
+20260630230425_fix_auto_switch_event_marketer.sql
+```
+
+That migration was applied to production with `npx supabase db push --linked`.
+
+Final production verification:
+
+- `npx supabase db push --dry-run --linked` returned `Remote database is up to date.`
+
 ## Security Notes
 
 - Do not paste Supabase access tokens in chat.
 - Any token pasted in chat should be revoked and replaced.
 - Do not commit `.env.staging.local`.
-- Do not run `migration repair` against production in this feature.
+- Run production `migration repair` only after a read-only schema check proves the affected local migrations are already materialized.
