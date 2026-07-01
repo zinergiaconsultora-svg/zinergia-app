@@ -272,6 +272,23 @@
         "external_integration": false,
         "business_critical_calculation": false
       }
+    },
+    {
+      "id": "ZIN-SDD-017",
+      "slug": "ocr-callback-commercial-fixture",
+      "description": "Validar en staging que el callback OCR completa un job y crea el lead comercial con PII protegida y segmento correcto.",
+      "status": "done",
+      "sdd": true,
+      "priority": "high",
+      "risk": {
+        "data_schema": false,
+        "pii": true,
+        "auth_rls": true,
+        "public_surface": false,
+        "cron_or_service_role": true,
+        "external_integration": false,
+        "business_critical_calculation": true
+      }
     }
   ]
 }
