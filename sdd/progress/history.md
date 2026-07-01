@@ -472,3 +472,29 @@ Verification:
 Residual notes:
 
 - This is a presentation-only UX improvement; no schema, Supabase, or auth behavior changed.
+
+## 2026-07-01 — proposals-empty-guidance
+
+Status: done.
+
+Implemented:
+
+- Added ZIN-SDD-029 for commercial proposals empty-state guidance.
+- Added `buildProposalsEmptyState(...)` to distinguish first proposal creation, active filters, and empty status tabs.
+- Updated `/dashboard/proposals` empty state to guide agents toward simulator + CRM save when no proposals exist.
+- Preserved existing filter clearing, simulator navigation, view modes, bulk actions, CSV export, and proposal navigation.
+- Added focused tests for the copy selection helper.
+
+Verification:
+
+- `npx vitest run src/app/dashboard/proposals/__tests__/emptyState.test.ts` — passed, 3 tests.
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npx tsc --noEmit` — passed.
+- `npm run lint` — passed with zero warnings.
+- `npm run test` — passed, 55 files and 384 tests.
+- `npm run test:coverage` — passed, thresholds met.
+- `npm run build` — passed.
+
+Residual notes:
+
+- This is a presentation-only UX improvement; no schema, Supabase, auth, or proposal mutation behavior changed.
