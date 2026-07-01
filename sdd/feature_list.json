@@ -442,6 +442,23 @@
         "external_integration": true,
         "business_critical_calculation": false
       }
+    },
+    {
+      "id": "ZIN-SDD-027",
+      "slug": "security-scan-advisory-warning",
+      "description": "Mostrar npm audit advisory como warning controlado sin anotacion roja falsa en CI.",
+      "status": "done",
+      "sdd": true,
+      "priority": "medium",
+      "risk": {
+        "data_schema": false,
+        "pii": false,
+        "auth_rls": false,
+        "public_surface": false,
+        "cron_or_service_role": false,
+        "external_integration": true,
+        "business_critical_calculation": false
+      }
     }
   ]
 }

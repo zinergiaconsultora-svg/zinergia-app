@@ -419,3 +419,30 @@ Residual notes:
 
 - Documentation check: current GitHub Actions examples use newer checkout/setup-node actions, `actions/checkout` v5+ uses Node 24 internally, and `actions/setup-node` v6 preserves `node-version` plus npm cache inputs.
 - Next.js 16 requires Node.js `>=20.9.0`; this iteration intentionally did not change the app command runtime from `20.x`.
+
+## 2026-07-01 — security-scan-advisory-warning
+
+Status: done.
+
+Implemented:
+
+- Added ZIN-SDD-027 for cleaning the advisory npm audit display in CI.
+- Replaced the bare `npm audit --audit-level=high` advisory step with a shell block that captures the exit code.
+- Preserved the full npm audit output in logs.
+- Emits a GitHub Actions `::warning` annotation when audit finds high severity advisories.
+- Avoids the misleading failed-step annotation while keeping Trivy, SARIF upload, and deploy behavior unchanged.
+
+Verification:
+
+- `rg -n "Run npm audit|npm audit --audit-level=high|::warning|trivy-action|upload-sarif|vercel deploy --prebuilt|archive=tgz" .github/workflows/ci-cd.yml` — confirmed audit, warning, Trivy, SARIF, and deploy commands remain present.
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npx tsc --noEmit` — passed.
+- `npm run lint` — passed with zero warnings.
+- `npm run test` — passed, 53 files and 378 tests.
+- `npm run test:coverage` — passed, thresholds met.
+- `npm run build` — passed.
+
+Residual notes:
+
+- Documentation check: GitHub Actions workflow commands support `::warning` annotations; step exit codes determine failed vs passed step display.
+- PR CI is the definitive verification that the advisory warning replaces the previous failed-step annotation.
