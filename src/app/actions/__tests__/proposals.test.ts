@@ -170,4 +170,41 @@ describe('proposal status side effects', () => {
             }),
         ]);
     });
+
+    it('does not duplicate the accepted documentation task when side effects are retried', async () => {
+        const auth = { getUser: vi.fn(async () => ({ data: { user: { id: 'agent-1' } } })) };
+        const profileQueries = [
+            query({ data: { role: 'agent', franchise_id: 'franchise-1' }, error: null }),
+            query({ data: { franchise_id: 'franchise-1' }, error: null }),
+            query({ data: null, error: null }),
+            query({ data: [{ id: 'franchise-profile-1', role: 'franchise' }], error: null }),
+        ];
+        const proposalUpdate = query({ data: acceptedProposal, error: null });
+        const existingCommission = query({ data: { id: 'commission-1' }, error: null });
+        const openJob = query({ data: null, error: null });
+        const existingContract = query({ data: { id: 'contract-1' }, error: null });
+        const existingDocumentationTask = query({ data: { id: 'task-1' }, error: null });
+
+        const from = vi.fn((table: string) => {
+            if (table === 'profiles') return profileQueries.shift() ?? query({ data: null, error: null });
+            if (table === 'proposals') return proposalUpdate;
+            if (table === 'network_commissions') return existingCommission;
+            if (table === 'ocr_jobs') return openJob;
+            if (table === 'tasks') return existingDocumentationTask;
+            if (table === 'contracts') return existingContract;
+            return query({ error: null });
+        });
+
+        createClientMock.mockResolvedValue({ auth, from });
+
+        const { updateProposalStatusAction } = await import('../proposals');
+
+        await updateProposalStatusAction('proposal-1', 'accepted');
+
+        expect(existingDocumentationTask.select).toHaveBeenCalledWith('id');
+        expect(existingDocumentationTask.eq).toHaveBeenCalledWith('proposal_id', 'proposal-1');
+        expect(existingDocumentationTask.eq).toHaveBeenCalledWith('type', 'documentation');
+        expect(existingDocumentationTask.eq).toHaveBeenCalledWith('auto_generated', true);
+        expect(existingDocumentationTask.insert).not.toHaveBeenCalled();
+    });
 });
