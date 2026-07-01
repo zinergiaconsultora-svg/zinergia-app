@@ -11,11 +11,28 @@
 
 import { test, expect } from '@playwright/test';
 
+const STAGING_PROJECT_REF = 'dnzytocmtmnptndeczny';
+const STAGING_FIXTURE_TOKEN_PREFIX = 'e2e-';
+
 // Override: public proposal page is unauthenticated
 test.use({ storageState: { cookies: [], origins: [] } });
 
 function publicProposalToken(): string | undefined {
     return process.env.E2E_PUBLIC_PROPOSAL_TOKEN ?? process.env.E2E_PROPOSAL_TOKEN;
+}
+
+function isStagingRun(): boolean {
+    const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? '';
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+    if (/zinergia(?:-app)?\.vercel\.app|www\.zinergia\.es/.test(baseUrl)) return false;
+    return baseUrl.includes('localhost') || supabaseUrl.includes(STAGING_PROJECT_REF);
+}
+
+function canUsePublicFixtureToken(): boolean {
+    const token = publicProposalToken();
+    if (!token) return false;
+    if (!token.startsWith(STAGING_FIXTURE_TOKEN_PREFIX)) return true;
+    return isStagingRun();
 }
 
 test.describe('Public proposal — invalid token', () => {
@@ -37,6 +54,9 @@ test.describe('Public proposal — valid staging fixture token', () => {
     test.beforeEach(async () => {
         if (!publicProposalToken()) {
             test.skip(true, 'E2E_PUBLIC_PROPOSAL_TOKEN not set. Run npm run test:e2e:seed-public-proposal against staging.');
+        }
+        if (!canUsePublicFixtureToken()) {
+            test.skip(true, 'Staging fixture proposal tokens are not used against production.');
         }
     });
 
