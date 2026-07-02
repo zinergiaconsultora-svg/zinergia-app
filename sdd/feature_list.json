@@ -595,6 +595,23 @@
         "external_integration": false,
         "business_critical_calculation": true
       }
+    },
+    {
+      "id": "ZIN-SDD-036",
+      "slug": "simulator-persistence-warning",
+      "description": "Avisar al comercial cuando la comparativa se calcula pero no se puede guardar la propuesta en CRM.",
+      "status": "done",
+      "sdd": true,
+      "priority": "high",
+      "risk": {
+        "data_schema": false,
+        "pii": true,
+        "auth_rls": false,
+        "public_surface": false,
+        "cron_or_service_role": false,
+        "external_integration": false,
+        "business_critical_calculation": true
+      }
     }
   ]
 }

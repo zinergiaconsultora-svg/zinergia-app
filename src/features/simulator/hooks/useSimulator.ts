@@ -42,6 +42,7 @@ interface SimulatorState {
     supervisedRecommendation?: SupervisedRecommendationResult;
     pdfUrl: string | null;
     savedProposalId: string | null;
+    persistenceWarning: string | null;
 
     // Fase 2: corrección humana en el loop
     ocrJobId: string | null;
@@ -64,6 +65,7 @@ type SimulatorAction =
     | { type: 'SET_SUPERVISED_RECOMMENDATION'; payload: SupervisedRecommendationResult | undefined }
     | { type: 'SET_PDF_URL'; payload: string | null }
     | { type: 'SET_SAVED_PROPOSAL_ID'; payload: string }
+    | { type: 'SET_PERSISTENCE_WARNING'; payload: string | null }
     | { type: 'SET_OCR_JOB_ID'; payload: string }
     | { type: 'SET_OCR_DATA_CONFIRMED' }
     | { type: 'SET_SEGMENT'; payload: ClientSegment | null }
@@ -91,6 +93,7 @@ const initialState: SimulatorState = {
     supervisedRecommendation: undefined,
     pdfUrl: null,
     savedProposalId: null,
+    persistenceWarning: null,
     ocrJobId: null,
     originalInvoiceData: null,
     ocrDataConfirmed: false,
@@ -99,7 +102,7 @@ const initialState: SimulatorState = {
 function simulatorReducer(state: SimulatorState, action: SimulatorAction): SimulatorState {
     switch (action.type) {
         case 'START_ANALYSIS':
-            return { ...state, isAnalyzing: true, uploadError: null, isMockMode: false };
+            return { ...state, isAnalyzing: true, uploadError: null, persistenceWarning: null, isMockMode: false };
         case 'SET_INVOICE_DATA': {
             // Usado exclusivamente para la llegada del resultado OCR.
             // Fuerza step 2, guarda el snapshot original y detiene el análisis.
@@ -154,6 +157,8 @@ function simulatorReducer(state: SimulatorState, action: SimulatorAction): Simul
             return { ...state, pdfUrl: action.payload };
         case 'SET_SAVED_PROPOSAL_ID':
             return { ...state, savedProposalId: action.payload };
+        case 'SET_PERSISTENCE_WARNING':
+            return { ...state, persistenceWarning: action.payload };
         case 'RESET':
             // Clean up PDF URL if it exists? We can't do side effects here easily.
             return { ...initialState };
@@ -523,6 +528,10 @@ export function useSimulator() {
                     } catch (persistError) {
                         const err = persistError as { message?: string; code?: string; details?: string; hint?: string };
                         console.error('[Simulator] Failed to persist proposals:', err?.message, '| code:', err?.code, '| details:', err?.details, '| hint:', err?.hint);
+                        dispatch({
+                            type: 'SET_PERSISTENCE_WARNING',
+                            payload: 'La comparativa se ha calculado, pero no se pudo guardar en CRM. Revisa la conexión e intenta guardar la propuesta de nuevo.',
+                        });
                     }
                 }
 
