@@ -612,6 +612,23 @@
         "external_integration": false,
         "business_critical_calculation": true
       }
+    },
+    {
+      "id": "ZIN-SDD-037",
+      "slug": "security-dependency-cleanup",
+      "description": "Eliminar advisories high de dependencias manteniendo importacion/exportacion Excel y sin relajar CI.",
+      "status": "done",
+      "sdd": true,
+      "priority": "high",
+      "risk": {
+        "data_schema": false,
+        "pii": true,
+        "auth_rls": false,
+        "public_surface": false,
+        "cron_or_service_role": false,
+        "external_integration": true,
+        "business_critical_calculation": false
+      }
     }
   ]
 }

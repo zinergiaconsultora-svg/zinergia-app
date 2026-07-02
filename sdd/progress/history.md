@@ -679,3 +679,30 @@ Residual notes:
 
 - No schema changes.
 - The warning tells the user to retry saving instead of implying the proposal is safely persisted.
+
+## 2026-07-02 — ZIN-SDD-037 Security dependency cleanup
+
+Status: done.
+
+Implemented:
+
+- Added SDD requirements, design, and tasks for dependency advisory cleanup.
+- Replaced vulnerable direct `xlsx` dependency with `@e965/xlsx`.
+- Updated Excel import/export call sites to use the maintained compatible package.
+- Applied safe patch updates for Next.js and ESLint tooling.
+
+Verification:
+
+- `npm audit --audit-level=high` — passed, 0 vulnerabilities.
+- `npm audit` — passed, 0 vulnerabilities.
+- `npm ls postcss xlsx @e965/xlsx next eslint eslint-config-next --all` — confirmed `xlsx` removed, `@e965/xlsx@0.20.3`, `next@16.2.10`, `eslint@9.39.4`, `eslint-config-next@16.2.10`, and `postcss@8.5.16` via override.
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npx tsc --noEmit` — passed.
+- `npm run lint` — passed.
+- `npm run test:coverage` — passed, 59 files and 395 tests; coverage thresholds passed.
+- `npm run build` — passed.
+
+Residual notes:
+
+- No schema changes.
+- CI security visibility remains unchanged; this work removes the advisory instead of suppressing it.

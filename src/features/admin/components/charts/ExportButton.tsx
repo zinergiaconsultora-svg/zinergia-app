@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import * as XLSX from 'xlsx';
+import * as XLSX from '@e965/xlsx';
 import type { TimeSeriesPoint, ProposalTimeSeriesPoint, AgentRankingEntry } from '@/app/actions/admin';
 
 interface Props {
