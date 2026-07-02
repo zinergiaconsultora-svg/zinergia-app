@@ -83,7 +83,7 @@ export function TariffExcelImportModal({ supplyType, onClose, onSuccess }: Props
     const processFile = useCallback(async (file: File) => {
         setParseError(null)
         try {
-            const { read, utils } = await import('xlsx')
+            const { read, utils } = await import('@e965/xlsx')
             const buffer = await file.arrayBuffer()
             const wb = read(buffer)
             const ws = wb.Sheets[wb.SheetNames[0]]

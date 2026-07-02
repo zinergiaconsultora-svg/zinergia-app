@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { Client, ClientStatus } from '@/types/crm';
 import { updateClientStatusBulk, deleteClientsBulk } from '@/app/actions/crm';
-import * as XLSX from 'xlsx';
+import * as XLSX from '@e965/xlsx';
 
 interface Props {
     clients: Client[];

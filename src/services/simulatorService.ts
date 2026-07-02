@@ -481,7 +481,7 @@ export async function exportResultsToExcel(
     invoiceData: InvoiceData,
     results: SavingsResult[]
 ): Promise<void> {
-    const XLSX = await import('xlsx');
+    const XLSX = await import('@e965/xlsx');
 
     // ── Sheet 1: Resumen del cliente ────────────────────────────────────────
     const totalKwh =
