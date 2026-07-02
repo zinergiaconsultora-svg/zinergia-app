@@ -6,6 +6,7 @@ import { InvoiceWithAgent, InvoiceStatus } from '@/types/crm';
 import { getIssuedInvoicesAction, getInvoiceStatsAction, issueInvoiceAction, cancelInvoiceAction, markInvoicePaidAction, getUninvoicedCommissionsAction, generateInvoiceAction } from '@/app/actions/invoicing';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { toast } from 'sonner';
+import { buildInvoicesEmptyState, buildUninvoicedCommissionsEmptyState } from './emptyState';
 
 const statusConfig: Record<InvoiceStatus, { label: string; color: string; bg: string }> = {
     draft: { label: 'Borrador', color: 'text-slate-700', bg: 'bg-slate-100' },
@@ -116,6 +117,8 @@ export default function InvoicingPage() {
         { label: 'Pagadas', value: stats.paid, icon: CheckCircle, color: 'text-emerald-600' },
         { label: 'Total Cobrado', value: `${stats.totalAmount.toFixed(0)}€`, icon: DollarSign, color: 'text-emerald-700' },
     ];
+    const invoicesEmptyState = buildInvoicesEmptyState(filter);
+    const commissionsEmptyState = buildUninvoicedCommissionsEmptyState();
 
     return (
         <div className="p-6 max-w-7xl mx-auto">
@@ -171,7 +174,8 @@ export default function InvoicingPage() {
             ) : invoices.length === 0 ? (
                 <div className="text-center p-12 text-slate-400">
                     <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>No hay facturas{filter !== 'all' ? ` con estado ${statusConfig[filter]?.label}` : ''}</p>
+                    <h2 className="text-base font-semibold text-slate-700">{invoicesEmptyState.title}</h2>
+                    <p className="mt-2 mx-auto max-w-md text-sm leading-6">{invoicesEmptyState.description}</p>
                 </div>
             ) : (
                 <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
@@ -227,7 +231,10 @@ export default function InvoicingPage() {
                         </div>
                         <div className="flex-1 overflow-y-auto p-6 space-y-3">
                             {uninvoicedCommissions.length === 0 ? (
-                                <p className="text-center text-slate-400 py-8">No hay comisiones pendientes de facturar</p>
+                                <div className="py-8 text-center text-slate-400">
+                                    <p className="text-sm font-semibold text-slate-600">{commissionsEmptyState.title}</p>
+                                    <p className="mx-auto mt-2 max-w-sm text-sm leading-6">{commissionsEmptyState.description}</p>
+                                </div>
                             ) : (
                                 uninvoicedCommissions.map((comm) => (
                                     <label key={comm.id} className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${selectedCommissions.has(comm.id) ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 hover:border-slate-300'}`}>

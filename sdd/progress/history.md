@@ -524,3 +524,30 @@ Verification:
 Residual notes:
 
 - This is a presentation-only UX improvement; no schema, Supabase, auth, or task mutation behavior changed.
+
+## 2026-07-02 — invoicing-empty-guidance
+
+Status: done.
+
+Implemented:
+
+- Added ZIN-SDD-031 for commercial invoicing empty-state guidance.
+- Added `buildInvoicesEmptyState(...)` to distinguish first invoice creation and empty invoice status filters.
+- Added `buildUninvoicedCommissionsEmptyState(...)` for the create-invoice modal when no commissions are selectable.
+- Updated `/dashboard/invoicing` empty states with operational guidance.
+- Preserved invoice fetching, error retry, filters, modal selection, generation, issue, cancel, and mark-paid behavior.
+- Added focused tests for the copy selection helpers.
+
+Verification:
+
+- `npx vitest run src/app/dashboard/invoicing/__tests__/emptyState.test.ts` — passed, 3 tests.
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npx tsc --noEmit` — passed.
+- `npm run lint` — passed with zero warnings.
+- `npm run test` — passed, 57 files and 390 tests.
+- `npm run test:coverage` — passed, thresholds met.
+- `npm run build` — passed.
+
+Residual notes:
+
+- This is a presentation-only UX improvement; no schema, Supabase, auth, invoice action, or commission calculation behavior changed.
