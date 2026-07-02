@@ -24,8 +24,8 @@ export const OPERATIONAL_QUEUES: OperationalQueue[] = [
     },
     {
         value: 'permanence_due',
-        label: 'Permanencia próxima',
-        description: 'Clientes que conviene revisar en 30 días',
+        label: 'Renovaciones',
+        description: 'Clientes que conviene revisar en 60 días',
     },
     {
         value: 'needs_review',

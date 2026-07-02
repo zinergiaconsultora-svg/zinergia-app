@@ -24,7 +24,8 @@ export type LeadAuditEventType =
     | 'drive_synced'
     | 'ocr_failed'
     | 'lead_reassigned'
-    | 'lead_reviewed';
+    | 'lead_reviewed'
+    | 'renewal_alert';
 
 export interface WriteLeadAuditEventInput {
     jobId: string;

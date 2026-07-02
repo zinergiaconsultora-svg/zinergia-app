@@ -12,7 +12,7 @@ const ALERTS: { key: keyof LeadAlerts; label: string; queue: string; Icon: typeo
     { key: 'ocr_failed', label: 'OCR fallido', queue: 'ocr_failed', Icon: AlertTriangle, active: 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100' },
     { key: 'drive_pending', label: 'Pendiente Drive', queue: 'drive_pending', Icon: CloudOff, active: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' },
     { key: 'needs_comparison', label: 'Sin comparar', queue: 'needs_comparison', Icon: Search, active: 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100' },
-    { key: 'permanence_due', label: 'Permanencias', queue: 'permanence_due', Icon: CalendarClock, active: 'border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100' },
+    { key: 'permanence_due', label: 'Renovaciones', queue: 'permanence_due', Icon: CalendarClock, active: 'border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100' },
     { key: 'needs_review', label: 'Por revisar', queue: 'needs_review', Icon: ClipboardList, active: 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100' },
     { key: 'cooling', label: 'Enfriándose', queue: 'cooling', Icon: Clock3, active: 'border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100' },
 ];

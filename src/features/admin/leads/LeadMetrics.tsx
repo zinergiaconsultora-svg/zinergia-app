@@ -38,7 +38,7 @@ export default function LeadMetrics({ metrics, ranking }: { metrics: Metrics; ra
                 <StatCard label="Conversión" value={`${rate}%`} icon={TrendingUp} tone="emerald" sub={`${metrics.won_total} ganados · ${metrics.lost_total} perdidos`} />
                 <StatCard label="Comisión generada" value={eur(metrics.commission_total)} icon={Euro} tone="amber" sub={`${eur(metrics.commission_this_month)} este mes`} />
                 <StatCard label="Pendientes Drive" value={metrics.pending_drive} icon={CloudOff} tone={metrics.pending_drive > 0 ? 'amber' : 'slate'} />
-                <StatCard label="Permanencias ≤30d" value={metrics.permanence_due_30} icon={CalendarClock} tone={metrics.permanence_due_30 > 0 ? 'rose' : 'slate'} />
+                <StatCard label="Renovaciones ≤60d" value={metrics.permanence_due_60} icon={CalendarClock} tone={metrics.permanence_due_60 > 0 ? 'rose' : 'slate'} />
             </div>
 
             <div className="grid lg:grid-cols-2 gap-4">
