@@ -527,6 +527,40 @@
         "external_integration": false,
         "business_critical_calculation": false
       }
+    },
+    {
+      "id": "ZIN-SDD-032",
+      "slug": "stale-ocr-pr-triage",
+      "description": "Cerrar PRs OCR antiguos no fusionables y registrar lo rescatable como trabajo SDD limpio.",
+      "status": "done",
+      "sdd": true,
+      "priority": "medium",
+      "risk": {
+        "data_schema": false,
+        "pii": false,
+        "auth_rls": false,
+        "public_surface": false,
+        "cron_or_service_role": false,
+        "external_integration": false,
+        "business_critical_calculation": false
+      }
+    },
+    {
+      "id": "ZIN-SDD-033",
+      "slug": "ocr-admin-observability",
+      "description": "Crear observabilidad OCR admin actual: metricas, errores frecuentes y tendencia reciente desde el esquema vigente.",
+      "status": "pending",
+      "sdd": true,
+      "priority": "medium",
+      "risk": {
+        "data_schema": false,
+        "pii": false,
+        "auth_rls": true,
+        "public_surface": false,
+        "cron_or_service_role": false,
+        "external_integration": false,
+        "business_critical_calculation": false
+      }
     }
   ]
 }

@@ -551,3 +551,27 @@ Verification:
 Residual notes:
 
 - This is a presentation-only UX improvement; no schema, Supabase, auth, invoice action, or commission calculation behavior changed.
+
+## 2026-07-02 — stale-ocr-pr-triage
+
+Status: done.
+
+Implemented:
+
+- Added ZIN-SDD-032 for triaging stale OCR PRs from the pre-SDD period.
+- Inspected open PRs `#1`, `#2`, `#3`, and `#4`.
+- Confirmed their diffs are too large for GitHub's PR diff API and include broad stale project state, generated logs, old workflow files, root SQL scripts, and unrelated app changes.
+- Decided not to merge or cherry-pick those branches blindly.
+- Added ZIN-SDD-033 as a clean pending follow-up for OCR admin observability, the only clearly useful missing idea found during triage.
+
+Verification:
+
+- `git status --short --branch` — clean before triage branch.
+- `gh pr list --state open --json number,title,headRefName,baseRefName,updatedAt,url,author` — confirmed PRs `#1` through `#4` were the only open PRs.
+- `gh pr view <number> --json ...` — inspected PR metadata, body, commits, and file lists.
+- `gh pr diff <number> --name-only` — failed with GitHub API `diff exceeded the maximum number of lines (20000)`, confirming the PRs are oversized.
+- `rg -n "idempotent|ocr_result|broadcast|rateLimit|postOcrToN8n|extractSyncDataFromResponse|getOcrMetrics|ocr-metrics|_confidence|OCR_WEBHOOK_URL|WEBHOOK_API_KEY" src supabase e2e sdd` — checked which OCR ideas already exist in current `main`.
+
+Residual notes:
+
+- Closing old PRs does not delete the branches. Any remaining valuable idea must be reimplemented from current `main` under SDD, starting with ZIN-SDD-033 if prioritized.
