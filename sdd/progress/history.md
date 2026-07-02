@@ -601,3 +601,29 @@ Residual notes:
 
 - No schema changes.
 - The panel intentionally avoids selecting `extracted_data`, `file_name`, `file_path`, CUPS, DNI, customer names, or invoice contents.
+
+## 2026-07-02 — ZIN-SDD-034 E2E staging CI dispatch
+
+Status: done.
+
+Implemented:
+
+- Added SDD requirements, design, and tasks for a manual staging E2E workflow.
+- Added `.github/workflows/e2e-staging.yml` using `workflow_dispatch`.
+- Added explicit secret validation before starting the staging app or Playwright.
+- Kept the default workflow read-safe; the mutating public proposal spec requires explicit input opt-in and a dedicated token.
+- Updated `e2e/README.md` with required secrets, staging guard, and artifact behavior.
+
+Verification:
+
+- GitHub Actions docs checked via Context7 for `workflow_dispatch`, secrets contexts, and artifact upload patterns.
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `node -e "import('yaml')..."` — parsed `.github/workflows/e2e-staging.yml` successfully.
+- `npx tsc --noEmit` — passed.
+- `npm run lint` — passed.
+- `npm run test` — passed, 58 files and 392 tests.
+- `npm run build` — passed.
+
+Residual notes:
+
+- The workflow cannot be executed until the required GitHub secrets are configured in the repository.
