@@ -627,3 +627,29 @@ Verification:
 Residual notes:
 
 - The workflow cannot be executed until the required GitHub secrets are configured in the repository.
+
+## 2026-07-02 — ZIN-SDD-035 Acceptance owner attribution
+
+Status: done.
+
+Implemented:
+
+- Added SDD requirements, design, and tasks for authenticated acceptance ownership.
+- Confirmed commissions, accepted documentation task, and contract already use the proposal owner.
+- Fixed authenticated proposal acceptance so status notification and client timeline use `proposal.agent_id ?? actorId`.
+- Preserved lead audit attribution to the authenticated actor.
+- Added a focused unit test for an admin accepting an agent-owned proposal.
+
+Verification:
+
+- `npx vitest run src/app/actions/__tests__/proposals.test.ts` — failed before the fix, then passed with 3 tests.
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npx tsc --noEmit` — passed.
+- `npm run lint` — passed.
+- `npm run test` — passed, 58 files and 393 tests.
+- `npm run build` — passed.
+
+Residual notes:
+
+- No schema changes.
+- Public proposal acceptance was not changed.
