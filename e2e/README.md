@@ -91,9 +91,27 @@ limpia `network_commissions`, `tasks` y `contracts` asociados a ese fixture.
 npx supabase db push --db-url "postgresql://postgres.dnzytocmtmnptndeczny:<STAGING_DB_PASSWORD>@aws-1-eu-central-1.pooler.supabase.com:5432/postgres"
 ```
 
-## CI (pendiente, opcional)
+## CI manual en GitHub Actions
 
-Para correrlos en GitHub Actions: añadir los `E2E_*`, la URL/anon de staging y
-las claves como **secrets**, y un job que despliegue una preview apuntando a
-staging y ejecute `npm run test:e2e` con `PLAYWRIGHT_BASE_URL` = la URL de la
-preview (`webServer` queda `undefined` cuando `CI=true`).
+El workflow `.github/workflows/e2e-staging.yml` se lanza manualmente desde
+Actions → **E2E Staging**. Por defecto ejecuta la suite read-safe contra staging.
+
+Secrets requeridos para la suite normal:
+
+- `STAGING_NEXT_PUBLIC_SUPABASE_URL`
+- `STAGING_NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `STAGING_APP_ENCRYPTION_KEY`
+- `STAGING_APP_ENCRYPTION_PEPPER`
+- `E2E_AGENT_EMAIL`
+- `E2E_AGENT_PASSWORD`
+- `E2E_ADMIN_EMAIL`
+- `E2E_ADMIN_PASSWORD`
+- `E2E_PUBLIC_PROPOSAL_TOKEN`
+
+Para ejecutar la prueba mutable hay que marcar el input
+`run_mutating_public_proposal=true` y configurar además
+`E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN`. El workflow valida que la URL de Supabase
+apunte al proyecto staging `dnzytocmtmnptndeczny` antes de arrancar la app.
+
+En cada ejecución se suben artifacts de Playwright, resultados y log del server
+cuando existen.

@@ -561,6 +561,23 @@
         "external_integration": false,
         "business_critical_calculation": false
       }
+    },
+    {
+      "id": "ZIN-SDD-034",
+      "slug": "e2e-staging-ci-dispatch",
+      "description": "Anadir un workflow manual de E2E contra staging con guardas para no ejecutar mutaciones por accidente.",
+      "status": "done",
+      "sdd": true,
+      "priority": "medium",
+      "risk": {
+        "data_schema": false,
+        "pii": false,
+        "auth_rls": true,
+        "public_surface": true,
+        "cron_or_service_role": false,
+        "external_integration": true,
+        "business_critical_calculation": false
+      }
     }
   ]
 }
