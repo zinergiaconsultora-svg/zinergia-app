@@ -207,4 +207,79 @@ describe('proposal status side effects', () => {
         expect(existingDocumentationTask.eq).toHaveBeenCalledWith('auto_generated', true);
         expect(existingDocumentationTask.insert).not.toHaveBeenCalled();
     });
+
+    it('keeps accepted proposal ownership on the proposal agent when admin accepts it', async () => {
+        const auth = { getUser: vi.fn(async () => ({ data: { user: { id: 'admin-1' } } })) };
+        const adminAcceptedProposal = {
+            ...acceptedProposal,
+            agent_id: 'agent-1',
+            franchise_id: 'franchise-1',
+        };
+        const profileQueries = [
+            query({ data: { role: 'admin', franchise_id: null }, error: null }),
+            query({ data: { franchise_id: 'franchise-1' }, error: null }),
+            query({ data: null, error: null }),
+            query({ data: [{ id: 'franchise-profile-1', role: 'franchise' }], error: null }),
+        ];
+        const proposalUpdate = query({ data: adminAcceptedProposal, error: null });
+        const existingCommission = query({ data: null, error: null });
+        const franchiseConfig = query({ data: { royalty_percent: null }, error: null });
+        const currentPoints = query({ data: { points: 10 }, error: null });
+        const openJob = query({
+            data: {
+                id: 'ocr-job-1',
+                closed: false,
+                lost: false,
+            },
+            error: null,
+        });
+        const existingContract = query({ data: null, error: null });
+        const tasksInsert = query({ error: null });
+        const contractInsert = query({ error: null });
+        const activityInsert = query({ error: null });
+
+        const from = vi.fn((table: string) => {
+            if (table === 'profiles') return profileQueries.shift() ?? query({ data: null, error: null });
+            if (table === 'proposals') return proposalUpdate;
+            if (table === 'network_commissions') return existingCommission;
+            if (table === 'franchise_config') return franchiseConfig;
+            if (table === 'user_points') return currentPoints;
+            if (table === 'ocr_jobs') return openJob;
+            if (table === 'tasks') return tasksInsert;
+            if (table === 'contracts') return existingContract.select.mock.calls.length > 0 ? existingContract : contractInsert;
+            if (table === 'client_activities') return activityInsert;
+            return query({ error: null });
+        });
+
+        createClientMock.mockResolvedValue({ auth, from });
+
+        const { updateProposalStatusAction } = await import('../proposals');
+
+        await updateProposalStatusAction('proposal-1', 'accepted');
+
+        expect(existingCommission.upsert).toHaveBeenCalledWith(expect.objectContaining({
+            proposal_id: 'proposal-1',
+            agent_id: 'agent-1',
+        }), { onConflict: 'proposal_id', ignoreDuplicates: true });
+        expect(tasksInsert.insert).toHaveBeenCalledWith([
+            expect.objectContaining({
+                proposal_id: 'proposal-1',
+                agent_id: 'agent-1',
+                type: 'documentation',
+            }),
+        ]);
+        expect(createNotificationInternalMock).toHaveBeenCalledWith(expect.anything(), 'agent-1', expect.objectContaining({
+            type: 'proposal_accepted',
+        }));
+        expect(activityInsert.insert).toHaveBeenCalledWith(expect.objectContaining({
+            client_id: 'client-1',
+            agent_id: 'agent-1',
+            type: 'proposal_accepted',
+        }));
+        expect(writeLeadAuditEventMock).toHaveBeenCalledWith(expect.objectContaining({
+            jobId: 'ocr-job-1',
+            actorId: 'admin-1',
+            eventType: 'lead_closed_won',
+        }));
+    });
 });

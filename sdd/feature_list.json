@@ -578,6 +578,23 @@
         "external_integration": true,
         "business_critical_calculation": false
       }
+    },
+    {
+      "id": "ZIN-SDD-035",
+      "slug": "acceptance-owner-attribution",
+      "description": "Asegurar que la aceptacion autenticada admin/franquicia conserva al agente propietario en notificaciones y timeline.",
+      "status": "done",
+      "sdd": true,
+      "priority": "high",
+      "risk": {
+        "data_schema": false,
+        "pii": false,
+        "auth_rls": true,
+        "public_surface": false,
+        "cron_or_service_role": false,
+        "external_integration": false,
+        "business_critical_calculation": true
+      }
     }
   ]
 }

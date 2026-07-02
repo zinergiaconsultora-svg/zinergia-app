@@ -277,11 +277,13 @@ export async function updateProposalStatusAction(
         await finalizeAcceptedProposalSideEffects(supabase, proposal as Proposal, user.id)
     }
 
+    const ownerAgentId = (proposal as Proposal).agent_id ?? user.id;
+
     // 3. Create in-app notification for the agent
-    await createStatusNotification(supabase, user.id, proposal as Proposal, status)
+    await createStatusNotification(supabase, ownerAgentId, proposal as Proposal, status)
 
     // 4. Log activity on the client timeline
-    await logProposalActivity(supabase, proposal as Proposal, user.id, status)
+    await logProposalActivity(supabase, proposal as Proposal, ownerAgentId, status)
 
     // 5. Auto-generate follow-up tasks for non-accepted statuses. Accepted
     // side effects are handled by finalizeAcceptedProposalSideEffects above.
