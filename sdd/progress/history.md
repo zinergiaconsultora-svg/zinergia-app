@@ -575,3 +575,29 @@ Verification:
 Residual notes:
 
 - Closing old PRs does not delete the branches. Any remaining valuable idea must be reimplemented from current `main` under SDD, starting with ZIN-SDD-033 if prioritized.
+
+## 2026-07-02 — ZIN-SDD-033 OCR admin observability
+
+Status: done.
+
+Implemented:
+
+- Added SDD requirements, design, and tasks for OCR admin observability.
+- Added `getOcrObservabilityAction()` using existing `ocr_jobs` operational columns only.
+- Added `/admin/ocr` with recent OCR health, stale processing, retry pressure, Drive/comparison coverage, sanitized frequent errors, and 14-day trend.
+- Added unit coverage for metric aggregation and error sanitization.
+
+Verification:
+
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npx vitest run src/app/actions/__tests__/ocrObservability.test.ts` — passed, 2 tests.
+- `npx vitest run src/features/admin/leads/__tests__/LeadDetailDrawer.test.tsx` — passed after an earlier full-suite timeout.
+- `npx tsc --noEmit` — passed.
+- `npm run lint` — passed.
+- `npm run test` — passed, 58 files and 392 tests.
+- `npm run build` — passed.
+
+Residual notes:
+
+- No schema changes.
+- The panel intentionally avoids selecting `extracted_data`, `file_name`, `file_path`, CUPS, DNI, customer names, or invoice contents.

@@ -43,6 +43,12 @@ export default async function AdminLayout({
                             ☁️ Drive
                         </a>
                         <a
+                            href="/admin/ocr"
+                            className="px-3 py-1.5 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/60 transition-all"
+                        >
+                            OCR
+                        </a>
+                        <a
                             href="/admin/reporting"
                             className="px-3 py-1.5 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/60 transition-all"
                         >

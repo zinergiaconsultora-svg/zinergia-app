@@ -549,7 +549,7 @@
       "id": "ZIN-SDD-033",
       "slug": "ocr-admin-observability",
       "description": "Crear observabilidad OCR admin actual: metricas, errores frecuentes y tendencia reciente desde el esquema vigente.",
-      "status": "pending",
+      "status": "done",
       "sdd": true,
       "priority": "medium",
       "risk": {
