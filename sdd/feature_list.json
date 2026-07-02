@@ -646,6 +646,23 @@
         "external_integration": false,
         "business_critical_calculation": false
       }
+    },
+    {
+      "id": "ZIN-SDD-039",
+      "slug": "sips-cache-error-hardening",
+      "description": "Alinear cache SIPS a TTL 7 dias y sanitizar errores publicos del endpoint CNMC/SIPS.",
+      "status": "done",
+      "sdd": true,
+      "priority": "high",
+      "risk": {
+        "data_schema": true,
+        "pii": true,
+        "auth_rls": true,
+        "public_surface": true,
+        "cron_or_service_role": false,
+        "external_integration": true,
+        "business_critical_calculation": false
+      }
     }
   ]
 }
