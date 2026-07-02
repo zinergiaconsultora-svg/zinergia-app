@@ -734,3 +734,31 @@ Residual notes:
 - The internal queue key remains `permanence_due` to preserve existing URLs.
 - The optional email criterion remains out of scope; existing notifications and push remain unchanged.
 - The Supabase migration is committed but not applied from this Codex session because `SUPABASE_ACCESS_TOKEN` is not available here.
+
+## 2026-07-02 — ZIN-SDD-039 SIPS cache error hardening
+
+Status: done.
+
+Implemented:
+
+- Added SDD requirements, design, and tasks for SIPS cache/error hardening.
+- Changed the SIPS annual-consumption endpoint to read cache validity from `expires_at`.
+- Reduced SIPS cache writes from 30 days to the 7-day TTL required by the CNMC/SIPS spec.
+- Sanitized client-facing SIPS errors so missing env vars or provider internals are not exposed.
+- Added a migration to update the cache default and cap existing cache rows to `fetched_at + 7 days`.
+- Added focused API route tests for cache hits, 7-day writes, and sanitized configuration errors.
+
+Verification:
+
+- `npx vitest run src/app/api/sips/electricity/annual-consumption/__tests__/route.test.ts src/lib/consumption/__tests__/annual.test.ts src/lib/cnmc/__tests__/sips.test.ts` — passed, 3 files and 11 tests.
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npx tsc --noEmit` — passed.
+- `npm run lint` — passed.
+- `npm run test` — passed, 61 files and 399 tests.
+- `npm run build` — passed.
+- Pending in this branch: remote migration apply.
+
+Residual notes:
+
+- No raw CUPS is stored; audit remains hash-only.
+- The internal audit row may keep the raw operational error message for diagnosis, but the HTTP response is sanitized.

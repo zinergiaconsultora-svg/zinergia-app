@@ -7,11 +7,13 @@ import { hashCups } from '@/lib/crypto/pii';
 import { rateLimit, getClientKey } from '@/lib/rate-limit';
 
 const limiter = rateLimit({ windowMs: 60_000, max: 20 });
-const CACHE_TTL_DAYS = 30;
+const CACHE_TTL_DAYS = 7;
 
 const bodySchema = z.object({
     cups: z.string().min(20).max(24),
 });
+
+const CACHE_TTL_MS = CACHE_TTL_DAYS * 86_400_000;
 
 export async function POST(request: Request) {
     const rl = limiter.check(getClientKey(request));
@@ -73,7 +75,14 @@ export async function POST(request: Request) {
         const message = error instanceof Error ? error.message : 'CNMC SIPS request failed';
         const status = message.includes('Missing CNMC OAuth') ? 503 : 502;
         await logSipsQuery(service, user.id, cupsHash, 'error', message);
-        return NextResponse.json({ error: message }, { status });
+        return NextResponse.json(
+            {
+                error: status === 503
+                    ? 'Servicio SIPS no configurado temporalmente'
+                    : 'No se pudo consultar SIPS en este momento',
+            },
+            { status },
+        );
     }
 }
 
@@ -87,12 +96,12 @@ interface CachedConsumptionRow {
 }
 
 async function getCachedConsumption(supabase: SupabaseServiceClient, cupsHash: string): Promise<CachedConsumptionRow | null> {
-    const validAfter = new Date(Date.now() - CACHE_TTL_DAYS * 86_400_000).toISOString();
+    const now = new Date().toISOString();
     const { data, error } = await supabase
         .from('sips_consumption_cache')
         .select('annual_consumption_kwh, annual_consumption_mwh, rows_count, fetched_at')
         .eq('cups_hash', cupsHash)
-        .gte('fetched_at', validAfter)
+        .gt('expires_at', now)
         .maybeSingle();
 
     if (error) return null;
@@ -112,7 +121,7 @@ async function upsertCachedConsumption(
             rows_count: row.rows,
             source: 'CNMC_SIPS',
             fetched_at: new Date().toISOString(),
-            expires_at: new Date(Date.now() + CACHE_TTL_DAYS * 86_400_000).toISOString(),
+            expires_at: new Date(Date.now() + CACHE_TTL_MS).toISOString(),
         }, { onConflict: 'cups_hash' });
 }
 
