@@ -653,3 +653,29 @@ Residual notes:
 
 - No schema changes.
 - Public proposal acceptance was not changed.
+
+## 2026-07-02 — ZIN-SDD-036 Simulator persistence warning
+
+Status: done.
+
+Implemented:
+
+- Added SDD requirements, design, and tasks for simulator CRM persistence warnings.
+- Added `persistenceWarning` state to the simulator flow.
+- Kept calculated comparison results visible when CRM persistence fails.
+- Added a non-blocking warning in simulator results with a static, PII-safe message.
+- Added a focused isolated component test proving the warning is shown without CUPS/DNI.
+
+Verification:
+
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npx vitest run src/features/simulator/components/__tests__/PersistenceWarningBanner.test.tsx` — passed, 2 tests.
+- `npx tsc --noEmit` — passed.
+- `npm run lint` — passed.
+- `npm run test:coverage` — passed, 59 files and 395 tests; coverage thresholds passed.
+- `npm run build` — passed.
+
+Residual notes:
+
+- No schema changes.
+- The warning tells the user to retry saving instead of implying the proposal is safely persisted.

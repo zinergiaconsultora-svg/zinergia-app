@@ -42,6 +42,7 @@ import { SupervisedRecommendationResult } from '@/lib/supervised/recommender';
 import { SupervisedConfirmationPanel } from './SupervisedConfirmationPanel';
 import { useSimulatorResultsActions } from './useSimulatorResultsActions';
 import { formatCurrency } from '@/lib/utils/format';
+import { PersistenceWarningBanner } from './PersistenceWarningBanner';
 
 const PresentationModal = dynamic(() => import('./PresentationModal'), { ssr: false });
 const CompareModal = dynamic(() => import('./CompareModal'), { ssr: false });
@@ -56,6 +57,7 @@ interface SimulatorResultsProps {
     clientProfile?: { tags: string[]; sales_argument: string; };
     invoiceData?: InvoiceData;
     savedProposalId?: string | null;
+    persistenceWarning?: string | null;
     supervisedRecommendation?: SupervisedRecommendationResult;
 }
 
@@ -69,6 +71,7 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
     invoiceData,
     clientProfile,
     savedProposalId,
+    persistenceWarning,
     supervisedRecommendation,
 }) => {
     const rankedResults = React.useMemo(
@@ -114,6 +117,8 @@ export const SimulatorResults: React.FC<SimulatorResultsProps> = ({
             >
                 {/* Demo Mode Alert */}
                 <DemoModeAlert show={isMockMode} />
+
+                <PersistenceWarningBanner message={persistenceWarning} />
 
                 {/* Anomalías detectadas en la factura */}
                 {invoiceData && (() => {

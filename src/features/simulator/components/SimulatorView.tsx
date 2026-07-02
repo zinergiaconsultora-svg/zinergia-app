@@ -44,6 +44,7 @@ export const SimulatorView = () => {
         pdfUrl,
         clientProfile,
         savedProposalId,
+        persistenceWarning,
         confirmOcrData,
     } = useSimulatorContext();
 
@@ -161,6 +162,7 @@ export const SimulatorView = () => {
                             invoiceData={invoiceData}
                             clientProfile={clientProfile}
                             savedProposalId={savedProposalId}
+                            persistenceWarning={persistenceWarning}
                             supervisedRecommendation={supervisedRecommendation}
                         />
                     )}
