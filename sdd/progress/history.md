@@ -706,3 +706,31 @@ Residual notes:
 
 - No schema changes.
 - CI security visibility remains unchanged; this work removes the advisory instead of suppressing it.
+
+## 2026-07-02 — ZIN-SDD-038 Renewal alert audit event
+
+Status: done.
+
+Implemented:
+
+- Added SDD requirements, design, and tasks for renewal alert auditing.
+- Extended the permanence reminder cron from 30 to 60 days.
+- Changed the audit event written by the cron from generic `note_added` to `renewal_alert`.
+- Added a migration that permits `renewal_alert` and aligns lead metrics/analytics to the 60-day window.
+- Updated admin queue labels, empty states, and KPI copy to say "Renovaciones".
+- Marked the implemented SPEC-renovaciones acceptance criteria as complete.
+
+Verification:
+
+- `npx vitest run src/app/api/cron/permanence-reminders/__tests__/route.test.ts src/app/actions/__tests__/invoices.test.ts src/features/admin/leads/__tests__/operationalQueues.test.ts` — passed, 3 files and 12 tests.
+- `node sdd/scripts/validate-sdd.mjs` — passed.
+- `npx tsc --noEmit` — passed.
+- `npm run lint` — passed.
+- `npm run test` — passed, 60 files and 396 tests.
+- `npm run build` — passed.
+
+Residual notes:
+
+- The internal queue key remains `permanence_due` to preserve existing URLs.
+- The optional email criterion remains out of scope; existing notifications and push remain unchanged.
+- The Supabase migration is committed but not applied from this Codex session because `SUPABASE_ACCESS_TOKEN` is not available here.

@@ -381,7 +381,7 @@ export async function getAdminLeadsAction(
     } else if (filters.queue === 'needs_comparison') {
         query = query.eq('process_status', 'ocr_done');
     } else if (filters.queue === 'permanence_due') {
-        const dueBefore = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        const dueBefore = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
         query = query
             .eq('process_status', 'closed_won')
             .not('permanencia_hasta', 'is', null)
@@ -434,7 +434,7 @@ export interface LeadMetrics {
     commission_total: number;
     commission_this_month: number;
     pending_drive: number;
-    permanence_due_30: number;
+    permanence_due_60: number;
     funnel: LeadFunnel;
 }
 
@@ -449,7 +449,7 @@ export interface LeadAgentRank {
 
 const EMPTY_METRICS: LeadMetrics = {
     open_leads: 0, won_total: 0, lost_total: 0, clients_this_month: 0,
-    commission_total: 0, commission_this_month: 0, pending_drive: 0, permanence_due_30: 0,
+    commission_total: 0, commission_this_month: 0, pending_drive: 0, permanence_due_60: 0,
     funnel: { uploaded: 0, ocr_done: 0, compared: 0, won: 0 },
 };
 

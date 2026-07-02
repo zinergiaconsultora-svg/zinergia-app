@@ -629,6 +629,23 @@
         "external_integration": true,
         "business_critical_calculation": false
       }
+    },
+    {
+      "id": "ZIN-SDD-038",
+      "slug": "renewal-alert-audit-event",
+      "description": "Alinear renovaciones a 60 dias con evento auditado renewal_alert y cola operativa visible.",
+      "status": "done",
+      "sdd": true,
+      "priority": "high",
+      "risk": {
+        "data_schema": true,
+        "pii": true,
+        "auth_rls": true,
+        "public_surface": false,
+        "cron_or_service_role": true,
+        "external_integration": false,
+        "business_critical_calculation": false
+      }
     }
   ]
 }

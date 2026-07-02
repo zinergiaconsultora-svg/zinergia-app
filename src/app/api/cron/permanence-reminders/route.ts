@@ -10,7 +10,7 @@ const log = moduleLogger('cron:permanence-reminders');
 const CRON_SECRET = process.env.CRON_SECRET;
 
 // Avisar cuando la permanencia vence dentro de este margen.
-const REMINDER_WINDOW_DAYS = 30;
+const REMINDER_WINDOW_DAYS = 60;
 
 export async function GET(request: Request) {
     const authHeader = request.headers.get('authorization');
@@ -94,11 +94,12 @@ export async function GET(request: Request) {
             await writeLeadAuditEvent({
                 jobId: job.id,
                 actorId: null,
-                eventType: 'note_added',
-                title: 'Recordatorio de permanencia enviado',
+                eventType: 'renewal_alert',
+                title: 'Alerta de renovación enviada',
                 detail: adminMessage,
                 metadata: {
                     permanenceUntil: job.permanence_until,
+                    reminderWindowDays: REMINDER_WINDOW_DAYS,
                     adminRecipients: Array.from(adminIds).length,
                     agentNotified: Boolean(job.agent_id),
                 },

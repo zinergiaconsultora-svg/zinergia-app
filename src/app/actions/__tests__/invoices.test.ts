@@ -209,7 +209,7 @@ describe('getAdminLeadsAction operational queues', () => {
         expect(eqMock).toHaveBeenCalledWith('process_status', 'failed');
     });
 
-    it('filters permanence reviews due in the next 30 days', async () => {
+    it('filters renewal reviews due in the next 60 days', async () => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date('2026-06-24T10:00:00.000Z'));
         const { getAdminLeadsAction } = await import('../invoices');
@@ -218,7 +218,7 @@ describe('getAdminLeadsAction operational queues', () => {
 
         expect(eqMock).toHaveBeenCalledWith('process_status', 'closed_won');
         expect(notMock).toHaveBeenCalledWith('permanencia_hasta', 'is', null);
-        expect(lteMock).toHaveBeenCalledWith('permanencia_hasta', '2026-07-24');
+        expect(lteMock).toHaveBeenCalledWith('permanencia_hasta', '2026-08-23');
 
         vi.useRealTimers();
     });

@@ -23,8 +23,8 @@ const QUEUE_EMPTY_COPY: Record<AdminLeadQueue, AdminLeadsEmptyStateCopy> = {
         actionHint: 'El siguiente paso suele estar en Pendientes de revisar o Enfriándose.',
     },
     permanence_due: {
-        title: 'Sin permanencias próximas',
-        description: 'No hay clientes que requieran revisión de permanencia en esta ventana.',
+        title: 'Sin renovaciones próximas',
+        description: 'No hay clientes que requieran revisión de renovación en esta ventana.',
         actionHint: 'Vuelve a esta cola más adelante o revisa clientes abiertos con prioridad.',
     },
     needs_review: {
