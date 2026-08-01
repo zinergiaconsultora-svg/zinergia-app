@@ -20,7 +20,11 @@ import {
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import type { AdminStats, FranchiseWithAgents, AgentProfile } from '@/app/actions/admin';
+import type { AcceptanceIntegrityItem } from '@/app/actions/acceptanceIntegrity';
 import FranchiseList from './FranchiseList';
+import AcceptanceIntegrityPanel from './AcceptanceIntegrityPanel';
+import RenewalAttentionPanel from '@/features/crm/components/RenewalAttentionPanel';
+import type { RenewalDataQualityItem } from '@/app/actions/workQueue';
 import { formatCurrency } from '@/lib/utils/format';
 
 const OcrAccuracyPanel = dynamic(() => import('./OcrAccuracyPanel'), {
@@ -60,6 +64,8 @@ interface AdminDashboardProps {
     stats: AdminStats;
     franchises: FranchiseWithAgents[];
     unassignedAgents: AgentProfile[];
+    acceptanceIntegrityItems: AcceptanceIntegrityItem[];
+    renewalAttention: RenewalDataQualityItem[];
 }
 
 const container = {
@@ -118,7 +124,7 @@ function SectionHeader({ title, icon: Icon, link }: { title: string; icon?: Reac
     );
 }
 
-export default function AdminDashboard({ stats, franchises, unassignedAgents }: AdminDashboardProps) {
+export default function AdminDashboard({ stats, franchises, unassignedAgents, acceptanceIntegrityItems, renewalAttention }: AdminDashboardProps) {
     const [showFranchises, setShowFranchises] = useState(true);
 
     return (
@@ -135,6 +141,8 @@ export default function AdminDashboard({ stats, franchises, unassignedAgents }: 
                 animate="show"
                 className="flex-1 flex flex-col px-0 gap-6 w-full z-10"
             >
+                <AcceptanceIntegrityPanel initialItems={acceptanceIntegrityItems} />
+                <RenewalAttentionPanel items={renewalAttention} showOwner />
                 {/* Header Row */}
                 <motion.div variants={item} className="flex flex-col gap-1 mb-2">
                     <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight flex items-center gap-2">

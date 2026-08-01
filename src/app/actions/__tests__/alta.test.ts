@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createClientMock = vi.fn();
 const createServiceClientMock = vi.fn();
+const serviceRpcMock = vi.fn();
 const requireServerRoleMock = vi.fn();
 const revalidatePathMock = vi.fn();
 
@@ -40,6 +41,11 @@ describe('alta admin actions', () => {
         requireServerRoleMock.mockResolvedValue(undefined);
         createServiceClientMock.mockReturnValue({
             from: vi.fn(() => query({ data: null, error: null })),
+            rpc: serviceRpcMock,
+        });
+        serviceRpcMock.mockResolvedValue({
+            data: [{ opportunity_id: '22222222-2222-4222-8222-222222222222' }],
+            error: null,
         });
     });
 
@@ -78,9 +84,8 @@ describe('alta admin actions', () => {
         expect(revalidatePathMock).not.toHaveBeenCalled();
     });
 
-    it('adds accepted-status guards to complete, reject and reopen updates', async () => {
+    it('adds accepted-status guards to reject and reopen updates', async () => {
         const auth = { getUser: vi.fn(async () => ({ data: { user: { id: 'admin-1' } } })) };
-        const completeUpdate = query({ data: [{ id: 'proposal-1' }], error: null });
         const rejectUpdate = query({ data: [{ id: 'proposal-1' }], error: null });
         const reopenRead = query({
             data: {
@@ -91,7 +96,7 @@ describe('alta admin actions', () => {
             error: null,
         });
         const reopenUpdate = query({ data: [{ id: 'proposal-1' }], error: null });
-        const proposalCalls = [completeUpdate, rejectUpdate, reopenRead, reopenUpdate];
+        const proposalCalls = [rejectUpdate, reopenRead, reopenUpdate];
         const from = vi.fn((table: string) => {
             if (table === 'proposals') {
                 return proposalCalls.shift() ?? query({ data: null, error: null });
@@ -100,15 +105,60 @@ describe('alta admin actions', () => {
         });
         createClientMock.mockResolvedValue({ auth, from });
 
-        const { completeAlta, rejectAlta, reopenAlta } = await import('../alta');
+        const { rejectAlta, reopenAlta } = await import('../alta');
 
-        await completeAlta('proposal-1');
         await rejectAlta({ proposalId: '11111111-1111-4111-8111-111111111111', reason: 'otro' });
         await reopenAlta('proposal-1');
 
-        expect(completeUpdate.eq).toHaveBeenCalledWith('status', 'accepted');
         expect(rejectUpdate.eq).toHaveBeenCalledWith('status', 'accepted');
         expect(reopenUpdate.eq).toHaveBeenCalledWith('status', 'accepted');
+    });
+
+    it('confirms activation through the protected atomic workflow', async () => {
+        const auth = { getUser: vi.fn(async () => ({ data: { user: { id: 'admin-1' } } })) };
+        const from = vi.fn();
+        createClientMock.mockResolvedValue({ auth, from });
+
+        const { completeAlta } = await import('../alta');
+        const result = await completeAlta({
+            proposalId: '11111111-1111-4111-8111-111111111111',
+            marketerName: ' Energia Clara ',
+            tariffName: ' 2.0TD ',
+            startDate: '2026-07-31',
+            permanenceStatus: 'known',
+            endDate: '2027-07-31',
+        });
+
+        expect(result).toEqual({ ok: true });
+        expect(requireServerRoleMock).toHaveBeenCalledWith(['admin']);
+        expect(from).not.toHaveBeenCalled();
+        expect(serviceRpcMock).toHaveBeenCalledWith('complete_crm_activation', {
+            p_proposal_id: '11111111-1111-4111-8111-111111111111',
+            p_actor_id: 'admin-1',
+            p_marketer_name: 'Energia Clara',
+            p_tariff_name: '2.0TD',
+            p_start_date: '2026-07-31',
+            p_permanence_status: 'known',
+            p_end_date: '2027-07-31',
+        });
+    });
+
+    it('rejects incomplete permanence data before creating a service client', async () => {
+        const { completeAlta } = await import('../alta');
+
+        const result = await completeAlta({
+            proposalId: '11111111-1111-4111-8111-111111111111',
+            marketerName: 'Energia Clara',
+            tariffName: '2.0TD',
+            startDate: '2026-07-31',
+            permanenceStatus: 'known',
+            endDate: null,
+        });
+
+        expect(result).toEqual({ ok: false, error: 'Indica la fecha de permanencia.' });
+        expect(requireServerRoleMock).toHaveBeenCalledWith(['admin']);
+        expect(createClientMock).not.toHaveBeenCalled();
+        expect(createServiceClientMock).not.toHaveBeenCalled();
     });
 
     it('revalidates admin and dashboard paths after successful alta transitions', async () => {
@@ -123,7 +173,6 @@ describe('alta admin actions', () => {
             error: null,
         });
         const requestUpdate = query({ data: [{ id: 'proposal-1' }], error: null });
-        const completeUpdate = query({ data: [{ id: 'proposal-1' }], error: null });
         const rejectUpdate = query({ data: [{ id: 'proposal-1' }], error: null });
         const reopenRead = query({
             data: {
@@ -138,7 +187,6 @@ describe('alta admin actions', () => {
             confirmUpdate,
             requestRead,
             requestUpdate,
-            completeUpdate,
             rejectUpdate,
             reopenRead,
             reopenUpdate,
@@ -155,11 +203,18 @@ describe('alta admin actions', () => {
 
         await confirmConsent('proposal-1', true);
         await requestAlta('proposal-1');
-        await completeAlta('proposal-1');
+        await completeAlta({
+            proposalId: '11111111-1111-4111-8111-111111111111',
+            marketerName: 'Energia Clara',
+            tariffName: '2.0TD',
+            startDate: '2026-07-31',
+            permanenceStatus: 'none',
+            endDate: null,
+        });
         await rejectAlta({ proposalId: '11111111-1111-4111-8111-111111111111', reason: 'otro' });
         await reopenAlta('proposal-1');
 
-        expect(revalidatePathMock).toHaveBeenCalledTimes(10);
+        expect(revalidatePathMock).toHaveBeenCalledTimes(11);
         expect(revalidatePathMock.mock.calls).toEqual([
             ['/admin'],
             ['/dashboard'],
@@ -167,6 +222,7 @@ describe('alta admin actions', () => {
             ['/dashboard'],
             ['/admin'],
             ['/dashboard'],
+            ['/dashboard/opportunities/22222222-2222-4222-8222-222222222222'],
             ['/admin'],
             ['/dashboard'],
             ['/admin'],

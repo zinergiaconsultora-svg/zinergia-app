@@ -94,20 +94,16 @@ export async function generatePublicLinkAction(proposalId: string): Promise<{ to
 
     if (!proposalCtx) throw new Error('Propuesta no encontrada o sin permisos');
 
-    const { error } = await supabase
-        .from('proposals')
-        .update({
-            public_token: token,
-            public_expires_at: expiresAt,
-            sent_date: new Date().toISOString(),
-            status: 'sent',
-        })
-        .eq('id', proposalId)
-        .eq('agent_id', user.id);
-
-    if (error) throw new Error(`Error generando link: ${error.message}`);
-
     const adminClient = createServiceClient();
+    const { error } = await adminClient.rpc('send_crm_proposal', {
+        p_proposal_id: proposalId,
+        p_actor_id: user.id,
+        p_public_token: token,
+        p_public_expires_at: expiresAt,
+    });
+
+    if (error) throw new Error('No se pudo preparar el enlace de la propuesta');
+
     await adminClient.from('client_activities').insert({
         client_id: proposalCtx.client_id,
         agent_id: user.id,
@@ -240,66 +236,36 @@ export async function acceptPublicProposalAction(
 
     const adminClient = createServiceClient();
 
-    // Verificar que el token es válido y la propuesta está en 'sent'
-    const { data: proposal, error: fetchError } = await adminClient
-        .from('proposals')
-        .select('id, status, public_expires_at, public_accepted_at')
-        .eq('public_token', token)
-        .maybeSingle();
+    const { data: acceptanceRows, error } = await adminClient.rpc('accept_crm_public_proposal', {
+        p_public_token: token,
+        p_signature_data: signatureData,
+        p_signed_name: cleanSignedName,
+    });
 
-    if (fetchError || !proposal) {
+    if (error) {
+        if (error.message?.includes('proposal link expired')) {
+            return { success: false, message: 'El enlace ha expirado. Contacta con tu asesor.' };
+        }
         return { success: false, message: PUBLIC_LINK_UNAVAILABLE_MESSAGE };
     }
-    if (proposal.public_accepted_at) {
+
+    const acceptance = Array.isArray(acceptanceRows) ? acceptanceRows[0] : acceptanceRows;
+    if (!acceptance?.proposal_id) {
+        return { success: false, message: PUBLIC_LINK_UNAVAILABLE_MESSAGE };
+    }
+    if (acceptance.outcome === 'already_accepted') {
         return { success: true, message: 'Esta propuesta ya fue aceptada anteriormente.' };
     }
-    if (proposal.status !== 'sent') {
-        return { success: false, message: PUBLIC_LINK_UNAVAILABLE_MESSAGE };
-    }
-    if (new Date(proposal.public_expires_at) < new Date()) {
-        return { success: false, message: 'El enlace ha expirado. Contacta con tu asesor.' };
-    }
 
-    const now = new Date().toISOString();
-    const updatePayload: Record<string, unknown> = {
-        status: 'accepted',
-        pricing_status: 'locked',
-        public_accepted_at: now,
-        signed_at: now,
-    };
-    updatePayload.signature_data = signatureData;
-    updatePayload.signed_name = cleanSignedName;
-
-    const { data: updatedProposal, error } = await adminClient
-        .from('proposals')
-        .update(updatePayload)
-        .eq('id', proposal.id)
-        .eq('status', 'sent')
-        .is('public_accepted_at', null)
-        .select('id')
-        .maybeSingle();
-
-    if (error) return { success: false, message: 'Error al procesar la aceptación.' };
-    if (!updatedProposal) {
-        const { data: latestProposal } = await adminClient
-            .from('proposals')
-            .select('public_accepted_at, status')
-            .eq('id', proposal.id)
-            .maybeSingle();
-
-        if (latestProposal?.public_accepted_at || latestProposal?.status === 'accepted') {
-            return { success: true, message: 'Esta propuesta ya fue aceptada anteriormente.' };
-        }
-
-        return { success: false, message: PUBLIC_LINK_UNAVAILABLE_MESSAGE };
-    }
+    const proposalId = acceptance.proposal_id as string;
+    const now = acceptance.accepted_at as string;
 
     // Log the acceptance event
     try {
         const { data: propForActivity } = await adminClient
             .from('proposals')
             .select('client_id, agent_id, franchise_id')
-            .eq('id', proposal.id)
+            .eq('id', proposalId)
             .maybeSingle();
         if (propForActivity?.client_id && propForActivity?.agent_id) {
             await adminClient.from('client_activities').insert({
@@ -311,14 +277,14 @@ export async function acceptPublicProposalAction(
                     ? `El cliente ${cleanSignedName} ha aceptado y firmado la propuesta.`
                     : 'El cliente ha aceptado la propuesta.',
                 metadata: {
-                    proposal_id: proposal.id,
+                    proposal_id: proposalId,
                     source: 'public_portal',
                     accepted_at: now,
                 },
             });
         }
     } catch (actErr) {
-        log.warn({ err: actErr, proposalId: proposal.id }, 'failed to log acceptance activity');
+        log.warn({ err: actErr, proposalId }, 'failed to log acceptance activity');
     }
 
     // Cargar contexto de la propuesta (necesario para comisión y notificaciones).
@@ -334,10 +300,10 @@ export async function acceptPublicProposalAction(
                 calculation_data, source_tariff_id, source_proposal_id, proposal_version,
                 price_snapshot, price_snapshot_at, pricing_status, repriced_at,
                 repricing_delta_eur, current_annual_cost, notes, optimization_result,
-                aletheia_summary, ocr_job_id,
+                aletheia_summary, ocr_job_id, opportunity_id, supply_point_id,
                 clients(name, email)
             `)
-            .eq('id', proposal.id)
+            .eq('id', proposalId)
             .maybeSingle();
 
         propData = prop as Record<string, unknown> | null;
@@ -353,8 +319,8 @@ export async function acceptPublicProposalAction(
             agentProfile = profile as { id: string; email?: string; franchise_id?: string } | null;
         }
     } catch (err) {
-        Sentry.captureException(err, { extra: { stage: 'accept-fetch-context', proposalId: proposal.id } });
-        log.error({ err, proposalId: proposal.id }, 'failed to load proposal context after accept');
+        Sentry.captureException(err, { extra: { stage: 'accept-fetch-context', proposalId } });
+        log.error({ err, proposalId }, 'failed to load proposal context after accept');
     }
 
     const clientName = clientData?.name ?? 'Cliente';
@@ -365,9 +331,9 @@ export async function acceptPublicProposalAction(
             await finalizeAcceptedProposalSideEffects(adminClient, propData as unknown as Proposal, agentProfile?.id);
         } catch (err) {
             Sentry.captureException(err, {
-                extra: { stage: 'accept-finalize-side-effects', proposalId: proposal.id, agentId: agentProfile?.id },
+                extra: { stage: 'accept-finalize-side-effects', proposalId, agentId: agentProfile?.id },
             });
-            log.error({ err, proposalId: proposal.id, agentId: agentProfile?.id }, 'proposal acceptance side effects failed');
+            log.error({ err, proposalId, agentId: agentProfile?.id }, 'proposal acceptance side effects failed');
         }
     }
 
@@ -389,7 +355,7 @@ export async function acceptPublicProposalAction(
             await sendAgentAcceptanceEmail(agentProfile.email, clientName, {
                 annual_savings: propData.annual_savings as number,
                 offer_snapshot: propData.offer_snapshot as { marketer_name: string },
-                id: proposal.id,
+                id: proposalId,
             });
         }
 
@@ -409,7 +375,7 @@ export async function acceptPublicProposalAction(
             );
         }
     } catch (err) {
-        log.warn({ err, proposalId: proposal.id }, 'acceptance notifications failed (non-blocking)');
+        log.warn({ err, proposalId }, 'acceptance notifications failed (non-blocking)');
     }
 
     return { success: true, message: '¡Propuesta aceptada! Tu asesor se pondrá en contacto contigo.' };

@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
   }
   graphql_public: {
     Tables: {
@@ -257,6 +257,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_activities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "client_activities_franchise_id_fkey"
             columns: ["franchise_id"]
             isOneToOne: false
@@ -328,6 +335,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_documents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "client_documents_franchise_id_fkey"
             columns: ["franchise_id"]
             isOneToOne: false
@@ -384,6 +398,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_status_transitions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
             referencedColumns: ["id"]
           },
           {
@@ -507,6 +528,432 @@ export type Database = {
           },
         ]
       }
+      commission_adjustments: {
+        Row: {
+          active_days: number | null
+          central_amount: number
+          commercial_amount: number
+          commission_id: string
+          evidence_reference: string
+          franchise_amount: number
+          gross_amount: number
+          id: string
+          policy_snapshot: Json
+          proposed_at: string
+          proposed_by: string
+          reason_code: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          reversal_bps: number
+          status: string
+          supplier_statement_line_id: string | null
+        }
+        Insert: {
+          active_days?: number | null
+          central_amount: number
+          commercial_amount: number
+          commission_id: string
+          evidence_reference: string
+          franchise_amount: number
+          gross_amount: number
+          id?: string
+          policy_snapshot: Json
+          proposed_at?: string
+          proposed_by: string
+          reason_code: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          reversal_bps: number
+          status?: string
+          supplier_statement_line_id?: string | null
+        }
+        Update: {
+          active_days?: number | null
+          central_amount?: number
+          commercial_amount?: number
+          commission_id?: string
+          evidence_reference?: string
+          franchise_amount?: number
+          gross_amount?: number
+          id?: string
+          policy_snapshot?: Json
+          proposed_at?: string
+          proposed_by?: string
+          reason_code?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          reversal_bps?: number
+          status?: string
+          supplier_statement_line_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_adjustments_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "commission_reconciliation_queue"
+            referencedColumns: ["commission_id"]
+          },
+          {
+            foreignKeyName: "commission_adjustments_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "network_commissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_adjustments_proposed_by_fkey"
+            columns: ["proposed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_adjustments_proposed_by_fkey"
+            columns: ["proposed_by"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "commission_adjustments_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_adjustments_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "commission_adjustments_supplier_statement_line_id_fkey"
+            columns: ["supplier_statement_line_id"]
+            isOneToOne: false
+            referencedRelation: "commission_supplier_statement_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_decommission_bands: {
+        Row: {
+          active_day_from: number
+          active_day_to: number | null
+          created_at: string
+          id: string
+          policy_id: string
+          reversal_bps: number
+        }
+        Insert: {
+          active_day_from: number
+          active_day_to?: number | null
+          created_at?: string
+          id?: string
+          policy_id: string
+          reversal_bps: number
+        }
+        Update: {
+          active_day_from?: number
+          active_day_to?: number | null
+          created_at?: string
+          id?: string
+          policy_id?: string
+          reversal_bps?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_decommission_bands_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "commission_decommission_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_decommission_policies: {
+        Row: {
+          clawback_days: number
+          code: string
+          consolidation_days: number
+          created_at: string
+          created_by: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          is_active: boolean
+          marketer_name: string
+          name: string
+          product_code: string | null
+          version: number
+        }
+        Insert: {
+          clawback_days: number
+          code: string
+          consolidation_days?: number
+          created_at?: string
+          created_by: string
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean
+          marketer_name: string
+          name: string
+          product_code?: string | null
+          version: number
+        }
+        Update: {
+          clawback_days?: number
+          code?: string
+          consolidation_days?: number
+          created_at?: string
+          created_by?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean
+          marketer_name?: string
+          name?: string
+          product_code?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_decommission_policies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_decommission_policies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+        ]
+      }
+      commission_events: {
+        Row: {
+          actor_id: string | null
+          central_delta: number
+          commercial_delta: number
+          commission_id: string
+          created_at: string
+          event_type: string
+          evidence_reference: string | null
+          franchise_delta: number
+          from_status: string | null
+          gross_delta: number
+          id: string
+          idempotency_key: string
+          reason_code: string | null
+          safe_metadata: Json
+          to_status: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          central_delta?: number
+          commercial_delta?: number
+          commission_id: string
+          created_at?: string
+          event_type: string
+          evidence_reference?: string | null
+          franchise_delta?: number
+          from_status?: string | null
+          gross_delta?: number
+          id?: string
+          idempotency_key: string
+          reason_code?: string | null
+          safe_metadata?: Json
+          to_status?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          central_delta?: number
+          commercial_delta?: number
+          commission_id?: string
+          created_at?: string
+          event_type?: string
+          evidence_reference?: string | null
+          franchise_delta?: number
+          from_status?: string | null
+          gross_delta?: number
+          id?: string
+          idempotency_key?: string
+          reason_code?: string | null
+          safe_metadata?: Json
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "commission_events_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "commission_reconciliation_queue"
+            referencedColumns: ["commission_id"]
+          },
+          {
+            foreignKeyName: "commission_events_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "network_commissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_plan_assignments: {
+        Row: {
+          assigned_by: string
+          commercial_id: string
+          created_at: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          plan_id: string
+          reason: string
+        }
+        Insert: {
+          assigned_by: string
+          commercial_id: string
+          created_at?: string
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          plan_id: string
+          reason: string
+        }
+        Update: {
+          assigned_by?: string
+          commercial_id?: string
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          plan_id?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_plan_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_plan_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "commission_plan_assignments_commercial_id_fkey"
+            columns: ["commercial_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_plan_assignments_commercial_id_fkey"
+            columns: ["commercial_id"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "commission_plan_assignments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "commission_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_plans: {
+        Row: {
+          central_share_bps: number
+          channel: string
+          code: string
+          commercial_share_bps: number
+          created_at: string
+          created_by: string
+          effective_from: string
+          effective_to: string | null
+          franchise_share_bps: number
+          id: string
+          is_active: boolean
+          name: string
+          version: number
+        }
+        Insert: {
+          central_share_bps: number
+          channel: string
+          code: string
+          commercial_share_bps: number
+          created_at?: string
+          created_by: string
+          effective_from: string
+          effective_to?: string | null
+          franchise_share_bps: number
+          id?: string
+          is_active?: boolean
+          name: string
+          version: number
+        }
+        Update: {
+          central_share_bps?: number
+          channel?: string
+          code?: string
+          commercial_share_bps?: number
+          created_at?: string
+          created_by?: string
+          effective_from?: string
+          effective_to?: string | null
+          franchise_share_bps?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_plans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_plans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+        ]
+      }
       commission_rules: {
         Row: {
           agent_share: number
@@ -551,6 +998,139 @@ export type Database = {
           points_per_win?: number
         }
         Relationships: []
+      }
+      commission_supplier_statement_lines: {
+        Row: {
+          contract_id: string | null
+          created_at: string
+          event_kind: string
+          evidence_reference: string | null
+          gross_amount: number | null
+          id: string
+          proposal_id: string | null
+          raw_safe_data: Json
+          source_line_key: string
+          statement_id: string
+        }
+        Insert: {
+          contract_id?: string | null
+          created_at?: string
+          event_kind: string
+          evidence_reference?: string | null
+          gross_amount?: number | null
+          id?: string
+          proposal_id?: string | null
+          raw_safe_data?: Json
+          source_line_key: string
+          statement_id: string
+        }
+        Update: {
+          contract_id?: string | null
+          created_at?: string
+          event_kind?: string
+          evidence_reference?: string | null
+          gross_amount?: number | null
+          id?: string
+          proposal_id?: string | null
+          raw_safe_data?: Json
+          source_line_key?: string
+          statement_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_supplier_statement_lines_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contract_renewal_data_quality"
+            referencedColumns: ["contract_id"]
+          },
+          {
+            foreignKeyName: "commission_supplier_statement_lines_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_supplier_statement_lines_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_acceptance_integrity"
+            referencedColumns: ["proposal_id"]
+          },
+          {
+            foreignKeyName: "commission_supplier_statement_lines_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_supplier_statement_lines_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals_alta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_supplier_statement_lines_statement_id_fkey"
+            columns: ["statement_id"]
+            isOneToOne: false
+            referencedRelation: "commission_supplier_statements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_supplier_statements: {
+        Row: {
+          created_at: string
+          id: string
+          imported_by: string
+          marketer_name: string
+          period_end: string
+          period_start: string
+          received_at: string
+          source_file_reference: string | null
+          statement_reference: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          imported_by: string
+          marketer_name: string
+          period_end: string
+          period_start: string
+          received_at?: string
+          source_file_reference?: string | null
+          statement_reference: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          imported_by?: string
+          marketer_name?: string
+          period_end?: string
+          period_start?: string
+          received_at?: string
+          source_file_reference?: string | null
+          statement_reference?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_supplier_statements_imported_by_fkey"
+            columns: ["imported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_supplier_statements_imported_by_fkey"
+            columns: ["imported_by"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+        ]
       }
       commission_tracking: {
         Row: {
@@ -619,6 +1199,13 @@ export type Database = {
             foreignKeyName: "commission_tracking_proposal_id_fkey"
             columns: ["proposal_id"]
             isOneToOne: false
+            referencedRelation: "proposal_acceptance_integrity"
+            referencedColumns: ["proposal_id"]
+          },
+          {
+            foreignKeyName: "commission_tracking_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
             referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
@@ -627,6 +1214,56 @@ export type Database = {
             columns: ["proposal_id"]
             isOneToOne: false
             referencedRelation: "proposals_alta"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_renewal_reminders: {
+        Row: {
+          contract_id: string
+          created_at: string
+          opportunity_id: string
+          threshold_days: number
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          opportunity_id: string
+          threshold_days: number
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          opportunity_id?: string
+          threshold_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_renewal_reminders_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contract_renewal_data_quality"
+            referencedColumns: ["contract_id"]
+          },
+          {
+            foreignKeyName: "contract_renewal_reminders_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_renewal_reminders_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "crm_work_queue"
+            referencedColumns: ["opportunity_id"]
+          },
+          {
+            foreignKeyName: "contract_renewal_reminders_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
             referencedColumns: ["id"]
           },
         ]
@@ -645,9 +1282,12 @@ export type Database = {
           monthly_cost_estimate: number | null
           notes: string | null
           notice_date: string | null
+          opportunity_id: string | null
+          permanence_status: string
           proposal_id: string | null
           start_date: string
           status: string
+          supply_point_id: string | null
           tariff_name: string | null
           updated_at: string | null
         }
@@ -664,9 +1304,12 @@ export type Database = {
           monthly_cost_estimate?: number | null
           notes?: string | null
           notice_date?: string | null
+          opportunity_id?: string | null
+          permanence_status?: string
           proposal_id?: string | null
           start_date?: string
           status?: string
+          supply_point_id?: string | null
           tariff_name?: string | null
           updated_at?: string | null
         }
@@ -683,9 +1326,12 @@ export type Database = {
           monthly_cost_estimate?: number | null
           notes?: string | null
           notice_date?: string | null
+          opportunity_id?: string | null
+          permanence_status?: string
           proposal_id?: string | null
           start_date?: string
           status?: string
+          supply_point_id?: string | null
           tariff_name?: string | null
           updated_at?: string | null
         }
@@ -712,11 +1358,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contracts_franchise_id_fkey"
             columns: ["franchise_id"]
             isOneToOne: false
             referencedRelation: "franchises"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_opportunity_client_fkey"
+            columns: ["opportunity_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_work_queue"
+            referencedColumns: ["opportunity_id", "client_id"]
+          },
+          {
+            foreignKeyName: "contracts_opportunity_client_fkey"
+            columns: ["opportunity_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id", "client_id"]
+          },
+          {
+            foreignKeyName: "contracts_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_acceptance_integrity"
+            referencedColumns: ["proposal_id"]
           },
           {
             foreignKeyName: "contracts_proposal_id_fkey"
@@ -731,6 +1405,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "proposals_alta"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_supply_point_client_fkey"
+            columns: ["supply_point_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "supply_points"
+            referencedColumns: ["id", "client_id"]
           },
         ]
       }
@@ -880,6 +1561,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          monthly_goal: number | null
           name: string
           slug: string
         }
@@ -887,6 +1569,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          monthly_goal?: number | null
           name: string
           slug: string
         }
@@ -894,6 +1577,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          monthly_goal?: number | null
           name?: string
           slug?: string
         }
@@ -1264,43 +1948,121 @@ export type Database = {
           agent_commission: number
           agent_id: string | null
           billing_cycle_id: string | null
+          calculation_snapshot: Json | null
+          central_remainder_amount: number | null
+          client_id: string | null
+          commercial_net_amount: number | null
+          commission_plan_id: string | null
+          contract_id: string | null
           created_at: string | null
+          decommission_policy_id: string | null
+          eligible_at: string | null
           franchise_commission: number
           franchise_id: string | null
+          franchise_royalty_amount: number | null
+          gross_supplier_commission: number | null
           id: string
           invoice_id: string | null
           invoiced: boolean | null
+          lifecycle_invoiced_at: string | null
+          lifecycle_paid_at: string | null
+          lifecycle_status: string
+          opportunity_id: string | null
           paid_date: string | null
+          plan_snapshot: Json | null
+          policy_snapshot: Json | null
           proposal_id: string | null
+          reconciliation_status: string
+          reverted_at: string | null
           status: string | null
+          supplier_statement_line_id: string | null
+          supply_point_id: string | null
+          total_reversed_central: number
+          total_reversed_commercial: number
+          total_reversed_franchise: number
+          total_reversed_gross: number
+          validated_at: string | null
+          validated_by: string | null
         }
         Insert: {
           agent_commission: number
           agent_id?: string | null
           billing_cycle_id?: string | null
+          calculation_snapshot?: Json | null
+          central_remainder_amount?: number | null
+          client_id?: string | null
+          commercial_net_amount?: number | null
+          commission_plan_id?: string | null
+          contract_id?: string | null
           created_at?: string | null
+          decommission_policy_id?: string | null
+          eligible_at?: string | null
           franchise_commission: number
           franchise_id?: string | null
+          franchise_royalty_amount?: number | null
+          gross_supplier_commission?: number | null
           id?: string
           invoice_id?: string | null
           invoiced?: boolean | null
+          lifecycle_invoiced_at?: string | null
+          lifecycle_paid_at?: string | null
+          lifecycle_status?: string
+          opportunity_id?: string | null
           paid_date?: string | null
+          plan_snapshot?: Json | null
+          policy_snapshot?: Json | null
           proposal_id?: string | null
+          reconciliation_status?: string
+          reverted_at?: string | null
           status?: string | null
+          supplier_statement_line_id?: string | null
+          supply_point_id?: string | null
+          total_reversed_central?: number
+          total_reversed_commercial?: number
+          total_reversed_franchise?: number
+          total_reversed_gross?: number
+          validated_at?: string | null
+          validated_by?: string | null
         }
         Update: {
           agent_commission?: number
           agent_id?: string | null
           billing_cycle_id?: string | null
+          calculation_snapshot?: Json | null
+          central_remainder_amount?: number | null
+          client_id?: string | null
+          commercial_net_amount?: number | null
+          commission_plan_id?: string | null
+          contract_id?: string | null
           created_at?: string | null
+          decommission_policy_id?: string | null
+          eligible_at?: string | null
           franchise_commission?: number
           franchise_id?: string | null
+          franchise_royalty_amount?: number | null
+          gross_supplier_commission?: number | null
           id?: string
           invoice_id?: string | null
           invoiced?: boolean | null
+          lifecycle_invoiced_at?: string | null
+          lifecycle_paid_at?: string | null
+          lifecycle_status?: string
+          opportunity_id?: string | null
           paid_date?: string | null
+          plan_snapshot?: Json | null
+          policy_snapshot?: Json | null
           proposal_id?: string | null
+          reconciliation_status?: string
+          reverted_at?: string | null
           status?: string | null
+          supplier_statement_line_id?: string | null
+          supply_point_id?: string | null
+          total_reversed_central?: number
+          total_reversed_commercial?: number
+          total_reversed_franchise?: number
+          total_reversed_gross?: number
+          validated_at?: string | null
+          validated_by?: string | null
         }
         Relationships: [
           {
@@ -1325,6 +2087,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "network_commissions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_commissions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_commissions_commission_plan_id_fkey"
+            columns: ["commission_plan_id"]
+            isOneToOne: false
+            referencedRelation: "commission_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_commissions_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contract_renewal_data_quality"
+            referencedColumns: ["contract_id"]
+          },
+          {
+            foreignKeyName: "network_commissions_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_commissions_decommission_policy_id_fkey"
+            columns: ["decommission_policy_id"]
+            isOneToOne: false
+            referencedRelation: "commission_decommission_policies"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "network_commissions_franchise_id_fkey"
             columns: ["franchise_id"]
             isOneToOne: false
@@ -1346,6 +2150,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "network_commissions_opportunity_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "crm_work_queue"
+            referencedColumns: ["opportunity_id"]
+          },
+          {
+            foreignKeyName: "network_commissions_opportunity_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_commissions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: true
+            referencedRelation: "proposal_acceptance_integrity"
+            referencedColumns: ["proposal_id"]
+          },
+          {
             foreignKeyName: "network_commissions_proposal_id_fkey"
             columns: ["proposal_id"]
             isOneToOne: true
@@ -1358,6 +2183,34 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "proposals_alta"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_commissions_supplier_statement_line_id_fkey"
+            columns: ["supplier_statement_line_id"]
+            isOneToOne: false
+            referencedRelation: "commission_supplier_statement_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_commissions_supply_point_id_fkey"
+            columns: ["supply_point_id"]
+            isOneToOne: false
+            referencedRelation: "supply_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_commissions_validated_by_fkey"
+            columns: ["validated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_commissions_validated_by_fkey"
+            columns: ["validated_by"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
           },
         ]
       }
@@ -1470,6 +2323,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "next_actions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "next_actions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_acceptance_integrity"
+            referencedColumns: ["proposal_id"]
+          },
+          {
             foreignKeyName: "next_actions_proposal_id_fkey"
             columns: ["proposal_id"]
             isOneToOne: false
@@ -1493,6 +2360,7 @@ export type Database = {
           link: string | null
           message: string
           read: boolean | null
+          source_key: string | null
           title: string
           type: string | null
           user_id: string | null
@@ -1504,6 +2372,7 @@ export type Database = {
           link?: string | null
           message: string
           read?: boolean | null
+          source_key?: string | null
           title: string
           type?: string | null
           user_id?: string | null
@@ -1515,6 +2384,7 @@ export type Database = {
           link?: string | null
           message?: string
           read?: boolean | null
+          source_key?: string | null
           title?: string
           type?: string | null
           user_id?: string | null
@@ -1549,6 +2419,8 @@ export type Database = {
           closed_tariff: string | null
           commission_amount: number | null
           compared_at: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
           created_at: string
           drive_file_id: string | null
           drive_synced_at: string | null
@@ -1564,11 +2436,13 @@ export type Database = {
           lost: boolean
           lost_at: string | null
           lost_reason: string | null
+          opportunity_id: string | null
           permanence_reminded_at: string | null
           permanence_until: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
+          supply_point_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1583,6 +2457,8 @@ export type Database = {
           closed_tariff?: string | null
           commission_amount?: number | null
           compared_at?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           drive_file_id?: string | null
           drive_synced_at?: string | null
@@ -1598,11 +2474,13 @@ export type Database = {
           lost?: boolean
           lost_at?: string | null
           lost_reason?: string | null
+          opportunity_id?: string | null
           permanence_reminded_at?: string | null
           permanence_until?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
+          supply_point_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1617,6 +2495,8 @@ export type Database = {
           closed_tariff?: string | null
           commission_amount?: number | null
           compared_at?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           drive_file_id?: string | null
           drive_synced_at?: string | null
@@ -1632,11 +2512,13 @@ export type Database = {
           lost?: boolean
           lost_at?: string | null
           lost_reason?: string | null
+          opportunity_id?: string | null
           permanence_reminded_at?: string | null
           permanence_until?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
+          supply_point_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1645,6 +2527,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocr_jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
             referencedColumns: ["id"]
           },
           {
@@ -1669,6 +2558,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ocr_jobs_opportunity_client_fkey"
+            columns: ["opportunity_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_work_queue"
+            referencedColumns: ["opportunity_id", "client_id"]
+          },
+          {
+            foreignKeyName: "ocr_jobs_opportunity_client_fkey"
+            columns: ["opportunity_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id", "client_id"]
+          },
+          {
             foreignKeyName: "ocr_jobs_reviewed_by_fkey"
             columns: ["reviewed_by"]
             isOneToOne: false
@@ -1681,6 +2584,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_franchise_client_stats"
             referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "ocr_jobs_supply_point_client_fkey"
+            columns: ["supply_point_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "supply_points"
+            referencedColumns: ["id", "client_id"]
           },
         ]
       }
@@ -1806,6 +2716,194 @@ export type Database = {
             columns: ["franchise_id"]
             isOneToOne: false
             referencedRelation: "franchises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunities: {
+        Row: {
+          client_id: string
+          closed_at: string | null
+          created_at: string
+          expected_close_date: string | null
+          franchise_id: string | null
+          id: string
+          loss_reason: string | null
+          lost_at: string | null
+          next_action_due_at: string | null
+          next_action_title: string | null
+          next_action_type: string | null
+          owner_id: string
+          source: string | null
+          source_contract_id: string | null
+          stage: string
+          stage_entered_at: string
+          supply_point_id: string
+          type: string
+          updated_at: string
+          won_at: string | null
+        }
+        Insert: {
+          client_id: string
+          closed_at?: string | null
+          created_at?: string
+          expected_close_date?: string | null
+          franchise_id?: string | null
+          id?: string
+          loss_reason?: string | null
+          lost_at?: string | null
+          next_action_due_at?: string | null
+          next_action_title?: string | null
+          next_action_type?: string | null
+          owner_id: string
+          source?: string | null
+          source_contract_id?: string | null
+          stage?: string
+          stage_entered_at?: string
+          supply_point_id: string
+          type: string
+          updated_at?: string
+          won_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          closed_at?: string | null
+          created_at?: string
+          expected_close_date?: string | null
+          franchise_id?: string | null
+          id?: string
+          loss_reason?: string | null
+          lost_at?: string | null
+          next_action_due_at?: string | null
+          next_action_title?: string | null
+          next_action_type?: string | null
+          owner_id?: string
+          source?: string | null
+          source_contract_id?: string | null
+          stage?: string
+          stage_entered_at?: string
+          supply_point_id?: string
+          type?: string
+          updated_at?: string
+          won_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_franchise_id_fkey"
+            columns: ["franchise_id"]
+            isOneToOne: false
+            referencedRelation: "franchises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "opportunities_source_contract_id_fkey"
+            columns: ["source_contract_id"]
+            isOneToOne: false
+            referencedRelation: "contract_renewal_data_quality"
+            referencedColumns: ["contract_id"]
+          },
+          {
+            foreignKeyName: "opportunities_source_contract_id_fkey"
+            columns: ["source_contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_supply_point_client_fkey"
+            columns: ["supply_point_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "supply_points"
+            referencedColumns: ["id", "client_id"]
+          },
+        ]
+      }
+      opportunity_stage_history: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          from_stage: string | null
+          id: string
+          opportunity_id: string
+          reason_code: string | null
+          safe_metadata: Json
+          to_stage: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          from_stage?: string | null
+          id?: string
+          opportunity_id: string
+          reason_code?: string | null
+          safe_metadata?: Json
+          to_stage: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          from_stage?: string | null
+          id?: string
+          opportunity_id?: string
+          reason_code?: string | null
+          safe_metadata?: Json
+          to_stage?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_stage_history_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_stage_history_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "opportunity_stage_history_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "crm_work_queue"
+            referencedColumns: ["opportunity_id"]
+          },
+          {
+            foreignKeyName: "opportunity_stage_history_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
             referencedColumns: ["id"]
           },
         ]
@@ -1945,6 +3043,13 @@ export type Database = {
             foreignKeyName: "proposal_alta_events_proposal_id_fkey"
             columns: ["proposal_id"]
             isOneToOne: false
+            referencedRelation: "proposal_acceptance_integrity"
+            referencedColumns: ["proposal_id"]
+          },
+          {
+            foreignKeyName: "proposal_alta_events_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
             referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
@@ -1982,9 +3087,11 @@ export type Database = {
           followup_7d_at: string | null
           franchise_id: string | null
           id: string
+          notes: string | null
           ocr_job_id: string | null
           offer_annual_cost: number
           offer_snapshot: Json
+          opportunity_id: string | null
           optimization_result: Json | null
           price_snapshot: Json
           price_snapshot_at: string
@@ -2007,6 +3114,7 @@ export type Database = {
           source_proposal_id: string | null
           source_tariff_id: string | null
           status: string | null
+          supply_point_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -2033,9 +3141,11 @@ export type Database = {
           followup_7d_at?: string | null
           franchise_id?: string | null
           id?: string
+          notes?: string | null
           ocr_job_id?: string | null
           offer_annual_cost: number
           offer_snapshot: Json
+          opportunity_id?: string | null
           optimization_result?: Json | null
           price_snapshot?: Json
           price_snapshot_at?: string
@@ -2058,6 +3168,7 @@ export type Database = {
           source_proposal_id?: string | null
           source_tariff_id?: string | null
           status?: string | null
+          supply_point_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -2084,9 +3195,11 @@ export type Database = {
           followup_7d_at?: string | null
           franchise_id?: string | null
           id?: string
+          notes?: string | null
           ocr_job_id?: string | null
           offer_annual_cost?: number
           offer_snapshot?: Json
+          opportunity_id?: string | null
           optimization_result?: Json | null
           price_snapshot?: Json
           price_snapshot_at?: string
@@ -2109,6 +3222,7 @@ export type Database = {
           source_proposal_id?: string | null
           source_tariff_id?: string | null
           status?: string | null
+          supply_point_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2117,6 +3231,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
             referencedColumns: ["id"]
           },
           {
@@ -2139,6 +3260,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ocr_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_opportunity_client_fkey"
+            columns: ["opportunity_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_work_queue"
+            referencedColumns: ["opportunity_id", "client_id"]
+          },
+          {
+            foreignKeyName: "proposals_opportunity_client_fkey"
+            columns: ["opportunity_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id", "client_id"]
+          },
+          {
+            foreignKeyName: "proposals_source_proposal_id_fkey"
+            columns: ["source_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_acceptance_integrity"
+            referencedColumns: ["proposal_id"]
           },
           {
             foreignKeyName: "proposals_source_proposal_id_fkey"
@@ -2167,6 +3309,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_active_tariffs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_supply_point_client_fkey"
+            columns: ["supply_point_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "supply_points"
+            referencedColumns: ["id", "client_id"]
           },
         ]
       }
@@ -2279,6 +3428,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "renewal_opportunities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renewal_opportunities_original_proposal_id_fkey"
+            columns: ["original_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_acceptance_integrity"
+            referencedColumns: ["proposal_id"]
+          },
+          {
             foreignKeyName: "renewal_opportunities_original_proposal_id_fkey"
             columns: ["original_proposal_id"]
             isOneToOne: false
@@ -2334,6 +3497,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sips_consents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
             referencedColumns: ["id"]
           },
         ]
@@ -2470,6 +3640,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "supply_points_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
         ]
       }
       switch_events: {
@@ -2542,6 +3719,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "switch_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
             referencedColumns: ["id"]
           },
           {
@@ -2618,6 +3802,7 @@ export type Database = {
           due_date: string | null
           franchise_id: string | null
           id: string
+          opportunity_id: string | null
           priority: string
           proposal_id: string | null
           status: string
@@ -2635,6 +3820,7 @@ export type Database = {
           due_date?: string | null
           franchise_id?: string | null
           id?: string
+          opportunity_id?: string | null
           priority?: string
           proposal_id?: string | null
           status?: string
@@ -2652,6 +3838,7 @@ export type Database = {
           due_date?: string | null
           franchise_id?: string | null
           id?: string
+          opportunity_id?: string | null
           priority?: string
           proposal_id?: string | null
           status?: string
@@ -2682,11 +3869,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tasks_franchise_id_fkey"
             columns: ["franchise_id"]
             isOneToOne: false
             referencedRelation: "franchises"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_opportunity_client_fkey"
+            columns: ["opportunity_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_work_queue"
+            referencedColumns: ["opportunity_id", "client_id"]
+          },
+          {
+            foreignKeyName: "tasks_opportunity_client_fkey"
+            columns: ["opportunity_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id", "client_id"]
+          },
+          {
+            foreignKeyName: "tasks_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_acceptance_integrity"
+            referencedColumns: ["proposal_id"]
           },
           {
             foreignKeyName: "tasks_proposal_id_fkey"
@@ -2888,6 +4103,231 @@ export type Database = {
       }
     }
     Views: {
+      commission_reconciliation_queue: {
+        Row: {
+          commercial_id: string | null
+          commission_id: string | null
+          created_at: string | null
+          franchise_id: string | null
+          lifecycle_status: string | null
+          opportunity_id: string | null
+          proposal_id: string | null
+          reconciliation_status: string | null
+          required_action: string | null
+        }
+        Insert: {
+          commercial_id?: string | null
+          commission_id?: string | null
+          created_at?: string | null
+          franchise_id?: string | null
+          lifecycle_status?: string | null
+          opportunity_id?: string | null
+          proposal_id?: string | null
+          reconciliation_status?: string | null
+          required_action?: never
+        }
+        Update: {
+          commercial_id?: string | null
+          commission_id?: string | null
+          created_at?: string | null
+          franchise_id?: string | null
+          lifecycle_status?: string | null
+          opportunity_id?: string | null
+          proposal_id?: string | null
+          reconciliation_status?: string | null
+          required_action?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "network_commissions_agent_id_fkey"
+            columns: ["commercial_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_commissions_agent_id_fkey"
+            columns: ["commercial_id"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "network_commissions_franchise_id_fkey"
+            columns: ["franchise_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_commissions_franchise_id_fkey"
+            columns: ["franchise_id"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "network_commissions_opportunity_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "crm_work_queue"
+            referencedColumns: ["opportunity_id"]
+          },
+          {
+            foreignKeyName: "network_commissions_opportunity_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_commissions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: true
+            referencedRelation: "proposal_acceptance_integrity"
+            referencedColumns: ["proposal_id"]
+          },
+          {
+            foreignKeyName: "network_commissions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: true
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_commissions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: true
+            referencedRelation: "proposals_alta"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_renewal_data_quality: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          contract_id: string | null
+          franchise_id: string | null
+          marketer_name: string | null
+          owner_id: string | null
+          owner_name: string | null
+          permanence_status: string | null
+          required_action: string | null
+          start_date: string | null
+          supply_label: string | null
+          supply_point_id: string | null
+          tariff_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_agent_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_agent_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_franchise_id_fkey"
+            columns: ["franchise_id"]
+            isOneToOne: false
+            referencedRelation: "franchises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_supply_point_client_fkey"
+            columns: ["supply_point_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "supply_points"
+            referencedColumns: ["id", "client_id"]
+          },
+        ]
+      }
+      crm_work_queue: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          due_group: string | null
+          franchise_id: string | null
+          next_action_due_at: string | null
+          next_action_title: string | null
+          next_action_type: string | null
+          opportunity_id: string | null
+          owner_id: string | null
+          owner_name: string | null
+          stage: string | null
+          stage_age_days: number | null
+          stage_entered_at: string | null
+          supply_label: string | null
+          supply_point_id: string | null
+          type: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_franchise_id_fkey"
+            columns: ["franchise_id"]
+            isOneToOne: false
+            referencedRelation: "franchises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "opportunities_supply_point_client_fkey"
+            columns: ["supply_point_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "supply_points"
+            referencedColumns: ["id", "client_id"]
+          },
+        ]
+      }
       franchise_wallet: {
         Row: {
           balance_available: number | null
@@ -2959,6 +4399,30 @@ export type Database = {
           },
         ]
       }
+      proposal_acceptance_integrity: {
+        Row: {
+          accepted_at: string | null
+          franchise_id: string | null
+          issue_count: number | null
+          missing_activation: boolean | null
+          missing_commission: boolean | null
+          missing_contract: boolean | null
+          missing_opportunity: boolean | null
+          opportunity_id: string | null
+          opportunity_stage: string | null
+          owner_id: string | null
+          proposal_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_franchise_id_fkey"
+            columns: ["franchise_id"]
+            isOneToOne: false
+            referencedRelation: "franchises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals_alta: {
         Row: {
           agent_email: string | null
@@ -2983,8 +4447,10 @@ export type Database = {
           id: string | null
           offer_annual_cost: number | null
           offer_snapshot: Json | null
+          opportunity_id: string | null
           sepa_confirmed_at: string | null
           status: string | null
+          supply_point_id: string | null
           updated_at: string | null
         }
         Relationships: [
@@ -2996,11 +4462,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "proposals_franchise_id_fkey"
             columns: ["franchise_id"]
             isOneToOne: false
             referencedRelation: "franchises"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_opportunity_client_fkey"
+            columns: ["opportunity_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_work_queue"
+            referencedColumns: ["opportunity_id", "client_id"]
+          },
+          {
+            foreignKeyName: "proposals_opportunity_client_fkey"
+            columns: ["opportunity_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id", "client_id"]
+          },
+          {
+            foreignKeyName: "proposals_supply_point_client_fkey"
+            columns: ["supply_point_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "supply_points"
+            referencedColumns: ["id", "client_id"]
           },
         ]
       }
@@ -3079,6 +4573,33 @@ export type Database = {
         }
         Relationships: []
       }
+      v_clients_expiring_soon: {
+        Row: {
+          email: string | null
+          id: string | null
+          name: string | null
+          purge_date: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          email?: string | null
+          id?: string | null
+          name?: string | null
+          purge_date?: never
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          email?: string | null
+          id?: string | null
+          name?: string | null
+          purge_date?: never
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       v_franchise_client_stats: {
         Row: {
           active_clients: number | null
@@ -3115,6 +4636,138 @@ export type Database = {
       }
     }
     Functions: {
+      accept_crm_public_proposal: {
+        Args: {
+          p_public_token: string
+          p_signature_data: string
+          p_signed_name: string
+        }
+        Returns: {
+          accepted_at: string
+          opportunity_id: string
+          outcome: string
+          owner_id: string
+          proposal_id: string
+        }[]
+      }
+      assign_commission_plan: {
+        Args: {
+          p_actor_id: string
+          p_commercial_id: string
+          p_effective_from?: string
+          p_plan_id: string
+          p_reason: string
+        }
+        Returns: string
+      }
+      complete_crm_activation: {
+        Args: {
+          p_actor_id: string
+          p_end_date?: string
+          p_marketer_name: string
+          p_permanence_status: string
+          p_proposal_id: string
+          p_start_date: string
+          p_tariff_name: string
+        }
+        Returns: {
+          client_id: string
+          contract_id: string
+          opportunity_id: string
+          proposal_id: string
+        }[]
+      }
+      configure_commission_model: {
+        Args: {
+          p_actor_id: string
+          p_direct_commercial_ids?: string[]
+          p_direct_commercial_share_bps: number
+          p_direct_name: string
+          p_franchise_commercial_share_bps: number
+          p_franchise_name: string
+          p_franchise_share_bps: number
+          p_reason?: string
+        }
+        Returns: Json
+      }
+      configure_decommission_policy: {
+        Args: {
+          p_actor_id: string
+          p_bands: Json
+          p_clawback_days: number
+          p_consolidation_days: number
+          p_marketer_name: string
+          p_product_code: string
+        }
+        Returns: string
+      }
+      confirm_contract_permanence: {
+        Args: {
+          p_actor_id: string
+          p_contract_id: string
+          p_end_date?: string
+          p_permanence_status: string
+        }
+        Returns: {
+          agent_id: string
+          annual_savings: number | null
+          client_id: string
+          contract_type: string
+          created_at: string | null
+          end_date: string | null
+          franchise_id: string | null
+          id: string
+          marketer_name: string
+          monthly_cost_estimate: number | null
+          notes: string | null
+          notice_date: string | null
+          opportunity_id: string | null
+          permanence_status: string
+          proposal_id: string | null
+          start_date: string
+          status: string
+          supply_point_id: string | null
+          tariff_name: string | null
+          updated_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contracts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      confirm_crm_ocr_data: {
+        Args: { p_actor_id: string; p_corrected_data: Json; p_job_id: string }
+        Returns: {
+          client_id: string
+          closed_at: string | null
+          created_at: string
+          expected_close_date: string | null
+          franchise_id: string | null
+          id: string
+          loss_reason: string | null
+          lost_at: string | null
+          next_action_due_at: string | null
+          next_action_title: string | null
+          next_action_type: string | null
+          owner_id: string
+          source: string | null
+          source_contract_id: string | null
+          stage: string
+          stage_entered_at: string
+          supply_point_id: string
+          type: string
+          updated_at: string
+          won_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "opportunities"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       generate_invoice_number: { Args: { p_agent_id: string }; Returns: string }
       get_conversion_funnel: {
         Args: { p_agent_id?: string }
@@ -3174,8 +4827,144 @@ export type Database = {
           previous_month_earned: number
         }[]
       }
+      initialize_commission_lifecycle: {
+        Args: { p_proposal_id: string }
+        Returns: string
+      }
       is_admin: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
+      propose_commission_adjustment: {
+        Args: {
+          p_active_days: number
+          p_actor_id: string
+          p_commission_id: string
+          p_evidence_reference: string
+          p_reason_code: string
+          p_reversal_bps: number
+          p_supplier_statement_line_id?: string
+        }
+        Returns: string
+      }
+      purge_expired_clients: { Args: never; Returns: number }
+      reconcile_contract_renewals: {
+        Args: { p_as_of?: string }
+        Returns: {
+          contract_id: string
+          opportunity_created: boolean
+          opportunity_id: string
+          owner_id: string
+          reminder_created: boolean
+          threshold_days: number
+        }[]
+      }
+      reconcile_crm_acceptance_state: {
+        Args: { p_actor_id: string; p_proposal_id: string }
+        Returns: {
+          activation_repaired: boolean
+          opportunity_id: string
+          opportunity_stage: string
+          owner_id: string
+          proposal_id: string
+        }[]
+      }
+      reconcile_crm_ocr_opportunity: {
+        Args: {
+          p_average_monthly_bill: number
+          p_client_name: string
+          p_contracted_power: Json
+          p_cups_ciphertext: string
+          p_cups_hash: string
+          p_cups_last4: string
+          p_current_marketer: string
+          p_current_tariff: string
+          p_dni_cif_ciphertext: string
+          p_dni_cif_hash: string
+          p_job_id: string
+          p_supply_address: string
+        }
+        Returns: {
+          client_id: string
+          opportunity_advanced: boolean
+          opportunity_created: boolean
+          opportunity_id: string
+          opportunity_stage: string
+          resolution: string
+          supply_point_id: string
+        }[]
+      }
+      resolve_commission_adjustment: {
+        Args: {
+          p_actor_id: string
+          p_adjustment_id: string
+          p_note: string
+          p_resolution: string
+        }
+        Returns: string
+      }
+      send_crm_proposal: {
+        Args: {
+          p_actor_id: string
+          p_proposal_id: string
+          p_public_expires_at: string
+          p_public_token: string
+        }
+        Returns: {
+          opportunity_id: string
+          outcome: string
+          owner_id: string
+          proposal_id: string
+          sent_at: string
+        }[]
+      }
+      transition_commission_lifecycle: {
+        Args: {
+          p_actor_id: string
+          p_commission_id: string
+          p_reason: string
+          p_to_status: string
+        }
+        Returns: string
+      }
+      transition_crm_opportunity: {
+        Args: {
+          p_actor_id: string
+          p_expected_stage: string
+          p_loss_reason?: string
+          p_next_action_due_at?: string
+          p_opportunity_id: string
+          p_reason_code?: string
+          p_safe_metadata?: Json
+          p_to_stage: string
+        }
+        Returns: {
+          client_id: string
+          closed_at: string | null
+          created_at: string
+          expected_close_date: string | null
+          franchise_id: string | null
+          id: string
+          loss_reason: string | null
+          lost_at: string | null
+          next_action_due_at: string | null
+          next_action_title: string | null
+          next_action_type: string | null
+          owner_id: string
+          source: string | null
+          source_contract_id: string | null
+          stage: string
+          stage_entered_at: string
+          supply_point_id: string
+          type: string
+          updated_at: string
+          won_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "opportunities"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       alta_status_enum:

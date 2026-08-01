@@ -74,7 +74,7 @@ export async function saveIbanAction(iban: string): Promise<{ success: boolean; 
         .eq('id', user.id);
 
     if (error) return { success: false, error: 'Error al guardar IBAN' };
-    revalidatePath('/dashboard/wallet');
+    revalidatePath('/dashboard/commissions');
     revalidatePath('/dashboard/settings');
     return { success: true };
 }
@@ -146,7 +146,7 @@ export async function createWithdrawalRequestAction(
         .single();
 
     if (error) return { success: false, error: 'Error al crear la solicitud' };
-    revalidatePath('/dashboard/wallet');
+    revalidatePath('/dashboard/commissions');
     return { success: true, withdrawal: data as WithdrawalRequest };
 }
 
@@ -221,11 +221,11 @@ export async function approveWithdrawalAction(id: string): Promise<{ success: bo
             title: 'Retiro aprobado',
             message: `Tu solicitud de retiro por ${withdrawal.amount.toFixed(2)}€ ha sido aprobada.`,
             type: 'withdrawal_status',
-            link: '/dashboard/wallet',
+            link: '/dashboard/commissions',
         });
     } catch { /* non-critical */ }
 
-    revalidatePath('/dashboard/wallet');
+    revalidatePath('/dashboard/commissions');
     return { success: true };
 }
 
@@ -263,12 +263,12 @@ export async function rejectWithdrawalAction(id: string, reason: string): Promis
                 title: 'Retiro rechazado',
                 message: `Tu solicitud de retiro por ${wr.amount.toFixed(2)}€ ha sido rechazada. Motivo: ${reason}`,
                 type: 'withdrawal_status',
-                link: '/dashboard/wallet',
+                link: '/dashboard/commissions',
             });
         } catch { /* non-critical */ }
     }
 
-    revalidatePath('/dashboard/wallet');
+    revalidatePath('/dashboard/commissions');
     return { success: true };
 }
 
@@ -312,11 +312,11 @@ export async function markWithdrawalPaidAction(id: string): Promise<{ success: b
             title: 'Retiro completado',
             message: `Tu retiro de ${withdrawal.amount.toFixed(2)}€ ha sido transferido a tu cuenta bancaria.`,
             type: 'commission_earned',
-            link: '/dashboard/wallet',
+            link: '/dashboard/commissions',
         });
     } catch { /* non-critical */ }
 
-    revalidatePath('/dashboard/wallet');
+    revalidatePath('/dashboard/commissions');
     return { success: true };
 }
 

@@ -573,12 +573,8 @@ export function useSimulator() {
             const result = await confirmOcrExtractionAction(state.ocrJobId, state.invoiceData);
             dispatch({ type: 'SET_OCR_DATA_CONFIRMED' });
             return { correctedFieldsCount: result.correctedFieldsCount };
-        } catch (error) {
-            // No bloquear el flujo del usuario — la confirmación es best-effort.
-            // El warn permite detectar fallos sistemáticos en producción.
-            console.warn('[OCR Confirm] Failed to save confirmation to training examples:', error);
-            dispatch({ type: 'SET_OCR_DATA_CONFIRMED' });
-            return { correctedFieldsCount: 0 };
+        } catch {
+            throw new Error('No se pudieron confirmar los datos OCR');
         }
     }, [state.ocrJobId, state.invoiceData, state.isMockMode]);
 

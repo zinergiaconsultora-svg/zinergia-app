@@ -57,6 +57,16 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  async redirects() {
+    return [
+      {
+        source: '/dashboard/wallet',
+        destination: '/dashboard/commissions',
+        permanent: true,
+      },
+    ];
+  },
+
   experimental: {
     serverActions: {
       bodySizeLimit: '12mb',

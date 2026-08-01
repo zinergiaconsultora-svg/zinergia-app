@@ -1,348 +1,347 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
-    LayoutDashboard,
+    BarChart3,
+    BookOpen,
+    BriefcaseBusiness,
+    Building2,
+    ChevronDown,
+    CircleGauge,
+    ClipboardList,
     Contact,
-    Network,
-    Briefcase,
-    FileSignature,
+    FileCheck2,
     FileText,
-    Sparkles,
-    Receipt,
-    Settings,
+    FolderArchive,
+    Gauge,
+    ListTodo,
     LogOut,
     Menu,
+    Network,
+    Receipt,
+    Settings,
+    ShieldCheck,
+    SlidersHorizontal,
+    Upload,
+    Users,
     X,
-    Shield
 } from 'lucide-react';
-import { ZinergiaLogo } from './ui/ZinergiaLogo';
-import { NotificationBell } from './ui/NotificationBell';
-import { motion, AnimatePresence } from 'framer-motion';
+import type { LucideIcon } from 'lucide-react';
 import { logout } from '@/app/auth/actions';
-import { createClient } from '@/lib/supabase/client';
+import {
+    getAppNavigation,
+    isNavigationItemActive,
+    type AppNavigationIcon,
+    type AppNavigationItem,
+} from '@/lib/navigation/appNavigation';
+import type { UserRole } from '@/types/crm';
+import { NotificationBell } from './ui/NotificationBell';
+import { ZinergiaLogo } from './ui/ZinergiaLogo';
 
-const navItems = [
-    { name: 'Inicio',      href: '/dashboard',           icon: LayoutDashboard },
-    { name: 'Clientes',    href: '/dashboard/clients',   icon: Contact         },
-    { name: 'Facturas',    href: '/dashboard/invoices',  icon: FileText        },
-    { name: 'Propuestas',  href: '/dashboard/proposals', icon: FileSignature   },
-    { name: 'Simulador',   href: '/dashboard/simulator', icon: Sparkles        },
-    { name: 'Cartera',     href: '/dashboard/wallet',    icon: Briefcase       },
-    { name: 'Ajustes',     href: '/dashboard/settings',  icon: Settings        },
-] as const;
+const icons: Record<AppNavigationIcon, LucideIcon> = {
+    work: ListTodo,
+    clients: Contact,
+    commissions: BriefcaseBusiness,
+    billing: Receipt,
+    team: Users,
+    admin: SlidersHorizontal,
+    settings: Settings,
+    invoice: FileText,
+    proposal: FileCheck2,
+    tariff: Gauge,
+    network: Network,
+    task: ClipboardList,
+    ocr: CircleGauge,
+    drive: FolderArchive,
+    reporting: BarChart3,
+    privacy: ShieldCheck,
+    academy: BookOpen,
+    metrics: Building2,
+};
 
+type NavigationTopProps = {
+    role: UserRole;
+};
 
-export const NavigationTop = () => {
+export function NavigationTop({ role }: NavigationTopProps) {
     const pathname = usePathname();
-    const router = useRouter();
-    const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [isAdmin, setIsAdmin] = useState(false);
-
-    useEffect(() => {
-        let mounted = true;
-        const supabase = createClient();
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            if (!user || !mounted) return;
-            supabase.from('profiles').select('role').eq('id', user.id).maybeSingle().then(({ data: profile }) => {
-                if (!mounted) return;
-                if (profile?.role === 'admin') setIsAdmin(true);
-            });
-        });
-
-        return () => { mounted = false; };
-    }, []);
+    const navigation = useMemo(() => getAppNavigation(role), [role]);
+    const mobileSecondaryItems = useMemo(
+        () => [...navigation.primary.slice(4), ...navigation.secondary],
+        [navigation],
+    );
+    const [isMoreOpen, setIsMoreOpen] = useState(false);
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
 
     const handleLogout = useCallback(() => logout(), []);
-    const handleMobileNavigation = useCallback((event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-        event.preventDefault();
-        setIsMobileMenuOpen(false);
-        router.push(href);
-    }, [router]);
 
     return (
         <>
-            <header className="fixed top-0 left-0 right-0 z-50 pointer-events-none">
-
-            {/* Mobile top bar — iOS Native Glass Style */}
-            <div className="lg:hidden bg-white/85 backdrop-blur-xl border-b border-[#e5e5ea]/50 pointer-events-auto flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),16px)] pb-3">
-                <Link href="/dashboard" className="active:opacity-70 transition-opacity">
-                    <ZinergiaLogo className="w-24 mt-1" />
-                </Link>
-                <div className="flex items-center gap-1 mt-1">
-                    <NotificationBell />
-                    <button
-                        type="button"
-                        onClick={handleLogout}
-                        aria-label="Cerrar sesión"
-                        className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-500 active:bg-slate-200/60 transition-colors"
-                        title="Cerrar Sesión"
+            <header className="fixed inset-x-0 top-0 z-40 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+                <div className="mx-auto flex h-16 max-w-[1700px] items-center gap-3 px-4 lg:px-8">
+                    <Link
+                        href={role === 'admin' ? '/admin' : '/dashboard'}
+                        aria-label="Ir al inicio de Zinergia"
+                        className="flex shrink-0 items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
                     >
-                        <LogOut size={18} />
-                    </button>
-                </div>
-            </div>
+                        <ZinergiaLogo className="w-24" />
+                    </Link>
 
-            {/* Desktop floating nav */}
-            <div className="hidden lg:block max-w-[1600px] mx-auto px-8 pointer-events-auto">
-                <nav className="glass-premium rounded-full flex items-center justify-between px-5 py-1.5 md:px-7 shadow-floating-medium border-white/40">
+                    <nav
+                        aria-label="Navegación principal"
+                        className="ml-3 hidden min-w-0 flex-1 items-center gap-1 xl:flex"
+                    >
+                        {navigation.primary.map((item) => (
+                            <DesktopNavigationLink
+                                key={item.href}
+                                item={item}
+                                pathname={pathname}
+                            />
+                        ))}
 
-                    {/* Logo Section */}
-                    <div className="flex items-center gap-8">
-                        <Link href="/dashboard" className="transition-transform active:scale-95 flex flex-col items-start">
-                            <ZinergiaLogo className="w-16 md:w-20" />
-                            <span className="sr-only">
-                                {process.env.NEXT_PUBLIC_APP_VERSION}
-                            </span>
-                        </Link>
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setIsMoreOpen((open) => !open)}
+                                aria-expanded={isMoreOpen}
+                                aria-controls="desktop-secondary-navigation"
+                                className="inline-flex h-9 items-center gap-1 rounded-md px-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                            >
+                                Más
+                                <ChevronDown
+                                    aria-hidden="true"
+                                    size={15}
+                                    className={isMoreOpen ? 'rotate-180 transition-transform' : 'transition-transform'}
+                                />
+                            </button>
 
-                        {/* Desktop Navigation Items */}
-                        <div className="hidden lg:flex items-center gap-1">
-                            {/* Admin: nav simplificado — solo Tarifas y Admin Panel */}
-                            {isAdmin ? (
-                                <>
-                                    <NavIconLink href="/dashboard/tariffs" label="Tarifas" icon={Receipt} pathname={pathname} hoveredItem={hoveredItem} setHoveredItem={setHoveredItem} />
-                                    <NavIconLink href="/dashboard/network" label="Red" icon={Network} pathname={pathname} hoveredItem={hoveredItem} setHoveredItem={setHoveredItem} />
-                                    <a
-                                        href="/admin"
-                                        aria-label="Admin Panel"
-                                        className={`relative flex items-center justify-center w-11 h-11 rounded-full transition-all duration-300 ${
-                                            pathname.startsWith('/admin')
-                                                ? 'bg-gradient-to-br from-brand-blue to-slate-800 text-white shadow-floating-light'
-                                                : 'text-indigo-500 hover:bg-indigo-50/30 hover:text-brand-blue hover:scale-105'
-                                        }`}
-                                        title="Admin Panel"
-                                    >
-                                        <Shield size={22} strokeWidth={1.5} />
-                                    </a>
-                                </>
-                            ) : (
-                                <>
-                                    {/* Comercial: todos los navItems + Tarifas */}
-                                    {navItems.map((item) => (
-                                        <NavIconLink key={item.name} href={item.href} label={item.name} icon={item.icon} pathname={pathname} hoveredItem={hoveredItem} setHoveredItem={setHoveredItem} />
-                                    ))}
-                                    <NavIconLink href="/dashboard/tariffs" label="Tarifas" icon={Receipt} pathname={pathname} hoveredItem={hoveredItem} setHoveredItem={setHoveredItem} />
-                                </>
+                            {isMoreOpen && (
+                                <SecondaryNavigationMenu
+                                    id="desktop-secondary-navigation"
+                                    items={navigation.secondary}
+                                    pathname={pathname}
+                                    onNavigate={() => setIsMoreOpen(false)}
+                                />
                             )}
                         </div>
-                    </div>
+                    </nav>
 
-                    {/* Right Section */}
-                    <div className="flex items-center gap-3">
+                    <div className="ml-auto flex items-center gap-1.5">
+                        <Link
+                            href="/dashboard/simulator"
+                            aria-label="Nueva factura"
+                            className="inline-flex h-10 items-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-bold text-white transition-colors hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 active:bg-emerald-900"
+                        >
+                            <Upload aria-hidden="true" size={17} />
+                            <span className="hidden sm:inline">Nueva factura</span>
+                            <span className="sm:hidden">Factura</span>
+                        </Link>
                         <NotificationBell />
-
-                        {/* Logout Button */}
                         <button
                             type="button"
                             onClick={handleLogout}
                             aria-label="Cerrar sesión"
-                            className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50/50 transition-colors active:scale-90"
-                            title="Cerrar Sesión"
+                            title="Cerrar sesión"
+                            className="hidden h-9 w-9 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 sm:inline-flex dark:text-slate-400 dark:hover:bg-slate-800"
                         >
-                            <LogOut size={18} />
+                            <LogOut aria-hidden="true" size={18} />
                         </button>
-
-                        {/* Mobile Menu Toggle (Oculto en Nuevo Diseño TabBar) */}
                         <button
                             type="button"
-                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                            aria-label={isMobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
-                            aria-expanded={isMobileMenuOpen}
-                            aria-controls="mobile-menu-sheet"
-                            className="hidden w-9 h-9 items-center justify-center rounded-xl bg-slate-900 text-white shadow-md active:scale-95"
+                            onClick={() => setIsMobileOpen((open) => !open)}
+                            aria-label={isMobileOpen ? 'Cerrar menú' : 'Abrir menú'}
+                            aria-expanded={isMobileOpen}
+                            aria-controls="mobile-secondary-navigation"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 xl:hidden dark:text-slate-300 dark:hover:bg-slate-800"
                         >
-                            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                            {isMobileOpen
+                                ? <X aria-hidden="true" size={20} />
+                                : <Menu aria-hidden="true" size={20} />}
                         </button>
                     </div>
-                </nav>
-            </div>
-
-            {/* Mobile Bottom Sheet Menu — iOS action sheet style */}
-            <AnimatePresence>
-                {isMobileMenuOpen && (
-                    <>
-                        {/* Backdrop */}
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="lg:hidden fixed inset-0 bg-black/30 z-[55] pointer-events-auto"
-                            onClick={() => setIsMobileMenuOpen(false)}
-                        />
-                        {/* Sheet */}
-                        <motion.div
-                            initial={{ y: '100%' }}
-                            animate={{ y: 0 }}
-                            exit={{ y: '100%' }}
-                            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                            id="mobile-menu-sheet"
-                            className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#f2f2f7] rounded-t-3xl z-[60] pb-safe overflow-hidden pointer-events-auto"
-                        >
-                            {/* Handle bar */}
-                            <div className="flex justify-center pt-3 pb-1">
-                                <div className="w-10 h-1 rounded-full bg-[#c7c7cc]" />
-                            </div>
-                            <div className="px-4 pb-4">
-                                <div className="grid grid-cols-3 gap-2 pt-2">
-                                    {isAdmin ? (
-                                        /* Admin: solo sus herramientas */
-                                        <>
-                                            <Link href="/admin" onClick={(event) => handleMobileNavigation(event, '/admin')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-colors active:scale-95 ${pathname.startsWith('/admin') ? 'bg-white text-brand-blue shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
-                                                <Shield size={22} strokeWidth={1.5} />
-                                                <span className="text-[11px] font-medium">Admin</span>
-                                            </Link>
-                                            <Link href="/dashboard/tariffs" onClick={(event) => handleMobileNavigation(event, '/dashboard/tariffs')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-colors active:scale-95 ${pathname.startsWith('/dashboard/tariffs') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
-                                                <Receipt size={22} strokeWidth={1.5} />
-                                                <span className="text-[11px] font-medium">Tarifas</span>
-                                            </Link>
-                                            <Link href="/dashboard/network" onClick={(event) => handleMobileNavigation(event, '/dashboard/network')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-colors active:scale-95 ${pathname.startsWith('/dashboard/network') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
-                                                <Network size={22} strokeWidth={1.5} />
-                                                <span className="text-[11px] font-medium">Red</span>
-                                            </Link>
-                                            <Link href="/dashboard/settings" onClick={(event) => handleMobileNavigation(event, '/dashboard/settings')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-colors active:scale-95 ${pathname.startsWith('/dashboard/settings') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
-                                                <Settings size={22} strokeWidth={1.5} />
-                                                <span className="text-[11px] font-medium">Ajustes</span>
-                                            </Link>
-                                        </>
-                                    ) : (
-                                        /* Comercial: todos los items + Tarifas */
-                                        <>
-                                            {navItems.map((item) => {
-                                                const Icon = item.icon;
-                                                const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-                                                return (
-                                                    <Link key={item.name} href={item.href} onClick={(event) => handleMobileNavigation(event, item.href)} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-colors active:scale-95 ${isActive ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
-                                                        <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
-                                                        <span className="text-[11px] font-medium">{item.name}</span>
-                                                    </Link>
-                                                );
-                                            })}
-                                            <Link href="/dashboard/tariffs" onClick={(event) => handleMobileNavigation(event, '/dashboard/tariffs')} className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl transition-colors active:scale-95 ${pathname.startsWith('/dashboard/tariffs') ? 'bg-white text-energy-500 shadow-sm' : 'bg-white text-slate-500 active:bg-slate-50'}`}>
-                                                <Receipt size={22} strokeWidth={1.5} />
-                                                <span className="text-[11px] font-medium">Tarifas</span>
-                                            </Link>
-                                        </>
-                                    )}
-                                </div>
-                                <p className="text-center text-[10px] text-slate-400/60 font-mono mt-3">
-                                    {process.env.NEXT_PUBLIC_APP_VERSION}
-                                </p>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+                </div>
             </header>
 
-            {/* --- MÓVIL: BOTTOM TAB BAR iOS PURO --- */}
-            <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-t border-[#e5e5ea] pb-[max(env(safe-area-inset-bottom),12px)] pt-1">
-                <div className="flex items-stretch justify-evenly max-w-md mx-auto">
-                    {isAdmin ? (
-                        /* Admin: tabs simplificados */
-                        <>
-                            <Link href="/admin" onClick={(event) => handleMobileNavigation(event, '/admin')} className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors">
-                                <Shield size={24} strokeWidth={pathname.startsWith('/admin') ? 2 : 1.5} className={pathname.startsWith('/admin') ? 'text-brand-blue' : 'text-[#8e8e93]'} />
-                                <span className={`text-[10px] font-medium ${pathname.startsWith('/admin') ? 'text-brand-blue' : 'text-[#8e8e93]'}`}>Admin</span>
-                            </Link>
-                            <Link href="/dashboard/tariffs" onClick={(event) => handleMobileNavigation(event, '/dashboard/tariffs')} className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors">
-                                <Receipt size={24} strokeWidth={pathname.startsWith('/dashboard/tariffs') ? 2 : 1.5} className={pathname.startsWith('/dashboard/tariffs') ? 'text-energy-500' : 'text-[#8e8e93]'} />
-                                <span className={`text-[10px] font-medium ${pathname.startsWith('/dashboard/tariffs') ? 'text-energy-500' : 'text-[#8e8e93]'}`}>Tarifas</span>
-                            </Link>
-                            <Link href="/dashboard/network" onClick={(event) => handleMobileNavigation(event, '/dashboard/network')} className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors">
-                                <Network size={24} strokeWidth={pathname.startsWith('/dashboard/network') ? 2 : 1.5} className={pathname.startsWith('/dashboard/network') ? 'text-energy-500' : 'text-[#8e8e93]'} />
-                                <span className={`text-[10px] font-medium ${pathname.startsWith('/dashboard/network') ? 'text-energy-500' : 'text-[#8e8e93]'}`}>Red</span>
-                            </Link>
-                            <Link href="/dashboard/settings" onClick={(event) => handleMobileNavigation(event, '/dashboard/settings')} className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors">
-                                <Settings size={24} strokeWidth={pathname.startsWith('/dashboard/settings') ? 2 : 1.5} className={pathname.startsWith('/dashboard/settings') ? 'text-energy-500' : 'text-[#8e8e93]'} />
-                                <span className={`text-[10px] font-medium ${pathname.startsWith('/dashboard/settings') ? 'text-energy-500' : 'text-[#8e8e93]'}`}>Ajustes</span>
-                            </Link>
-                        </>
-                    ) : (
-                        /* Comercial: tabs habituales */
-                        navItems.slice(0, 4).map((item) => {
-                        const Icon = item.icon;
-                        const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-                        return (
-                            <Link
-                                key={item.name}
-                                href={item.href}
-                                onClick={(event) => handleMobileNavigation(event, item.href)}
-                                className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors"
-                            >
-                                <Icon size={24} strokeWidth={isActive ? 2 : 1.5} className={isActive ? 'text-energy-500' : 'text-[#8e8e93]'} />
-                                <span className={`text-[10px] font-medium ${isActive ? 'text-energy-500' : 'text-[#8e8e93]'}`}>
-                                    {item.name}
-                                </span>
-                            </Link>
-                        );
-                    })
-                    )}
-
-                    {/* Botón Más — solo para comerciales */}
-                    {!isAdmin && <button
+            {isMobileOpen && (
+                <div
+                    id="mobile-secondary-navigation"
+                    className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px))] top-16 z-30 overflow-y-auto border-t border-slate-200 bg-white px-4 py-5 xl:hidden dark:border-slate-800 dark:bg-slate-950"
+                >
+                    <p className="mb-2 text-sm font-bold text-slate-950 dark:text-white">
+                        Herramientas
+                    </p>
+                    <nav aria-label="Herramientas secundarias" className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {mobileSecondaryItems.map((item) => (
+                            <MobileMenuLink
+                                key={item.href}
+                                item={item}
+                                pathname={pathname}
+                                onNavigate={() => setIsMobileOpen(false)}
+                            />
+                        ))}
+                    </nav>
+                    <button
                         type="button"
-                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        aria-label={isMobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
-                        aria-expanded={isMobileMenuOpen}
-                        aria-controls="mobile-menu-sheet"
-                        className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1 active:bg-slate-50 transition-colors"
+                        onClick={handleLogout}
+                        className="mt-6 inline-flex h-10 items-center gap-2 rounded-md px-3 text-sm font-semibold text-rose-700 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-700 dark:text-rose-400 dark:hover:bg-rose-950/40"
                     >
-                        <div className={`flex items-center justify-center ${isMobileMenuOpen ? 'text-energy-500' : 'text-[#8e8e93]'}`}>
-                            {isMobileMenuOpen ? <X size={24} strokeWidth={2} /> : <Menu size={24} strokeWidth={1.5} />}
-                        </div>
-                        <span className={`text-[10px] font-medium ${isMobileMenuOpen ? 'text-energy-500' : 'text-[#8e8e93]'}`}>
-                            Menú
-                        </span>
-                    </button>}
+                        <LogOut aria-hidden="true" size={17} />
+                        Cerrar sesión
+                    </button>
                 </div>
-            </nav>
+            )}
+
+            <MobilePrimaryNavigation
+                items={navigation.primary}
+                pathname={pathname}
+                isMoreOpen={isMobileOpen}
+                onToggleMore={() => setIsMobileOpen((open) => !open)}
+            />
         </>
     );
-};
+}
 
-// ─── Helper: icono de navegación desktop con tooltip ─────────────────────────
-function NavIconLink({ href, label, icon: Icon, pathname, hoveredItem, setHoveredItem }: {
-    href: string
-    label: string
-    icon: React.ElementType
-    pathname: string
-    hoveredItem: string | null
-    setHoveredItem: (v: string | null) => void
+function DesktopNavigationLink({
+    item,
+    pathname,
+}: {
+    item: AppNavigationItem;
+    pathname: string;
 }) {
-    const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
-    const isSimulador = label === 'Simulador';
-
-    const containerClass = isSimulador
-        ? `relative flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 ${isActive ? 'bg-gradient-to-r from-energy-500 to-energy-600 text-white shadow-floating-light scale-105' : 'bg-energy-50/50 text-energy-500 hover:bg-energy-100/80 hover:scale-105'}`
-        : `relative flex items-center justify-center w-11 h-11 rounded-full transition-all duration-300 ${isActive ? 'bg-gradient-to-br from-brand-blue to-slate-800 text-white shadow-floating-light' : 'text-slate-500 hover:bg-slate-100/50 hover:text-slate-900 hover:scale-105'}`;
+    const Icon = icons[item.icon];
+    const active = isNavigationItemActive(pathname, item.href);
 
     return (
-        <div className="relative group" onMouseEnter={() => setHoveredItem(label)} onMouseLeave={() => setHoveredItem(null)}>
-            <Link
-                href={href}
-                aria-label={label}
-                className={containerClass}
-                onFocus={() => setHoveredItem(label)}
-                onBlur={() => setHoveredItem(null)}
-            >
-                <Icon size={isSimulador ? 24 : 22} strokeWidth={isSimulador ? 2 : 1.5} />
-            </Link>
-            <AnimatePresence>
-                {hoveredItem === label && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                        className="absolute top-full left-1/2 -translate-x-1/2 mt-3 px-2.5 py-1 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-[0.2em] rounded-md pointer-events-none whitespace-nowrap z-50"
-                    >
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 w-2 h-2 rotate-45 bg-slate-900" />
-                        {label}
-                    </motion.div>
-                )}
-            </AnimatePresence>
+        <Link
+            href={item.href}
+            aria-current={active ? 'page' : undefined}
+            className={
+                active
+                    ? 'inline-flex h-9 items-center gap-2 rounded-md bg-slate-900 px-3 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:bg-white dark:text-slate-950'
+                    : 'inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
+            }
+        >
+            <Icon aria-hidden="true" size={17} strokeWidth={1.8} />
+            {item.label}
+        </Link>
+    );
+}
+
+function SecondaryNavigationMenu({
+    id,
+    items,
+    pathname,
+    onNavigate,
+}: {
+    id: string;
+    items: AppNavigationItem[];
+    pathname: string;
+    onNavigate: () => void;
+}) {
+    return (
+        <div
+            id={id}
+            className="absolute right-0 top-11 w-64 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+        >
+            {items.map((item) => (
+                <MobileMenuLink
+                    key={item.href}
+                    item={item}
+                    pathname={pathname}
+                    onNavigate={onNavigate}
+                />
+            ))}
         </div>
+    );
+}
+
+function MobileMenuLink({
+    item,
+    pathname,
+    onNavigate,
+}: {
+    item: AppNavigationItem;
+    pathname: string;
+    onNavigate: () => void;
+}) {
+    const Icon = icons[item.icon];
+    const active = isNavigationItemActive(pathname, item.href);
+
+    return (
+        <Link
+            href={item.href}
+            onClick={onNavigate}
+            aria-current={active ? 'page' : undefined}
+            className={
+                active
+                    ? 'flex min-h-11 items-center gap-3 bg-indigo-50 px-3 py-2.5 text-sm font-bold text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200'
+                    : 'flex min-h-11 items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 dark:text-slate-200 dark:hover:bg-slate-800'
+            }
+        >
+            <Icon aria-hidden="true" size={18} strokeWidth={1.8} />
+            {item.label}
+        </Link>
+    );
+}
+
+function MobilePrimaryNavigation({
+    items,
+    pathname,
+    isMoreOpen,
+    onToggleMore,
+}: {
+    items: AppNavigationItem[];
+    pathname: string;
+    isMoreOpen: boolean;
+    onToggleMore: () => void;
+}) {
+    const visibleItems = items.slice(0, 4);
+
+    return (
+        <nav
+            aria-label="Navegación móvil"
+            className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom,0px)] xl:hidden dark:border-slate-800 dark:bg-slate-950"
+        >
+            <div className="mx-auto flex h-[4.25rem] max-w-lg items-stretch">
+                {visibleItems.map((item) => {
+                    const Icon = icons[item.icon];
+                    const active = isNavigationItemActive(pathname, item.href);
+                    return (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            aria-current={active ? 'page' : undefined}
+                            className={
+                                active
+                                    ? 'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 text-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 dark:text-indigo-300'
+                                    : 'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 dark:text-slate-400'
+                            }
+                        >
+                            <Icon aria-hidden="true" size={20} strokeWidth={active ? 2.2 : 1.7} />
+                            <span className="max-w-full truncate text-[11px] font-bold">
+                                {item.label}
+                            </span>
+                        </Link>
+                    );
+                })}
+                <button
+                    type="button"
+                    onClick={onToggleMore}
+                    aria-label={isMoreOpen ? 'Cerrar herramientas' : 'Abrir herramientas'}
+                    aria-expanded={isMoreOpen}
+                    aria-controls="mobile-secondary-navigation"
+                    className={
+                        isMoreOpen
+                            ? 'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 text-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 dark:text-indigo-300'
+                            : 'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 dark:text-slate-400'
+                    }
+                >
+                    <Menu aria-hidden="true" size={20} strokeWidth={isMoreOpen ? 2.2 : 1.7} />
+                    <span className="text-[11px] font-bold">Más</span>
+                </button>
+            </div>
+        </nav>
     );
 }

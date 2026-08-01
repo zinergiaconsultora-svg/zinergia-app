@@ -66,7 +66,7 @@ export default defineConfig({
                 storageState: 'e2e/.auth/admin.json',
             },
             dependencies: ['setup'],
-            testMatch: /admin\.spec\.ts/,
+            testMatch: /(admin|commission-management)\.spec\.ts/,
         },
     ],
 

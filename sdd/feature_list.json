@@ -646,6 +646,23 @@
         "external_integration": false,
         "business_critical_calculation": false
       }
+    },
+    {
+      "id": "ZIN-SDD-040",
+      "slug": "crm-core-flow-simplification",
+      "description": "Simplificar el CRM energetico alrededor de oportunidades profesionales, desde OCR hasta contrato, renovacion, comision y facturacion.",
+      "status": "in_progress",
+      "sdd": true,
+      "priority": "critical",
+      "risk": {
+        "data_schema": true,
+        "pii": true,
+        "auth_rls": true,
+        "public_surface": true,
+        "cron_or_service_role": true,
+        "external_integration": true,
+        "business_critical_calculation": true
+      }
     }
   ]
 }

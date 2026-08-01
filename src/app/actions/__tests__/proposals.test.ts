@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Proposal } from '@/types/crm';
 
 const createClientMock = vi.fn();
+const createServiceClientMock = vi.fn();
+const serviceRpcMock = vi.fn();
 const revalidatePathMock = vi.fn();
 const requireServerRoleMock = vi.fn();
 const getActiveCommissionRuleMock = vi.fn();
@@ -13,6 +15,10 @@ const loggerErrorMock = vi.fn();
 
 vi.mock('@/lib/supabase/server', () => ({
     createClient: createClientMock,
+}));
+
+vi.mock('@/lib/supabase/service', () => ({
+    createServiceClient: createServiceClientMock,
 }));
 
 vi.mock('next/cache', () => ({
@@ -66,6 +72,8 @@ function query(result: unknown = { data: null, error: null }) {
 const acceptedProposal: Proposal = {
     id: 'proposal-1',
     client_id: 'client-1',
+    opportunity_id: 'opportunity-1',
+    supply_point_id: 'supply-1',
     franchise_id: 'franchise-1',
     agent_id: 'agent-1',
     created_at: '2026-06-30T10:00:00.000Z',
@@ -118,6 +126,8 @@ describe('proposal status side effects', () => {
         createNotificationInternalMock.mockResolvedValue(undefined);
         writeLeadAuditEventMock.mockResolvedValue(undefined);
         syncClientStatusFromLeadsMock.mockResolvedValue(undefined);
+        serviceRpcMock.mockResolvedValue({ data: 'commission-1', error: null });
+        createServiceClientMock.mockReturnValue({ rpc: serviceRpcMock });
     });
 
     it('creates accepted follow-up tasks only once when an authenticated proposal is accepted', async () => {
@@ -156,14 +166,19 @@ describe('proposal status side effects', () => {
 
         expect(existingCommission.upsert).toHaveBeenCalledWith(expect.objectContaining({
             proposal_id: 'proposal-1',
+            opportunity_id: 'opportunity-1',
             agent_id: 'agent-1',
             franchise_id: 'franchise-profile-1',
             status: 'pending',
         }), { onConflict: 'proposal_id', ignoreDuplicates: true });
+        expect(serviceRpcMock).toHaveBeenCalledWith('initialize_commission_lifecycle', {
+            p_proposal_id: 'proposal-1',
+        });
         expect(tasksInsert.insert).toHaveBeenCalledTimes(1);
         expect(tasksInsert.insert).toHaveBeenCalledWith([
             expect.objectContaining({
                 proposal_id: 'proposal-1',
+                opportunity_id: 'opportunity-1',
                 title: 'Recopilar documentación',
                 type: 'documentation',
                 auto_generated: true,
@@ -259,11 +274,13 @@ describe('proposal status side effects', () => {
 
         expect(existingCommission.upsert).toHaveBeenCalledWith(expect.objectContaining({
             proposal_id: 'proposal-1',
+            opportunity_id: 'opportunity-1',
             agent_id: 'agent-1',
         }), { onConflict: 'proposal_id', ignoreDuplicates: true });
         expect(tasksInsert.insert).toHaveBeenCalledWith([
             expect.objectContaining({
                 proposal_id: 'proposal-1',
+                opportunity_id: 'opportunity-1',
                 agent_id: 'agent-1',
                 type: 'documentation',
             }),
@@ -275,6 +292,12 @@ describe('proposal status side effects', () => {
             client_id: 'client-1',
             agent_id: 'agent-1',
             type: 'proposal_accepted',
+        }));
+        expect(contractInsert.insert).toHaveBeenCalledWith(expect.objectContaining({
+            proposal_id: 'proposal-1',
+            opportunity_id: 'opportunity-1',
+            supply_point_id: 'supply-1',
+            agent_id: 'agent-1',
         }));
         expect(writeLeadAuditEventMock).toHaveBeenCalledWith(expect.objectContaining({
             jobId: 'ocr-job-1',

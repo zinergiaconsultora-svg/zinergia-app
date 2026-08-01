@@ -308,12 +308,24 @@ function fmtDate(iso: string): string {
     return new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function todayForDateInput(): string {
+    const today = new Date();
+    const offset = today.getTimezoneOffset() * 60_000;
+    return new Date(today.getTime() - offset).toISOString().slice(0, 10);
+}
+
 export default function ExpedienteAlta({ expediente, onRefresh }: ExpedienteAltaProps) {
+    const initialOffer = expediente.offerSnapshot ?? {};
     const [loading, setLoading] = useState<string | null>(null);
     const [showReject, setShowReject] = useState(false);
     const [sepaChecked, setSepaChecked] = useState(!!expediente.sepaConfirmedAt);
     const [events, setEvents] = useState<AltaEvent[]>([]);
     const [showHistory, setShowHistory] = useState(false);
+    const [activationMarketer, setActivationMarketer] = useState(String(initialOffer.marketer_name ?? ''));
+    const [activationTariff, setActivationTariff] = useState(String(initialOffer.tariff_name ?? ''));
+    const [activationStart, setActivationStart] = useState(todayForDateInput);
+    const [permanenceStatus, setPermanenceStatus] = useState<'known' | 'none' | 'unknown'>('unknown');
+    const [activationEnd, setActivationEnd] = useState('');
     const rejectButtonRef = useRef<HTMLButtonElement | null>(null);
 
     const refreshEvents = useCallback(async () => {
@@ -548,15 +560,56 @@ export default function ExpedienteAlta({ expediente, onRefresh }: ExpedienteAlta
 
                 {/* ── Gate 3: Confirmar activación ── */}
                 {canComplete && (
-                    <button
-                        type="button"
-                        disabled={!!loading}
-                        onClick={() => run(() => completeAlta(expediente.id), 'complete')}
-                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 disabled:opacity-60 transition-colors shadow-md shadow-emerald-200 w-full"
-                    >
-                        <CheckCircle2 size={16} />
-                        {loading === 'complete' ? 'Guardando…' : 'Confirmar activación por distribuidor'}
-                    </button>
+                    <div className="border-y border-emerald-200 bg-emerald-50/50 py-4">
+                        <div className="mb-3 flex items-center gap-2">
+                            <CheckCircle2 size={16} className="text-emerald-700" />
+                            <h4 className="text-sm font-bold text-slate-900">Confirmar activación</h4>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <label className="text-xs font-medium text-slate-700">
+                                Comercializadora
+                                <input value={activationMarketer} onChange={e => setActivationMarketer(e.target.value)} maxLength={120} className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm" />
+                            </label>
+                            <label className="text-xs font-medium text-slate-700">
+                                Tarifa
+                                <input value={activationTariff} onChange={e => setActivationTariff(e.target.value)} maxLength={160} className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm" />
+                            </label>
+                            <label className="text-xs font-medium text-slate-700">
+                                Inicio del contrato
+                                <input type="date" value={activationStart} max={todayForDateInput()} onChange={e => setActivationStart(e.target.value)} className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm" />
+                            </label>
+                            <label className="text-xs font-medium text-slate-700">
+                                Permanencia
+                                <select value={permanenceStatus} onChange={e => setPermanenceStatus(e.target.value as typeof permanenceStatus)} className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm">
+                                    <option value="unknown">Fecha desconocida</option>
+                                    <option value="none">Sin permanencia</option>
+                                    <option value="known">Con permanencia</option>
+                                </select>
+                            </label>
+                            {permanenceStatus === 'known' && (
+                                <label className="text-xs font-medium text-slate-700 sm:col-span-2">
+                                    Fin de permanencia
+                                    <input type="date" value={activationEnd} min={activationStart} onChange={e => setActivationEnd(e.target.value)} className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm" />
+                                </label>
+                            )}
+                        </div>
+                        <button
+                            type="button"
+                            disabled={!!loading || !activationMarketer.trim() || !activationTariff.trim() || !activationStart || (permanenceStatus === 'known' && !activationEnd)}
+                            onClick={() => run(() => completeAlta({
+                                proposalId: expediente.id,
+                                marketerName: activationMarketer,
+                                tariffName: activationTariff,
+                                startDate: activationStart,
+                                permanenceStatus,
+                                endDate: permanenceStatus === 'known' ? activationEnd : null,
+                            }), 'complete')}
+                            className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <CheckCircle2 size={16} />
+                            {loading === 'complete' ? 'Confirmando…' : 'Confirmar activación'}
+                        </button>
+                    </div>
                 )}
 
                 {/* Activated */}

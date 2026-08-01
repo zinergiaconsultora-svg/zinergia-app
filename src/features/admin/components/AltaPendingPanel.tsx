@@ -126,7 +126,7 @@ export default function AltaPendingPanel() {
                             Cerrar
                         </button>
                     </div>
-                    <ExpedienteAlta expediente={selected} onRefresh={load} />
+                    <ExpedienteAlta key={selected.id} expediente={selected} onRefresh={load} />
                 </div>
             )}
 
