@@ -15,17 +15,16 @@ const STAGING_PROJECT_REF = 'dnzytocmtmnptndeczny';
 test.use({ storageState: { cookies: [], origins: [] } });
 
 function mutableEnv():
-    | { supabaseUrl: string; serviceKey: string; token: string }
+    | { supabaseUrl: string; serviceKey: string }
     | null {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const token = process.env.E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN;
 
     if (process.env.E2E_RUN_MUTATING_PUBLIC_PROPOSAL !== '1') return null;
-    if (!supabaseUrl || !serviceKey || !token) return null;
+    if (!supabaseUrl || !serviceKey) return null;
     if (!supabaseUrl.includes(STAGING_PROJECT_REF)) return null;
 
-    return { supabaseUrl, serviceKey, token };
+    return { supabaseUrl, serviceKey };
 }
 
 function serviceClient(env: { supabaseUrl: string; serviceKey: string }): SupabaseClient {
@@ -34,15 +33,19 @@ function serviceClient(env: { supabaseUrl: string; serviceKey: string }): Supaba
     });
 }
 
-function resetFixture(): void {
-    execFileSync(process.execPath, ['scripts/ensure-e2e-public-proposal.mjs'], {
+function createFixture(): string {
+    const output = execFileSync(process.execPath, ['scripts/ensure-e2e-public-proposal.mjs', '--json'], {
         cwd: process.cwd(),
         env: {
             ...process.env,
             E2E_ALLOW_STAGING_SEED: '1',
         },
-        stdio: 'pipe',
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
     });
+    const result = JSON.parse(output) as { acceptanceToken?: string };
+    if (!result.acceptanceToken) throw new Error('Staging fixture seed did not return an acceptance token');
+    return result.acceptanceToken;
 }
 
 async function signProposal(page: Page) {
@@ -96,14 +99,14 @@ test.describe('Public proposal — mutating staging acceptance', () => {
     test('signs a staging fixture and creates business side effects exactly once', async ({ page }) => {
         const env = mutableEnv();
         if (!env) {
-            test.skip(true, 'Requires E2E_RUN_MUTATING_PUBLIC_PROPOSAL=1, staging Supabase URL, service key and E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN.');
+            test.skip(true, 'Requires E2E_RUN_MUTATING_PUBLIC_PROPOSAL=1, staging Supabase URL and service key.');
             return;
         }
 
-        resetFixture();
+        const token = createFixture();
         const supabase = serviceClient(env);
 
-        await page.goto(`/p/${env.token}`);
+        await page.goto(`/p/${token}`);
         await expect(page.getByText(/de ahorro al año|ahorro estimado/i)).toBeVisible({ timeout: 10_000 });
 
         await signProposal(page);
@@ -111,7 +114,7 @@ test.describe('Public proposal — mutating staging acceptance', () => {
         await expect(page.getByRole('heading', { name: /firmado/i })).toBeVisible({ timeout: 15_000 });
         await expect(page.getByText(/tu propuesta ha sido aceptada|propuesta aceptada/i)).toBeVisible();
 
-        await expect.poll(async () => loadAcceptedFixtureState(supabase, env.token), {
+        await expect.poll(async () => loadAcceptedFixtureState(supabase, token), {
             timeout: 20_000,
             intervals: [500, 1_000, 2_000],
         }).toMatchObject({
@@ -129,7 +132,7 @@ test.describe('Public proposal — mutating staging acceptance', () => {
             contracts: [{ status: 'pending_switch' }],
         });
 
-        const state = await loadAcceptedFixtureState(supabase, env.token);
+        const state = await loadAcceptedFixtureState(supabase, token);
         expect(state?.proposal.public_accepted_at).toBeTruthy();
         expect(state?.proposal.signed_at).toBeTruthy();
         expect(state?.proposal.signature_data).toMatch(/^data:image\/png;base64,/);

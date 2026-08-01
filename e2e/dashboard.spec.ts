@@ -10,14 +10,10 @@ import { test, expect } from './fixtures/runtime';
 import { hasAgentCredentials } from './helpers/auth';
 
 const commercialNav = [
-    'Inicio',
+    'Trabajo',
     'Clientes',
-    'Facturas',
-    'Propuestas',
-    'Simulador',
-    'Cartera',
+    'Comisiones',
     'Ajustes',
-    'Tarifas',
 ];
 
 const commercialRoutes = [
@@ -25,7 +21,7 @@ const commercialRoutes = [
     { path: '/dashboard/invoices', url: /invoices/, signal: /Facturas de clientes|No hay facturas/i },
     { path: '/dashboard/proposals', url: /proposals/, signal: /Propuestas|Nueva simulación|Buscar cliente/i },
     { path: '/dashboard/simulator', url: /simulator/, signal: /Simulador de Facturas|Comparar varias|Guía de uso/i },
-    { path: '/dashboard/wallet', url: /wallet/, signal: /Mi Cartera|Saldo Disponible|Wallet Activa/i },
+    { path: '/dashboard/commissions', url: /commissions/, signal: /Comisiones|Neto registrado|Sin comisiones/i },
     { path: '/dashboard/settings', url: /settings/, signal: /Configuración|Gestión de perfil/i },
     { path: '/dashboard/tariffs', url: /tariffs/, signal: /Tarifas disponibles|Gestión de Tarifas|Buscar/i },
 ];
@@ -54,14 +50,23 @@ test.beforeEach(async ({ page }) => {
 
 test.describe('Dashboard layout', () => {
     test('shows commercial dashboard content and navigation', async ({ page }) => {
-        await expect(page.getByRole('heading', { name: /Ahorro Encontrado/i })).toBeVisible({ timeout: 10_000 });
-        await expect(page.getByRole('heading', { name: /Estado de Propuestas/i })).toBeVisible();
+        await expect(page.getByRole('heading', { name: /^Trabajo$/i })).toBeVisible({ timeout: 10_000 });
+        await expect(page.getByText(/Prioridades de hoy|No hay trabajo pendiente/i).first()).toBeVisible();
 
         for (const label of commercialNav) {
             await expect(page.getByRole('link', { name: label, exact: true })).toBeVisible();
         }
 
+        await expect(page.getByRole('button', { name: 'Más', exact: true })).toBeVisible();
+        await expect(page.getByRole('link', { name: /Nueva factura/i })).toBeVisible();
+
         await expect(page.getByRole('link', { name: /Admin Panel/i })).toHaveCount(0);
+    });
+
+    test('redirects the legacy wallet route to commissions', async ({ page }) => {
+        await gotoRoute(page, '/dashboard/wallet');
+        await expect(page).toHaveURL(/\/dashboard\/commissions/, { timeout: 10_000 });
+        await expect(page.getByRole('heading', { name: /Comisiones/i })).toBeVisible();
     });
 
     for (const route of commercialRoutes) {

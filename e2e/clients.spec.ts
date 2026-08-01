@@ -21,10 +21,10 @@ test.describe('Client list', () => {
 
         const content = page
             .locator('table, [data-testid="client-list"]')
-            .or(page.getByRole('heading', { name: /mis clientes/i }))
-            .or(page.getByPlaceholder(/buscar por nombre/i))
+            .or(page.getByRole('heading', { name: /^clientes$/i }))
+            .or(page.getByRole('searchbox', { name: /buscar clientes/i }))
             .or(page.getByText(/no hay clientes|sin clientes|todavía/i))
-            .or(page.locator('ul').first());
+            .or(page.locator('article').first());
 
         await expect(content.first()).toBeVisible({ timeout: 10_000 });
     });
@@ -47,7 +47,7 @@ test.describe('Client list', () => {
         await page.goto('/dashboard/clients');
 
         const firstClientLink = page
-            .locator('a[href*="/clients/"]')
+            .locator('a[href^="/dashboard/clients/"]:not([href$="/new"])')
             .or(page.locator('tr[data-testid="client-row"]').first());
 
         const isVisible = await firstClientLink.first().isVisible().catch(() => false);
@@ -64,7 +64,9 @@ test.describe('Client detail', () => {
     test('shows client information when navigating to a client page', async ({ page }) => {
         await page.goto('/dashboard/clients');
 
-        const firstClientLink = page.locator('a[href*="/clients/"]').first();
+        const firstClientLink = page
+            .locator('a[href^="/dashboard/clients/"]:not([href$="/new"])')
+            .first();
         const isVisible = await firstClientLink.isVisible().catch(() => false);
         if (!isVisible) {
             test.skip(true, 'No clients available — skipping detail test');

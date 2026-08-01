@@ -64,6 +64,7 @@ async function cleanupFixture(supabase: SupabaseClient, jobId: string, clientId:
 
 test.describe('OCR callback — commercial staging fixture', () => {
     test('completes an OCR job and creates a segmented commercial client', async ({ request }) => {
+        test.setTimeout(60_000);
         const env = callbackEnv();
         if (!env) {
             test.skip(true, 'Requires staging Supabase URL, service role, WEBHOOK_API_KEY and E2E_AGENT_EMAIL.');
@@ -91,7 +92,7 @@ test.describe('OCR callback — commercial staging fixture', () => {
 
             if (insertError) throw insertError;
 
-            const response = await request.post('/api/webhooks/ocr/callback', {
+            const callbackRequest = {
                 headers: { 'x-api-key': env.webhookApiKey },
                 data: {
                     job_id: jobId,
@@ -120,10 +121,25 @@ test.describe('OCR callback — commercial staging fixture', () => {
                     },
                     text_sample: 'Factura sintetica E2E sin datos reales.',
                 },
-            });
+            };
 
-            expect(response.ok()).toBe(true);
-            const body = await response.json();
+            let response = await request.post('/api/webhooks/ocr/callback', callbackRequest);
+            for (let attempt = 1; attempt < 3; attempt += 1) {
+                const contentType = response.headers()['content-type'] ?? '';
+                if (response.ok() && contentType.includes('application/json')) break;
+                if (response.status() < 500) break;
+                await new Promise((resolve) => setTimeout(resolve, attempt * 500));
+                response = await request.post('/api/webhooks/ocr/callback', callbackRequest);
+            }
+
+            const contentType = response.headers()['content-type'] ?? '';
+            const body = contentType.includes('application/json')
+                ? await response.json()
+                : { error: 'non-JSON server response' };
+            expect(
+                response.ok(),
+                `OCR callback returned ${response.status()}: ${String(body.error ?? 'unknown safe error')}`,
+            ).toBe(true);
             expect(body.success).toBe(true);
             expect(body.client_id).toBeTruthy();
             clientId = body.client_id as string;

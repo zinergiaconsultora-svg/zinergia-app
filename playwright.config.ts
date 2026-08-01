@@ -4,6 +4,8 @@ import { config as loadEnv } from 'dotenv';
 // Load staging credentials / base URL (gitignored) so E2E never touches prod.
 loadEnv({ path: '.env.staging.local' });
 
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000';
+
 /**
  * E2E test configuration for Zinergia.
  *
@@ -31,7 +33,7 @@ export default defineConfig({
     ],
 
     use: {
-        baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',
+        baseURL,
         /* Capture screenshot on failure */
         screenshot: 'only-on-failure',
         /* Capture video on first retry */
@@ -56,7 +58,7 @@ export default defineConfig({
                 storageState: 'e2e/.auth/agent.json',
             },
             dependencies: ['setup'],
-            testIgnore: /global\.setup\.ts/,
+            testIgnore: /(?:global\.setup|admin|commission-management)\.spec\.ts/,
         },
         /* Admin tests */
         {
@@ -76,7 +78,7 @@ export default defineConfig({
         : {
               // Runs the app against the STAGING Supabase project (never prod).
               command: 'npm run dev:staging',
-              url: 'http://localhost:3000',
+              url: baseURL,
               reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === 'true',
               timeout: 120_000,
           },

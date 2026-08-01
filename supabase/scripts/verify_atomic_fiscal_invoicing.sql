@@ -32,6 +32,12 @@ privilege_errors AS (
         ('authenticated can insert invoices', has_table_privilege('authenticated', 'public.invoices', 'INSERT')),
         ('authenticated can update invoices', has_table_privilege('authenticated', 'public.invoices', 'UPDATE')),
         ('authenticated can delete invoices', has_table_privilege('authenticated', 'public.invoices', 'DELETE')),
+        ('anon can read fiscal organizations', has_table_privilege('anon', 'public.fiscal_organizations', 'SELECT')),
+        ('anon can read self-billing agreements', has_table_privilege('anon', 'public.self_billing_agreements', 'SELECT')),
+        ('anon can read fiscal commission lines', has_table_privilege('anon', 'public.fiscal_invoice_commission_lines', 'SELECT')),
+        ('authenticated can insert fiscal lines', has_table_privilege('authenticated', 'public.fiscal_invoice_commission_lines', 'INSERT')),
+        ('authenticated can update self-billing agreements', has_table_privilege('authenticated', 'public.self_billing_agreements', 'UPDATE')),
+        ('authenticated can delete rectification requests', has_table_privilege('authenticated', 'public.fiscal_rectification_requests', 'DELETE')),
         ('authenticated can create fiscal draft', has_function_privilege('authenticated', 'public.create_commission_invoice_draft(uuid,uuid[],uuid)', 'EXECUTE')),
         ('anon can create fiscal draft', has_function_privilege('anon', 'public.create_commission_invoice_draft(uuid,uuid[],uuid)', 'EXECUTE')),
         ('authenticated can use legacy numbering', has_function_privilege('authenticated', 'public.generate_invoice_number(uuid)', 'EXECUTE'))
@@ -54,9 +60,28 @@ missing_guards AS (
         ('service role fiscal draft execute', has_function_privilege('service_role', 'public.create_commission_invoice_draft(uuid,uuid[],uuid)', 'EXECUTE'))
     ) guard(item, is_present)
     WHERE NOT is_present
+),
+missing_policies AS (
+    SELECT 'missing_policy' AS check_type, item
+    FROM (VALUES
+        ('fiscal organizations admin read', EXISTS (
+            SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'fiscal_organizations' AND policyname = 'fiscal_organizations_admin_read'
+        )),
+        ('self-billing scoped read', EXISTS (
+            SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'self_billing_agreements' AND policyname = 'self_billing_agreements_scoped_read'
+        )),
+        ('fiscal lines scoped read', EXISTS (
+            SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'fiscal_invoice_commission_lines' AND policyname = 'fiscal_lines_scoped_read'
+        )),
+        ('rectification requests scoped read', EXISTS (
+            SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'fiscal_rectification_requests' AND policyname = 'rectification_requests_scoped_read'
+        ))
+    ) policy(item, is_present)
+    WHERE NOT is_present
 )
 SELECT * FROM missing_relations
 UNION ALL SELECT * FROM missing_functions
 UNION ALL SELECT * FROM privilege_errors
 UNION ALL SELECT * FROM missing_guards
+UNION ALL SELECT * FROM missing_policies
 ORDER BY check_type, item;

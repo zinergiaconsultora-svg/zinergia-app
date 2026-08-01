@@ -29,6 +29,13 @@ describe('atomic fiscal commission invoicing migration', () => {
         expect(migration).toContain("coalesce(auth.role(), '') <> 'service_role'");
     });
 
+    it('keeps fiscal reads scoped to commercial, supervising franchise or admin', () => {
+        expect(migration).toMatch(/self_billing_agreements_scoped_read[\s\S]*commercial\.parent_id = \(select auth\.uid\(\)\)/);
+        expect(migration).toMatch(/fiscal_lines_scoped_read[\s\S]*commercial\.parent_id = \(select auth\.uid\(\)\)/);
+        expect(migration).toMatch(/rectification_requests_scoped_read[\s\S]*commission\.franchise_id = \(select auth\.uid\(\)\)/);
+        expect(migration).toContain('FROM PUBLIC, anon, authenticated');
+    });
+
     it('requires exact atomic lifecycle transitions for every normalized line', () => {
         expect(migration).toContain("IF affected_count <> expected_count OR expected_count = 0 THEN");
         expect(migration).toContain("SET lifecycle_status = 'invoiced'");

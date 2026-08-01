@@ -403,3 +403,11 @@ Approving these tasks authorizes implementation in the listed slices. It does no
   - Generated database types include the renewal reminder table, data-quality view, reconciliation RPC and protected permanence-confirmation RPC.
   - Local gates passed: `npx tsc --noEmit`, `npm run lint`, `npm run test` (81 files, 508 tests) and `npm run build` (41 pages).
   - Browser verification passed at 1440x900 and 390x844: the correction panel has no horizontal overflow, hides the date when `Sin permanencia` is selected and produced zero console errors.
+
+## T16-T20 Continuation (2026-08-01)
+
+- T16 remains business-pending. The protected/versioned configuration workflow is implemented, but no percentages, five-partner assignments or marketer/product decommission terms were invented.
+- T17 local fiscal hardening now includes franchise-supervisor read scopes, explicit effective-privilege checks and a bound service-role RPC regression fix. The migration remains unapplied in staging.
+- T18 local authorization/privacy review found the service-role key import confined to `src/lib/supabase/service.ts`, no CUPS/DNI/token/signature logging patterns in touched paths, authorization-first mutations and explicit fiscal grants/RLS. Remote advisor and fiscal RLS evidence remain blocked by project access.
+- T19 public acceptance passed against staging with an append-only canonical fixture and exact commission/task/contract side effects. The non-fiscal browser suite has 59 passing tests and 6 intentional skips; the idempotent OCR callback passed four concurrent repetitions after limiting retries to transient 5xx/non-JSON development responses. The activation/economic full story remains blocked by T16/T17.
+- T20 local gates pass: TypeScript, lint, 95 test files with 580 tests and the 42-page production build. Staging dry-run fails with password authentication `28P01`; advisors fail with HTTP 403 for insufficient account privileges. No staging fiscal apply, generated remote types or production promotion is claimed.

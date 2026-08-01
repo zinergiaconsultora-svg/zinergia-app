@@ -54,8 +54,12 @@ describe('fiscal invoicing actions', () => {
     });
 
     it('delegates draft creation atomically with the authenticated actor', async () => {
-        const rpc = vi.fn().mockResolvedValue({ data: invoiceId, error: null });
-        createServiceClientMock.mockReturnValue({ rpc });
+        const service = { rpc: vi.fn() };
+        service.rpc.mockImplementation(function (this: unknown) {
+            expect(this).toBe(service);
+            return Promise.resolve({ data: invoiceId, error: null });
+        });
+        createServiceClientMock.mockReturnValue(service);
 
         const result = await createFiscalInvoiceDraftAction({
             commercialId: actorId,
@@ -63,7 +67,7 @@ describe('fiscal invoicing actions', () => {
         });
 
         expect(result).toEqual({ success: true, invoiceId });
-        expect(rpc).toHaveBeenCalledWith('create_commission_invoice_draft', {
+        expect(service.rpc).toHaveBeenCalledWith('create_commission_invoice_draft', {
             p_commercial_id: actorId,
             p_commission_ids: [commissionId],
             p_actor_id: actorId,

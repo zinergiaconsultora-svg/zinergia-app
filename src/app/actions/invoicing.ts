@@ -94,7 +94,8 @@ async function getActor(allowed: UserRole[]) {
 }
 
 function fiscalRpc(): FiscalRpc {
-    return createServiceClient().rpc as unknown as FiscalRpc;
+    const service = createServiceClient();
+    return service.rpc.bind(service) as unknown as FiscalRpc;
 }
 
 function databaseActionError(error: RpcError, fallback: string) {

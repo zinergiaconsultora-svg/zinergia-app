@@ -13,7 +13,7 @@ Cerrar el hueco de verificacion end-to-end que quedaba en staging: aceptar una p
 In scope:
 
 - Fixture mutable de propuesta publica en staging.
-- Reset seguro de side effects asociados al fixture.
+- Creacion aditiva de una propuesta mutable aislada por ejecucion.
 - Playwright E2E que confirma firma y verifica propuesta aceptada, comision, tarea y contrato.
 - Documentacion del opt-in requerido para pruebas destructivas de staging.
 
@@ -25,7 +25,7 @@ Out of scope:
 
 ## EARS Requirements
 
-- [REQ-001] WHEN the staging seed refreshes the mutating public proposal fixture, the system shall reset the proposal to `sent` and remove side effects tied to that fixture proposal.
+- [REQ-001] WHEN the staging seed prepares the mutating public proposal fixture, the system shall create a fresh `sent` proposal without deleting or rewriting side effects from previous runs.
 - [REQ-002] WHEN the mutating E2E is not explicitly enabled, the test shall skip instead of accepting a proposal.
 - [REQ-003] WHEN the mutating E2E runs, the environment shall prove it targets the staging Supabase project before any destructive action.
 - [REQ-004] WHEN the public proposal is signed in Playwright, the UI shall reach the signed confirmation state.
@@ -37,3 +37,4 @@ Out of scope:
 - [INV-001] The mutating E2E must never run against production.
 - [INV-002] The test must not commit or print secret values.
 - [INV-003] The read-only public proposal smoke test must remain non-mutating.
+- [INV-004] Commission ledger rows and their events must remain immutable across fixture runs.

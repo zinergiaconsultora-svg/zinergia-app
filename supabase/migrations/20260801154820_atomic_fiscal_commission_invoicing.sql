@@ -714,12 +714,38 @@ ALTER TABLE public.fiscal_invoice_commission_lines ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fiscal_rectification_requests ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY fiscal_organizations_admin_read ON public.fiscal_organizations FOR SELECT TO authenticated USING ((select private.is_admin()));
-CREATE POLICY self_billing_agreements_scoped_read ON public.self_billing_agreements FOR SELECT TO authenticated USING (commercial_id = (select auth.uid()) OR (select private.is_admin()));
+CREATE POLICY self_billing_agreements_scoped_read ON public.self_billing_agreements FOR SELECT TO authenticated USING (
+    commercial_id = (select auth.uid())
+    OR EXISTS (
+        SELECT 1 FROM public.profiles commercial
+        WHERE commercial.id = self_billing_agreements.commercial_id
+          AND commercial.parent_id = (select auth.uid())
+    )
+    OR (select private.is_admin())
+);
 CREATE POLICY fiscal_lines_scoped_read ON public.fiscal_invoice_commission_lines FOR SELECT TO authenticated USING (
-    EXISTS (SELECT 1 FROM public.invoices invoice WHERE invoice.id = fiscal_invoice_commission_lines.invoice_id AND (invoice.agent_id = (select auth.uid()) OR (select private.is_admin())))
+    EXISTS (
+        SELECT 1
+        FROM public.invoices invoice
+        JOIN public.profiles commercial ON commercial.id = invoice.agent_id
+        WHERE invoice.id = fiscal_invoice_commission_lines.invoice_id
+          AND (
+              invoice.agent_id = (select auth.uid())
+              OR commercial.parent_id = (select auth.uid())
+              OR (select private.is_admin())
+          )
+    )
 );
 CREATE POLICY rectification_requests_scoped_read ON public.fiscal_rectification_requests FOR SELECT TO authenticated USING (
-    EXISTS (SELECT 1 FROM public.network_commissions commission WHERE commission.id = fiscal_rectification_requests.commission_id AND (commission.agent_id = (select auth.uid()) OR (select private.is_admin())))
+    EXISTS (
+        SELECT 1 FROM public.network_commissions commission
+        WHERE commission.id = fiscal_rectification_requests.commission_id
+          AND (
+              commission.agent_id = (select auth.uid())
+              OR commission.franchise_id = (select auth.uid())
+              OR (select private.is_admin())
+          )
+    )
 );
 
 -- Fiscal mutations are server-only. Legacy broad RLS policies are insufficient

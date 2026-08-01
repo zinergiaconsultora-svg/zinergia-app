@@ -163,7 +163,7 @@ function SummaryMetric({ icon: Icon, label, value, description }: { icon: typeof
             <div className="min-w-0">
                 <p className="text-xs font-bold text-slate-600 dark:text-slate-300">{label}</p>
                 <p className="mt-1 truncate text-xl font-bold tabular-nums text-slate-950 dark:text-white">{value}</p>
-                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{description}</p>
+                <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">{description}</p>
             </div>
         </div>
     );
@@ -178,11 +178,11 @@ function CommissionRow({ item }: { item: CommissionWorkspaceItem }) {
             <div className="grid gap-4 lg:grid-cols-[minmax(220px,1.25fr)_minmax(180px,1fr)_180px_150px_145px] lg:items-center">
                 <div className="min-w-0">
                     <p className="truncate font-bold text-slate-950 dark:text-white">{item.clientName}</p>
-                    <p className="mt-0.5 font-mono text-xs text-slate-500">{shortReference(item.proposalId, 'PROP')}</p>
+                    <p className="mt-0.5 font-mono text-xs text-slate-600 dark:text-slate-300">{shortReference(item.proposalId, 'PROP')}</p>
                 </div>
                 <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{item.marketerName}</p>
-                    <p className="mt-0.5 truncate text-xs text-slate-500">{item.productName}</p>
+                    <p className="mt-0.5 truncate text-xs text-slate-600 dark:text-slate-300">{item.productName}</p>
                 </div>
                 <div>
                     <span className={`inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-bold ${config.badge}`}>
@@ -211,10 +211,10 @@ function CommissionRow({ item }: { item: CommissionWorkspaceItem }) {
                     <div className="mt-3 grid gap-4 border-l-2 border-slate-200 pl-4 dark:border-slate-700">
                         {item.adjustments.map((adjustment) => (
                             <div key={adjustment.id} className="grid gap-3 text-sm md:grid-cols-[minmax(180px,1fr)_140px_140px_minmax(180px,1fr)]">
-                                <div><p className="font-bold text-slate-900 dark:text-white">{adjustment.reasonLabel}</p><p className="mt-0.5 text-xs text-slate-500">{adjustment.frozenPolicyLabel}</p></div>
+                                <div><p className="font-bold text-slate-900 dark:text-white">{adjustment.reasonLabel}</p><p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">{adjustment.frozenPolicyLabel}</p></div>
                                 <div><p className="text-xs font-bold text-slate-500">Días activos</p><p className="mt-0.5 font-semibold text-slate-800 dark:text-slate-100">{adjustment.activeDays ?? 'No informado'}</p></div>
                                 <div><p className="text-xs font-bold text-slate-500">Reversión</p><p className="mt-0.5 font-bold tabular-nums text-rose-700 dark:text-rose-300">{adjustment.reversalPercent}% · {formatCurrency(adjustment.reversedAmount)}</p></div>
-                                <div className="min-w-0"><p className="text-xs font-bold text-slate-500">Evidencia y estado</p><p className="mt-0.5 truncate font-semibold text-slate-800 dark:text-slate-100" title={adjustment.evidenceReference}>{adjustment.evidenceReference}</p><p className="mt-0.5 text-xs text-slate-500">{adjustment.disputeLabel}</p></div>
+                                <div className="min-w-0"><p className="text-xs font-bold text-slate-600 dark:text-slate-300">Evidencia y estado</p><p className="mt-0.5 truncate font-semibold text-slate-800 dark:text-slate-100" title={adjustment.evidenceReference}>{adjustment.evidenceReference}</p><p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">{adjustment.disputeLabel}</p></div>
                             </div>
                         ))}
                         {item.adjustments.length === 0 && <p className="text-sm text-slate-600 dark:text-slate-300">Esta operación necesita revisión antes de continuar.</p>}
