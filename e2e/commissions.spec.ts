@@ -51,5 +51,38 @@ test.describe('commercial commissions workspace', () => {
         await expect(page.getByText('Disponible para facturar')).toBeVisible();
         await expect(page.getByRole('button', { name: /Todas/ })).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+
+        await page.goto('/dashboard/invoicing');
+        await expect(page.getByRole('heading', { name: 'Facturación de comisiones' })).toBeVisible();
+        await expect(page.getByRole('tab', { name: 'Todas' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Crear borrador' })).toBeVisible();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+    });
+
+    test('loads the fiscal invoicing workspace with role-safe actions', async ({ page }) => {
+        const browserErrors: string[] = [];
+        page.on('pageerror', (error) => browserErrors.push(error.message));
+        page.on('console', (message) => {
+            if (message.type() === 'error') browserErrors.push(message.text());
+        });
+
+        await page.goto('/dashboard/invoicing');
+
+        await expect(page.getByRole('heading', { name: 'Facturación de comisiones' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Crear borrador' })).toBeVisible();
+        await expect(page.getByText('Por facturar')).toBeVisible();
+        await expect(page.getByText('En trámite')).toBeVisible();
+        await expect(page.getByText('Pagado')).toBeVisible();
+        for (const label of ['Todas', 'Borrador', 'Emitida', 'Pagada', 'Cancelada']) {
+            await expect(page.getByRole('tab', { name: label })).toBeVisible();
+        }
+
+        expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+        expect(browserErrors).toEqual([]);
+
+        const accessibility = await new AxeBuilder({ page })
+            .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+            .analyze();
+        expect(accessibility.violations).toEqual([]);
     });
 });

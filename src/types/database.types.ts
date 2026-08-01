@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       academy_resources: {
@@ -1511,6 +1486,245 @@ export type Database = {
         }
         Relationships: []
       }
+      fiscal_document_sequences: {
+        Row: {
+          fiscal_year: number
+          issuer_id: string
+          next_number: number
+          series: string
+        }
+        Insert: {
+          fiscal_year: number
+          issuer_id: string
+          next_number?: number
+          series: string
+        }
+        Update: {
+          fiscal_year?: number
+          issuer_id?: string
+          next_number?: number
+          series?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_document_sequences_issuer_id_fkey"
+            columns: ["issuer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_document_sequences_issuer_id_fkey"
+            columns: ["issuer_id"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+        ]
+      }
+      fiscal_invoice_commission_lines: {
+        Row: {
+          adjustment_id: string | null
+          base_amount: number
+          commission_id: string
+          created_at: string
+          description: string
+          id: string
+          invoice_id: string
+          released_at: string | null
+          retention_amount: number
+          retention_percent: number
+          tax_amount: number
+          tax_percent: number
+          total_amount: number
+        }
+        Insert: {
+          adjustment_id?: string | null
+          base_amount: number
+          commission_id: string
+          created_at?: string
+          description: string
+          id?: string
+          invoice_id: string
+          released_at?: string | null
+          retention_amount: number
+          retention_percent: number
+          tax_amount: number
+          tax_percent: number
+          total_amount: number
+        }
+        Update: {
+          adjustment_id?: string | null
+          base_amount?: number
+          commission_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id?: string
+          released_at?: string | null
+          retention_amount?: number
+          retention_percent?: number
+          tax_amount?: number
+          tax_percent?: number
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_invoice_commission_lines_adjustment_id_fkey"
+            columns: ["adjustment_id"]
+            isOneToOne: false
+            referencedRelation: "commission_adjustments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_invoice_commission_lines_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "commission_reconciliation_queue"
+            referencedColumns: ["commission_id"]
+          },
+          {
+            foreignKeyName: "fiscal_invoice_commission_lines_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "network_commissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_invoice_commission_lines_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fiscal_organizations: {
+        Row: {
+          created_at: string
+          created_by: string
+          fiscal_address: string
+          fiscal_city: string
+          fiscal_country: string
+          fiscal_postal_code: string
+          id: string
+          is_active: boolean
+          legal_name: string
+          nif: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          fiscal_address: string
+          fiscal_city: string
+          fiscal_country?: string
+          fiscal_postal_code: string
+          id?: string
+          is_active?: boolean
+          legal_name: string
+          nif: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          fiscal_address?: string
+          fiscal_city?: string
+          fiscal_country?: string
+          fiscal_postal_code?: string
+          id?: string
+          is_active?: boolean
+          legal_name?: string
+          nif?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_organizations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_organizations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+        ]
+      }
+      fiscal_rectification_requests: {
+        Row: {
+          adjustment_id: string
+          commission_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          rectifying_invoice_id: string | null
+          source_invoice_id: string
+          status: string
+        }
+        Insert: {
+          adjustment_id: string
+          commission_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          rectifying_invoice_id?: string | null
+          source_invoice_id: string
+          status?: string
+        }
+        Update: {
+          adjustment_id?: string
+          commission_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          rectifying_invoice_id?: string | null
+          source_invoice_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_rectification_requests_adjustment_id_fkey"
+            columns: ["adjustment_id"]
+            isOneToOne: true
+            referencedRelation: "commission_adjustments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_rectification_requests_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "commission_reconciliation_queue"
+            referencedColumns: ["commission_id"]
+          },
+          {
+            foreignKeyName: "fiscal_rectification_requests_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "network_commissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_rectification_requests_rectifying_invoice_id_fkey"
+            columns: ["rectifying_invoice_id"]
+            isOneToOne: true
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_rectification_requests_source_invoice_id_fkey"
+            columns: ["source_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       franchise_config: {
         Row: {
           active: boolean | null
@@ -1621,10 +1835,18 @@ export type Database = {
       }
       invoices: {
         Row: {
+          acceptance_status: string
+          accepted_at: string | null
+          accepted_by: string | null
           agent_id: string
           billing_period_end: string | null
           billing_period_start: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           created_at: string | null
+          created_by: string | null
+          document_kind: string
           due_date: string
           franchise_id: string | null
           id: string
@@ -1646,8 +1868,12 @@ export type Database = {
           recipient_name: string
           recipient_nif: string
           recipient_postal_code: string | null
+          rectification_reason: string | null
           retention_percent: number | null
           retention_total: number | null
+          self_billing: boolean
+          self_billing_agreement_id: string | null
+          source_invoice_id: string | null
           status: string | null
           subtotal: number
           tax_amount: number
@@ -1658,10 +1884,18 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          acceptance_status?: string
+          accepted_at?: string | null
+          accepted_by?: string | null
           agent_id: string
           billing_period_end?: string | null
           billing_period_start?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           created_at?: string | null
+          created_by?: string | null
+          document_kind?: string
           due_date: string
           franchise_id?: string | null
           id?: string
@@ -1683,8 +1917,12 @@ export type Database = {
           recipient_name: string
           recipient_nif: string
           recipient_postal_code?: string | null
+          rectification_reason?: string | null
           retention_percent?: number | null
           retention_total?: number | null
+          self_billing?: boolean
+          self_billing_agreement_id?: string | null
+          source_invoice_id?: string | null
           status?: string | null
           subtotal?: number
           tax_amount?: number
@@ -1695,10 +1933,18 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          acceptance_status?: string
+          accepted_at?: string | null
+          accepted_by?: string | null
           agent_id?: string
           billing_period_end?: string | null
           billing_period_start?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           created_at?: string | null
+          created_by?: string | null
+          document_kind?: string
           due_date?: string
           franchise_id?: string | null
           id?: string
@@ -1720,8 +1966,12 @@ export type Database = {
           recipient_name?: string
           recipient_nif?: string
           recipient_postal_code?: string | null
+          rectification_reason?: string | null
           retention_percent?: number | null
           retention_total?: number | null
+          self_billing?: boolean
+          self_billing_agreement_id?: string | null
+          source_invoice_id?: string | null
           status?: string | null
           subtotal?: number
           tax_amount?: number
@@ -1732,6 +1982,20 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "invoices_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
           {
             foreignKeyName: "invoices_agent_id_fkey"
             columns: ["agent_id"]
@@ -1747,10 +2011,52 @@ export type Database = {
             referencedColumns: ["franchise_id"]
           },
           {
+            foreignKeyName: "invoices_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "invoices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
             foreignKeyName: "invoices_franchise_id_fkey"
             columns: ["franchise_id"]
             isOneToOne: false
             referencedRelation: "franchises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_self_billing_agreement_id_fkey"
+            columns: ["self_billing_agreement_id"]
+            isOneToOne: false
+            referencedRelation: "self_billing_agreements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_source_invoice_id_fkey"
+            columns: ["source_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
         ]
@@ -2929,6 +3235,7 @@ export type Database = {
           id: string
           invoice_next_number: number | null
           invoice_prefix: string | null
+          invoice_tax_percent: number | null
           nif_cif: string | null
           parent_id: string | null
           phone: string | null
@@ -2957,6 +3264,7 @@ export type Database = {
           id: string
           invoice_next_number?: number | null
           invoice_prefix?: string | null
+          invoice_tax_percent?: number | null
           nif_cif?: string | null
           parent_id?: string | null
           phone?: string | null
@@ -2985,6 +3293,7 @@ export type Database = {
           id?: string
           invoice_next_number?: number | null
           invoice_prefix?: string | null
+          invoice_tax_percent?: number | null
           nif_cif?: string | null
           parent_id?: string | null
           phone?: string | null
@@ -3454,6 +3763,105 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "proposals_alta"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      self_billing_agreements: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          agreement_reference: string
+          commercial_id: string
+          id: string
+          proposed_at: string
+          proposed_by: string
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          scope_description: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          agreement_reference: string
+          commercial_id: string
+          id?: string
+          proposed_at?: string
+          proposed_by: string
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          scope_description: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          agreement_reference?: string
+          commercial_id?: string
+          id?: string
+          proposed_at?: string
+          proposed_by?: string
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          scope_description?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "self_billing_agreements_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_billing_agreements_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "self_billing_agreements_commercial_id_fkey"
+            columns: ["commercial_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_billing_agreements_commercial_id_fkey"
+            columns: ["commercial_id"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "self_billing_agreements_proposed_by_fkey"
+            columns: ["proposed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_billing_agreements_proposed_by_fkey"
+            columns: ["proposed_by"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "self_billing_agreements_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_billing_agreements_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "v_franchise_client_stats"
+            referencedColumns: ["franchise_id"]
           },
         ]
       }
@@ -4650,6 +5058,14 @@ export type Database = {
           proposal_id: string
         }[]
       }
+      accept_self_billed_invoice: {
+        Args: { p_actor_id: string; p_invoice_id: string }
+        Returns: string
+      }
+      accept_self_billing_agreement: {
+        Args: { p_actor_id: string; p_agreement_id: string }
+        Returns: string
+      }
       assign_commission_plan: {
         Args: {
           p_actor_id: string
@@ -4698,6 +5114,18 @@ export type Database = {
           p_consolidation_days: number
           p_marketer_name: string
           p_product_code: string
+        }
+        Returns: string
+      }
+      configure_fiscal_organization: {
+        Args: {
+          p_actor_id: string
+          p_fiscal_address: string
+          p_fiscal_city: string
+          p_fiscal_country?: string
+          p_fiscal_postal_code: string
+          p_legal_name: string
+          p_nif: string
         }
         Returns: string
       }
@@ -4768,6 +5196,18 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_commission_invoice_draft: {
+        Args: {
+          p_actor_id: string
+          p_commercial_id: string
+          p_commission_ids: string[]
+        }
+        Returns: string
+      }
+      create_rectifying_invoice_draft: {
+        Args: { p_actor_id: string; p_request_id: string }
+        Returns: string
+      }
       generate_invoice_number: { Args: { p_agent_id: string }; Returns: string }
       get_conversion_funnel: {
         Args: { p_agent_id?: string }
@@ -4792,6 +5232,7 @@ export type Database = {
           tariff_name: string
         }[]
       }
+      get_fiscal_admin_setup: { Args: { p_actor_id: string }; Returns: Json }
       get_lead_agent_ranking: {
         Args: never
         Returns: {
@@ -4819,6 +5260,10 @@ export type Database = {
       }
       get_my_franchise_id: { Args: never; Returns: string }
       get_my_parent_id: { Args: never; Returns: string }
+      get_my_self_billing_status: {
+        Args: { p_actor_id: string }
+        Returns: Json
+      }
       get_withdrawal_growth: {
         Args: { p_user_id: string }
         Returns: {
@@ -4842,6 +5287,15 @@ export type Database = {
           p_reason_code: string
           p_reversal_bps: number
           p_supplier_statement_line_id?: string
+        }
+        Returns: string
+      }
+      propose_self_billing_agreement: {
+        Args: {
+          p_actor_id: string
+          p_agreement_reference: string
+          p_commercial_id: string
+          p_scope_description: string
         }
         Returns: string
       }
@@ -4899,6 +5353,10 @@ export type Database = {
           p_note: string
           p_resolution: string
         }
+        Returns: string
+      }
+      revoke_self_billing_agreement: {
+        Args: { p_actor_id: string; p_agreement_id: string; p_reason: string }
         Returns: string
       }
       send_crm_proposal: {
@@ -4964,6 +5422,17 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      transition_fiscal_invoice: {
+        Args: {
+          p_actor_id: string
+          p_invoice_id: string
+          p_payment_method?: string
+          p_payment_reference?: string
+          p_reason: string
+          p_to_status: string
+        }
+        Returns: string
       }
     }
     Enums: {
@@ -5098,9 +5567,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       alta_status_enum: [

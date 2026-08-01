@@ -22,23 +22,14 @@ test.describe('Profile page', () => {
         await expect(page.getByRole('heading', { name: /configuración/i })).toBeVisible();
     });
 
-    test('shows profile form with name and email fields', async ({ page }) => {
+    test('shows the editable company profile field', async ({ page }) => {
         await page.goto('/dashboard/settings');
 
-        const nameField = page
-            .getByLabel(/nombre|name/i)
-            .or(page.locator('input[name="name"]'))
-            .or(page.locator('input[name="full_name"]'));
+        const profileField = page.getByRole('textbox', {
+            name: /razón social|nombre comercial/i,
+        });
 
-        const emailField = page
-            .getByLabel(/email|correo/i)
-            .or(page.locator('input[name="email"]'))
-            .or(page.locator('input[type="email"]'));
-
-        // At least name or email should be visible
-        const hasName = await nameField.first().isVisible().catch(() => false);
-        const hasEmail = await emailField.first().isVisible().catch(() => false);
-        expect(hasName || hasEmail).toBe(true);
+        await expect(profileField).toBeVisible({ timeout: 10_000 });
     });
 
     test('has a save/update button', async ({ page }) => {

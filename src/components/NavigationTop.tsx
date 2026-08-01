@@ -107,7 +107,7 @@ export function NavigationTop({ role }: NavigationTopProps) {
                                 onClick={() => setIsMoreOpen((open) => !open)}
                                 aria-expanded={isMoreOpen}
                                 aria-controls="desktop-secondary-navigation"
-                                className="inline-flex h-9 items-center gap-1 rounded-md px-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                                className="inline-flex h-9 items-center gap-1 rounded-md px-3 text-sm font-semibold text-[#475569] transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
                             >
                                 Más
                                 <ChevronDown
@@ -132,7 +132,7 @@ export function NavigationTop({ role }: NavigationTopProps) {
                         <Link
                             href="/dashboard/simulator"
                             aria-label="Nueva factura"
-                            className="inline-flex h-10 items-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-bold text-white transition-colors hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 active:bg-emerald-900"
+                            className="inline-flex h-10 items-center gap-2 rounded-md bg-[#166534] px-3 text-sm font-bold text-white transition-colors hover:bg-[#14532d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#166534] focus-visible:ring-offset-2 active:bg-[#14532d]"
                         >
                             <Upload aria-hidden="true" size={17} />
                             <span className="hidden sm:inline">Nueva factura</span>
@@ -220,7 +220,7 @@ function DesktopNavigationLink({
             className={
                 active
                     ? 'inline-flex h-9 items-center gap-2 rounded-md bg-slate-900 px-3 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:bg-white dark:text-slate-950'
-                    : 'inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
+                    : 'inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-semibold text-[#475569] transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
             }
         >
             <Icon aria-hidden="true" size={17} strokeWidth={1.8} />
@@ -316,7 +316,7 @@ function MobilePrimaryNavigation({
                             className={
                                 active
                                     ? 'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 text-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 dark:text-indigo-300'
-                                    : 'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 dark:text-slate-400'
+                                    : 'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 dark:text-slate-300'
                             }
                         >
                             <Icon aria-hidden="true" size={20} strokeWidth={active ? 2.2 : 1.7} />
@@ -335,7 +335,7 @@ function MobilePrimaryNavigation({
                     className={
                         isMoreOpen
                             ? 'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 text-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 dark:text-indigo-300'
-                            : 'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 dark:text-slate-400'
+                            : 'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 dark:text-slate-300'
                     }
                 >
                     <Menu aria-hidden="true" size={20} strokeWidth={isMoreOpen ? 2.2 : 1.7} />

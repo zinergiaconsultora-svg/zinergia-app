@@ -38,9 +38,18 @@ function getFixturePdfPath(testInfo: TestInfo): string {
 
 async function selectResidentialSegment(page: Page) {
     const segmentButton = page.getByRole('button', { name: /cliente residencial/i });
+    const fileInput = page.locator('input[type="file"]');
+
+    await Promise.race([
+        segmentButton.waitFor({ state: 'visible', timeout: 10_000 }),
+        fileInput.waitFor({ state: 'attached', timeout: 10_000 }),
+    ]).catch(() => undefined);
+
     if (await segmentButton.isVisible().catch(() => false)) {
         await segmentButton.click();
     }
+
+    await fileInput.waitFor({ state: 'attached', timeout: 10_000 });
 }
 
 test.beforeEach(async () => {

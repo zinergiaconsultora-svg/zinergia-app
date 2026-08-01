@@ -133,7 +133,7 @@ export function FiscalInvoicingWorkspace({ data }: { data: InvoicingWorkspaceDat
             <header className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-950">Facturación de comisiones</h1>
-                    <p className="mt-1 text-sm text-slate-600">Cobros fiscales vinculados a comisiones validadas.</p>
+                    <p className="mt-1 text-sm text-slate-700">Cobros fiscales vinculados a comisiones validadas.</p>
                 </div>
                 <button
                     type="button"
@@ -186,7 +186,7 @@ export function FiscalInvoicingWorkspace({ data }: { data: InvoicingWorkspaceDat
                         aria-selected={filter === status}
                         key={status}
                         onClick={() => setFilter(status)}
-                        className={`h-8 shrink-0 rounded-md px-3 text-sm font-medium ${filter === status ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                        className={`h-8 shrink-0 rounded-md px-3 text-sm font-medium ${filter === status ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
                     >
                         {status === 'all' ? 'Todas' : statusLabels[status]}
                     </button>
@@ -227,13 +227,13 @@ export function FiscalInvoicingWorkspace({ data }: { data: InvoicingWorkspaceDat
                                         <span className="rounded bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-800">Autofactura</span>
                                     )}
                                 </div>
-                                <p className="mt-1 truncate text-sm text-slate-600">
+                                <p className="mt-1 truncate text-sm text-slate-700">
                                     {invoice.profiles?.full_name ?? invoice.issuer_name} · {invoice.invoice_lines?.length ?? 0} concepto(s)
                                 </p>
                             </div>
                             <div className="md:text-right">
                                 <p className="font-semibold tabular-nums text-slate-950">{formatCurrency(Number(invoice.total))}</p>
-                                <p className="text-xs text-slate-500">Base {formatCurrency(Number(invoice.tax_base))}</p>
+                                <p className="text-xs text-slate-700">Base {formatCurrency(Number(invoice.tax_base))}</p>
                             </div>
                             <div className="flex min-w-32 justify-start gap-2 md:justify-end">
                                 {busy ? <Loader2 className="h-4 w-4 animate-spin text-slate-500" /> : (
@@ -260,7 +260,7 @@ export function FiscalInvoicingWorkspace({ data }: { data: InvoicingWorkspaceDat
                         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                             <div>
                                 <h2 id="invoice-draft-title" className="text-base font-bold text-slate-950">Nuevo borrador</h2>
-                                <p className="mt-1 text-sm text-slate-600">Comisiones validadas y conciliadas</p>
+                                <p className="mt-1 text-sm text-slate-700">Comisiones validadas y conciliadas</p>
                             </div>
                             <button type="button" title="Cerrar" onClick={() => setCreating(false)} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-100">
                                 <X className="h-4 w-4" />
@@ -289,7 +289,7 @@ export function FiscalInvoicingWorkspace({ data }: { data: InvoicingWorkspaceDat
                             ))}
                         </div>
                         <div className="flex items-center justify-between gap-4 border-t border-slate-200 px-5 py-4">
-                            <span className="text-sm text-slate-600">Total <strong className="text-slate-950">{formatCurrency(selectedTotal)}</strong></span>
+                            <span className="text-sm text-slate-700">Total <strong className="text-slate-950">{formatCurrency(selectedTotal)}</strong></span>
                             <button
                                 type="button"
                                 onClick={createDraft}
@@ -329,7 +329,7 @@ function Metric({ icon: Icon, label, value }: { icon: typeof ReceiptText; label:
         <div className="flex items-center gap-3 border-slate-200 px-4 py-5 sm:not-last:border-r">
             <Icon className="h-5 w-5 text-slate-500" />
             <div>
-                <p className="text-xs font-semibold uppercase text-slate-500">{label}</p>
+                <p className="text-xs font-semibold uppercase text-slate-700">{label}</p>
                 <p className="mt-1 text-xl font-bold tabular-nums text-slate-950">{value}</p>
             </div>
         </div>

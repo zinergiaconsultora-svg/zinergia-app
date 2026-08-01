@@ -124,10 +124,13 @@ test.describe('OCR callback — commercial staging fixture', () => {
             };
 
             let response = await request.post('/api/webhooks/ocr/callback', callbackRequest);
-            for (let attempt = 1; attempt < 3; attempt += 1) {
+            for (let attempt = 1; attempt < 4; attempt += 1) {
                 const contentType = response.headers()['content-type'] ?? '';
                 if (response.ok() && contentType.includes('application/json')) break;
-                if (response.status() < 500) break;
+                // A JSON 4xx is a real callback rejection. A non-JSON response,
+                // including a transient Next.js dev-server 404 while compiling,
+                // is safe to retry because the callback is idempotent by job_id.
+                if (response.status() < 500 && contentType.includes('application/json')) break;
                 await new Promise((resolve) => setTimeout(resolve, attempt * 500));
                 response = await request.post('/api/webhooks/ocr/callback', callbackRequest);
             }

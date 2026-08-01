@@ -194,7 +194,7 @@ Status: approved on 2026-07-30. Slice 4 is in progress; T15 completed and the T1
   - Verification: direct-partner/franchise allocation matrix, self-assignment denial, transition/reversal matrix, policy-boundary tests, partial/full decomission, paid-debt offset, concurrency, RLS and existing calculation regression tests.
   - Current evidence: the technical ledger and protected workflows are verified in staging. A first-entry admin form atomically creates both versioned channel models and assigns up to five existing direct-partner profiles. A second atomic form versions marketer/product decomission policies with complete, non-overlapping and non-increasing bands. T16 remains business-pending until approved percentages, policies and real assignments are saved.
 
-- [ ] T17. Simplify commission and fiscal-invoicing screens.
+- [x] T17. Simplify commission and fiscal-invoicing screens.
   - Remove wallet/gamification terminology from the primary workflow.
   - Show the six commission states, net amounts and traceable source operation.
   - Give commercial users one surface for pending, available to invoice, invoiced, paid and adjustments.
@@ -207,7 +207,7 @@ Status: approved on 2026-07-30. Slice 4 is in progress; T15 completed and the T1
   - Label customer energy bills, marketer statements and collaborator fiscal invoices separately.
   - Traceability: `REQ-012`, `REQ-013`, `REQ-015`, `REQ-020` to `REQ-022`, `INV-007`, `INV-012`, `INV-016` to `INV-020`.
   - Verification: integration tests for draft, self-billing acceptance, issue, cancel, pay, full/partial reversal and rectifying document.
-  - Current evidence: the commercial workspace is implemented at `/dashboard/commissions`. It replaces the primary wallet route, groups the six canonical states, shows commercial original/reversed/net amounts, source proposal, marketer/product, reconciliation blockers and decomission evidence/dispute detail. `/dashboard/wallet` is now an HTTP compatibility redirect, notifications use the canonical route, pure mapping tests pass and authenticated desktop/mobile checks report no overflow, browser errors or WCAG A/AA violations. `/admin/commissions` opens with three focused operational queues for validation, settlement readiness and adjustment/reconciliation resolution; validation and resolution call only protected lifecycle RPCs with an explicit reason. The fiscal implementation is now authored locally: one transaction creates normalized validated-only lines, reserves each commission once, calculates IVA on the full base and subtracts retention, uses the commercial as issuer and Zinergia as recipient, synchronizes draft cancellation/issue/payment, requires prior and per-document self-billing acceptance, and queues linked negative rectifying invoices for confirmed post-invoice decomissions. Browser-side multi-write invoice generation and direct fiscal-profile writes were removed. The simple fiscal UI includes commercial readiness, draft selection, role/state-safe actions, central-entity setup and self-billing agreements. T17 remains open until the migration, structural verifier, rollback transaction verifier, regenerated remote types and authenticated desktop/mobile E2E pass in staging.
+  - Current evidence: the canonical commercial/admin workspaces and atomic fiscal lifecycle are implemented. The migration and four additive hardening fixes are applied in staging; structural, transactional, lifecycle and RLS verifiers pass; types were regenerated from staging; and authenticated desktop/mobile fiscal E2E passes without overflow or serious/critical Axe findings. Draft, acceptance, issue, cancellation, payment and linked rectification remain protected service-only transitions with normalized unique commission lines.
 
 ### Slice 4 Exit Gate
 
@@ -218,7 +218,7 @@ Status: approved on 2026-07-30. Slice 4 is in progress; T15 completed and the T1
 
 ## Slice 5: Security, Verification and Consolidation
 
-- [ ] T18. Complete cross-domain authorization, privacy and audit coverage.
+- [x] T18. Complete cross-domain authorization, privacy and audit coverage.
   - Test agent, franchise, admin and public boundaries across every new relation and view.
   - Verify all mutating actions authorize before writes.
   - Verify no CUPS, DNI, signatures or tokens appear in logs, errors, history or reconciliation metadata.
@@ -407,7 +407,14 @@ Approving these tasks authorizes implementation in the listed slices. It does no
 ## T16-T20 Continuation (2026-08-01)
 
 - T16 remains business-pending. The protected/versioned configuration workflow is implemented, but no percentages, five-partner assignments or marketer/product decommission terms were invented.
-- T17 local fiscal hardening now includes franchise-supervisor read scopes, explicit effective-privilege checks and a bound service-role RPC regression fix. The migration remains unapplied in staging.
-- T18 local authorization/privacy review found the service-role key import confined to `src/lib/supabase/service.ts`, no CUPS/DNI/token/signature logging patterns in touched paths, authorization-first mutations and explicit fiscal grants/RLS. Remote advisor and fiscal RLS evidence remain blocked by project access.
+- T17 local fiscal hardening added franchise-supervisor read scopes, explicit effective-privilege checks and a bound service-role RPC regression fix. Its former staging-access blocker was resolved on 2026-08-02; closure evidence follows below.
+- T18 local authorization/privacy review found the service-role key import confined to `src/lib/supabase/service.ts`, no CUPS/DNI/token/signature logging patterns in touched paths, authorization-first mutations and explicit fiscal grants/RLS. Its former advisor-access blocker was resolved on 2026-08-02; closure evidence follows below.
 - T19 public acceptance passed against staging with an append-only canonical fixture and exact commission/task/contract side effects. The non-fiscal browser suite has 59 passing tests and 6 intentional skips; the idempotent OCR callback passed four concurrent repetitions after limiting retries to transient 5xx/non-JSON development responses. The activation/economic full story remains blocked by T16/T17.
-- T20 local gates pass: TypeScript, lint, 95 test files with 580 tests and the 42-page production build. Staging dry-run fails with password authentication `28P01`; advisors fail with HTTP 403 for insufficient account privileges. No staging fiscal apply, generated remote types or production promotion is claimed.
+- T20 local gates passed at this checkpoint: TypeScript, lint, 95 test files with 580 tests and the 42-page production build. The former staging authentication/authorization blockers were resolved on 2026-08-02. Production promotion remains unclaimed.
+
+## T17-T20 Staging Closure (2026-08-02)
+
+- T17 completed in staging. Migration `20260801154820_atomic_fiscal_commission_invoicing.sql` and additive ambiguity fixes `20260802002600_fix_fiscal_sequence_year_ambiguity.sql` and `20260802002717_fix_rectifying_invoice_variable_ambiguity.sql` are applied. Structural verification returned zero findings; the rollback-only fiscal workflow returned `ok`; and staging types were regenerated.
+- T18 completed with documented residuals. Migration `20260802003127_fix_complete_activation_conflict_ambiguity.sql` removes a legacy activation conflict, while `20260802003128_harden_legacy_analytics_and_rgpd.sql` makes analytics invoker-safe, pins search paths and rewrites the RGPD purge atomically. Remote database lint and performance advisor return zero findings. The security advisor retains four intentional INFO findings for RLS-enabled service-only tables without browser policies, and one project-level warning until leaked-password protection is enabled in Supabase Auth.
+- Authenticated staging E2E passes 63 executed tests with 6 intentional skips and zero failures across agent/admin roles, desktop/mobile, OCR callback, client relationship, commission and fiscal screens, and WCAG blocker checks.
+- T19 remains open until approved T16 business configuration permits a real activation-to-eligibility-to-invoice-to-payment story. T20 remains open because production has not been changed or regenerated.

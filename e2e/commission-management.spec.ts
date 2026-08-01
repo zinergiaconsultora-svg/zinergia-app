@@ -55,6 +55,12 @@ test.describe('commission management', () => {
             await franchise.fill('10');
         }
 
+        await page.getByRole('button', { name: 'Fiscal', exact: true }).click();
+        await expect(page.getByRole('heading', { name: 'Entidad fiscal Zinergia' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Autofacturación' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Guardar entidad' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Proponer acuerdo' })).toBeDisabled();
+
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
         expect(overflow).toBe(false);
         expect(browserErrors).toEqual([]);
@@ -83,6 +89,10 @@ test.describe('commission management', () => {
             await expect(page.getByRole('button', { name: 'Guardar versión' })).toBeVisible();
             await expect(page.getByRole('button', { name: 'Asignar plan' })).toBeVisible();
         }
+
+        await page.getByRole('button', { name: 'Fiscal', exact: true }).click();
+        await expect(page.getByRole('heading', { name: 'Entidad fiscal Zinergia' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Autofacturación' })).toBeVisible();
 
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
         expect(overflow).toBe(false);

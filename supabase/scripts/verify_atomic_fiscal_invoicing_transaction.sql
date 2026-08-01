@@ -19,16 +19,34 @@ DECLARE
     source_invoice public.invoices%ROWTYPE;
 BEGIN
     SELECT id INTO v_admin_id FROM public.profiles WHERE role = 'admin' ORDER BY created_at, id LIMIT 1;
-    SELECT commission.id, commission.agent_id INTO v_commission_id, v_commercial_id
+    SELECT id INTO v_commercial_id
+    FROM public.profiles
+    WHERE id <> v_admin_id
+    ORDER BY created_at, id
+    LIMIT 1;
+
+    IF v_admin_id IS NULL OR v_commercial_id IS NULL THEN
+        RAISE EXCEPTION 'verification requires one admin and one distinct commercial';
+    END IF;
+
+    SELECT commission.id INTO v_commission_id
     FROM public.network_commissions commission
-    JOIN public.profiles commercial ON commercial.id = commission.agent_id
-    WHERE commission.agent_id <> v_admin_id
+    WHERE commission.agent_id = v_commercial_id
       AND commission.commercial_net_amount - commission.total_reversed_commercial > 0.01
     ORDER BY commission.created_at, commission.id
     LIMIT 1;
 
-    IF v_admin_id IS NULL OR v_commercial_id IS NULL OR v_commission_id IS NULL THEN
-        RAISE EXCEPTION 'verification requires one admin and one positive commission owned by a distinct commercial';
+    IF v_commission_id IS NULL THEN
+        INSERT INTO public.network_commissions (
+            agent_id, agent_commission, franchise_commission, status,
+            lifecycle_status, reconciliation_status, validated_at, validated_by,
+            gross_supplier_commission, commercial_net_amount,
+            franchise_royalty_amount, central_remainder_amount
+        ) VALUES (
+            v_commercial_id, 100, 0, 'cleared',
+            'validated', 'ready', clock_timestamp(), v_admin_id,
+            100, 100, 0, 0
+        ) RETURNING id INTO v_commission_id;
     END IF;
 
     UPDATE public.profiles
