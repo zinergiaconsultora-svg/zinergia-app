@@ -61,21 +61,45 @@ describe('CommissionManagementView', () => {
     it('calculates Zinergia as the direct-plan remainder and keeps franchise at zero', () => {
         render(<CommissionManagementView initialData={configuredData} />);
 
-        const inputs = screen.getAllByRole('spinbutton');
-        fireEvent.change(inputs[0], { target: { value: '80' } });
+        const commercialInput = screen.getByRole('spinbutton', {
+            name: 'Socio comercial %',
+        });
+        fireEvent.change(commercialInput, { target: { value: '80' } });
 
-        expect(screen.getByText('20.00 %')).toBeTruthy();
-        expect((inputs[1] as HTMLInputElement).disabled).toBe(true);
-        expect((inputs[1] as HTMLInputElement).value).toBe('0');
+        expect(screen.getAllByText('20.00 %')).toHaveLength(2);
+        expect(
+            screen.queryByRole('spinbutton', { name: 'Franquicia %' }),
+        ).toBeNull();
     });
 
     it('enables franchise percentage only for the franchise network channel', () => {
         render(<CommissionManagementView initialData={configuredData} />);
 
-        fireEvent.click(screen.getByRole('button', { name: 'Franquicia' }));
-        const inputs = screen.getAllByRole('spinbutton');
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Red franquiciada' }),
+        );
 
-        expect((inputs[1] as HTMLInputElement).disabled).toBe(false);
-        expect(screen.getAllByText('25.00 %').length).toBeGreaterThan(0);
+        expect(
+            screen.getByRole('spinbutton', { name: 'Franquicia %' }),
+        ).toBeTruthy();
+        expect(screen.getAllByText('40.00 %').length).toBeGreaterThan(0);
+    });
+
+    it('only enables versioning after the current split has changed', () => {
+        render(<CommissionManagementView initialData={configuredData} />);
+
+        const saveButton = screen.getByRole('button', {
+            name: 'Guardar como v2',
+        });
+        expect((saveButton as HTMLButtonElement).disabled).toBe(true);
+
+        fireEvent.change(
+            screen.getByRole('spinbutton', { name: 'Socio comercial %' }),
+            {
+                target: { value: '80' },
+            },
+        );
+
+        expect((saveButton as HTMLButtonElement).disabled).toBe(false);
     });
 });

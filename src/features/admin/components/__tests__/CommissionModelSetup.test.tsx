@@ -22,8 +22,8 @@ describe('CommissionModelSetup', () => {
         render(<CommissionModelSetup actorId="admin-1" commercials={commercials} />);
 
         expect(screen.getByRole('heading', { name: 'Configuración inicial' })).toBeTruthy();
-        expect(screen.getByText('25.00 %')).toBeTruthy();
-        expect(screen.getByText('40.00 %')).toBeTruthy();
+        expect(screen.getAllByText('25.00 %').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('40.00 %').length).toBeGreaterThan(0);
         expect((screen.getByRole('button', { name: 'Guardar configuración' }) as HTMLButtonElement).disabled).toBe(false);
     });
 
@@ -33,7 +33,7 @@ describe('CommissionModelSetup', () => {
         const checkboxes = screen.getAllByRole('checkbox');
         checkboxes.slice(0, 5).forEach((checkbox) => fireEvent.click(checkbox));
 
-        expect(screen.getByText('Seleccionados: 5 de 5.')).toBeTruthy();
+        expect(screen.getByText('5 de 5 seleccionados')).toBeTruthy();
         expect((checkboxes[5] as HTMLInputElement).disabled).toBe(true);
     });
 
