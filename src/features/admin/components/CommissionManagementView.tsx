@@ -215,12 +215,13 @@ export function CommissionManagementView({
                         id="editor-heading"
                         className="text-xl font-bold text-slate-950 dark:text-white"
                     >
-                        Preparar un nuevo reparto
+                        Editar reparto comercial
                     </h2>
                     <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        La nueva versión se aplicará desde el momento de
-                        guardarla. Las operaciones anteriores conservarán sus
-                        porcentajes.
+                        Los porcentajes son editables por administración. Al
+                        guardar se crea una nueva versión aplicable desde ese
+                        momento; las operaciones anteriores conservan su
+                        reparto original.
                     </p>
                 </div>
 
