@@ -1,6 +1,14 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { InvoicingWorkspaceData } from '@/app/actions/invoicing';
+import {
+    acceptSelfBilledInvoiceAction,
+    acceptSelfBillingAgreementAction,
+    cancelInvoiceAction,
+    generateInvoiceAction,
+    issueInvoiceAction,
+    markInvoicePaidAction,
+    type InvoicingWorkspaceData,
+} from '@/app/actions/invoicing';
 import { FiscalInvoicingWorkspace } from '../FiscalInvoicingWorkspace';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
@@ -96,5 +104,108 @@ describe('FiscalInvoicingWorkspace', () => {
 
         expect((screen.getByRole('button', { name: 'Crear borrador' }) as HTMLButtonElement).disabled).toBe(true);
         expect(screen.getByRole('link', { name: 'Completar datos fiscales' }).getAttribute('href')).toBe('/dashboard/settings');
+    });
+
+    it('creates a draft from selected commissions and supports closing the selector', async () => {
+        vi.mocked(generateInvoiceAction).mockResolvedValue({
+            success: true,
+            invoiceId: '99999999-9999-4999-8999-999999999999',
+        });
+        const commission = {
+            id: '33333333-3333-4333-8333-333333333333',
+            agent_commission: 125,
+            proposals: [{ clients: [{ name: 'Taller Norte' }] }],
+        };
+
+        render(<FiscalInvoicingWorkspace data={workspace({
+            commissions: [commission],
+        } as unknown as Partial<InvoicingWorkspaceData>)} />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Crear borrador' }));
+        expect(screen.getByText('Taller Norte')).toBeTruthy();
+        fireEvent.click(screen.getByTitle('Cerrar'));
+        fireEvent.click(screen.getByRole('button', { name: 'Crear borrador' }));
+        fireEvent.click(screen.getByRole('checkbox'));
+        fireEvent.click(screen.getAllByRole('button', { name: 'Crear borrador' })[1]);
+
+        await waitFor(() => expect(generateInvoiceAction).toHaveBeenCalled());
+        const formData = vi.mocked(generateInvoiceAction).mock.calls.at(-1)?.[0] as FormData;
+        expect(formData.get('commission_ids')).toBe(JSON.stringify([commission.id]));
+    });
+
+    it('executes every valid invoice action and accepts the self-billing agreement', async () => {
+        vi.mocked(acceptSelfBilledInvoiceAction).mockResolvedValue({ success: true });
+        vi.mocked(issueInvoiceAction).mockResolvedValue({ success: true });
+        vi.mocked(cancelInvoiceAction).mockResolvedValue({ success: true });
+        vi.mocked(acceptSelfBillingAgreementAction).mockResolvedValue({ success: true });
+
+        const pendingSelfBill = invoice({
+            id: '44444444-4444-4444-8444-444444444444',
+            invoice_number: 'AUTO-1',
+            self_billing: true,
+            acceptance_status: 'pending',
+        });
+        const ownerDraft = invoice({
+            id: '55555555-5555-4555-8555-555555555555',
+            invoice_number: 'FAC-2',
+        });
+
+        render(<FiscalInvoicingWorkspace data={workspace({
+            invoices: [pendingSelfBill, ownerDraft],
+            selfBillingAgreement: {
+                id: '66666666-6666-4666-8666-666666666666',
+                reference: 'AUTO-2026-001',
+                acceptedAt: null,
+            },
+        } as unknown as Partial<InvoicingWorkspaceData>)} />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Aceptar acuerdo' }));
+        await waitFor(() => expect(acceptSelfBillingAgreementAction).toHaveBeenCalledWith(
+            '66666666-6666-4666-8666-666666666666',
+        ));
+
+        fireEvent.click(await screen.findByRole('button', { name: 'Aceptar' }));
+        await waitFor(() => expect(acceptSelfBilledInvoiceAction).toHaveBeenCalledWith(pendingSelfBill.id));
+
+        fireEvent.click(await screen.findByRole('button', { name: 'Emitir' }));
+        await waitFor(() => expect(issueInvoiceAction).toHaveBeenCalledWith(ownerDraft.id));
+
+        fireEvent.click(await screen.findByTitle('Cancelar borrador'));
+        await waitFor(() => expect(cancelInvoiceAction).toHaveBeenCalledWith(ownerDraft.id));
+    });
+
+    it('filters invoices and reconciles a payment with a bank reference', async () => {
+        vi.mocked(markInvoicePaidAction).mockResolvedValue({ success: true });
+        const issued = invoice({
+            id: '77777777-7777-4777-8777-777777777777',
+            status: 'issued',
+        });
+        const paid = invoice({
+            id: '88888888-8888-4888-8888-888888888888',
+            invoice_number: 'FAC-PAID',
+            status: 'paid',
+        });
+
+        render(<FiscalInvoicingWorkspace data={workspace({
+            role: 'admin',
+            invoices: [issued, paid],
+        } as Partial<InvoicingWorkspaceData>)} />);
+
+        fireEvent.click(screen.getByRole('tab', { name: 'Pagada' }));
+        expect(screen.getByText('FAC-PAID')).toBeTruthy();
+        expect(screen.queryByText('FAC-2026-00001')).toBeNull();
+        fireEvent.click(screen.getByRole('tab', { name: 'Todas' }));
+
+        fireEvent.click(screen.getByRole('button', { name: 'Conciliar' }));
+        fireEvent.click(screen.getByTitle('Cerrar'));
+        fireEvent.click(screen.getByRole('button', { name: 'Conciliar' }));
+        fireEvent.change(screen.getByLabelText('Referencia bancaria'), { target: { value: ' TRX-900 ' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Confirmar pago' }));
+
+        await waitFor(() => expect(markInvoicePaidAction).toHaveBeenCalledWith(
+            issued.id,
+            'transferencia',
+            'TRX-900',
+        ));
     });
 });

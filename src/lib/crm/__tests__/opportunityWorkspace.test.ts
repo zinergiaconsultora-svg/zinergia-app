@@ -122,4 +122,61 @@ describe('opportunity workspace model', () => {
             nextAction: null,
         })).toBeNull();
     });
+
+    it('maps proposals, contracts, commissions and tasks into one ordered history', () => {
+        const workspace = buildOpportunityWorkspace({
+            ...source,
+            proposals: [{
+                id: '00000000-0000-4000-8000-000000000020',
+                opportunity_id: source.opportunity.id,
+                status: 'accepted',
+                created_at: '2026-07-30T11:00:00.000Z',
+                sent_date: '2026-07-30T12:00:00.000Z',
+                accepted_date: '2026-07-31T09:00:00.000Z',
+                annual_savings: 540,
+                offer_snapshot: { marketer_name: ' Nueva Energía ', tariff_name: ' 2.0TD Fija ' },
+                alta_status: 'pending',
+            }],
+            contracts: [{
+                id: '00000000-0000-4000-8000-000000000030',
+                opportunity_id: source.opportunity.id,
+                status: 'active',
+                marketer_name: 'Nueva Energía',
+                tariff_name: '2.0TD Fija',
+                start_date: '2026-08-01',
+                end_date: '2027-08-01',
+                permanence_status: 'active',
+            }],
+            commissions: [{
+                id: '00000000-0000-4000-8000-000000000040',
+                opportunity_id: source.opportunity.id,
+                status: null,
+                agent_commission: 300,
+                franchise_commission: 50,
+                invoiced: null,
+                paid_date: null,
+            }],
+            tasks: [{
+                id: '00000000-0000-4000-8000-000000000050',
+                opportunity_id: source.opportunity.id,
+                title: 'Confirmar alta',
+                description: 'Revisar el contrato',
+                status: 'completed',
+                due_date: '2026-08-02T10:00:00.000Z',
+                created_at: '2026-08-01T10:00:00.000Z',
+            }],
+        });
+
+        expect(workspace.proposals[0]).toMatchObject({
+            marketer: 'Nueva Energía',
+            tariff: '2.0TD Fija',
+        });
+        expect(workspace.contracts[0].status).toBe('active');
+        expect(workspace.commissions[0]).toMatchObject({ status: 'pending', invoiced: false });
+        expect(workspace.tasks[0].title).toBe('Confirmar alta');
+        expect(workspace.activity[0]).toMatchObject({
+            kind: 'task',
+            detail: 'Tarea completada',
+        });
+    });
 });

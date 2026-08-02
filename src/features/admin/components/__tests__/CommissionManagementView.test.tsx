@@ -102,4 +102,14 @@ describe('CommissionManagementView', () => {
 
         expect((saveButton as HTMLButtonElement).disabled).toBe(false);
     });
+
+    it('uses the active franchise plan when no direct plan exists', () => {
+        render(<CommissionManagementView initialData={{
+            ...configuredData,
+            plans: [configuredData.plans[1]],
+        }} />);
+
+        expect(screen.getByRole('spinbutton', { name: 'Franquicia %' })).toBeTruthy();
+        expect(screen.getByRole('button', { name: 'Red franquiciada' }).getAttribute('aria-pressed')).toBe('true');
+    });
 });
