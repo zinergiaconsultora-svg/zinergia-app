@@ -22,6 +22,11 @@ const decommissionPolicyMigration = readFileSync(
     'utf8',
 );
 
+const proportionalPermanenceMigration = readFileSync(
+    resolve(process.cwd(), 'supabase/migrations/20260802102124_version_commission_and_proportional_permanence.sql'),
+    'utf8',
+);
+
 describe('commission lifecycle migration contract', () => {
     it('creates versioned economic plans, assignments and decommission policies', () => {
         expect(migration).toContain('CREATE TABLE public.commission_plans');
@@ -124,5 +129,39 @@ describe('commission lifecycle migration contract', () => {
         expect(decommissionPolicyMigration).not.toMatch(
             /GRANT EXECUTE ON FUNCTION public\.configure_decommission_policy[^;]*TO authenticated/i,
         );
+    });
+
+    it('versions future percentages atomically without recalculating frozen commissions', () => {
+        expect(proportionalPermanenceMigration).toContain(
+            'CREATE UNIQUE INDEX commission_plans_one_active_code_idx',
+        );
+        expect(proportionalPermanenceMigration).toContain(
+            'CREATE OR REPLACE FUNCTION public.version_commission_plan',
+        );
+        expect(proportionalPermanenceMigration).toContain(
+            'Actualización de porcentajes del canal económico',
+        );
+        expect(proportionalPermanenceMigration).toContain(
+            'IF commission.plan_snapshot IS NOT NULL THEN',
+        );
+    });
+
+    it('derives proportional permanence reversals from canonical contract dates', () => {
+        expect(proportionalPermanenceMigration).toContain(
+            'CREATE OR REPLACE FUNCTION public.propose_permanence_decommission',
+        );
+        expect(proportionalPermanenceMigration).toContain(
+            'remaining_days * 10000.0 / total_days',
+        );
+        expect(proportionalPermanenceMigration).toContain(
+            "contract.permanence_status <> 'known'",
+        );
+        expect(proportionalPermanenceMigration).toContain(
+            "'customer_penalty_independent', true",
+        );
+        expect(proportionalPermanenceMigration).toContain(
+            'FROM PUBLIC, anon, authenticated',
+        );
+        expect(proportionalPermanenceMigration).toContain('TO service_role');
     });
 });

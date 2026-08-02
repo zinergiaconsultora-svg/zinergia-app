@@ -220,14 +220,17 @@ Verification:
 - Acceptance creates a pending accrual.
 - Activation makes the accrual eligible for validation; it does not silently mark it paid or invoiced.
 - Cancellation, rejection or reversal preserves an audited monetary history.
+- An admin can create a new effective-dated version of either economic channel from the commission management screen.
+- Saving a new version closes the previous version and moves current assignments forward atomically; commissions already accepted keep their frozen percentages and amounts.
 
-[REQ-021] WHEN Zinergia receives a supplier cancellation, early-switch, non-consolidation, non-payment or irregular-sale event, the system shall evaluate a versioned marketer policy and create an auditable decommission proposal without rewriting the original commission or payment.
+[REQ-021] WHEN Zinergia receives documented evidence that a contract ended before a known permanence end date, the system shall calculate an auditable proportional decommission proposal without rewriting the original commission or payment.
 
 Verification:
 
-- A policy snapshot records marketer, product/campaign, effective dates, consolidation trigger, clawback window, reason rules and percentage tiers used by the operation.
+- The proportional reversal is calculated server-side as `remaining calendar days / total permanence calendar days`, using the canonical contract start date, permanence end date and documented termination date.
+- The commission and adjustment snapshots record the original allocation, contract dates, termination date, total days, remaining days, calculated percentage and evidence reference used by the operation.
 - The system distinguishes a customer contract penalty from the commercial decommission owed between marketer, Zinergia, franchise and commercial.
-- No automatic monetary reversal occurs without an applicable policy and authoritative supplier evidence; incomplete cases enter an admin review queue.
+- No monetary reversal occurs when permanence is absent, unknown or already fulfilled, nor without authoritative evidence and admin confirmation; incomplete cases enter an admin review queue.
 - A confirmed full or partial reversal preserves the original allocation and creates negative ledger movements for every affected beneficiary.
 - Paid or invoiced commissions use a future settlement adjustment and, when required, a linked rectifying fiscal document instead of deleting or editing historical documents.
 - Commercial users can see the cause, dates, calculation, evidence state and dispute status of every adjustment affecting them.
@@ -264,8 +267,8 @@ Verification:
 - [INV-014] A renewal is a new opportunity, never a mutation of the opportunity that originally won the contract.
 - [INV-015] Documents, proposals, contracts, commissions and fiscal invoice lines cannot be associated across opportunities.
 - [INV-016] Paid and invoiced monetary events are immutable; corrections are append-only positive or negative ledger entries.
-- [INV-017] No decommission is posted from a guessed cancellation, permanence date or generic default policy.
-- [INV-018] Every commission allocation balances to its gross supplier amount and retains the calculation and policy versions used at acceptance.
+- [INV-017] No decommission is posted without a canonical contract, known start and permanence end dates, a documented early termination date and evidence.
+- [INV-018] The reversal percentage is derived server-side from frozen contract dates and cannot be supplied by the caller; every allocation remains balanced to its gross supplier amount.
 - [INV-019] Customer early-termination penalties and collaborator decomissions are independent facts with independent amounts and evidence.
 - [INV-020] One commission allocation can belong to at most one active collaborator fiscal-invoice line or settlement line.
 - [INV-021] Economic channel and plan assignment is explicit, versioned and admin-controlled; it is never inferred only from `role`, missing `franchise_id` or current ownership.

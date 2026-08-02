@@ -18,11 +18,13 @@ const labelClass = 'mb-1.5 block text-sm font-semibold text-slate-700 dark:text-
 
 export function CommissionManagementView({ initialData }: { initialData: CommissionManagementData }) {
     const router = useRouter();
+    const initialPlan = initialData.plans.find((plan) => plan.channel === 'partner_direct' && plan.isActive)
+        ?? initialData.plans.find((plan) => plan.isActive);
     const [pending, startTransition] = useTransition();
-    const [channel, setChannel] = useState<CommissionChannel>('partner_direct');
-    const [name, setName] = useState('Socios directos');
-    const [commercialPercent, setCommercialPercent] = useState(75);
-    const [franchisePercent, setFranchisePercent] = useState(0);
+    const [channel, setChannel] = useState<CommissionChannel>(initialPlan?.channel ?? 'partner_direct');
+    const [name, setName] = useState(initialPlan?.name ?? 'Socios directos');
+    const [commercialPercent, setCommercialPercent] = useState((initialPlan?.commercialShareBps ?? 0) / 100);
+    const [franchisePercent, setFranchisePercent] = useState((initialPlan?.franchiseShareBps ?? 0) / 100);
     const [commercialId, setCommercialId] = useState('');
     const [planId, setPlanId] = useState('');
     const [reason, setReason] = useState('Asignación inicial');
@@ -37,10 +39,11 @@ export function CommissionManagementView({ initialData }: { initialData: Commiss
         [initialData.plans],
     );
 
-    const hasDirectPlan = initialData.plans.some((plan) => plan.channel === 'partner_direct');
-    const hasFranchisePlan = initialData.plans.some((plan) => plan.channel === 'franchise_network');
+    const activePlans = initialData.plans.filter((plan) => plan.isActive);
+    const hasDirectPlan = activePlans.some((plan) => plan.channel === 'partner_direct');
+    const hasFranchisePlan = activePlans.some((plan) => plan.channel === 'franchise_network');
 
-    if (!hasDirectPlan || !hasFranchisePlan) {
+    if (!hasDirectPlan && !hasFranchisePlan) {
         return (
             <div className="mx-auto w-full max-w-5xl space-y-8">
                 <CommissionModelSetup
@@ -63,7 +66,7 @@ export function CommissionManagementView({ initialData }: { initialData: Commiss
             toast.error(result.error);
             return;
         }
-        toast.success('Plan económico creado');
+        toast.success('Nueva versión guardada para operaciones futuras');
         router.refresh();
     });
 
@@ -88,7 +91,7 @@ export function CommissionManagementView({ initialData }: { initialData: Commiss
                 </div>
                 <h1 className="text-2xl font-semibold text-slate-950 dark:text-white">Modelo económico</h1>
                 <p className="max-w-3xl text-sm text-slate-600 dark:text-slate-300">
-                    Planes vigentes, asignaciones comerciales y operaciones que requieren revisión.
+                    Edita los porcentajes futuros y consulta el histórico aplicado a cada operación.
                 </p>
             </header>
 
@@ -96,9 +99,9 @@ export function CommissionManagementView({ initialData }: { initialData: Commiss
                 <div className="mb-5 flex items-center justify-between gap-4">
                     <div>
                         <h2 id="plans-heading" className="text-lg font-semibold text-slate-950 dark:text-white">Planes</h2>
-                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Cada cambio crea una versión nueva.</p>
+                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Cada cambio entra en vigor desde su guardado. Lo anterior no se recalcula.</p>
                     </div>
-                    <span className="text-sm font-semibold text-slate-500">{initialData.plans.length} vigentes</span>
+                    <span className="text-sm font-semibold text-slate-500">{activePlans.length} vigentes · {initialData.plans.length} versiones</span>
                 </div>
 
                 <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
@@ -111,6 +114,7 @@ export function CommissionManagementView({ initialData }: { initialData: Commiss
                                     <th className="px-4 py-3 text-right font-semibold">Comercial</th>
                                     <th className="px-4 py-3 text-right font-semibold">Franquicia</th>
                                     <th className="px-4 py-3 text-right font-semibold">Zinergia</th>
+                                    <th className="px-4 py-3 font-semibold">Estado</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -121,10 +125,11 @@ export function CommissionManagementView({ initialData }: { initialData: Commiss
                                         <td className="px-4 py-3 text-right tabular-nums">{formatBps(plan.commercialShareBps)}</td>
                                         <td className="px-4 py-3 text-right tabular-nums">{formatBps(plan.franchiseShareBps)}</td>
                                         <td className="px-4 py-3 text-right tabular-nums">{formatBps(plan.centralShareBps)}</td>
+                                        <td className="px-4 py-3"><span className={`rounded px-2 py-1 text-xs font-bold ${plan.isActive ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{plan.isActive ? 'Vigente' : `Hasta ${formatDate(plan.effectiveTo)}`}</span></td>
                                     </tr>
                                 ))}
                                 {initialData.plans.length === 0 && (
-                                    <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-500">Todavía no hay planes configurados.</td></tr>
+                                    <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">Todavía no hay planes configurados.</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -142,8 +147,10 @@ export function CommissionManagementView({ initialData }: { initialData: Commiss
                                             type="button"
                                             onClick={() => {
                                                 setChannel(value);
-                                                setName(value === 'partner_direct' ? 'Socios directos' : 'Red franquiciada');
-                                                if (value === 'partner_direct') setFranchisePercent(0);
+                                                const current = activePlans.find((plan) => plan.channel === value);
+                                                setName(current?.name ?? (value === 'partner_direct' ? 'Socios directos' : 'Red franquiciada'));
+                                                setCommercialPercent((current?.commercialShareBps ?? 0) / 100);
+                                                setFranchisePercent(value === 'partner_direct' ? 0 : (current?.franchiseShareBps ?? 0) / 100);
                                             }}
                                             aria-pressed={channel === value}
                                             className={`h-8 rounded text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 ${channel === value ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}
@@ -164,6 +171,7 @@ export function CommissionManagementView({ initialData }: { initialData: Commiss
                             <button type="button" disabled={pending || centralPercent < 0 || !name.trim()} onClick={submitPlan} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 text-sm font-bold text-white hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
                                 <Save aria-hidden="true" size={16} /> Guardar versión
                             </button>
+                            <p className="text-xs leading-5 text-slate-500">Se aplicará a nuevas aceptaciones y conservará automáticamente las asignaciones actuales del canal.</p>
                         </div>
                     </div>
                 </div>
@@ -187,7 +195,7 @@ export function CommissionManagementView({ initialData }: { initialData: Commiss
                         <Field label="Plan">
                             <select className={inputClass} value={planId} onChange={(event) => setPlanId(event.target.value)}>
                                 <option value="">Seleccionar</option>
-                                {initialData.plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name} v{plan.version}</option>)}
+                                {activePlans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name} v{plan.version}</option>)}
                             </select>
                         </Field>
                         <Field label="Motivo"><input className={inputClass} value={reason} onChange={(event) => setReason(event.target.value)} /></Field>
@@ -236,6 +244,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function formatBps(value: number): string {
     return `${(value / 100).toFixed(2)} %`;
+}
+
+function formatDate(value: string | null): string {
+    if (!value) return 'histórico';
+    return new Intl.DateTimeFormat('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+    }).format(new Date(value));
 }
 
 function channelLabel(channel: CommissionChannel): string {

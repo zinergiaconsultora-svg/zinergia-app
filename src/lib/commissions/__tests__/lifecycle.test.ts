@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     allocateGrossCommission,
     calculateCommissionReversal,
+    calculatePermanenceReversal,
     canTransitionCommission,
     statusAfterReversal,
     validateCommissionPlan,
@@ -132,6 +133,56 @@ describe('commission decommissioning', () => {
                 { activeDayFrom: 31, activeDayTo: 90, reversalBps: 7_500 },
             ],
         })).toContain('Band reversal cannot increase as active days advance.');
+    });
+
+    it('calculates a proportional reversal from remaining permanence days', () => {
+        expect(calculatePermanenceReversal({
+            startDate: '2026-01-01',
+            endDate: '2027-01-01',
+            terminationDate: '2026-07-02',
+        })).toEqual({
+            totalDays: 365,
+            activeDays: 182,
+            remainingDays: 183,
+            reversalBps: 5_014,
+        });
+    });
+
+    it('returns roughly two thirds when twelve of thirty-six months were fulfilled', () => {
+        const result = calculatePermanenceReversal({
+            startDate: '2026-01-01',
+            endDate: '2029-01-01',
+            terminationDate: '2027-01-01',
+        });
+
+        expect(result.reversalBps).toBe(6_670);
+        expect(result.activeDays + result.remainingDays).toBe(result.totalDays);
+    });
+
+    it('does not reverse a permanence fulfilled on its end date', () => {
+        expect(calculatePermanenceReversal({
+            startDate: '2024-02-29',
+            endDate: '2025-02-28',
+            terminationDate: '2025-02-28',
+        })).toEqual({
+            totalDays: 365,
+            activeDays: 365,
+            remainingDays: 0,
+            reversalBps: 0,
+        });
+    });
+
+    it('rejects guessed or invalid termination dates', () => {
+        expect(() => calculatePermanenceReversal({
+            startDate: '2026-01-01',
+            endDate: '2027-01-01',
+            terminationDate: '2025-12-31',
+        })).toThrow(/within the permanence period/);
+        expect(() => calculatePermanenceReversal({
+            startDate: '2026-02-30',
+            endDate: '2027-01-01',
+            terminationDate: '2026-06-01',
+        })).toThrow(/valid calendar day/);
     });
 });
 

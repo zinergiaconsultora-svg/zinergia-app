@@ -78,6 +78,7 @@ export type CommissionAdminQueues = {
 };
 
 const CAUSE_LABELS: Record<string, string> = {
+    permanence_breach: 'Permanencia incumplida',
     early_switch: 'Cambio anticipado de comercializadora',
     non_consolidation: 'Contrato no consolidado',
     non_payment: 'Impago del cliente',

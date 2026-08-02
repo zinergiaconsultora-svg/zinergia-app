@@ -117,6 +117,7 @@ const RECONCILIATION_LABELS: Record<string, string> = {
 };
 
 const ADJUSTMENT_REASON_LABELS: Record<string, string> = {
+    permanence_breach: 'Permanencia incumplida',
     early_switch: 'Cambio anticipado de comercializadora',
     non_consolidation: 'Contrato no consolidado',
     non_payment: 'Impago del cliente',
@@ -158,7 +159,9 @@ function formatFrozenPolicy(snapshot: Json): string {
     const version = isRecord(snapshot) && typeof snapshot.version === 'number'
         ? ` v${snapshot.version}`
         : '';
-    return `${code}${version}`;
+    return code === 'proportional_permanence'
+        ? `Permanencia proporcional${version}`
+        : `${code}${version}`;
 }
 
 function mapAdjustment(source: CommissionAdjustmentSource): CommissionAdjustmentItem {

@@ -26,6 +26,13 @@ export interface CommissionReversal extends CommissionAllocation {
     readonly reversalBps: number;
 }
 
+export interface PermanenceReversal {
+    readonly totalDays: number;
+    readonly activeDays: number;
+    readonly remainingDays: number;
+    readonly reversalBps: number;
+}
+
 export interface DecommissionBandInput {
     readonly activeDayFrom: number;
     readonly activeDayTo: number;
@@ -177,6 +184,33 @@ export function calculateCommissionReversal(
     };
 }
 
+export function calculatePermanenceReversal(input: {
+    startDate: string;
+    endDate: string;
+    terminationDate: string;
+}): PermanenceReversal {
+    const startDay = parseDateOnly(input.startDate);
+    const endDay = parseDateOnly(input.endDate);
+    const terminationDay = parseDateOnly(input.terminationDate);
+    const totalDays = endDay - startDay;
+    const activeDays = terminationDay - startDay;
+
+    if (totalDays <= 0) {
+        throw new RangeError('endDate must be after startDate.');
+    }
+    if (activeDays < 0 || terminationDay > endDay) {
+        throw new RangeError('terminationDate must fall within the permanence period.');
+    }
+
+    const remainingDays = endDay - terminationDay;
+    return {
+        totalDays,
+        activeDays,
+        remainingDays,
+        reversalBps: Math.round((remainingDays * BASIS_POINTS) / totalDays),
+    };
+}
+
 export function canTransitionCommission(
     from: CommissionLifecycleStatus,
     to: CommissionLifecycleStatus,
@@ -205,4 +239,24 @@ function toCents(amount: number): number {
 
 function fromCents(cents: number): number {
     return cents / 100;
+}
+
+function parseDateOnly(value: string): number {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (!match) throw new RangeError('Dates must use YYYY-MM-DD.');
+
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const milliseconds = Date.UTC(year, month - 1, day);
+    const parsed = new Date(milliseconds);
+    if (
+        parsed.getUTCFullYear() !== year
+        || parsed.getUTCMonth() !== month - 1
+        || parsed.getUTCDate() !== day
+    ) {
+        throw new RangeError('Date is not a valid calendar day.');
+    }
+
+    return Math.floor(milliseconds / 86_400_000);
 }

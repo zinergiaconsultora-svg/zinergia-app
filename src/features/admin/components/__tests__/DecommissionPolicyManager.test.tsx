@@ -1,57 +1,40 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createDecommissionPolicyAction } from '@/app/actions/commissionManagement';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import { DecommissionPolicyManager } from '../DecommissionPolicyManager';
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock('@/app/actions/commissionManagement', () => ({
-    createDecommissionPolicyAction: vi.fn(),
-}));
-
 describe('DecommissionPolicyManager', () => {
-    beforeEach(() => vi.clearAllMocks());
-
-    it('builds a continuous default policy and requires a marketer', () => {
+    it('shows the canonical proportional permanence rule without editable bands', () => {
         render(<DecommissionPolicyManager policies={[]} />);
 
-        const save = screen.getByRole('button', { name: 'Guardar política' }) as HTMLButtonElement;
-        expect(save.disabled).toBe(true);
-
-        fireEvent.change(screen.getByLabelText('Comercializadora'), { target: { value: 'Iberdrola' } });
-        expect(save.disabled).toBe(false);
-        expect(screen.getByText('Desde 0')).toBeTruthy();
-        expect(screen.getByText('Desde 31')).toBeTruthy();
-        expect(screen.getByText('Desde 91')).toBeTruthy();
+        expect(screen.getByText('Permanencia proporcional · v1')).toBeTruthy();
+        expect(screen.getByText(/días de permanencia pendientes ÷ días totales/)).toBeTruthy();
+        expect(screen.queryByRole('button', { name: 'Guardar política' })).toBeNull();
+        expect(screen.queryByLabelText('Devolución %')).toBeNull();
     });
 
-    it('rejects reversal percentages that increase with active days', () => {
+    it('makes the evidence and customer-penalty boundaries explicit', () => {
         render(<DecommissionPolicyManager policies={[]} />);
-        fireEvent.change(screen.getByLabelText('Comercializadora'), { target: { value: 'Endesa' } });
 
-        const reversalInputs = screen.getAllByLabelText('Devolución %');
-        fireEvent.change(reversalInputs[0], { target: { value: '40' } });
-
-        expect(screen.getByRole('alert')).toBeTruthy();
-        expect((screen.getByRole('button', { name: 'Guardar política' }) as HTMLButtonElement).disabled).toBe(true);
+        expect(screen.getByText('Evidencia + confirmación admin')).toBeTruthy();
+        expect(screen.getByText('No inventa fechas ni permanencias desconocidas.')).toBeTruthy();
+        expect(screen.getByText('No calcula ni representa una penalización al cliente.')).toBeTruthy();
     });
 
-    it('submits normalized continuous bands through one action', async () => {
-        vi.mocked(createDecommissionPolicyAction).mockResolvedValue({ success: true, data: 'policy-1' });
-        render(<DecommissionPolicyManager policies={[]} />);
-        fireEvent.change(screen.getByLabelText('Comercializadora'), { target: { value: 'Naturgy' } });
-        fireEvent.change(screen.getByLabelText('Producto (opcional)'), { target: { value: 'Luz 2.0TD' } });
-        fireEvent.click(screen.getByRole('button', { name: 'Guardar política' }));
-
-        await waitFor(() => expect(createDecommissionPolicyAction).toHaveBeenCalledWith({
+    it('keeps prior marketer policies as read-only history', () => {
+        render(<DecommissionPolicyManager policies={[{
+            id: 'policy-1',
+            name: 'Histórica',
             marketerName: 'Naturgy',
             productCode: 'Luz 2.0TD',
+            version: 2,
             consolidationDays: 30,
             clawbackDays: 180,
-            bands: [
-                { activeDayFrom: 0, activeDayTo: 30, reversalPercent: 100 },
-                { activeDayFrom: 31, activeDayTo: 90, reversalPercent: 50 },
-                { activeDayFrom: 91, activeDayTo: 180, reversalPercent: 25 },
-            ],
-        }));
+            effectiveFrom: '2026-01-01T00:00:00Z',
+            bands: [],
+        }]} />);
+
+        fireEvent.click(screen.getByText('Políticas históricas (1)'));
+        expect(screen.getByText('Naturgy · Luz 2.0TD')).toBeTruthy();
+        expect(screen.getByText('v2 · 180 días')).toBeTruthy();
     });
 });

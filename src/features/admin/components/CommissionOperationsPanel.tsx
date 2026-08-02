@@ -15,9 +15,12 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
+    proposePermanenceDecommissionAction,
     resolveCommissionAdjustmentAction,
     validateCommissionAction,
+    type CommissionPermanenceCandidateSummary,
 } from '@/app/actions/commissionManagement';
+import { calculatePermanenceReversal } from '@/lib/commissions/lifecycle';
 import type {
     CommissionAdminAdjustmentItem,
     CommissionAdminQueueItem,
@@ -37,12 +40,18 @@ function formatDate(value: string | null): string {
     return new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value));
 }
 
-export function CommissionOperationsPanel({ queues }: { queues: CommissionAdminQueues }) {
+export function CommissionOperationsPanel({
+    queues,
+    permanenceCandidates,
+}: {
+    queues: CommissionAdminQueues;
+    permanenceCandidates: CommissionPermanenceCandidateSummary[];
+}) {
     const [queue, setQueue] = useState<Queue>('validation');
     const options: Array<{ id: Queue; label: string; shortLabel: string; count: number; icon: typeof BadgeCheck }> = [
         { id: 'validation', label: 'Validar', shortLabel: 'Validar', count: queues.validation.length, icon: BadgeCheck },
         { id: 'settlement', label: 'Liquidar', shortLabel: 'Liquidar', count: queues.settlement.length, icon: ReceiptText },
-        { id: 'attention', label: 'Ajustes y conciliación', shortLabel: 'Ajustes', count: queues.attentionCount, icon: Scale },
+        { id: 'attention', label: 'Ajustes y conciliación', shortLabel: 'Ajustes', count: queues.attentionCount + permanenceCandidates.length, icon: Scale },
     ];
 
     return (
@@ -77,7 +86,7 @@ export function CommissionOperationsPanel({ queues }: { queues: CommissionAdminQ
 
             {queue === 'validation' && <ValidationQueue items={queues.validation} />}
             {queue === 'settlement' && <SettlementQueue items={queues.settlement} />}
-            {queue === 'attention' && <AttentionQueue adjustments={queues.adjustments} reconciliation={queues.reconciliation} />}
+            {queue === 'attention' && <AttentionQueue adjustments={queues.adjustments} reconciliation={queues.reconciliation} permanenceCandidates={permanenceCandidates} />}
         </section>
     );
 }
@@ -147,7 +156,15 @@ function SettlementQueue({ items }: { items: CommissionAdminQueueItem[] }) {
     );
 }
 
-function AttentionQueue({ adjustments, reconciliation }: { adjustments: CommissionAdminAdjustmentItem[]; reconciliation: CommissionAdminQueues['reconciliation'] }) {
+function AttentionQueue({
+    adjustments,
+    reconciliation,
+    permanenceCandidates,
+}: {
+    adjustments: CommissionAdminAdjustmentItem[];
+    reconciliation: CommissionAdminQueues['reconciliation'];
+    permanenceCandidates: CommissionPermanenceCandidateSummary[];
+}) {
     const router = useRouter();
     const [pending, startTransition] = useTransition();
     const [openId, setOpenId] = useState<string | null>(null);
@@ -167,12 +184,13 @@ function AttentionQueue({ adjustments, reconciliation }: { adjustments: Commissi
         });
     }
 
-    if (adjustments.length === 0 && reconciliation.length === 0) {
+    if (adjustments.length === 0 && reconciliation.length === 0 && permanenceCandidates.length === 0) {
         return <QueueEmpty icon={Scale} title="No hay diferencias pendientes" description="Los ajustes y bloqueos de conciliación aparecerán aquí con su evidencia." />;
     }
 
     return (
         <div className="space-y-7 pt-5">
+            <PermanenceDecommissionForm candidates={permanenceCandidates} />
             <div>
                 <h3 className="text-sm font-bold text-slate-950 dark:text-white">Ajustes propuestos</h3>
                 <div className="mt-2 divide-y divide-slate-200 border-y border-slate-200 dark:divide-slate-800 dark:border-slate-800">
@@ -214,6 +232,104 @@ function AttentionQueue({ adjustments, reconciliation }: { adjustments: Commissi
     );
 }
 
+function PermanenceDecommissionForm({ candidates }: { candidates: CommissionPermanenceCandidateSummary[] }) {
+    const router = useRouter();
+    const [pending, startTransition] = useTransition();
+    const [commissionId, setCommissionId] = useState('');
+    const [terminationDate, setTerminationDate] = useState('');
+    const [evidenceReference, setEvidenceReference] = useState('');
+    const selected = candidates.find((candidate) => candidate.commissionId === commissionId);
+    let preview: ReturnType<typeof calculatePermanenceReversal> | null = null;
+    if (selected && terminationDate) {
+        try {
+            preview = calculatePermanenceReversal({
+                startDate: selected.startDate,
+                endDate: selected.endDate,
+                terminationDate,
+            });
+        } catch {
+            preview = null;
+        }
+    }
+
+    function submit() {
+        startTransition(async () => {
+            const result = await proposePermanenceDecommissionAction({
+                commissionId,
+                terminationDate,
+                evidenceReference,
+            });
+            if (!result.success) {
+                toast.error(result.error);
+                return;
+            }
+
+            toast.success('Decomisión proporcional propuesta para revisión');
+            setCommissionId('');
+            setTerminationDate('');
+            setEvidenceReference('');
+            router.refresh();
+        });
+    }
+
+    return (
+        <div className="rounded-md border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/40">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
+                <div>
+                    <h3 className="text-sm font-bold text-slate-950 dark:text-white">Registrar incumplimiento de permanencia</h3>
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Solo aparecen contratos con fechas conocidas y una comisión congelada.</p>
+                </div>
+                <span className="mt-1 shrink-0 text-xs font-semibold text-slate-500">{candidates.length} operaciones elegibles</span>
+            </div>
+
+            {candidates.length === 0 ? (
+                <p className="mt-4 rounded bg-white px-3 py-3 text-sm text-slate-500 dark:bg-slate-950">No hay operaciones elegibles sin una decomisión previa.</p>
+            ) : (
+                <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(240px,1.3fr)_170px_minmax(220px,1fr)_auto] lg:items-end">
+                    <label>
+                        <span className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">Operación</span>
+                        <select className={inputClass} value={commissionId} onChange={(event) => {
+                            setCommissionId(event.target.value);
+                            setTerminationDate('');
+                        }}>
+                            <option value="">Seleccionar contrato</option>
+                            {candidates.map((candidate) => (
+                                <option key={candidate.commissionId} value={candidate.commissionId}>
+                                    {candidate.clientName} · {candidate.commercialName} · hasta {candidate.endDate}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                    <label>
+                        <span className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">Fecha efectiva de baja</span>
+                        <input
+                            type="date"
+                            className={inputClass}
+                            min={selected?.startDate}
+                            max={selected ? previousDate(selected.endDate) : undefined}
+                            value={terminationDate}
+                            onChange={(event) => setTerminationDate(event.target.value)}
+                        />
+                    </label>
+                    <label>
+                        <span className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">Referencia de evidencia</span>
+                        <input className={inputClass} placeholder="Liquidación, correo o expediente" value={evidenceReference} onChange={(event) => setEvidenceReference(event.target.value)} />
+                    </label>
+                    <button type="button" disabled={pending || !preview || preview.reversalBps <= 0 || evidenceReference.trim().length < 3} onClick={submit} className="h-10 rounded-md bg-rose-700 px-4 text-sm font-bold text-white hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-50">
+                        Proponer ajuste
+                    </button>
+                </div>
+            )}
+
+            {selected && preview && preview.reversalBps > 0 && (
+                <p className="mt-3 text-sm font-semibold text-rose-700 dark:text-rose-300">
+                    Vista previa: {preview.remainingDays} de {preview.totalDays} días pendientes · {(preview.reversalBps / 100).toFixed(2)} % de la asignación original. Se aplicará solo tras confirmación administrativa.
+                </p>
+            )}
+        </div>
+    );
+}
+
 function QueueRow({ item, action }: { item: CommissionAdminQueueItem; action: React.ReactNode }) {
     return (
         <div className="grid gap-4 lg:grid-cols-[minmax(220px,1.15fr)_minmax(190px,1fr)_150px_150px_auto] lg:items-center">
@@ -234,4 +350,10 @@ function QueueEmpty({ icon: Icon, title, description }: { icon: typeof FileText;
             <p className="mx-auto mt-1 max-w-md text-sm text-slate-600 dark:text-slate-300">{description}</p>
         </div>
     );
+}
+
+function previousDate(value: string): string {
+    const date = new Date(`${value}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() - 1);
+    return date.toISOString().slice(0, 10);
 }

@@ -7,6 +7,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock('@/app/actions/commissionManagement', () => ({
     validateCommissionAction: vi.fn(),
     resolveCommissionAdjustmentAction: vi.fn(),
+    proposePermanenceDecommissionAction: vi.fn(),
 }));
 
 const queues: CommissionAdminQueues = {
@@ -61,7 +62,7 @@ const queues: CommissionAdminQueues = {
 
 describe('CommissionOperationsPanel', () => {
     it('keeps validation, settlement and attention as focused queues', () => {
-        render(<CommissionOperationsPanel queues={queues} />);
+        render(<CommissionOperationsPanel queues={queues} permanenceCandidates={[]} />);
 
         expect(screen.getByText('Taller Norte')).toBeTruthy();
         fireEvent.click(screen.getByRole('button', { name: /Liquidar/ }));
@@ -74,12 +75,33 @@ describe('CommissionOperationsPanel', () => {
     });
 
     it('requires an explicit validation reason before confirmation', () => {
-        render(<CommissionOperationsPanel queues={queues} />);
+        render(<CommissionOperationsPanel queues={queues} permanenceCandidates={[]} />);
         fireEvent.click(screen.getByRole('button', { name: 'Validar' }));
 
         const reason = screen.getByLabelText('Motivo de validación');
         const confirm = screen.getByRole('button', { name: 'Confirmar validación' });
         fireEvent.change(reason, { target: { value: '' } });
         expect((confirm as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it('previews the server-equivalent proportional permanence calculation', () => {
+        render(<CommissionOperationsPanel queues={queues} permanenceCandidates={[{
+            commissionId: '11111111-1111-4111-8111-111111111111',
+            contractId: '22222222-2222-4222-8222-222222222222',
+            clientName: 'Industria Norte',
+            commercialName: 'Ana Comercial',
+            startDate: '2026-01-01',
+            endDate: '2027-01-01',
+        }]} />);
+
+        fireEvent.click(screen.getByRole('button', { name: /Ajustes y conciliación/ }));
+        fireEvent.change(screen.getByLabelText('Operación'), {
+            target: { value: '11111111-1111-4111-8111-111111111111' },
+        });
+        fireEvent.change(screen.getByLabelText('Fecha efectiva de baja'), {
+            target: { value: '2026-07-02' },
+        });
+
+        expect(screen.getByText(/183 de 365 días pendientes · 50.14 %/)).toBeTruthy();
     });
 });

@@ -20,6 +20,8 @@ test.describe('commission management', () => {
         await expect(page.getByRole('button', { name: /Validar/ })).toBeVisible();
         await expect(page.getByRole('button', { name: /Liquidar/ })).toBeVisible();
         await expect(page.getByRole('button', { name: /Ajustes/ })).toBeVisible();
+        await page.getByRole('button', { name: /Ajustes/ }).click();
+        await expect(page.getByRole('heading', { name: 'Registrar incumplimiento de permanencia' })).toBeVisible();
         await page.getByRole('button', { name: 'Modelo económico' }).click();
         const initialSetup = page.getByRole('heading', { name: 'Configuración inicial' });
 
@@ -28,7 +30,8 @@ test.describe('commission management', () => {
             await expect(page.getByRole('heading', { name: 'Socios directos' })).toBeVisible();
             await expect(page.getByRole('heading', { name: 'Red franquiciada' })).toBeVisible();
             await expect(page.getByRole('heading', { name: 'Perfiles de socios' })).toBeVisible();
-            await expect(page.getByRole('heading', { name: 'Políticas de decomisión' })).toBeVisible();
+            await expect(page.getByRole('heading', { name: 'Regla de decomisión' })).toBeVisible();
+            await expect(page.getByRole('heading', { name: 'Permanencia proporcional · v1' })).toBeVisible();
 
             await page.getByLabel('Socio %').fill('80');
             await expect(page.getByText('20.00 %')).toBeVisible();
@@ -36,13 +39,12 @@ test.describe('commission management', () => {
             await expect(page.getByText('30.00 %')).toBeVisible();
             await expect(page.getByRole('button', { name: 'Guardar configuración' })).toBeEnabled();
 
-            await page.getByLabel('Comercializadora').fill('Verificación visual');
-            await expect(page.getByRole('button', { name: 'Guardar política' })).toBeEnabled();
         } else {
             await expect(page.getByRole('heading', { name: 'Modelo económico' })).toBeVisible();
             await expect(page.getByRole('heading', { name: 'Planes' })).toBeVisible();
             await expect(page.getByRole('heading', { name: 'Asignaciones' })).toBeVisible();
             await expect(page.getByRole('heading', { name: 'Revisión económica' })).toBeVisible();
+            await expect(page.getByRole('heading', { name: 'Regla de decomisión' })).toBeVisible();
 
             const commercial = page.getByLabel('Comercial %');
             const franchise = page.getByLabel('Franquicia %');
@@ -82,12 +84,13 @@ test.describe('commission management', () => {
         if (await initialSetup.count()) {
             await expect(initialSetup).toBeVisible();
             await expect(page.getByRole('button', { name: 'Guardar configuración' })).toBeVisible();
-            await expect(page.getByRole('heading', { name: 'Políticas de decomisión' })).toBeVisible();
-            await expect(page.getByRole('button', { name: 'Guardar política' })).toBeVisible();
+            await expect(page.getByRole('heading', { name: 'Regla de decomisión' })).toBeVisible();
+            await expect(page.getByText(/días de permanencia pendientes ÷ días totales/)).toBeVisible();
         } else {
             await expect(page.getByRole('heading', { name: 'Modelo económico' })).toBeVisible();
             await expect(page.getByRole('button', { name: 'Guardar versión' })).toBeVisible();
             await expect(page.getByRole('button', { name: 'Asignar plan' })).toBeVisible();
+            await expect(page.getByRole('heading', { name: 'Regla de decomisión' })).toBeVisible();
         }
 
         await page.getByRole('button', { name: 'Fiscal', exact: true }).click();

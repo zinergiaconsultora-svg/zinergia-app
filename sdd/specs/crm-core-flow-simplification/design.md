@@ -212,6 +212,8 @@ The initial five partners are assignments in business data, not five special use
 
 Each versioned `commission_plan` defines commercial, franchise and central percentages that sum to exactly 100%. Percentages are configurable by effective date and may optionally be specialized by marketer, product or campaign without changing historical operations.
 
+The admin commission screen is the only primary editing surface for these percentages. Creating a new version is atomic: it closes the prior version, creates the successor and rolls every current assignment for that channel forward at the same effective timestamp. Existing commissions are never recalculated because their accepted allocation snapshot remains immutable.
+
 Each accepted proposal stores an immutable calculation snapshot containing:
 
 - Gross supplier commission and source (`tariff_fixed`, supplier statement or approved savings rule).
@@ -226,26 +228,18 @@ The three final allocations must equal the supplier gross commission. Historical
 
 #### Decommission lifecycle
 
-A decommission is a negative economic event linked to the original commission, not a destructive status edit.
+A decommission is a negative economic event linked to the original commission, not a destructive status edit. The canonical new-business rule is proportional unfulfilled permanence, not an editable table of arbitrary day bands.
 
-Supported source reasons are:
+The rule applies only when the commission is linked to a canonical contract with known start and permanence end dates and Zinergia has documented an actual termination before that end date. The protected database workflow derives `reversal_bps = round(remaining_days * 10000 / total_days)` from date-only calendar arithmetic, clamps only for monetary safety and applies that ratio to the frozen gross and beneficiary allocation. The caller cannot submit a percentage.
 
-- `not_activated`: the supplier never consolidated the activation.
-- `withdrawal`: a valid customer withdrawal cancelled the operation.
-- `early_switch`: the active supply changed marketer inside a contractual clawback window.
-- `non_payment`: the supplier statement applies a contractually supported non-payment reversal.
-- `irregular_sale`: consent, documentation or quality controls invalidate the sale.
-- `supplier_correction`: the supplier corrects a prior settlement.
-- `supplier_fault` or `operational_fault`: tracked for quality but not charged to the commercial unless the applicable written policy says otherwise.
-
-`commission_policies` are versioned by marketer and optionally product/campaign. A policy defines the earning trigger, consolidation days, clawback window, tier percentages, applicable reasons, allocation treatment and required evidence. The exact policy version is copied to the commission at acceptance.
+Legacy marketer/product policies and bands remain readable for operations that already froze them, but they are no longer the primary rule or editing surface for new commissions. Supplier corrections unrelated to permanence remain reviewable legacy adjustments and cannot masquerade as a permanence breach.
 
 The protected workflow is:
 
-1. Ingest a supplier statement row or an authorized manual cancellation event.
-2. Match it to contract, supply point and original commission without exposing CUPS plaintext.
-3. Calculate a proposed full or partial reversal from the frozen policy.
-4. Require admin review when evidence, matching or responsibility is incomplete.
+1. An authorized admin records the documented early termination date and evidence reference against an eligible commission.
+2. The service-only workflow locks and matches the canonical contract, original commission and frozen allocation without exposing CUPS plaintext.
+3. Calculate the proposed partial reversal from total and remaining permanence days.
+4. Reject absent, unknown, fulfilled or inconsistent permanence and require admin review of the resulting proposal.
 5. Append negative allocation events using the original beneficiary proportions.
 6. Offset unpaid amounts in the next settlement; never silently debit a different operation.
 7. For already invoiced/paid amounts, create a linked adjustment balance and rectifying-document requirement.
@@ -257,7 +251,7 @@ Customer contract penalties are recorded separately and never used as the decomm
 
 - `network_commissions` remains the compatible aggregate during rollout.
 - `commission_plans` and `commission_plan_assignments` store versioned channel allocation and admin-controlled membership.
-- `commission_decommission_policies` and immutable bands store versioned marketer earning and reversal rules.
+- `commission_decommission_policies` and immutable bands retain legacy frozen rules; new operations snapshot the canonical proportional-permanence rule.
 - `commission_allocations` stores commercial, franchise and central amounts.
 - `commission_events` is the append-only monetary/state ledger.
 - `commission_adjustments` stores proposed, confirmed, waived and disputed decomissions.

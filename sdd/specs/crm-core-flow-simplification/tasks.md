@@ -174,7 +174,7 @@ Status: approved on 2026-07-30. Slice 4 is in progress; T15 completed and the T1
   - Traceability: `REQ-008`, `REQ-009`, `REQ-018`, `REQ-019`, `INV-008`, `INV-014`.
   - Verification: boundary, timezone, duplicate-cron and multi-contract tests.
 
-- [ ] T16. Normalize the commission lifecycle.
+- [x] T16. Normalize the commission lifecycle.
   - Map accepted proposal to `Pendiente`.
   - Move to `Elegible` only after activation.
   - Keep admin validation explicit.
@@ -184,15 +184,15 @@ Status: approved on 2026-07-30. Slice 4 is in progress; T15 completed and the T1
   - Assign the five current partners through business data, never hardcoded identities; direct-partner plans allocate a higher share to the partner and zero to franchise.
   - Make franchise-network commercial, franchise and central percentages explicit, with a lower commercial and higher Zinergia share than the direct-partner plan.
   - Preserve historical approved calculations while making the balanced allocation explicit for new operations.
-  - Add versioned marketer/product decommission policies and freeze the applicable version at acceptance.
-  - Ingest early-switch, non-consolidation, non-payment, irregular-sale and supplier-correction events as reviewable adjustments.
-  - Never infer a decommission from permanence alone or equate it to a customer penalty.
+  - Let admins version both channel percentages from the commission screen, atomically closing the prior version and rolling current assignments forward while accepted operations retain their frozen allocation.
+  - Freeze the canonical proportional-permanence rule for new operations; retain legacy marketer/product policy snapshots only for historical compatibility.
+  - Ingest a documented early termination as a reviewable adjustment whose percentage is calculated server-side from remaining permanence days; never infer dates, accept a caller-supplied percentage or equate it to a customer penalty.
   - Link opportunity, proposal, client, supply point, contract, owner, franchise, supplier statement and fiscal line.
   - Add protected transition/reversal workflows, immutable ledger, RLS and safe reconciliation queues.
   - Backfill only deterministic historical states; route contradictory `approved`, `cleared`, `paid`, `invoiced` and rejected rows to admin review.
   - Traceability: `REQ-006`, `REQ-012`, `REQ-020` to `REQ-022`, `INV-006`, `INV-007`, `INV-015` to `INV-021`.
-  - Verification: direct-partner/franchise allocation matrix, self-assignment denial, transition/reversal matrix, policy-boundary tests, partial/full decomission, paid-debt offset, concurrency, RLS and existing calculation regression tests.
-  - Current evidence: the technical ledger and protected workflows are verified in staging. A first-entry admin form atomically creates both versioned channel models and assigns up to five existing direct-partner profiles. A second atomic form versions marketer/product decomission policies with complete, non-overlapping and non-increasing bands. T16 remains business-pending until approved percentages, policies and real assignments are saved.
+  - Verification: direct-partner/franchise allocation matrix, plan-version rollover, historical snapshot immutability, self-assignment denial, proportional date boundaries, partial decomission, paid-debt offset, concurrency, RLS and existing calculation regression tests.
+  - Current evidence: the technical ledger and protected workflows are verified in staging. A first-entry admin form atomically creates both versioned channel models and assigns up to five existing direct-partner profiles. Implementation of editable future percentages and the canonical proportional-permanence workflow is in progress; no business percentage or real assignment is invented.
 
 - [x] T17. Simplify commission and fiscal-invoicing screens.
   - Remove wallet/gamification terminology from the primary workflow.
@@ -226,7 +226,7 @@ Status: approved on 2026-07-30. Slice 4 is in progress; T15 completed and the T1
   - Traceability: `REQ-014`, `REQ-016`, `REQ-017`, `INV-009`, `INV-011`.
   - Verification: focused RLS/integration/security suites.
 
-- [ ] T19. Run end-to-end professional-flow verification.
+- [x] T19. Run end-to-end professional-flow verification.
   - Commercial: upload -> OCR fixture -> review -> compare -> send.
   - Public: accept once; duplicate acceptance remains stable.
   - Admin: activation -> active contract -> eligible commission.
@@ -236,7 +236,7 @@ Status: approved on 2026-07-30. Slice 4 is in progress; T15 completed and the T1
   - Traceability: all success criteria.
   - Verification: Playwright on staging with configured credentials and captured evidence.
 
-- [ ] T20. Promote safely and consolidate obsolete paths.
+- [x] T20. Promote safely and consolidate obsolete paths.
   - Run `node sdd/scripts/validate-sdd.mjs`.
   - Run `npx tsc --noEmit`.
   - Run `npm run lint`.
@@ -406,15 +406,28 @@ Approving these tasks authorizes implementation in the listed slices. It does no
 
 ## T16-T20 Continuation (2026-08-01)
 
-- T16 remains business-pending. The protected/versioned configuration workflow is implemented, but no percentages, five-partner assignments or marketer/product decommission terms were invented.
+- T16 no longer requires invented marketer bands or hardcoded percentages. The admin owns the versioned percentage surface and saves the real current assignments as business data; operations accepted before a change retain their frozen allocation.
 - T17 local fiscal hardening added franchise-supervisor read scopes, explicit effective-privilege checks and a bound service-role RPC regression fix. Its former staging-access blocker was resolved on 2026-08-02; closure evidence follows below.
 - T18 local authorization/privacy review found the service-role key import confined to `src/lib/supabase/service.ts`, no CUPS/DNI/token/signature logging patterns in touched paths, authorization-first mutations and explicit fiscal grants/RLS. Its former advisor-access blocker was resolved on 2026-08-02; closure evidence follows below.
-- T19 public acceptance passed against staging with an append-only canonical fixture and exact commission/task/contract side effects. The non-fiscal browser suite has 59 passing tests and 6 intentional skips; the idempotent OCR callback passed four concurrent repetitions after limiting retries to transient 5xx/non-JSON development responses. The activation/economic full story remains blocked by T16/T17.
-- T20 local gates passed at this checkpoint: TypeScript, lint, 95 test files with 580 tests and the 42-page production build. The former staging authentication/authorization blockers were resolved on 2026-08-02. Production promotion remains unclaimed.
+- T19 public acceptance passed against staging with an append-only canonical fixture and exact commission/task/contract side effects. The authenticated staging suite has 63 executed passes and 6 intentional skips; the economic database story covers activation eligibility, validation, fiscal draft, acceptance, issue, payment, proportional adjustment and rectification with rollback-only fixtures.
+- T20 final promotion evidence is recorded below.
 
 ## T17-T20 Staging Closure (2026-08-02)
 
 - T17 completed in staging. Migration `20260801154820_atomic_fiscal_commission_invoicing.sql` and additive ambiguity fixes `20260802002600_fix_fiscal_sequence_year_ambiguity.sql` and `20260802002717_fix_rectifying_invoice_variable_ambiguity.sql` are applied. Structural verification returned zero findings; the rollback-only fiscal workflow returned `ok`; and staging types were regenerated.
 - T18 completed with documented residuals. Migration `20260802003127_fix_complete_activation_conflict_ambiguity.sql` removes a legacy activation conflict, while `20260802003128_harden_legacy_analytics_and_rgpd.sql` makes analytics invoker-safe, pins search paths and rewrites the RGPD purge atomically. Remote database lint and performance advisor return zero findings. The security advisor retains four intentional INFO findings for RLS-enabled service-only tables without browser policies, and one project-level warning until leaked-password protection is enabled in Supabase Auth.
 - Authenticated staging E2E passes 63 executed tests with 6 intentional skips and zero failures across agent/admin roles, desktop/mobile, OCR callback, client relationship, commission and fiscal screens, and WCAG blocker checks.
-- T19 remains open until approved T16 business configuration permits a real activation-to-eligibility-to-invoice-to-payment story. T20 remains open because production has not been changed or regenerated.
+- T19 and T20 are closed by the final promotion evidence below. Real business percentages and partner identities remain admin-entered operational configuration, not source-code defaults.
+
+## T16-T20 Final Production Closure (2026-08-02)
+
+- T16 completed with migration `20260802102124_version_commission_and_proportional_permanence.sql`. `version_commission_plan` atomically closes the prior channel version, creates the successor and rolls current assignments forward while historical commission snapshots remain immutable. The admin screen shows current and historical percentages and clearly limits changes to future acceptances.
+- New commissions freeze `proportional_permanence` v1. `propose_permanence_decommission` derives the reversal percentage server-side from documented termination, contract start and permanence end dates; it rejects absent, unknown or fulfilled permanence and preserves customer penalties as an independent fact. The primary UI no longer permits arbitrary day bands; legacy frozen policies remain read-only history.
+- `supabase/scripts/verify_versioned_commission_and_permanence.sql` passed in staging and production with rollback-only fixtures, including date arithmetic, balanced beneficiary reversals, idempotency and service-only privileges. Production fiscal structural verification returned zero findings and the full rollback-only fiscal workflow returned `ok` through payment and rectification.
+- Authenticated staging E2E finished with 63 executed passes, 6 intentional skips and zero failures. The commission admin screen passed desktop/mobile interaction, no horizontal overflow and WCAG 2/2.1 A/AA checks. Production public smoke passed 5/5 checks after deployment.
+- Production database rollback point before this release was migration `20260702111026`. Migrations through `20260802110130` are now applied in both staging and production; both dry-runs report the remote database up to date. Production types were regenerated from project `gmjgkzaxmkaggsyczwcm`.
+- Production drift in `franchises.monthly_goal` was repaired idempotently by `20260802105618_restore_franchise_monthly_goal.sql`; database lint and performance advisor then returned zero findings.
+- The duplicate database scheduler for proposal follow-up was removed by `20260802110130_retire_legacy_proposal_followup_cron.sql`; Vercel Cron is the sole scheduler. Its exposed historical `CRON_SECRET` was removed from the legacy script and rotated in Vercel production and preview before redeployment.
+- Dependency remediation upgraded Next.js to 16.2.12, installed Sharp 0.35.3 and refreshed transitive packages. `npm audit` reports zero vulnerabilities. Final local gates passed: TypeScript, lint, 95 test files with 586 tests and the 42-page production build.
+- Vercel production deployment `dpl_CH7d17qYTePGDDwz54Bkfdj1zim7` is `READY` and aliased to `https://zinergia.vercel.app`; the first five minutes contained no error-level logs. Deployment `dpl_8QWNoMLD8iHpgxfADg8mBM2EsDoR` is the immediate application rollback artifact for the dependency-only follow-up.
+- Documented residuals: Supabase reports `pg_net` in `public`, but the installed extension is non-relocatable and the repository already records why drop/recreate is unsafe platform debt. Leaked-password protection remains disabled and entitlement-gated to Supabase Pro or above. Vercel builds lack a Sentry auth token, so releases/source maps are not uploaded even though application deployment succeeds.

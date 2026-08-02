@@ -17,6 +17,7 @@ const emptyData = {
     assignments: [],
     policies: [],
     reconciliation: [],
+    permanenceCandidates: [],
     operations: {
         validation: [],
         settlement: [],
@@ -38,6 +39,8 @@ const configuredData = {
             franchiseShareBps: 0,
             centralShareBps: 2500,
             effectiveFrom: '2026-08-01T00:00:00Z',
+            effectiveTo: null,
+            isActive: true,
         },
         {
             id: 'franchise-plan',
@@ -48,6 +51,8 @@ const configuredData = {
             franchiseShareBps: 1500,
             centralShareBps: 4000,
             effectiveFrom: '2026-08-01T00:00:00Z',
+            effectiveTo: null,
+            isActive: true,
         },
     ],
 };

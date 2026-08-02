@@ -14,7 +14,8 @@ export function CommissionAdminWorkspace({ initialData, fiscalData }: { initialD
     const [section, setSection] = useState<Section>('operations');
     const operationCount = initialData.operations.validation.length
         + initialData.operations.settlement.length
-        + initialData.operations.attentionCount;
+        + initialData.operations.attentionCount
+        + initialData.permanenceCandidates.length;
 
     return (
         <div className="mx-auto w-full max-w-[1400px]">
@@ -60,7 +61,7 @@ export function CommissionAdminWorkspace({ initialData, fiscalData }: { initialD
                 </button>
             </nav>
 
-            {section === 'operations' && <CommissionOperationsPanel queues={initialData.operations} />}
+            {section === 'operations' && <CommissionOperationsPanel queues={initialData.operations} permanenceCandidates={initialData.permanenceCandidates} />}
             {section === 'model' && <div className="pt-7"><CommissionManagementView initialData={initialData} /></div>}
             {section === 'fiscal' && <FiscalAdministrationPanel data={fiscalData} commercials={initialData.commercials} />}
         </div>

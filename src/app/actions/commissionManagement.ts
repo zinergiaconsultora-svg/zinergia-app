@@ -66,6 +66,12 @@ const adjustmentResolutionSchema = z.object({
     note: z.string().trim().min(3).max(500),
 });
 
+const permanenceDecommissionSchema = z.object({
+    commissionId: z.uuid(),
+    terminationDate: z.iso.date(),
+    evidenceReference: z.string().trim().min(3).max(500),
+});
+
 export type CommissionPlanSummary = {
     id: string;
     name: string;
@@ -75,6 +81,17 @@ export type CommissionPlanSummary = {
     franchiseShareBps: number;
     centralShareBps: number;
     effectiveFrom: string;
+    effectiveTo: string | null;
+    isActive: boolean;
+};
+
+export type CommissionPermanenceCandidateSummary = {
+    commissionId: string;
+    contractId: string;
+    clientName: string;
+    commercialName: string;
+    startDate: string;
+    endDate: string;
 };
 
 export type CommissionCommercialSummary = {
@@ -127,6 +144,7 @@ export type CommissionManagementData = {
     assignments: CommissionAssignmentSummary[];
     policies: CommissionPolicySummary[];
     reconciliation: CommissionReconciliationSummary[];
+    permanenceCandidates: CommissionPermanenceCandidateSummary[];
     operations: CommissionAdminQueues;
 };
 
@@ -134,6 +152,39 @@ export type CommissionModelSetupResult = {
     directPlanId: string;
     franchisePlanId: string;
     assignedCount: number;
+};
+
+type CommissionPermanenceSource = {
+    id: string;
+    contract_id: string | null;
+    gross_supplier_commission: number | null;
+    plan_snapshot: unknown;
+    clients: { name: string | null } | { name: string | null }[] | null;
+    proposals: {
+        clients: { name: string | null } | { name: string | null }[] | null;
+    } | {
+        clients: { name: string | null } | { name: string | null }[] | null;
+    }[] | null;
+    contract: {
+        id: string;
+        start_date: string;
+        end_date: string | null;
+        permanence_status: string;
+    } | {
+        id: string;
+        start_date: string;
+        end_date: string | null;
+        permanence_status: string;
+    }[] | null;
+    commercial: {
+        full_name: string | null;
+        company_name: string | null;
+        email: string | null;
+    } | {
+        full_name: string | null;
+        company_name: string | null;
+        email: string | null;
+    }[] | null;
 };
 
 export async function getCommissionManagementDataAction(): Promise<CommissionManagementData> {
@@ -150,11 +201,11 @@ export async function getCommissionManagementDataAction(): Promise<CommissionMan
         reconciliationResult,
         commissionsResult,
         adjustmentsResult,
+        permanenceAdjustmentsResult,
     ] = await Promise.all([
         service
             .from('commission_plans')
-            .select('id, name, channel, version, commercial_share_bps, franchise_share_bps, central_share_bps, effective_from')
-            .eq('is_active', true)
+            .select('id, name, channel, version, commercial_share_bps, franchise_share_bps, central_share_bps, effective_from, effective_to, is_active')
             .order('channel')
             .order('version', { ascending: false }),
         service
@@ -188,17 +239,26 @@ export async function getCommissionManagementDataAction(): Promise<CommissionMan
                 id,
                 agent_id,
                 proposal_id,
+                contract_id,
                 lifecycle_status,
                 reconciliation_status,
+                gross_supplier_commission,
                 commercial_net_amount,
                 agent_commission,
                 total_reversed_commercial,
+                plan_snapshot,
                 invoice_id,
                 created_at,
                 eligible_at,
                 validated_at,
                 clients ( name ),
                 proposals ( clients ( name ) ),
+                contract:contracts!network_commissions_contract_id_fkey (
+                    id,
+                    start_date,
+                    end_date,
+                    permanence_status
+                ),
                 commercial:profiles!network_commissions_agent_id_fkey (
                     full_name,
                     email,
@@ -214,6 +274,11 @@ export async function getCommissionManagementDataAction(): Promise<CommissionMan
             .eq('status', 'proposed')
             .order('proposed_at', { ascending: true })
             .limit(100),
+        service
+            .from('commission_adjustments')
+            .select('commission_id')
+            .eq('reason_code', 'permanence_breach')
+            .in('status', ['proposed', 'confirmed']),
     ]);
 
     const firstError = plansResult.error
@@ -223,7 +288,8 @@ export async function getCommissionManagementDataAction(): Promise<CommissionMan
         ?? bandsResult.error
         ?? reconciliationResult.error
         ?? commissionsResult.error
-        ?? adjustmentsResult.error;
+        ?? adjustmentsResult.error
+        ?? permanenceAdjustmentsResult.error;
     if (firstError) throw new Error('No se pudo cargar la configuración de comisiones.');
 
     const bandsByPolicy = new Map<string, CommissionPolicyBandSummary[]>();
@@ -249,6 +315,11 @@ export async function getCommissionManagementDataAction(): Promise<CommissionMan
             createdAt: item.created_at,
         }));
 
+    const commissions = (commissionsResult.data ?? []) as unknown as CommissionPermanenceSource[];
+    const permanenceAdjustmentCommissionIds = new Set(
+        (permanenceAdjustmentsResult.data ?? []).map((adjustment) => adjustment.commission_id),
+    );
+
     return {
         actorId,
         plans: (plansResult.data ?? []).map((plan) => ({
@@ -260,6 +331,8 @@ export async function getCommissionManagementDataAction(): Promise<CommissionMan
             franchiseShareBps: plan.franchise_share_bps,
             centralShareBps: plan.central_share_bps,
             effectiveFrom: plan.effective_from,
+            effectiveTo: plan.effective_to,
+            isActive: plan.is_active,
         })),
         commercials: (profilesResult.data ?? []).map((profile) => ({
             id: profile.id,
@@ -286,8 +359,36 @@ export async function getCommissionManagementDataAction(): Promise<CommissionMan
             bands: bandsByPolicy.get(policy.id) ?? [],
         })),
         reconciliation,
+        permanenceCandidates: commissions.flatMap((commission) => {
+            const contract = oneRelation(commission.contract);
+            if (
+                !contract
+                || !commission.contract_id
+                || !commission.plan_snapshot
+                || !commission.gross_supplier_commission
+                || contract.permanence_status !== 'known'
+                || !contract.start_date
+                || !contract.end_date
+                || permanenceAdjustmentCommissionIds.has(commission.id)
+            ) return [];
+
+            const client = oneRelation(commission.clients)
+                ?? oneRelation(oneRelation(commission.proposals)?.clients);
+            const commercial = oneRelation(commission.commercial);
+            return [{
+                commissionId: commission.id,
+                contractId: commission.contract_id,
+                clientName: client?.name?.trim() || 'Cliente sin nombre',
+                commercialName: commercial?.full_name?.trim()
+                    || commercial?.company_name?.trim()
+                    || commercial?.email
+                    || 'Comercial sin nombre',
+                startDate: contract.start_date,
+                endDate: contract.end_date,
+            }];
+        }),
         operations: buildCommissionAdminQueues({
-            commissions: (commissionsResult.data ?? []) as unknown as AdminCommissionSource[],
+            commissions: commissions as unknown as AdminCommissionSource[],
             adjustments: (adjustmentsResult.data ?? []) as unknown as AdminAdjustmentSource[],
             reconciliation,
         }),
@@ -367,36 +468,47 @@ export async function createCommissionPlanAction(input: z.input<typeof planSchem
     try {
         const actorId = await getActorId();
         const service = createServiceClient();
-        const code = parsed.data.channel;
-        const { data: latest } = await service
-            .from('commission_plans')
-            .select('version')
-            .eq('code', code)
-            .order('version', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-        const { data, error } = await service
-            .from('commission_plans')
-            .insert({
-                code,
-                version: (latest?.version ?? 0) + 1,
-                name: parsed.data.name,
-                channel: parsed.data.channel,
-                commercial_share_bps: commercialShareBps,
-                franchise_share_bps: franchiseShareBps,
-                central_share_bps: centralShareBps,
-                effective_from: new Date().toISOString(),
-                created_by: actorId,
-            })
-            .select('id')
-            .single();
+        const { data, error } = await service.rpc('version_commission_plan', {
+            p_actor_id: actorId,
+            p_channel: parsed.data.channel,
+            p_name: parsed.data.name,
+            p_commercial_share_bps: commercialShareBps,
+            p_franchise_share_bps: franchiseShareBps,
+        });
 
         if (error || !data) return actionError(error, 'No se pudo crear el plan.');
         revalidatePath('/admin/commissions');
-        return actionSuccess(data.id);
+        return actionSuccess((data as { planId: string }).planId);
     } catch (error) {
         return actionError(error, 'No se pudo crear el plan.');
+    }
+}
+
+export async function proposePermanenceDecommissionAction(
+    input: z.input<typeof permanenceDecommissionSchema>,
+): Promise<ActionResult<string>> {
+    await requireServerRole(['admin']);
+    const parsed = permanenceDecommissionSchema.safeParse(input);
+    if (!parsed.success) {
+        return { success: false, error: 'Indica la operación, la fecha de baja y una evidencia.' };
+    }
+
+    try {
+        const actorId = await getActorId();
+        const service = createServiceClient();
+        const { data, error } = await service.rpc('propose_permanence_decommission', {
+            p_commission_id: parsed.data.commissionId,
+            p_actor_id: actorId,
+            p_termination_date: parsed.data.terminationDate,
+            p_evidence_reference: parsed.data.evidenceReference,
+        });
+
+        if (error || !data) return actionError(error, 'No se pudo proponer la decomisión.');
+        revalidatePath('/admin/commissions');
+        revalidatePath('/dashboard/commissions');
+        return actionSuccess(data);
+    } catch (error) {
+        return actionError(error, 'No se pudo proponer la decomisión.');
     }
 }
 
@@ -537,4 +649,9 @@ async function getActorId(): Promise<string> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Sesión expirada.');
     return user.id;
+}
+
+function oneRelation<T>(value: T | T[] | null | undefined): T | null {
+    if (Array.isArray(value)) return value[0] ?? null;
+    return value ?? null;
 }

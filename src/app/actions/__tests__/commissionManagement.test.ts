@@ -10,19 +10,6 @@ vi.mock('@/lib/supabase/server', () => ({ createClient: createClientMock }));
 vi.mock('@/lib/supabase/service', () => ({ createServiceClient: createServiceClientMock }));
 vi.mock('next/cache', () => ({ revalidatePath: revalidatePathMock }));
 
-function query(result: unknown = { data: null, error: null }) {
-    const q = {
-        select: vi.fn(() => q),
-        insert: vi.fn(() => q),
-        eq: vi.fn(() => q),
-        order: vi.fn(() => q),
-        limit: vi.fn(() => q),
-        maybeSingle: vi.fn(async () => result),
-        single: vi.fn(async () => result),
-    };
-    return q;
-}
-
 describe('commission management actions', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -33,12 +20,8 @@ describe('commission management actions', () => {
     });
 
     it('creates a balanced direct-partner plan with zero franchise share', async () => {
-        const latest = query({ data: { version: 2 }, error: null });
-        const insert = query({ data: { id: 'plan-3' }, error: null });
-        const from = vi.fn()
-            .mockReturnValueOnce(latest)
-            .mockReturnValueOnce(insert);
-        createServiceClientMock.mockReturnValue({ from });
+        const rpc = vi.fn(async () => ({ data: { planId: 'plan-3' }, error: null }));
+        createServiceClientMock.mockReturnValue({ rpc });
 
         const { createCommissionPlanAction } = await import('../commissionManagement');
         const result = await createCommissionPlanAction({
@@ -49,13 +32,13 @@ describe('commission management actions', () => {
         });
 
         expect(result).toEqual({ success: true, data: 'plan-3' });
-        expect(insert.insert).toHaveBeenCalledWith(expect.objectContaining({
-            version: 3,
-            commercial_share_bps: 7500,
-            franchise_share_bps: 0,
-            central_share_bps: 2500,
-            created_by: 'admin-1',
-        }));
+        expect(rpc).toHaveBeenCalledWith('version_commission_plan', {
+            p_actor_id: 'admin-1',
+            p_channel: 'partner_direct',
+            p_name: 'Socios directos',
+            p_commercial_share_bps: 7500,
+            p_franchise_share_bps: 0,
+        });
     });
 
     it('rejects a franchise split above one hundred percent before writing', async () => {
@@ -127,6 +110,26 @@ describe('commission management actions', () => {
             p_actor_id: 'admin-1',
             p_resolution: 'confirmed',
             p_note: 'Confirmado contra la liquidación de la comercializadora',
+        });
+    });
+
+    it('proposes a permanence decomission without accepting a caller percentage', async () => {
+        const rpc = vi.fn(async () => ({ data: 'adjustment-1', error: null }));
+        createServiceClientMock.mockReturnValue({ rpc });
+
+        const { proposePermanenceDecommissionAction } = await import('../commissionManagement');
+        const result = await proposePermanenceDecommissionAction({
+            commissionId: '11111111-1111-4111-8111-111111111111',
+            terminationDate: '2026-08-01',
+            evidenceReference: 'Liquidación agosto, línea 4',
+        });
+
+        expect(result).toEqual({ success: true, data: 'adjustment-1' });
+        expect(rpc).toHaveBeenCalledWith('propose_permanence_decommission', {
+            p_commission_id: '11111111-1111-4111-8111-111111111111',
+            p_actor_id: 'admin-1',
+            p_termination_date: '2026-08-01',
+            p_evidence_reference: 'Liquidación agosto, línea 4',
         });
     });
 
