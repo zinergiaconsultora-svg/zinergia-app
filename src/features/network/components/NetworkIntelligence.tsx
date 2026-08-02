@@ -155,7 +155,7 @@ export const NetworkIntelligence: React.FC = () => {
                         )}
                     </div>
                     <div className="relative z-10 flex-shrink-0">
-                        <button onClick={() => window.location.href = '/dashboard/wallet'} className="px-4 py-2 bg-white text-xs text-slate-900 rounded-lg font-bold hover:scale-105 transition-transform">
+                        <button onClick={() => window.location.href = '/dashboard/commissions'} className="px-4 py-2 bg-white text-xs text-slate-900 rounded-lg font-bold hover:scale-105 transition-transform">
                             Ver mis comisiones
                         </button>
                     </div>

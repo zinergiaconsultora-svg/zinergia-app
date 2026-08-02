@@ -4,6 +4,9 @@ import { createClient as createServerClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { sanitizeOcrTrainingData } from '@/lib/ocr/sanitizeTrainingData';
 import { InvoiceData } from '@/types/crm';
+import { requireServerRole } from '@/lib/auth/permissions';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { z } from 'zod';
 
 /**
  * Fase 2 — Corrección humana en el loop.
@@ -23,11 +26,38 @@ export async function confirmOcrExtractionAction(
     jobId: string,
     correctedData: InvoiceData
 ): Promise<{ correctedFieldsCount: number; alreadyValidated: boolean }> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+
+    if (!z.uuid().safeParse(jobId).success) {
+        throw new Error('Trabajo OCR inválido');
+    }
+
+    let serializedData: string;
+    try {
+        serializedData = JSON.stringify(correctedData);
+    } catch {
+        throw new Error('Datos OCR inválidos');
+    }
+    if (!serializedData || serializedData.length > 262_144) {
+        throw new Error('Datos OCR inválidos');
+    }
+
     const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('No autenticado');
 
     const admin = createServiceClient();
+    const { data: confirmedOpportunity, error: confirmationError } = await (
+        admin as unknown as SupabaseClient
+    ).rpc('confirm_crm_ocr_data', {
+        p_job_id: jobId,
+        p_actor_id: user.id,
+        p_corrected_data: correctedData,
+    });
+
+    if (confirmationError || !confirmedOpportunity) {
+        throw new Error('No se pudieron confirmar los datos OCR');
+    }
 
     // 1. Recuperar el ejemplo asociado al job
     const { data: existing } = await admin

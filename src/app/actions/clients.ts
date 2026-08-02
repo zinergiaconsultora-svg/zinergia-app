@@ -28,6 +28,14 @@ import { hashCups, hashDni } from '@/lib/crypto/pii';
 import { moduleLogger } from '@/lib/logger';
 import { purgeClientDriveFiles } from '@/lib/drive/purgeClientDriveFiles';
 import { writeLeadAuditEvent } from '@/lib/audit/leadAuditLog';
+import {
+    buildClientPortfolio,
+    buildClientRelationshipRecord,
+    type ClientPortfolioItem,
+    type ClientPortfolioSource,
+    type ClientRelationshipRecord,
+    type ClientRelationshipSource,
+} from '@/lib/crm/clientPortfolio';
 
 const log = moduleLogger('clients-action');
 
@@ -63,6 +71,117 @@ export interface ClientKpis {
     nuevos: number;
     pipelineValue: number;
     conversion: number;
+}
+
+export async function getClientPortfolioAction(
+    limit = 100,
+    offset = 0,
+): Promise<ClientPortfolioItem[]> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+    const safeLimit = Math.min(Math.max(1, limit), PAGE_SIZE_MAX);
+    const safeOffset = Math.max(0, offset);
+    const { supabase, franchiseId, role } = await getSessionContext();
+    if (role !== 'admin' && !franchiseId) return [];
+
+    let clientsQuery = supabase
+        .from('clients')
+        .select('id,name,email,phone,status,owner_id,last_contact_date,created_at')
+        .order('name', { ascending: true })
+        .range(safeOffset, safeOffset + safeLimit - 1);
+    if (role !== 'admin' && franchiseId) {
+        clientsQuery = clientsQuery.eq('franchise_id', franchiseId);
+    }
+
+    const { data: clients, error: clientsError } = await clientsQuery;
+    if (clientsError) throw new Error(`Error cargando cartera: ${clientsError.message}`);
+    if (!clients?.length) return [];
+
+    const clientIds = clients.map(client => client.id);
+    const ownerIds = [...new Set(clients.map(client => client.owner_id))];
+    const [owners, supplyPoints, opportunities, contracts] = await Promise.all([
+        supabase.from('profiles').select('id,full_name').in('id', ownerIds),
+        supabase
+            .from('supply_points')
+            .select('id,client_id,supply_type,cups_last4,address,city,current_marketer,current_tariff')
+            .in('client_id', clientIds),
+        supabase
+            .from('opportunities')
+            .select('id,client_id,supply_point_id,type,stage,stage_entered_at,next_action_title,next_action_due_at,closed_at,created_at')
+            .in('client_id', clientIds),
+        supabase
+            .from('contracts')
+            .select('id,client_id,supply_point_id,opportunity_id,status,marketer_name,tariff_name,start_date,end_date,permanence_status,created_at')
+            .in('client_id', clientIds),
+    ]);
+    const firstError = [owners, supplyPoints, opportunities, contracts]
+        .find(result => result.error)?.error;
+    if (firstError) throw new Error(`Error cargando cartera: ${firstError.message}`);
+
+    return buildClientPortfolio({
+        clients,
+        owners: owners.data ?? [],
+        supplyPoints: supplyPoints.data ?? [],
+        opportunities: opportunities.data ?? [],
+        contracts: contracts.data ?? [],
+    } as ClientPortfolioSource);
+}
+
+export async function getClientRelationshipAction(
+    rawClientId: string,
+): Promise<ClientRelationshipRecord | null> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
+    const parsedId = z.string().uuid().safeParse(rawClientId);
+    if (!parsedId.success) return null;
+
+    const { supabase } = await getSessionContext();
+    const { data: client, error: clientError } = await supabase
+        .from('clients')
+        .select('id,name,email,phone,status,owner_id,last_contact_date,created_at')
+        .eq('id', parsedId.data)
+        .maybeSingle();
+    if (clientError) throw new Error(`Error cargando cliente: ${clientError.message}`);
+    if (!client) return null;
+
+    const [owners, supplyPoints, opportunities, contracts, documents, activities] = await Promise.all([
+        supabase.from('profiles').select('id,full_name').eq('id', client.owner_id),
+        supabase
+            .from('supply_points')
+            .select('id,client_id,supply_type,cups_last4,address,city,current_marketer,current_tariff')
+            .eq('client_id', client.id),
+        supabase
+            .from('opportunities')
+            .select('id,client_id,supply_point_id,type,stage,stage_entered_at,next_action_title,next_action_due_at,closed_at,created_at')
+            .eq('client_id', client.id)
+            .order('created_at', { ascending: false }),
+        supabase
+            .from('contracts')
+            .select('id,client_id,supply_point_id,opportunity_id,status,marketer_name,tariff_name,start_date,end_date,permanence_status,created_at')
+            .eq('client_id', client.id)
+            .order('created_at', { ascending: false }),
+        supabase
+            .from('ocr_jobs')
+            .select('id,client_id,supply_point_id,opportunity_id,file_name,status,created_at')
+            .eq('client_id', client.id)
+            .order('created_at', { ascending: false }),
+        supabase
+            .from('client_activities')
+            .select('id,client_id,type,description,created_at')
+            .eq('client_id', client.id)
+            .order('created_at', { ascending: false }),
+    ]);
+    const firstError = [owners, supplyPoints, opportunities, contracts, documents, activities]
+        .find(result => result.error)?.error;
+    if (firstError) throw new Error(`Error cargando ficha de cliente: ${firstError.message}`);
+
+    return buildClientRelationshipRecord(client.id, {
+        clients: [client],
+        owners: owners.data ?? [],
+        supplyPoints: supplyPoints.data ?? [],
+        opportunities: opportunities.data ?? [],
+        contracts: contracts.data ?? [],
+        documents: documents.data ?? [],
+        activities: activities.data ?? [],
+    } as ClientRelationshipSource);
 }
 
 async function getSessionContext() {

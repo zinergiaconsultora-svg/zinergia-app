@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
- * Creates/refreshes deterministic public proposal fixtures in staging.
+ * Creates fresh public proposal fixtures in staging.
  *
  * This script is intentionally guarded. It refuses to run unless:
  * - .env.staging.local exists
  * - E2E_ALLOW_STAGING_SEED=1 is set
  * - NEXT_PUBLIC_SUPABASE_URL points to the known staging project
  *
- * Output tokens are stable and safe to copy into .env.staging.local.
+ * Every run creates new proposals so immutable commission history is never
+ * deleted or rewritten. Use --write-env to persist the new public tokens.
  */
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -16,16 +17,15 @@ import { createClient } from '@supabase/supabase-js';
 
 const ENV_FILE = '.env.staging.local';
 const STAGING_PROJECT_REF = 'dnzytocmtmnptndeczny';
-const READONLY_TOKEN = 'e2e-readonly-public-proposal-token-20260630';
-const ACCEPTANCE_TOKEN = 'e2e-acceptance-public-proposal-token-20260630';
 const shouldWriteEnv = process.argv.includes('--write-env');
+const shouldPrintJson = process.argv.includes('--json');
 
 if (!existsSync(ENV_FILE)) {
     console.error(`[e2e-seed] Missing ${ENV_FILE}. See e2e/README.md.`);
     process.exit(1);
 }
 
-config({ path: ENV_FILE });
+config({ path: ENV_FILE, quiet: true });
 
 if (process.env.E2E_ALLOW_STAGING_SEED !== '1') {
     console.error('[e2e-seed] Refusing to seed without E2E_ALLOW_STAGING_SEED=1.');
@@ -113,19 +113,54 @@ async function upsertClient(agentProfile) {
     return data.id;
 }
 
-async function upsertProposal({ agentProfile, clientId, token, resetAcceptance }) {
-    const { data: existing, error: lookupError } = await supabase
-        .from('proposals')
-        .select('id')
-        .eq('public_token', token)
-        .maybeSingle();
+async function createOpportunityContext({ agentProfile, clientId, fixtureKind }) {
+    const supplyPointId = randomUUID();
+    const opportunityId = randomUUID();
 
-    if (lookupError) throw new Error(`Proposal lookup failed for ${token}: ${lookupError.message}`);
+    const { error: supplyError } = await supabase
+        .from('supply_points')
+        .insert({
+            id: supplyPointId,
+            client_id: clientId,
+            supply_type: 'electricity',
+            current_marketer: 'Actual E2E',
+            current_tariff: '2.0TD',
+            is_primary: false,
+        });
+    if (supplyError) throw new Error(`Supply point insert failed: ${supplyError.message}`);
 
+    const { error: opportunityError } = await supabase
+        .from('opportunities')
+        .insert({
+            id: opportunityId,
+            client_id: clientId,
+            supply_point_id: supplyPointId,
+            owner_id: agentProfile.id,
+            franchise_id: agentProfile.franchise_id,
+            type: 'new_business',
+            stage: 'proposal_sent',
+            source: `e2e_public_${fixtureKind}`,
+            next_action_type: 'follow_up_proposal',
+            next_action_title: 'Hacer seguimiento de propuesta',
+            next_action_due_at: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+        });
+    if (opportunityError) throw new Error(`Opportunity insert failed: ${opportunityError.message}`);
+
+    return { opportunityId, supplyPointId };
+}
+
+async function createProposal({ agentProfile, clientId, token, fixtureKind }) {
+    const { opportunityId, supplyPointId } = await createOpportunityContext({
+        agentProfile,
+        clientId,
+        fixtureKind,
+    });
     const payload = {
         client_id: clientId,
         agent_id: agentProfile.id,
         franchise_id: agentProfile.franchise_id,
+        opportunity_id: opportunityId,
+        supply_point_id: supplyPointId,
         status: 'sent',
         annual_savings: 420,
         savings_percent: 35,
@@ -136,32 +171,11 @@ async function upsertProposal({ agentProfile, clientId, token, resetAcceptance }
         public_token: token,
         public_expires_at: expiresAt,
         sent_date: now.toISOString(),
-        notes: 'Fixture publica E2E. No representa una propuesta real.',
+        notes: `Fixture publica E2E (${fixtureKind}). No representa una propuesta real.`,
         optimization_result: {
             annual_optimization_savings: 72,
         },
-        ...(resetAcceptance
-            ? {
-                public_accepted_at: null,
-                signed_at: null,
-                signed_name: null,
-                signature_data: null,
-            }
-            : {}),
     };
-
-    if (existing?.id) {
-        if (resetAcceptance) {
-            await resetProposalSideEffects(existing.id);
-        }
-
-        const { error } = await supabase
-            .from('proposals')
-            .update(payload)
-            .eq('id', existing.id);
-        if (error) throw new Error(`Proposal update failed for ${token}: ${error.message}`);
-        return existing.id;
-    }
 
     const { data, error } = await supabase
         .from('proposals')
@@ -173,24 +187,11 @@ async function upsertProposal({ agentProfile, clientId, token, resetAcceptance }
     return data.id;
 }
 
-async function resetProposalSideEffects(proposalId) {
-    const tables = ['network_commissions', 'tasks', 'contracts'];
-
-    for (const table of tables) {
-        const { error } = await supabase
-            .from(table)
-            .delete()
-            .eq('proposal_id', proposalId);
-
-        if (error) throw new Error(`Failed to reset ${table} for fixture proposal: ${error.message}`);
-    }
-}
-
-function writeTokenEnv() {
+function writeTokenEnv(readonlyToken, acceptanceToken) {
     const envText = readFileSync(ENV_FILE, 'utf8');
     const updates = {
-        E2E_PUBLIC_PROPOSAL_TOKEN: READONLY_TOKEN,
-        E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN: ACCEPTANCE_TOKEN,
+        E2E_PUBLIC_PROPOSAL_TOKEN: readonlyToken,
+        E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN: acceptanceToken,
     };
 
     let next = envText;
@@ -210,27 +211,34 @@ function writeTokenEnv() {
 try {
     const agentProfile = await getAgentProfile();
     const clientId = await upsertClient(agentProfile);
-    const readonlyProposalId = await upsertProposal({
+    const readonlyToken = `e2e-readonly-${randomUUID()}`;
+    const acceptanceToken = `e2e-acceptance-${randomUUID()}`;
+    const readonlyProposalId = await createProposal({
         agentProfile,
         clientId,
-        token: READONLY_TOKEN,
-        resetAcceptance: true,
+        token: readonlyToken,
+        fixtureKind: 'read-only',
     });
-    const acceptanceProposalId = await upsertProposal({
+    const acceptanceProposalId = await createProposal({
         agentProfile,
         clientId,
-        token: ACCEPTANCE_TOKEN,
-        resetAcceptance: true,
+        token: acceptanceToken,
+        fixtureKind: 'mutable',
     });
 
-    console.log('[e2e-seed] Public proposal fixtures ready.');
-    console.log(`E2E_PUBLIC_PROPOSAL_TOKEN=${READONLY_TOKEN}`);
-    console.log(`E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN=${ACCEPTANCE_TOKEN}`);
-    console.log(`readonly_proposal_id=${readonlyProposalId}`);
-    console.log(`acceptance_proposal_id=${acceptanceProposalId}`);
     if (shouldWriteEnv) {
-        writeTokenEnv();
-        console.log(`[e2e-seed] Updated ${ENV_FILE} with fixture token variables.`);
+        writeTokenEnv(readonlyToken, acceptanceToken);
+    }
+
+    if (shouldPrintJson) {
+        process.stdout.write(JSON.stringify({
+            readonlyToken,
+            acceptanceToken,
+            readonlyProposalId,
+            acceptanceProposalId,
+        }));
+    } else {
+        console.log(`[e2e-seed] Fresh public proposal fixtures created${shouldWriteEnv ? ` and ${ENV_FILE} updated` : ''}.`);
     }
 } catch (error) {
     console.error(`[e2e-seed] ${error instanceof Error ? error.message : String(error)}`);

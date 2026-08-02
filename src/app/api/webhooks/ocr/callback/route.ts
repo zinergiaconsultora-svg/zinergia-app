@@ -3,13 +3,13 @@ import * as Sentry from '@sentry/nextjs';
 import { createServiceClient } from '@/lib/supabase/service';
 import { env } from '@/lib/env';
 import { sendPushToUser } from '@/lib/push/sendPush';
-import { encryptNullable, hashCups, hashDni } from '@/lib/crypto/pii';
 import { safeStringEqual } from '@/lib/crypto/timingSafe';
 import { moduleLogger } from '@/lib/logger';
 import { redactOcrTextSample, sanitizeOcrTrainingData } from '@/lib/ocr/sanitizeTrainingData';
 import { normalizeInvoiceData, parseInvoiceNumber } from '@/lib/invoices/normalization';
 import { resolveTitularDniCif } from '@/lib/invoices/titularId';
 import { writeLeadAuditEvent } from '@/lib/audit/leadAuditLog';
+import { reconcileCompletedOcrOpportunity } from '@/lib/crm/ocrOpportunity';
 
 const log = moduleLogger('ocr-callback');
 
@@ -184,114 +184,15 @@ export async function POST(request: Request) {
         // 3. Recuperar job para obtener agent_id y franchise_id
         const { data: job } = await supabaseAdmin
             .from('ocr_jobs')
-            .select('id, agent_id, franchise_id, file_name, client_segment')
+            .select('id, agent_id, franchise_id, file_name')
             .eq('id', job_id)
             .single();
 
-        // Segmento elegido por el usuario en el simulador (fuente de verdad).
-        const jobSegment = (job?.client_segment as 'RESIDENCIAL' | 'PYME' | null) ?? null;
-        // type derivado del segmento; fallback a heurística sólo si no hay segmento.
-
-        // 4. Auto-crear/actualizar cliente desde los datos extraídos
-        let clientId: string | null = null;
-        if (status === 'completed' && invoiceData && job?.agent_id && job?.franchise_id) {
-            try {
-                const clientName = invoiceData.client_name as string;
-                const cups = invoiceData.cups as string;
-                const dniCif = invoiceData.dni_cif as string;
-
-                // Buscar cliente existente por CUPS (más único) o por DNI/CIF.
-                // Usa blind-index hash para búsqueda de igualdad (RGPD-safe).
-                let existingClient = null;
-                if (cups) {
-                    const { data } = await supabaseAdmin
-                        .from('clients')
-                        .select('id')
-                        .eq('franchise_id', job.franchise_id)
-                        .eq('cups_hash', hashCups(cups))
-                        .maybeSingle();
-                    existingClient = data;
-                }
-                if (!existingClient && dniCif) {
-                    const { data } = await supabaseAdmin
-                        .from('clients')
-                        .select('id')
-                        .eq('franchise_id', job.franchise_id)
-                        .eq('dni_cif_hash', hashDni(dniCif))
-                        .maybeSingle();
-                    existingClient = data;
-                }
-
-                if (existingClient) {
-                    // Actualizar datos del cliente existente (dual-write RGPD).
-                    await supabaseAdmin
-                        .from('clients')
-                        .update({
-                            cups_ciphertext: cups ? encryptNullable(cups) : undefined,
-                            cups_hash: cups ? hashCups(cups) : undefined,
-                            current_supplier: (invoiceData.company_name as string) || undefined,
-                            tariff_type: (invoiceData.tariff_name as string) || undefined,
-                            address: (invoiceData.supply_address as string) || undefined,
-                            contracted_power: {
-                                p1: invoiceData.power_p1, p2: invoiceData.power_p2,
-                                p3: invoiceData.power_p3, p4: invoiceData.power_p4,
-                                p5: invoiceData.power_p5, p6: invoiceData.power_p6,
-                            },
-                            average_monthly_bill: invoiceData.total_amount
-                                ? Math.round((invoiceData.total_amount as number) / ((invoiceData.period_days as number || 30) / 30))
-                                : undefined,
-                            segment: jobSegment ?? undefined,
-                            type: jobSegment ? (jobSegment === 'PYME' ? 'company' : 'residential') : undefined,
-                        })
-                        .eq('id', existingClient.id);
-                    clientId = existingClient.id;
-                } else if (clientName && clientName !== 'Cliente Desconocido') {
-                    // Crear nuevo cliente (dual-write RGPD).
-                    const { data: newClient } = await supabaseAdmin
-                        .from('clients')
-                        .insert({
-                            franchise_id: job.franchise_id,
-                            owner_id: job.agent_id,
-                            name: clientName,
-                            dni_cif_ciphertext: dniCif ? encryptNullable(dniCif) : null,
-                            dni_cif_hash: dniCif ? hashDni(dniCif) : null,
-                            cups_ciphertext: cups ? encryptNullable(cups) : null,
-                            cups_hash: cups ? hashCups(cups) : null,
-                            address: (invoiceData.supply_address as string) || null,
-                            current_supplier: (invoiceData.company_name as string) || null,
-                            tariff_type: (invoiceData.tariff_name as string) || null,
-                            contracted_power: {
-                                p1: invoiceData.power_p1, p2: invoiceData.power_p2,
-                                p3: invoiceData.power_p3, p4: invoiceData.power_p4,
-                                p5: invoiceData.power_p5, p6: invoiceData.power_p6,
-                            },
-                            average_monthly_bill: invoiceData.total_amount
-                                ? Math.round((invoiceData.total_amount as number) / ((invoiceData.period_days as number || 30) / 30))
-                                : null,
-                            segment: jobSegment,
-                            // El tipo se deriva del segmento elegido; sólo se cae a la
-                            // heurística del DNI cuando no hay segmento (p.ej. subidas antiguas).
-                            type: jobSegment ? (jobSegment === 'PYME' ? 'company' : 'residential') : (dniCif ? 'company' : 'residential'),
-                            status: 'new',
-                        })
-                        .select('id')
-                        .single();
-                    clientId = newClient?.id ?? null;
-                }
-            } catch (clientErr) {
-                // No bloquear el flujo si falla la creación del cliente
-                log.warn({
-                    errorMessage: clientErr instanceof Error ? clientErr.message : 'unknown',
-                    jobId: job_id,
-                }, 'Auto-client creation failed (non-blocking)');
-            }
-        }
-
-        // 5. Actualizar job en la DB (campo correcto: extracted_data)
+        // 4. Persistir primero el resultado OCR. Si la reconciliación comercial
+        // falla después, el reintento del callback podrá continuar idempotentemente.
         const updatePayload: Record<string, unknown> = { status };
         if (invoiceData) updatePayload.extracted_data = invoiceData;
         if (error) updatePayload.error_message = error;
-        if (clientId) updatePayload.client_id = clientId;
 
         const { error: dbError } = await supabaseAdmin
             .from('ocr_jobs')
@@ -302,6 +203,34 @@ export async function POST(request: Request) {
             Sentry.captureException(dbError, { extra: { jobId: job_id, status } });
             log.error({ err: dbError, jobId: job_id, status }, 'OCR callback DB update failed');
             return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
+        }
+
+        // 5. Resolver cliente, suministro y oportunidad con identidad protegida.
+        let clientId: string | null = null;
+        let opportunityId: string | null = null;
+        if (status === 'completed' && invoiceData) {
+            try {
+                const reconciliation = await reconcileCompletedOcrOpportunity(
+                    job_id,
+                    invoiceData,
+                );
+                if (reconciliation.status === 'linked') {
+                    clientId = reconciliation.clientId;
+                    opportunityId = reconciliation.opportunityId;
+                }
+            } catch (reconciliationError) {
+                Sentry.captureException(reconciliationError, {
+                    extra: { jobId: job_id },
+                });
+                log.error(
+                    { jobId: job_id },
+                    'OCR commercial reconciliation failed',
+                );
+                return NextResponse.json(
+                    { error: 'Commercial workflow reconciliation failed' },
+                    { status: 500 },
+                );
+            }
         }
 
         // 5b. Auditoría de sistema: registrar el fallo de OCR en el timeline del lead.
@@ -414,7 +343,11 @@ export async function POST(request: Request) {
             sendPushToUser(job.agent_id, pushPayload).catch(() => {});
         }
 
-        return NextResponse.json({ success: true, client_id: clientId });
+        return NextResponse.json({
+            success: true,
+            client_id: clientId,
+            opportunity_id: opportunityId,
+        });
 
     } catch (error) {
         Sentry.captureException(error);

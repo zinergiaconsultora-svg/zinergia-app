@@ -60,6 +60,8 @@ export type RejectionReason =
 export interface AltaExpediente {
     id: string;
     clientId: string;
+    opportunityId: string | null;
+    supplyPointId: string | null;
     clientName: string;
     clientEmail: string | null;
     // NIF/IBAN are stored encrypted in clients; we surface them from calculation_data
@@ -159,6 +161,8 @@ function mapExpediente(row: Record<string, unknown>): AltaExpediente {
     return {
         id: row.id as string,
         clientId: row.client_id as string,
+        opportunityId: (row.opportunity_id as string) ?? null,
+        supplyPointId: (row.supply_point_id as string) ?? null,
         clientName: (row.client_name as string) ?? 'Sin nombre',
         clientEmail: (row.client_email as string) ?? null,
         clientNif: extractFromCalcData(calcData, [
@@ -269,32 +273,52 @@ export async function requestAlta(proposalId: string): Promise<{ ok: boolean; er
     return { ok: true };
 }
 
-/** Gate 3: Admin marks the switch as completed by the distributor. */
-export async function completeAlta(proposalId: string): Promise<{ ok: boolean; error?: string }> {
+const completeActivationSchema = z.object({
+    proposalId: z.uuid(),
+    marketerName: z.string().trim().min(1).max(120),
+    tariffName: z.string().trim().min(1).max(160),
+    startDate: z.iso.date(),
+    permanenceStatus: z.enum(['known', 'none', 'unknown']),
+    endDate: z.iso.date().nullable().optional(),
+}).superRefine((value, ctx) => {
+    if (value.permanenceStatus === 'known' && !value.endDate) {
+        ctx.addIssue({ code: 'custom', path: ['endDate'], message: 'Indica la fecha de permanencia.' });
+    }
+    if (value.permanenceStatus === 'none' && value.endDate) {
+        ctx.addIssue({ code: 'custom', path: ['endDate'], message: 'Sin permanencia no debe tener fecha final.' });
+    }
+    if (value.endDate && value.endDate < value.startDate) {
+        ctx.addIssue({ code: 'custom', path: ['endDate'], message: 'La fecha final debe ser posterior al inicio.' });
+    }
+});
+
+export type CompleteActivationInput = z.input<typeof completeActivationSchema>;
+
+/** Gate 3: admin atomically activates contract, client and opportunity. */
+export async function completeAlta(input: CompleteActivationInput): Promise<{ ok: boolean; error?: string }> {
     await requireServerRole(['admin']);
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const parsed = completeActivationSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Revisa los datos del contrato.' };
+
+    const session = await createClient();
+    const { data: { user } } = await session.auth.getUser();
     if (!user) return { ok: false, error: 'No autenticado' };
 
-    const { data, error } = await supabase
-        .from('proposals')
-        .update({
-            alta_status: 'activada',
-            alta_completada_at: new Date().toISOString(),
-            alta_completada_by: user.id,
-        })
-        .eq('id', proposalId)
-        .eq('status', 'accepted')
-        .eq('alta_status', 'en_alta')
-        .select('id');
+    const service = createServiceClient();
+    const { data, error } = await service.rpc('complete_crm_activation', {
+        p_proposal_id: parsed.data.proposalId,
+        p_actor_id: user.id,
+        p_marketer_name: parsed.data.marketerName,
+        p_tariff_name: parsed.data.tariffName,
+        p_start_date: parsed.data.startDate,
+        p_permanence_status: parsed.data.permanenceStatus,
+        p_end_date: parsed.data.endDate ?? null,
+    });
 
-    if (error) return { ok: false, error: error.message };
-    if (!data || data.length === 0) {
-        return { ok: false, error: 'No se pudo activar: el expediente no estaba en trámite.' };
-    }
+    if (error || !data?.length) return { ok: false, error: 'No se pudo confirmar la activación. Revisa el estado y los datos.' };
 
-    await writeAltaEvent(proposalId, user.id, 'alta_completed', 'Cliente activado por la distribuidora');
     revalidateAltaPaths();
+    revalidatePath(`/dashboard/opportunities/${data[0].opportunity_id}`);
     return { ok: true };
 }
 

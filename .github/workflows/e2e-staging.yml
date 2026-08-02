@@ -49,7 +49,7 @@ jobs:
           E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
           E2E_PUBLIC_PROPOSAL_TOKEN: ${{ secrets.E2E_PUBLIC_PROPOSAL_TOKEN }}
-          E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN: ${{ secrets.E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN }}
+          STAGING_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           missing=0
           for name in \
@@ -69,8 +69,8 @@ jobs:
             fi
           done
 
-          if [ "${{ inputs.run_mutating_public_proposal }}" = "true" ] && [ -z "$E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN" ]; then
-            echo "::error title=Missing mutating E2E secret::E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN is required when run_mutating_public_proposal=true"
+          if [ "${{ inputs.run_mutating_public_proposal }}" = "true" ] && [ -z "$STAGING_SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error title=Missing mutating E2E secret::STAGING_SUPABASE_SERVICE_ROLE_KEY is required when run_mutating_public_proposal=true"
             missing=1
           fi
 
@@ -95,7 +95,7 @@ jobs:
           E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
           E2E_PUBLIC_PROPOSAL_TOKEN: ${{ secrets.E2E_PUBLIC_PROPOSAL_TOKEN }}
-          E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN: ${{ secrets.E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN }}
+          STAGING_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           {
             echo "NEXT_PUBLIC_SUPABASE_URL=$STAGING_NEXT_PUBLIC_SUPABASE_URL"
@@ -107,7 +107,7 @@ jobs:
             echo "E2E_ADMIN_EMAIL=$E2E_ADMIN_EMAIL"
             echo "E2E_ADMIN_PASSWORD=$E2E_ADMIN_PASSWORD"
             echo "E2E_PUBLIC_PROPOSAL_TOKEN=$E2E_PUBLIC_PROPOSAL_TOKEN"
-            echo "E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN=$E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$STAGING_SUPABASE_SERVICE_ROLE_KEY"
             echo "PLAYWRIGHT_BASE_URL=$PLAYWRIGHT_BASE_URL"
           } > .env.staging.local
 

@@ -11,16 +11,12 @@ const hasAdminCredentials = () =>
     !!(process.env.E2E_ADMIN_EMAIL && process.env.E2E_ADMIN_PASSWORD);
 
 const adminNav = [
-    /Dashboard/i,
-    /Leads/i,
-    /Drive/i,
-    /Reporting/i,
-    /Agentes/i,
-    /Academy/i,
-    /RGPD/i,
-    /Audit/i,
-    /KPIs/i,
+    /Operaciones/i,
+    /Clientes/i,
+    /Comisiones/i,
     /Facturación/i,
+    /Equipo/i,
+    /Administración/i,
 ];
 
 const adminRoutes = [

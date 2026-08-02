@@ -34,6 +34,8 @@ function expediente(overrides: Partial<AltaExpediente> = {}): AltaExpediente {
     return {
         id: 'proposal-1',
         clientId: 'client-1',
+        opportunityId: 'opportunity-1',
+        supplyPointId: 'supply-point-1',
         clientName: 'Cliente Demo',
         clientEmail: 'cliente@example.com',
         clientNif: '12345678Z',
@@ -177,9 +179,32 @@ describe('ExpedienteAlta', () => {
         fireEvent.click(screen.getByRole('button', { name: /confirmar activación/i }));
 
         await waitFor(() => {
-            expect(mocks.completeAlta).toHaveBeenCalledWith('proposal-2');
+            expect(mocks.completeAlta).toHaveBeenCalledWith(expect.objectContaining({
+                proposalId: 'proposal-2',
+                marketerName: 'Nueva Energia',
+                tariffName: '2.0TD',
+                permanenceStatus: 'unknown',
+                endDate: null,
+            }));
         });
         expect(onCompleteRefresh).toHaveBeenCalledTimes(1);
+    });
+
+    it('asks for an end date only when the contract has permanence', async () => {
+        mocks.getAltaEvents.mockResolvedValue([]);
+
+        render(
+            <ExpedienteAlta
+                expediente={expediente({ altaStatus: 'en_alta' })}
+                onRefresh={vi.fn()}
+            />,
+        );
+
+        await waitFor(() => expect(mocks.getAltaEvents).toHaveBeenCalledTimes(1));
+        expect(screen.queryByLabelText(/fin de permanencia/i)).toBeNull();
+        fireEvent.change(screen.getByLabelText(/^permanencia$/i), { target: { value: 'known' } });
+        expect(screen.getByLabelText(/fin de permanencia/i)).toBeTruthy();
+        expect((screen.getByRole('button', { name: /confirmar activación/i }) as HTMLButtonElement).disabled).toBe(true);
     });
 
     it('submits rejection details and supports reopening a rejected expediente', async () => {

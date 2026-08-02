@@ -213,12 +213,18 @@ export const SimulatorForm: React.FC<SimulatorFormProps> = ({
     const handleConfirm = async () => {
         if (isConfirming) return;
         setIsConfirming(true);
-        setTimeout(() => {
+        try {
+            if (onConfirmOcrData) {
+                await onConfirmOcrData();
+            }
             setIsConfirming(false);
             setLocalConfirmed(true);
             toast.success('Datos confirmados. ¡Gracias!');
-            if (onConfirmOcrData) onConfirmOcrData().catch(() => {});
-        }, 600);
+        } catch {
+            setIsConfirming(false);
+            setLocalConfirmed(false);
+            toast.error('No se pudieron confirmar los datos. Inténtalo de nuevo.');
+        }
     };
 
     // ── Confianza OCR ─────────────────────────────────────────────────────────

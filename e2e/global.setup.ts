@@ -13,6 +13,10 @@ import path from 'node:path';
 
 const AUTH_DIR = path.join(__dirname, '.auth');
 
+// Local Next.js can compile the authenticated shell on the first login. Keep
+// the two session fixtures serial so they do not contend for that compilation.
+setup.describe.configure({ mode: 'serial' });
+
 setup.beforeAll(() => {
     if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
 });
@@ -38,7 +42,7 @@ setup('authenticate as agent', async ({ page }) => {
     await page.getByRole('button', { name: /entrar|iniciar|sign in|login/i }).click();
 
     // Wait for redirect to /dashboard
-    await page.waitForURL('**/dashboard**', { timeout: 15_000 });
+    await page.waitForURL('**/dashboard**', { timeout: 60_000 });
     await expect(page).toHaveURL(/dashboard/);
 
     await page.context().storageState({ path: path.join(AUTH_DIR, 'agent.json') });
@@ -67,7 +71,7 @@ setup('authenticate as admin', async ({ page }) => {
     // Some deployments land on /dashboard first, while others already finish on
     // /admin. Avoid restarting the same navigation because production can abort
     // the duplicate document request while the admin shell is already visible.
-    await expect(page).toHaveURL(/\/(admin|dashboard)/, { timeout: 15_000 });
+    await expect(page).toHaveURL(/\/(admin|dashboard)/, { timeout: 60_000 });
     if (!/\/admin(?:[/?#]|$)/.test(new URL(page.url()).pathname)) {
         try {
             await page.goto('/admin', { waitUntil: 'domcontentloaded' });
@@ -79,7 +83,7 @@ setup('authenticate as admin', async ({ page }) => {
         }
     }
     await expect(page).toHaveURL(/\/admin(?:[/?#]|$)/, { timeout: 10_000 });
-    await expect(page.getByRole('heading', { name: /Zinergia SuperAdmin/i })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('heading', { name: /Vista Global del Sistema/i })).toBeVisible({ timeout: 10_000 });
 
     await page.context().storageState({ path: path.join(AUTH_DIR, 'admin.json') });
 });

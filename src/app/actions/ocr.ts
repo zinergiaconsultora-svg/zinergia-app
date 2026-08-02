@@ -8,6 +8,7 @@ import { requireServerRole } from '@/lib/auth/permissions';
 import { InvoiceData } from '@/types/crm';
 import { resolveTitularDniCif } from '@/lib/invoices/titularId';
 import { scheduleInvoiceArchive } from '@/lib/drive/scheduleInvoiceArchive';
+import { reconcileCompletedOcrOpportunity } from '@/lib/crm/ocrOpportunity';
 import { z } from 'zod';
 
 // Schema de validación para datos crudos del webhook N8N
@@ -168,12 +169,46 @@ async function markOcrJobFailed(jobId: string | null): Promise<void> {
                 status: 'failed',
                 error_message: 'No se pudo procesar la factura con OCR.',
             })
-            .eq('id', jobId);
+            .eq('id', jobId)
+            .eq('status', 'processing');
     } catch (err) {
         logger.warn('[OCR] Could not mark OCR job as failed', {
             jobId,
             err: err instanceof Error ? err.message : String(err),
         });
+    }
+}
+
+async function persistSynchronousOcrResult(
+    supabase: Awaited<ReturnType<typeof createClient>>,
+    jobId: string,
+    invoiceData: Record<string, unknown>,
+): Promise<void> {
+    const { error: updateError } = await supabase
+        .from('ocr_jobs')
+        .update({
+            status: 'completed',
+            extracted_data: invoiceData,
+            error_message: null,
+        })
+        .eq('id', jobId);
+
+    if (updateError) {
+        throw new Error('No se pudo guardar el resultado OCR');
+    }
+
+    try {
+        await reconcileCompletedOcrOpportunity(jobId, invoiceData);
+    } catch {
+        await supabase
+            .from('ocr_jobs')
+            .update({
+                status: 'failed',
+                error_message: 'OCR completado; no se pudo preparar el expediente.',
+            })
+            .eq('id', jobId)
+            .eq('status', 'completed');
+        throw new Error('No se pudo preparar el expediente comercial');
     }
 }
 
@@ -292,9 +327,11 @@ export async function analyzeDocumentByUrlAction(
 
                 if (hasMeaningfulData && rawData) {
                     const validatedData = parseRawInvoiceData(rawData);
-                    await supabase.from('ocr_jobs')
-                        .update({ status: 'completed', extracted_data: validatedData })
-                        .eq('id', job.id);
+                    await persistSynchronousOcrResult(
+                        supabase,
+                        job.id,
+                        validatedData,
+                    );
                     return { jobId: job.id, isMock: false, data: validatedData as unknown as InvoiceData };
                 }
             } catch {
@@ -435,9 +472,11 @@ export async function analyzeDocumentAction(formData: FormData): Promise<{ jobId
 
                 if (hasMeaningfulData && rawData) {
                     const validatedData = parseRawInvoiceData(rawData);
-                    await supabase.from('ocr_jobs')
-                        .update({ status: 'completed', extracted_data: validatedData })
-                        .eq('id', job.id);
+                    await persistSynchronousOcrResult(
+                        supabase,
+                        job.id,
+                        validatedData,
+                    );
                     return { jobId: job.id, isMock: false, data: validatedData as unknown as InvoiceData };
                 }
             } catch {

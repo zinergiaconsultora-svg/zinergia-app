@@ -23,7 +23,7 @@ Usuarios de prueba ya creados en staging:
    - `E2E_AGENT_EMAIL` / `E2E_AGENT_PASSWORD`
    - `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`
    - `E2E_PUBLIC_PROPOSAL_TOKEN` (fixture público de staging, lectura)
-   - `E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN` (fixture de staging reservado para pruebas destructivas explícitas)
+   - `E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN` (último fixture mutable creado manualmente; el spec crea uno nuevo por ejecución)
    - `PLAYWRIGHT_BASE_URL=http://localhost:3000`
    - `STAGING_DB_PASSWORD` (para `supabase db push` a staging)
 
@@ -58,8 +58,9 @@ Usuarios de prueba ya creados en staging:
 - `E2E_PUBLIC_PROPOSAL_TOKEN` se usa para validar render, ahorro visible,
   botón de firma y apertura del paso de firma. El test se detiene antes de
   confirmar la firma.
-- `E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN` queda reservado para una prueba futura
-  de aceptación completa. No debe usarse en smoke de producción.
+- `E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN` identifica el último fixture creado con
+  `--write-env`; el spec de aceptación crea otro aislado en cada ejecución.
+  No debe usarse en smoke de producción.
 - `E2E_PROPOSAL_TOKEN` sigue aceptándose como fallback temporal para no romper
   entornos antiguos, pero el nombre correcto es `E2E_PUBLIC_PROPOSAL_TOKEN`.
 - La URL de producción solo debe usarse para smoke read-only sin fixtures
@@ -79,10 +80,10 @@ npm run test:e2e:public-mutating
 Remove-Item Env:\E2E_RUN_MUTATING_PUBLIC_PROPOSAL
 ```
 
-El spec se salta si falta el opt-in, si falta `E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN`
-o si `NEXT_PUBLIC_SUPABASE_URL` no apunta al proyecto staging
-`dnzytocmtmnptndeczny`. Antes de firmar, el seed resetea la propuesta mutable y
-limpia `network_commissions`, `tasks` y `contracts` asociados a ese fixture.
+El spec se salta si falta el opt-in o si `NEXT_PUBLIC_SUPABASE_URL` no apunta al
+proyecto staging `dnzytocmtmnptndeczny`. Antes de firmar, crea una propuesta
+mutable nueva. No elimina comisiones, eventos, tareas ni contratos de ejecuciones
+anteriores.
 
 ## Re-aplicar esquema a staging
 
@@ -110,7 +111,7 @@ Secrets requeridos para la suite normal:
 
 Para ejecutar la prueba mutable hay que marcar el input
 `run_mutating_public_proposal=true` y configurar además
-`E2E_MUTATING_PUBLIC_PROPOSAL_TOKEN`. El workflow valida que la URL de Supabase
+`STAGING_SUPABASE_SERVICE_ROLE_KEY`. El workflow valida que la URL de Supabase
 apunte al proyecto staging `dnzytocmtmnptndeczny` antes de arrancar la app.
 
 En cada ejecución se suben artifacts de Playwright, resultados y log del server

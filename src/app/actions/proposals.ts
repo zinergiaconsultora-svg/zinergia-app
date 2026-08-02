@@ -3,6 +3,7 @@
 import { logger } from '@/lib/utils/logger'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { InvoiceData, Proposal } from '@/types/crm'
@@ -267,7 +268,7 @@ export async function updateProposalStatusAction(
     }
 
     const { data: proposal, error } = await query
-        .select('id, client_id, franchise_id, agent_id, created_at, updated_at, status, offer_snapshot, calculation_data, source_tariff_id, source_proposal_id, proposal_version, price_snapshot, price_snapshot_at, pricing_status, repriced_at, repricing_delta_eur, current_annual_cost, offer_annual_cost, annual_savings, savings_percent, notes, optimization_result, aletheia_summary')
+        .select('id, client_id, opportunity_id, supply_point_id, franchise_id, agent_id, created_at, updated_at, status, offer_snapshot, calculation_data, source_tariff_id, source_proposal_id, proposal_version, price_snapshot, price_snapshot_at, pricing_status, repriced_at, repricing_delta_eur, current_annual_cost, offer_annual_cost, annual_savings, savings_percent, notes, optimization_result, aletheia_summary')
         .single()
 
     if (error) throw new Error('Error al actualizar la propuesta');
@@ -291,8 +292,9 @@ export async function updateProposalStatusAction(
         await generateFollowUpTasks(supabase, {
             clientId: proposal.client_id,
             proposalId: proposal.id,
-            franchiseId: profile.franchise_id,
-            agentId: user.id,
+            opportunityId: (proposal as Proposal).opportunity_id ?? undefined,
+            franchiseId: (proposal as Proposal).franchise_id ?? profile.franchise_id ?? undefined,
+            agentId: ownerAgentId,
             status,
         })
 
@@ -317,6 +319,7 @@ export async function finalizeAcceptedProposalSideEffects(
     await generateFollowUpTasks(supabase, {
         clientId: proposal.client_id,
         proposalId: proposal.id,
+        opportunityId: proposal.opportunity_id ?? undefined,
         franchiseId: proposal.franchise_id ?? undefined,
         agentId,
         status: 'accepted',
@@ -328,6 +331,27 @@ export async function finalizeAcceptedProposalSideEffects(
         agentId,
         proposal,
     });
+}
+
+export async function reconcileAcceptedProposalDurableEffects(
+    supabase: Pick<Awaited<ReturnType<typeof createClient>>, 'from'>,
+    proposal: Proposal,
+    missing: { commission: boolean; contract: boolean },
+): Promise<void> {
+    if (!proposal.client_id || !proposal.agent_id || proposal.status !== 'accepted') return;
+
+    if (missing.commission) {
+        await processCommissions(supabase, proposal, false);
+    }
+    if (missing.contract) {
+        await autoCreateContract(supabase, {
+            clientId: proposal.client_id,
+            proposalId: proposal.id,
+            franchiseId: proposal.franchise_id ?? undefined,
+            agentId: proposal.agent_id,
+            proposal,
+        });
+    }
 }
 
 type PricingReviewStatus = 'current' | 'outdated' | 'manual' | 'locked' | 'missing';
@@ -530,7 +554,7 @@ export async function recalculateProposalWithCurrentTariffsAction(proposalId: st
 /**
  * Registra una venta cerrada: exige una nota que la justifique (constancia),
  * marca la propuesta como aceptada — lo que genera la comisión de la tarifa en
- * el wallet — y deja un rastro explícito en el historial del cliente.
+ * las comisiones y deja un rastro explícito en el historial del cliente.
  */
 export async function registerSaleAction(proposalId: string, note: string): Promise<Proposal> {
     await requireServerRole(['admin', 'franchise', 'agent'])
@@ -575,7 +599,7 @@ export async function registerSaleAction(proposalId: string, note: string): Prom
         } catch { /* non-critical */ }
     }
 
-    revalidatePath('/dashboard/wallet')
+    revalidatePath('/dashboard/commissions')
     return proposal
 }
 
@@ -746,12 +770,18 @@ async function autoCloseLeadOnAcceptance(
         const company = (offer?.marketer_name ?? offer?.marketerName ?? '') as string;
         const tariff = (offer?.tariff_name ?? offer?.tariffName ?? '') as string;
 
-        const { data: openJob } = await supabase
+        let openJobQuery = supabase
             .from('ocr_jobs')
             .select('id, closed, lost')
             .eq('client_id', proposal.client_id)
             .eq('closed', false)
-            .eq('lost', false)
+            .eq('lost', false);
+
+        if (proposal.opportunity_id) {
+            openJobQuery = openJobQuery.eq('opportunity_id', proposal.opportunity_id) as typeof openJobQuery;
+        }
+
+        const { data: openJob } = await openJobQuery
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
@@ -791,7 +821,8 @@ async function autoCloseLeadOnAcceptance(
 
 async function processCommissions(
     supabase: Pick<Awaited<ReturnType<typeof createClient>>, 'from'>,
-    proposal: Proposal
+    proposal: Proposal,
+    awardPoints = true,
 ) {
     try {
         // Guard: skip if commission already exists for this proposal
@@ -849,6 +880,7 @@ async function processCommissions(
         // garantía real.
         await supabase.from('network_commissions').upsert({
             proposal_id: proposal.id,
+            opportunity_id: proposal.opportunity_id ?? null,
             agent_id: agentId,
             franchise_id: commissionFranchiseProfileId,
             agent_commission: resolvedCommission.agentCommission,
@@ -856,7 +888,20 @@ async function processCommissions(
             status: 'pending',
         }, { onConflict: 'proposal_id', ignoreDuplicates: true })
 
-        // Award gamification points (upsert to handle first-time users)
+        // The database freezes the assigned economic plan and decommission
+        // policy. Missing business configuration is routed to reconciliation
+        // without blocking proposal acceptance.
+        const service = createServiceClient();
+        const { error: lifecycleError } = await service.rpc('initialize_commission_lifecycle', {
+            p_proposal_id: proposal.id,
+        });
+        if (lifecycleError) {
+            logger.error('[processCommissions] lifecycle initialization failed', lifecycleError);
+        }
+
+        if (!awardPoints) return;
+
+        // Award gamification points only on the initial acceptance path.
         const { data: current } = await supabase
             .from('user_points')
             .select('points')
@@ -945,6 +990,7 @@ async function generateFollowUpTasks(
     data: {
         clientId: string;
         proposalId: string;
+        opportunityId?: string;
         franchiseId?: string;
         agentId: string;
         status: Proposal['status'];
@@ -957,6 +1003,7 @@ async function generateFollowUpTasks(
         franchise_id?: string;
         client_id: string;
         proposal_id: string;
+        opportunity_id?: string;
         title: string;
         description: string;
         type: string;
@@ -977,6 +1024,7 @@ async function generateFollowUpTasks(
             franchise_id: data.franchiseId,
             client_id: data.clientId,
             proposal_id: data.proposalId,
+            opportunity_id: data.opportunityId,
             title: 'Seguimiento propuesta (3 días)',
             description: 'Contactar cliente para conocer su opinión sobre la propuesta enviada.',
             type: 'follow_up',
@@ -991,6 +1039,7 @@ async function generateFollowUpTasks(
             franchise_id: data.franchiseId,
             client_id: data.clientId,
             proposal_id: data.proposalId,
+            opportunity_id: data.opportunityId,
             title: 'Seguimiento propuesta (7 días)',
             description: 'Segundo intento de contacto si no hubo respuesta al primer seguimiento.',
             type: 'follow_up',
@@ -1022,6 +1071,7 @@ async function generateFollowUpTasks(
             franchise_id: data.franchiseId,
             client_id: data.clientId,
             proposal_id: data.proposalId,
+            opportunity_id: data.opportunityId,
             title: 'Recopilar documentación',
             description: 'Solicitar al cliente la documentación necesaria para el cambio de comercializadora.',
             type: 'documentation',
@@ -1073,6 +1123,8 @@ async function autoCreateContract(
         await supabase.from('contracts').insert({
             client_id: data.clientId,
             proposal_id: data.proposalId,
+            opportunity_id: data.proposal.opportunity_id ?? null,
+            supply_point_id: data.proposal.supply_point_id ?? null,
             agent_id: data.agentId,
             franchise_id: data.franchiseId,
             marketer_name: marketerName,

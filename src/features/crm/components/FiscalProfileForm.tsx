@@ -33,7 +33,7 @@ export const FiscalProfileForm: React.FC = () => {
         const fields = [
             'nif_cif', 'fiscal_address', 'fiscal_city', 'fiscal_province',
             'fiscal_postal_code', 'fiscal_country', 'iban', 'company_name',
-            'company_type', 'retention_percent', 'invoice_prefix'
+            'company_type', 'retention_percent', 'invoice_tax_percent', 'invoice_prefix'
         ];
         fields.forEach(f => {
             const val = profile[f as keyof FiscalProfile];
@@ -239,6 +239,19 @@ export const FiscalProfileForm: React.FC = () => {
                             className={inputClass}
                         />
                         <p className="text-xs text-slate-400 mt-1">15% para autónomos, 0% para SL/SA</p>
+                    </div>
+                    <div>
+                        <label className={labelClass}>IVA aplicable (%)</label>
+                        <input
+                            type="number"
+                            value={profile.invoice_tax_percent ?? 21}
+                            onChange={e => handleChange('invoice_tax_percent', parseFloat(e.target.value) || 0)}
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            className={inputClass}
+                            required
+                        />
                     </div>
                 </div>
             </div>

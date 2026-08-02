@@ -194,6 +194,8 @@ export interface ProposalPriceSnapshot {
 export interface Proposal {
     id: string;
     client_id: string;
+    opportunity_id?: string | null;
+    supply_point_id?: string | null;
     franchise_id?: string;
     agent_id?: string;
     created_at: string;
@@ -391,6 +393,7 @@ export interface FiscalProfile {
     invoice_prefix?: string;
     invoice_next_number?: number;
     retention_percent?: number;
+    invoice_tax_percent?: number;
     fiscal_verified?: boolean;
     fiscal_verified_at?: string;
 }
@@ -405,6 +408,8 @@ export function isProfileReadyForInvoicing(profile: FiscalProfile): { ready: boo
     if (!profile.fiscal_province) missing.push('Provincia');
     if (!profile.fiscal_postal_code) missing.push('Código postal');
     if (!profile.iban) missing.push('IBAN');
+    if (profile.invoice_tax_percent === undefined || profile.invoice_tax_percent === null) missing.push('IVA');
+    if (!profile.fiscal_verified) missing.push('Verificación fiscal');
     return { ready: missing.length === 0, missing };
 }
 
@@ -465,6 +470,12 @@ export interface Invoice {
     payment_reference?: string;
     notes?: string;
     pdf_url?: string;
+    document_kind?: 'legacy_unverified' | 'collaborator_invoice' | 'rectifying_invoice';
+    source_invoice_id?: string;
+    self_billing?: boolean;
+    acceptance_status?: 'not_required' | 'pending' | 'accepted';
+    accepted_at?: string;
+    rectification_reason?: string;
 
     created_at: string;
     updated_at: string;
