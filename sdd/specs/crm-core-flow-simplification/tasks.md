@@ -1,6 +1,6 @@
 # CRM Core Flow Simplification Tasks
 
-Status: approved on 2026-07-30. Slice 4 is in progress; T15 completed and the T16 technical workflow plus admin configuration surface are verified in staging. Approved business percentages and five partner assignments remain pending.
+Status: completed on 2026-08-02. T1-T20 are implemented, verified and promoted to production. The business percentages and the five real partner assignments remain operational configuration owned by the admin; they are intentionally not hardcoded or inferred from source data.
 
 ## Delivery Rules
 
@@ -192,7 +192,7 @@ Status: approved on 2026-07-30. Slice 4 is in progress; T15 completed and the T1
   - Backfill only deterministic historical states; route contradictory `approved`, `cleared`, `paid`, `invoiced` and rejected rows to admin review.
   - Traceability: `REQ-006`, `REQ-012`, `REQ-020` to `REQ-022`, `INV-006`, `INV-007`, `INV-015` to `INV-021`.
   - Verification: direct-partner/franchise allocation matrix, plan-version rollover, historical snapshot immutability, self-assignment denial, proportional date boundaries, partial decomission, paid-debt offset, concurrency, RLS and existing calculation regression tests.
-  - Current evidence: the technical ledger and protected workflows are verified in staging. A first-entry admin form atomically creates both versioned channel models and assigns up to five existing direct-partner profiles. Implementation of editable future percentages and the canonical proportional-permanence workflow is in progress; no business percentage or real assignment is invented.
+  - Current evidence: the technical ledger, editable future percentages, immutable historical snapshots and canonical proportional-permanence workflow are verified in staging and production. A first-entry admin form atomically creates both versioned channel models and assigns up to five existing direct-partner profiles. No business percentage or real assignment is invented.
 
 - [x] T17. Simplify commission and fiscal-invoicing screens.
   - Remove wallet/gamification terminology from the primary workflow.
