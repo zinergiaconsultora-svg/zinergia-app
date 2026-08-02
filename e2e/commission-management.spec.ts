@@ -64,7 +64,9 @@ test.describe('commission management', () => {
             await page.getByLabel('Socio %').fill('80');
             await expect(page.getByText('20.00 %').last()).toBeVisible();
             await page.getByLabel('Comercial %').fill('55');
-            await expect(page.getByText('30.00 %')).toBeVisible();
+            await expect(
+                page.getByRole('status').filter({ hasText: '30.00 %' }),
+            ).toBeVisible();
             await expect(
                 page.getByRole('button', { name: 'Guardar configuración' }),
             ).toBeEnabled();
