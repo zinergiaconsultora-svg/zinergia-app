@@ -26,6 +26,11 @@ export type AppNavigationItem = {
     icon: AppNavigationIcon;
 };
 
+export type AppNavigationGroup = {
+    label: string;
+    items: AppNavigationItem[];
+};
+
 const commercialPrimary: AppNavigationItem[] = [
     { label: 'Trabajo', href: '/dashboard', icon: 'work' },
     { label: 'Clientes', href: '/dashboard/clients', icon: 'clients' },
@@ -46,25 +51,54 @@ const franchiseSecondary: AppNavigationItem[] = [
 ];
 
 const adminPrimary: AppNavigationItem[] = [
-    { label: 'Operaciones', href: '/admin', icon: 'work' },
+    { label: 'Hoy', href: '/admin', icon: 'work' },
     { label: 'Clientes', href: '/dashboard/clients', icon: 'clients' },
     { label: 'Comisiones', href: '/admin/commissions', icon: 'commissions' },
-    { label: 'Facturación', href: '/dashboard/invoicing', icon: 'billing' },
     { label: 'Equipo', href: '/admin/agents', icon: 'team' },
-    { label: 'Administración', href: '/admin/audit', icon: 'admin' },
 ];
 
-const adminSecondary: AppNavigationItem[] = [
-    { label: 'Gestión avanzada de leads', href: '/admin/leads', icon: 'clients' },
-    { label: 'Control OCR', href: '/admin/ocr', icon: 'ocr' },
-    { label: 'Archivo Drive', href: '/admin/drive', icon: 'drive' },
-    { label: 'Informes', href: '/admin/reporting', icon: 'reporting' },
-    { label: 'Tarifas', href: '/dashboard/tariffs', icon: 'tariff' },
-    { label: 'Red comercial', href: '/dashboard/network', icon: 'network' },
-    { label: 'Protección de datos', href: '/admin/rgpd', icon: 'privacy' },
-    { label: 'Academia', href: '/admin/academy', icon: 'academy' },
-    { label: 'Indicadores', href: '/admin/business-metrics', icon: 'metrics' },
+const adminGroups: AppNavigationGroup[] = [
+    {
+        label: 'Comercial',
+        items: [
+            { label: 'Oportunidades', href: '/admin/leads', icon: 'clients' },
+            { label: 'Clientes', href: '/dashboard/clients', icon: 'clients' },
+        ],
+    },
+    {
+        label: 'Economía',
+        items: [
+            { label: 'Comisiones', href: '/admin/commissions', icon: 'commissions' },
+            { label: 'Facturación', href: '/dashboard/invoicing', icon: 'billing' },
+            { label: 'Tarifas', href: '/dashboard/tariffs', icon: 'tariff' },
+        ],
+    },
+    {
+        label: 'Organización',
+        items: [
+            { label: 'Equipo', href: '/admin/agents', icon: 'team' },
+            { label: 'Formación', href: '/admin/academy', icon: 'academy' },
+        ],
+    },
+    {
+        label: 'Control',
+        items: [
+            { label: 'Informes', href: '/admin/reporting', icon: 'reporting' },
+            { label: 'Procesamiento de facturas', href: '/admin/ocr', icon: 'ocr' },
+            { label: 'Documentos', href: '/admin/drive', icon: 'drive' },
+            { label: 'Protección de datos', href: '/admin/rgpd', icon: 'privacy' },
+            { label: 'Historial de actividad', href: '/admin/audit', icon: 'admin' },
+        ],
+    },
 ];
+
+const adminSecondary = adminGroups
+    .flatMap((group) => group.items)
+    .filter((item) => !adminPrimary.some((primary) => primary.href === item.href));
+
+export function getAdminNavigationGroups(): AppNavigationGroup[] {
+    return adminGroups;
+}
 
 export function getAppNavigation(role: UserRole): {
     primary: AppNavigationItem[];

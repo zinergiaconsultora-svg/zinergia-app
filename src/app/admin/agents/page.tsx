@@ -1,5 +1,5 @@
 import { getAllAgentsAction, getAllFranchises } from '@/app/actions/admin';
-import AgentsManagement from '@/features/admin/components/AgentsManagement';
+import { TeamAdminWorkspace } from '@/features/admin/components/TeamAdminWorkspace';
 
 export default async function AdminAgentsPage() {
     const [agents, franchises] = await Promise.all([
@@ -7,5 +7,5 @@ export default async function AdminAgentsPage() {
         getAllFranchises(),
     ]);
 
-    return <AgentsManagement agents={agents} franchises={franchises} />;
+    return <TeamAdminWorkspace agents={agents} franchises={franchises} />;
 }

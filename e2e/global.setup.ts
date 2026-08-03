@@ -83,7 +83,7 @@ setup('authenticate as admin', async ({ page }) => {
         }
     }
     await expect(page).toHaveURL(/\/admin(?:[/?#]|$)/, { timeout: 10_000 });
-    await expect(page.getByRole('heading', { name: /Vista Global del Sistema/i })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('heading', { name: /Hoy/i })).toBeVisible({ timeout: 10_000 });
 
     await page.context().storageState({ path: path.join(AUTH_DIR, 'admin.json') });
 });

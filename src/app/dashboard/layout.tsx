@@ -13,7 +13,7 @@ export default async function DashboardLayout({
 
     return (
         <NotificationProvider>
-            <div className="relative min-h-[100dvh] bg-slate-50 pt-16 pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] font-sans text-slate-900 selection:bg-indigo-100 xl:pb-0 dark:bg-slate-950 dark:text-slate-100 dark:selection:bg-indigo-900">
+            <div className={`relative min-h-[100dvh] bg-slate-50 pt-16 pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] font-sans text-slate-900 selection:bg-indigo-100 xl:pb-0 dark:bg-slate-950 dark:text-slate-100 dark:selection:bg-indigo-900 ${role === 'admin' ? 'xl:pl-64' : ''}`}>
                 <NavigationTop role={role ?? 'agent'} />
                 <OnboardingWizard />
                 <main>

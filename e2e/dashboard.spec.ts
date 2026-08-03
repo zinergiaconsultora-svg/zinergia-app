@@ -80,6 +80,6 @@ test.describe('Dashboard layout', () => {
     test('commercial users cannot open admin content', async ({ page }) => {
         await gotoRoute(page, '/admin');
         await expect(page).not.toHaveURL(/\/admin$/, { timeout: 10_000 });
-        await expect(page.getByText(/Vista Global del Sistema|Cola de Conversión/i)).toHaveCount(0);
+        await expect(page.getByText(/Preparar propuestas|Tramitar altas/i)).toHaveCount(0);
     });
 });

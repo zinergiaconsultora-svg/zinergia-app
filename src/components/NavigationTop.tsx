@@ -31,9 +31,11 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { logout } from '@/app/auth/actions';
 import {
+    getAdminNavigationGroups,
     getAppNavigation,
     isNavigationItemActive,
     type AppNavigationIcon,
+    type AppNavigationGroup,
     type AppNavigationItem,
 } from '@/lib/navigation/appNavigation';
 import type { UserRole } from '@/types/crm';
@@ -68,6 +70,10 @@ type NavigationTopProps = {
 export function NavigationTop({ role }: NavigationTopProps) {
     const pathname = usePathname();
     const navigation = useMemo(() => getAppNavigation(role), [role]);
+    const adminGroups = useMemo(
+        () => (role === 'admin' ? getAdminNavigationGroups() : []),
+        [role],
+    );
     const mobileSecondaryItems = useMemo(
         () => [...navigation.primary.slice(4), ...navigation.secondary],
         [navigation],
@@ -89,44 +95,46 @@ export function NavigationTop({ role }: NavigationTopProps) {
                         <ZinergiaLogo className="w-24" />
                     </Link>
 
-                    <nav
-                        aria-label="Navegación principal"
-                        className="ml-3 hidden min-w-0 flex-1 items-center gap-1 xl:flex"
-                    >
-                        {navigation.primary.map((item) => (
-                            <DesktopNavigationLink
-                                key={item.href}
-                                item={item}
-                                pathname={pathname}
-                            />
-                        ))}
-
-                        <div className="relative">
-                            <button
-                                type="button"
-                                onClick={() => setIsMoreOpen((open) => !open)}
-                                aria-expanded={isMoreOpen}
-                                aria-controls="desktop-secondary-navigation"
-                                className="inline-flex h-9 items-center gap-1 rounded-md px-3 text-sm font-semibold text-[#475569] transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
-                            >
-                                Más
-                                <ChevronDown
-                                    aria-hidden="true"
-                                    size={15}
-                                    className={isMoreOpen ? 'rotate-180 transition-transform' : 'transition-transform'}
-                                />
-                            </button>
-
-                            {isMoreOpen && (
-                                <SecondaryNavigationMenu
-                                    id="desktop-secondary-navigation"
-                                    items={navigation.secondary}
+                    {role !== 'admin' && (
+                        <nav
+                            aria-label="Navegación principal"
+                            className="ml-3 hidden min-w-0 flex-1 items-center gap-1 xl:flex"
+                        >
+                            {navigation.primary.map((item) => (
+                                <DesktopNavigationLink
+                                    key={item.href}
+                                    item={item}
                                     pathname={pathname}
-                                    onNavigate={() => setIsMoreOpen(false)}
                                 />
-                            )}
-                        </div>
-                    </nav>
+                            ))}
+
+                            <div className="relative">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsMoreOpen((open) => !open)}
+                                    aria-expanded={isMoreOpen}
+                                    aria-controls="desktop-secondary-navigation"
+                                    className="inline-flex h-9 items-center gap-1 rounded-md px-3 text-sm font-semibold text-[#475569] transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                                >
+                                    Más
+                                    <ChevronDown
+                                        aria-hidden="true"
+                                        size={15}
+                                        className={isMoreOpen ? 'rotate-180 transition-transform' : 'transition-transform'}
+                                    />
+                                </button>
+
+                                {isMoreOpen && (
+                                    <SecondaryNavigationMenu
+                                        id="desktop-secondary-navigation"
+                                        items={navigation.secondary}
+                                        pathname={pathname}
+                                        onNavigate={() => setIsMoreOpen(false)}
+                                    />
+                                )}
+                            </div>
+                        </nav>
+                    )}
 
                     <div className="ml-auto flex items-center gap-1.5">
                         <Link
@@ -164,24 +172,37 @@ export function NavigationTop({ role }: NavigationTopProps) {
                 </div>
             </header>
 
+            {role === 'admin' && (
+                <AdminSidebar groups={adminGroups} pathname={pathname} />
+            )}
+
             {isMobileOpen && (
                 <div
                     id="mobile-secondary-navigation"
                     className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px))] top-16 z-30 overflow-y-auto border-t border-slate-200 bg-white px-4 py-5 xl:hidden dark:border-slate-800 dark:bg-slate-950"
                 >
-                    <p className="mb-2 text-sm font-bold text-slate-950 dark:text-white">
-                        Herramientas
+                    <p className="mb-3 text-base font-bold text-slate-950 dark:text-white">
+                        Menú
                     </p>
-                    <nav aria-label="Herramientas secundarias" className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {mobileSecondaryItems.map((item) => (
-                            <MobileMenuLink
-                                key={item.href}
-                                item={item}
-                                pathname={pathname}
-                                onNavigate={() => setIsMobileOpen(false)}
-                            />
-                        ))}
-                    </nav>
+                    {role === 'admin' ? (
+                        <AdminMobileMenu
+                            groups={adminGroups}
+                            primaryItems={navigation.primary}
+                            pathname={pathname}
+                            onNavigate={() => setIsMobileOpen(false)}
+                        />
+                    ) : (
+                        <nav aria-label="Herramientas secundarias" className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {mobileSecondaryItems.map((item) => (
+                                <MobileMenuLink
+                                    key={item.href}
+                                    item={item}
+                                    pathname={pathname}
+                                    onNavigate={() => setIsMobileOpen(false)}
+                                />
+                            ))}
+                        </nav>
+                    )}
                     <button
                         type="button"
                         onClick={handleLogout}
@@ -200,6 +221,119 @@ export function NavigationTop({ role }: NavigationTopProps) {
                 onToggleMore={() => setIsMobileOpen((open) => !open)}
             />
         </>
+    );
+}
+
+function AdminSidebar({
+    groups,
+    pathname,
+}: {
+    groups: AppNavigationGroup[];
+    pathname: string;
+}) {
+    const todayItem: AppNavigationItem = {
+        label: 'Hoy',
+        href: '/admin',
+        icon: 'work',
+    };
+
+    return (
+        <aside className="fixed bottom-0 left-0 top-16 z-30 hidden w-64 overflow-y-auto border-r border-slate-200 bg-white px-3 py-4 xl:block dark:border-slate-800 dark:bg-slate-950">
+            <nav aria-label="Navegación de administración" className="space-y-4">
+                <SidebarNavigationLink item={todayItem} pathname={pathname} />
+                {groups.map((group) => (
+                    <section key={group.label} aria-labelledby={navigationGroupId('admin-group', group.label)}>
+                        <p
+                            id={navigationGroupId('admin-group', group.label)}
+                            className="mb-1 px-3 text-xs font-semibold text-slate-500 dark:text-slate-400"
+                        >
+                            {group.label}
+                        </p>
+                        <div className="space-y-0.5">
+                            {group.items.map((item) => (
+                                <SidebarNavigationLink
+                                    key={item.href}
+                                    item={item}
+                                    pathname={pathname}
+                                />
+                            ))}
+                        </div>
+                    </section>
+                ))}
+            </nav>
+        </aside>
+    );
+}
+
+function SidebarNavigationLink({
+    item,
+    pathname,
+}: {
+    item: AppNavigationItem;
+    pathname: string;
+}) {
+    const Icon = icons[item.icon];
+    const active = isNavigationItemActive(pathname, item.href);
+
+    return (
+        <Link
+            href={item.href}
+            aria-current={active ? 'page' : undefined}
+            className={
+                active
+                    ? 'flex min-h-9 items-center gap-3 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:bg-white dark:text-slate-950'
+                    : 'flex min-h-9 items-center gap-3 rounded-md px-3 py-1.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
+            }
+        >
+            <Icon aria-hidden="true" size={18} strokeWidth={1.8} />
+            <span>{item.label}</span>
+        </Link>
+    );
+}
+
+function AdminMobileMenu({
+    groups,
+    primaryItems,
+    pathname,
+    onNavigate,
+}: {
+    groups: AppNavigationGroup[];
+    primaryItems: AppNavigationItem[];
+    pathname: string;
+    onNavigate: () => void;
+}) {
+    const primaryHrefs = new Set(primaryItems.map((item) => item.href));
+
+    return (
+        <nav aria-label="Herramientas de administración" className="space-y-5">
+            {groups.map((group) => {
+                const items = group.items.filter(
+                    (item) => !primaryHrefs.has(item.href),
+                );
+                if (items.length === 0) return null;
+
+                return (
+                    <section key={group.label} aria-labelledby={navigationGroupId('mobile-admin-group', group.label)}>
+                        <p
+                            id={navigationGroupId('mobile-admin-group', group.label)}
+                            className="mb-1 px-3 text-xs font-semibold text-slate-500 dark:text-slate-400"
+                        >
+                            {group.label}
+                        </p>
+                        <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {items.map((item) => (
+                                <MobileMenuLink
+                                    key={item.href}
+                                    item={item}
+                                    pathname={pathname}
+                                    onNavigate={onNavigate}
+                                />
+                            ))}
+                        </div>
+                    </section>
+                );
+            })}
+        </nav>
     );
 }
 
@@ -227,6 +361,14 @@ function DesktopNavigationLink({
             {item.label}
         </Link>
     );
+}
+
+function navigationGroupId(prefix: string, label: string): string {
+    return `${prefix}-${label
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, '-')}`;
 }
 
 function SecondaryNavigationMenu({

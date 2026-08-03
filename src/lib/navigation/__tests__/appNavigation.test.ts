@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getAppNavigation, isNavigationItemActive } from '../appNavigation';
+import { getAdminNavigationGroups, getAppNavigation, isNavigationItemActive } from '../appNavigation';
 
 describe('role-aware app navigation', () => {
     it('keeps the commercial primary navigation focused on daily work', () => {
@@ -19,19 +19,34 @@ describe('role-aware app navigation', () => {
         );
     });
 
-    it('gives admin the six approved operational categories', () => {
+    it('keeps four daily destinations in the admin mobile navigation', () => {
         const navigation = getAppNavigation('admin');
 
         expect(navigation.primary.map((item) => item.label)).toEqual([
-            'Operaciones',
+            'Hoy',
             'Clientes',
             'Comisiones',
-            'Facturación',
             'Equipo',
-            'Administración',
         ]);
         expect(navigation.secondary.map((item) => item.label)).toContain(
-            'Control OCR',
+            'Procesamiento de facturas',
+        );
+    });
+
+    it('groups admin tools by commercial, economic, organization and control goals', () => {
+        const groups = getAdminNavigationGroups();
+
+        expect(groups.map((group) => group.label)).toEqual([
+            'Comercial',
+            'Economía',
+            'Organización',
+            'Control',
+        ]);
+        expect(groups.flatMap((group) => group.items)).toContainEqual(
+            expect.objectContaining({ label: 'Historial de actividad', href: '/admin/audit' }),
+        );
+        expect(groups.flatMap((group) => group.items)).not.toContainEqual(
+            expect.objectContaining({ label: 'Indicadores' }),
         );
     });
 

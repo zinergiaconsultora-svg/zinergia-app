@@ -41,29 +41,31 @@ describe('NavigationTop', () => {
         ).toBe('/dashboard/simulator');
     });
 
-    it('renders all approved admin categories without client-side role lookup', () => {
+    it('renders a focused admin navigation grouped by business purpose', () => {
         mocks.pathname = '/admin';
         render(<NavigationTop role="admin" />);
 
         for (const label of [
-            'Operaciones',
+            'Hoy',
             'Clientes',
             'Comisiones',
-            'Facturación',
             'Equipo',
-            'Administración',
         ]) {
             expect(screen.getAllByText(label).length).toBeGreaterThan(0);
         }
+
+        for (const group of ['Comercial', 'Economía', 'Organización', 'Control']) {
+            expect(screen.getAllByText(group).length).toBeGreaterThan(0);
+        }
     });
 
-    it('keeps advanced routes reachable from the secondary menu', () => {
+    it('keeps advanced routes reachable from the grouped admin menu', () => {
         render(<NavigationTop role="admin" />);
 
         fireEvent.click(screen.getByRole('button', { name: 'Abrir herramientas' }));
 
         expect(
-            screen.getAllByRole('link', { name: 'Control OCR' })[0].getAttribute('href'),
+            screen.getAllByRole('link', { name: 'Procesamiento de facturas' })[0].getAttribute('href'),
         ).toBe('/admin/ocr');
         expect(
             screen.getAllByRole('link', { name: 'Protección de datos' })[0].getAttribute('href'),
@@ -72,7 +74,7 @@ describe('NavigationTop', () => {
             screen.getAllByRole('link', { name: 'Equipo' })[0].getAttribute('href'),
         ).toBe('/admin/agents');
         expect(
-            screen.getAllByRole('link', { name: 'Administración' })[0].getAttribute('href'),
+            screen.getAllByRole('link', { name: 'Historial de actividad' })[0].getAttribute('href'),
         ).toBe('/admin/audit');
     });
 });
