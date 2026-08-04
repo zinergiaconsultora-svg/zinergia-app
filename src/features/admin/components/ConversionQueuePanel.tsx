@@ -152,7 +152,10 @@ export default function ConversionQueuePanel() {
                                 <button
                                     type="button"
                                     onClick={() => handleAnalyze(opp)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors whitespace-nowrap"
+                                    // min-h-11 (44px) is the touch target floor. This is the primary
+                                    // action of the queue and py-1.5 left it at 28px, which is hard
+                                    // to hit on the phone the agents actually work from.
+                                    className="flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors whitespace-nowrap"
                                 >
                                     Analizar <ArrowRight size={12} />
                                 </button>

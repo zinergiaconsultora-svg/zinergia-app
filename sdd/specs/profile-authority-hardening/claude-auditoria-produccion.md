@@ -97,8 +97,9 @@ Cuando una tarifa no tiene comisión, el comparador muestra **"Pendiente"**. Es 
 
 ## 🟡 BAJO — 7 · Detalles de accesibilidad
 
-- **Dos elementos `h1`** en la misma página (`/admin`). Debería haber uno.
-- **13 elementos interactivos por debajo de 32 px** en móvil. La recomendación WCAG es 44 px. Tus comerciales trabajan desde el teléfono.
+- **13 elementos interactivos por debajo de 32 px** en móvil. La recomendación WCAG es 44 px. Tus comerciales trabajan desde el teléfono. Los 12 principales son el botón **"Analizar"** de la cola de conversión —la acción primaria de esa pantalla— a 28 px de alto.
+
+> **Retractación.** En la primera versión de este informe afirmé que `/admin` tenía **dos elementos `h1`**. **Es falso.** Al verificarlo específicamente, el HTML del servidor y el DOM hidratado tienen **uno solo**, tanto a 1280 px como a 375 px. La lectura original fue un error de medición mío.
 
 ## 🟡 BAJO — 8 · Escala del catálogo
 
@@ -152,6 +153,35 @@ La diferencia entre ambos **no es de modelo, es de volumen de datos mantenidos**
 | 5 | Poblar `ssa_treatment` y `surplus_compensation_price` | días, es trabajo de datos |
 | 6 | Decidir sobre las 3 tarifas de gas: completar o desactivar | minutos |
 | 7 | Endurecer el aviso de comisión ausente | horas |
-| 8 | `h1` duplicado y tamaños de pulsación | horas |
+| 8 | Tamaños de pulsación en móvil | horas |
 
 Las dos primeras son las que tocan dinero. Yo empezaría por ahí.
+
+---
+
+## Estado de resolución — 2026-08-04
+
+| # | Hallazgo | Estado |
+|---|---|---|
+| 1 | Tarifas vendibles sin comisión | ✅ **Resuelto** — las 2 desactivadas; `active_without_commission_rules` devuelve vacío. Reactivación en `supabase/scripts/ROLLBACK_reactivate_gana_pyme_20260804.sql`, condicionada a que existan las reglas PYME de GANA |
+| 2 | Desbordamiento móvil en Tarifas | ✅ **Resuelto** — era la barra de pestañas (`w-fit`), no la tabla. Medido: documento de 500 px → 375 px |
+| 6 | "Pendiente" demasiado suave | ✅ **Resuelto** — ahora dice **"Sin configurar"** en ámbar, con explicación al pasar el ratón |
+| 7 | Tamaños de pulsación | ✅ **Parcial** — el botón "Analizar" pasa a 44 px |
+| — | Pipeline de despliegue roto desde el 2-ago | ✅ **Resuelto** — build remoto en lugar de `--prebuilt --archive=tgz` |
+| 3 | 609 KB en la página de tarifas | ⏸️ **No resuelto a propósito** — ver abajo |
+| 4 | Compensación de excedentes sin configurar | ❌ **Bloqueado** — dato de negocio |
+| 5 | 3 tarifas de gas sin precio | ⏸️ **No resuelto a propósito** — ver abajo |
+
+### Por qué no toqué el peso de la página de tarifas
+
+Con 65 tarifas es lento, pero **no es un defecto actual: es un límite de escala**. Paginar o virtualizar es un cambio grande en una pantalla de edición con formularios en línea, y no tengo forma de verificarlo visualmente (las previews de Vercel están tras autenticación). Hacer una refactorización así sin verificación, horas después de una demo, es peor negocio que dejarlo documentado.
+
+Se vuelve urgente cuando el catálogo crezca de 65 a varios cientos.
+
+### Por qué no desactivé las 3 tarifas de gas
+
+Son de NATURGY, y **NATURGY sí tiene una regla de comisión de gas** configurada. Eso indica que alguien empezó a construir el vertical de gas deliberadamente. Desactivarlas borraría esa intención sin preguntar.
+
+Además son inofensivas hoy: el comparador filtra por `supply_type = 'electricity'`, así que **no aparecen en ninguna comparativa**. Están inertes, no rotas.
+
+Es una decisión de producto: completarlas o retirarlas. No mía.
