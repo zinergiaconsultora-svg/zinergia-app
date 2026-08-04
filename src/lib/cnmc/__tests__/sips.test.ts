@@ -102,7 +102,8 @@ describe('CNMC SIPS OAuth', () => {
         it('lists every missing variable rather than only the first', () => {
             for (const name of OAUTH_VARS) delete process.env[name];
 
-            expect(() => getCnmcOAuthConfig()).toThrowError(/consumerKey.*tokenSecret/s);
+            // The message is a single line, so no dotAll flag is needed here.
+            expect(() => getCnmcOAuthConfig()).toThrowError(/consumerKey.*tokenSecret/);
         });
     });
 
