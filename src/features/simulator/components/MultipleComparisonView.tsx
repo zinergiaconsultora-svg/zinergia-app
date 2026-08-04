@@ -319,11 +319,18 @@ function InvoiceRecommendationBlock({
                                     </div>
                                     <div>
                                         <p className="opacity-70">Comision</p>
-                                        <p className="font-bold">
-                                            {result.offer.estimated_agent_commission != null
-                                                ? formatEuro(result.offer.estimated_agent_commission)
-                                                : 'Pendiente'}
-                                        </p>
+                                        {/* A null commission means no rule matches this tariff, not a
+                                            calculation still in flight. "Pendiente" read as the latter
+                                            and let an agent close a sale that pays nothing. */}
+                                        {result.offer.estimated_agent_commission != null ? (
+                                            <p className="font-bold">
+                                                {formatEuro(result.offer.estimated_agent_commission)}
+                                            </p>
+                                        ) : (
+                                            <p className="font-bold text-amber-300" title="Esta tarifa no tiene comision configurada. Consultalo antes de proponerla.">
+                                                Sin configurar
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                                 <p className="mt-2 text-xs leading-snug opacity-80">{recommendation.reason}</p>

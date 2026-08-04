@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
     DEFAULT_SSA_MARKET_RATE_EUR_MWH,
     calculateAdjustmentServicesCost,
+    resolveSsaMarketRate,
     simulateInvoiceComparison,
     type SsaTreatment,
     type TariffSimulationInput,
@@ -72,6 +73,40 @@ describe('adjustment services (SSA) normalisation', () => {
         it('returns zero for zero or negative consumption', () => {
             expect(calculateAdjustmentServicesCost(0, 'billed_separately', 20)).toBe(0);
             expect(calculateAdjustmentServicesCost(-500, 'billed_separately', 20)).toBe(0);
+        });
+    });
+
+    // The client's own bill is a better reference than any market average: it is the rate
+    // this supply actually pays. Deriving it also removes the assumption from the result.
+    describe('resolveSsaMarketRate', () => {
+        it('prefers an explicitly configured rate over everything else', () => {
+            expect(resolveSsaMarketRate({ ssaMarketRateEurMwh: 18, ssaAmount: 40 }, 1000))
+                .toEqual({ value: 18, source: 'configured' });
+        });
+
+        it('accepts a configured rate of zero rather than treating it as absent', () => {
+            expect(resolveSsaMarketRate({ ssaMarketRateEurMwh: 0, ssaAmount: 40 }, 1000))
+                .toEqual({ value: 0, source: 'configured' });
+        });
+
+        it('derives the rate from the SSA already itemised on the current invoice', () => {
+            // 40 EUR over 2 MWh = 20 EUR/MWh, this supply's real rate.
+            expect(resolveSsaMarketRate({ ssaAmount: 40 }, 2000))
+                .toEqual({ value: 20, source: 'derived_from_invoice' });
+        });
+
+        it.each([
+            ['no SSA on the invoice', {}, 1000],
+            ['zero SSA amount', { ssaAmount: 0 }, 1000],
+            ['no consumption to divide by', { ssaAmount: 40 }, 0],
+        ])('falls back to the documented constant when it cannot measure (%s)', (_l, inv, kwh) => {
+            expect(resolveSsaMarketRate(inv, kwh as number))
+                .toEqual({ value: DEFAULT_SSA_MARKET_RATE_EUR_MWH, source: 'assumed' });
+        });
+
+        it('ignores a non-finite configured rate instead of poisoning the calculation', () => {
+            expect(resolveSsaMarketRate({ ssaMarketRateEurMwh: Number.NaN }, 1000).source)
+                .toBe('assumed');
         });
     });
 
@@ -150,6 +185,40 @@ describe('adjustment services (SSA) normalisation', () => {
             );
 
             expect(result.alerts.find(entry => entry.code === 'ssa_market_rate_assumed')).toBeUndefined();
+        });
+
+        it('prices SSA from the client own invoice instead of the default assumption', () => {
+            // 60 EUR of SSA over 1 MWh = 60 EUR/MWh, five times the 12 EUR/MWh fallback.
+            const result = simulateInvoiceComparison(
+                invoice({ ssaAmount: 60 }),
+                tariff({ ssaTreatment: 'billed_separately' }),
+            );
+
+            const ssaLine = result.lines.find(line => line.label === 'Servicios de ajuste');
+            expect(ssaLine?.amount).toBeCloseTo(60, 6);
+            expect(ssaLine?.formula).toMatch(/deducida de la propia factura/i);
+        });
+
+        it('says the reference came from the invoice, and stops calling it an assumption', () => {
+            const result = simulateInvoiceComparison(
+                invoice({ ssaAmount: 60 }),
+                tariff({ ssaTreatment: 'billed_separately' }),
+            );
+
+            const codes = result.alerts.map(alert => alert.code);
+            expect(codes).toContain('ssa_market_rate_from_invoice');
+            expect(codes).not.toContain('ssa_market_rate_assumed');
+        });
+
+        it('still prefers an explicitly configured rate over the invoice-derived one', () => {
+            const result = simulateInvoiceComparison(
+                invoice({ ssaAmount: 60, ssaMarketRateEurMwh: 18 }),
+                tariff({ ssaTreatment: 'billed_separately' }),
+            );
+
+            const ssaLine = result.lines.find(line => line.label === 'Servicios de ajuste');
+            expect(ssaLine?.amount).toBeCloseTo(18, 6);
+            expect(result.alerts.map(a => a.code)).not.toContain('ssa_market_rate_from_invoice');
         });
 
         it('does not flag an assumed rate for a bundled tariff, which never needs one', () => {

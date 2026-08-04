@@ -159,24 +159,39 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
-      - name: Pull Vercel Environment Information
+      - name: Link Vercel project
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
-      - name: Build Project Artifacts
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-
-      - name: Deploy Project Artifacts to Vercel
-        run: vercel deploy --prebuilt --prod --archive=tgz --token=${{ secrets.VERCEL_TOKEN }}
+      # Built remotely on Vercel rather than locally with --prebuilt --archive=tgz.
+      #
+      # The prebuilt archive path had been failing on every push to main since
+      # 2026-08-02 with:
+      #   ENOENT: lstat '/vercel/path0/node_modules/@opentelemetry/api/build/src/api/context.js'
+      # Next.js output tracing references that file (it arrives via @sentry/nextjs) but it
+      # does not survive the tgz round trip, so listing the deployment files fails. The
+      # result was silent: main kept merging while production stopped receiving deploys.
+      #
+      # A remote build is the path that was verified to work end to end on 2026-08-04.
+      # Environment variables come from the Vercel project settings, so they no longer have
+      # to be mirrored into GitHub secrets.
+      - name: Deploy to Vercel (production)
+        run: vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
 
   # Job 5: Deploy to Vercel (Preview)
   deploy-preview:
     runs-on: ubuntu-latest
     name: Deploy Preview
     needs: [build, security]
-    if: github.ref != 'refs/heads/main' && github.event_name == 'push'
+    # Previously `github.event_name == 'push' && github.ref != 'refs/heads/main'`, which
+    # could never be true: this workflow only listens to pushes on main and develop, so a
+    # feature branch never produced a push event and a main push never satisfied the ref
+    # check. The job had therefore never run.
+    #
+    # That is why the broken deploy went unnoticed for two days: the only path that
+    # exercised deployment was production itself, where a failure is silent - main keeps
+    # merging while nothing reaches users. Running it on pull requests puts the deploy path
+    # in front of a reviewer before it can reach production.
+    if: github.event_name == 'pull_request'
     
     steps:
       - name: Checkout code
@@ -194,14 +209,9 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
-      - name: Pull Vercel Environment Information
+      - name: Link Vercel project
         run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
 
-      - name: Build Project Artifacts
-        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-
-      - name: Deploy Project Artifacts to Vercel
-        run: vercel deploy --prebuilt --archive=tgz --token=${{ secrets.VERCEL_TOKEN }}
+      # Same remote build as the production job, for the same reason.
+      - name: Deploy to Vercel (preview)
+        run: vercel deploy --yes --token=${{ secrets.VERCEL_TOKEN }}
