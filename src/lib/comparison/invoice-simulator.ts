@@ -113,6 +113,40 @@ const MONEY_EPSILON = 0.005;
  */
 export const DEFAULT_SSA_MARKET_RATE_EUR_MWH = 12;
 
+/** Where the adjustment-services reference used in a simulation came from. */
+export type SsaRateSource = 'configured' | 'derived_from_invoice' | 'assumed';
+
+/**
+ * Resolves the EUR/MWh reference used to price adjustment services, best source first:
+ *
+ *  1. `configured`            an explicit rate was supplied.
+ *  2. `derived_from_invoice`  the client's own bill already itemises SSA, so the effective
+ *                             rate they are actually paying is amount / MWh. This beats any
+ *                             market average, because it is this supply's real number.
+ *  3. `assumed`               nothing to go on; fall back to the constant and say so.
+ *
+ * The third case is the only one that should make anyone uncomfortable, which is why the
+ * simulation reports the source rather than presenting all three as equivalent.
+ */
+export function resolveSsaMarketRate(
+    invoice: Pick<InvoiceSimulationInput, 'ssaMarketRateEurMwh' | 'ssaAmount'>,
+    totalEnergyKwh: number,
+): { value: number; source: SsaRateSource } {
+    if (typeof invoice.ssaMarketRateEurMwh === 'number'
+        && Number.isFinite(invoice.ssaMarketRateEurMwh)
+        && invoice.ssaMarketRateEurMwh >= 0) {
+        return { value: invoice.ssaMarketRateEurMwh, source: 'configured' };
+    }
+
+    const megawattHours = Math.max(0, totalEnergyKwh) / 1000;
+    const billed = invoice.ssaAmount || 0;
+    if (megawattHours > 0 && billed > 0) {
+        return { value: billed / megawattHours, source: 'derived_from_invoice' };
+    }
+
+    return { value: DEFAULT_SSA_MARKET_RATE_EUR_MWH, source: 'assumed' };
+}
+
 /**
  * Cost of adjustment services that the client would pay on top of the energy term, for a
  * given treatment. Returns EUR for the billed period.
@@ -188,7 +222,8 @@ export function simulateInvoiceComparison(
     const surplusCompensation = (invoice.surplusExportKwh || 0) * (tariff.surplusCompensationPrice || 0);
     const meterRental = invoice.meterRentalAmount || 0;
     const ssaTreatment = tariff.ssaTreatment || 'unknown';
-    const ssaMarketRate = invoice.ssaMarketRateEurMwh ?? DEFAULT_SSA_MARKET_RATE_EUR_MWH;
+    const ssaRate = resolveSsaMarketRate(invoice, totalEnergyKwh);
+    const ssaMarketRate = ssaRate.value;
     const adjustmentServices = calculateAdjustmentServicesCost(
         totalEnergyKwh,
         ssaTreatment,
@@ -250,7 +285,7 @@ export function simulateInvoiceComparison(
             {
                 label: 'Servicios de ajuste',
                 amount: adjustmentServices,
-                formula: describeAdjustmentServices(ssaTreatment, ssaMarketRate, tariff.ssaIncludedEurMwh),
+                formula: describeAdjustmentServices(ssaTreatment, ssaRate, tariff.ssaIncludedEurMwh),
             },
             {
                 label: 'Compensacion excedentes',
@@ -280,6 +315,7 @@ export function simulateInvoiceComparison(
             activePeriods,
             currentInvoiceTotal,
             simulatedInvoiceTotal,
+            ssaRateSource: ssaRate.source,
         }),
     };
 }
@@ -292,6 +328,7 @@ export function validateInvoiceSimulationInput(
         activePeriods?: ComparisonPeriod[];
         currentInvoiceTotal?: number;
         simulatedInvoiceTotal?: number;
+        ssaRateSource?: SsaRateSource;
     }
 ): QualityAlert[] {
     const alerts: QualityAlert[] = [];
@@ -354,15 +391,25 @@ export function validateInvoiceSimulationInput(
             code: 'missing_ssa_treatment',
             message: 'La tarifa no declara como trata los servicios de ajuste. Comparar contra ofertas que los facturan aparte sobrestima el ahorro; confirmar antes de proponer.',
         });
-    } else if (
-        (ssaTreatment === 'billed_separately' || ssaTreatment === 'included_with_cap')
-        && invoice.ssaMarketRateEurMwh === undefined
-    ) {
-        alerts.push({
-            level: 'info',
-            code: 'ssa_market_rate_assumed',
-            message: `Servicios de ajuste valorados con la referencia por defecto de ${DEFAULT_SSA_MARKET_RATE_EUR_MWH} EUR/MWh. Es un concepto variable: revisar con la referencia de mercado vigente.`,
-        });
+    } else if (ssaTreatment === 'billed_separately' || ssaTreatment === 'included_with_cap') {
+        const ssaRateSource = context?.ssaRateSource
+            ?? resolveSsaMarketRate(invoice, energyTotal).source;
+
+        if (ssaRateSource === 'assumed') {
+            alerts.push({
+                level: 'info',
+                code: 'ssa_market_rate_assumed',
+                message: `Servicios de ajuste valorados con la referencia por defecto de ${DEFAULT_SSA_MARKET_RATE_EUR_MWH} EUR/MWh. Es un concepto variable: revisar con la referencia de mercado vigente.`,
+            });
+        } else if (ssaRateSource === 'derived_from_invoice') {
+            // Worth saying out loud: this is the rate this supply actually pays today, which
+            // is a stronger basis than any market average.
+            alerts.push({
+                level: 'info',
+                code: 'ssa_market_rate_from_invoice',
+                message: 'Servicios de ajuste valorados con la referencia deducida de la propia factura del cliente, no con una media de mercado.',
+            });
+        }
     }
 
     if ((invoice.reactiveEnergyAmount || 0) > 0) {
@@ -402,22 +449,33 @@ export function validateInvoiceSimulationInput(
     return alerts;
 }
 
+const SSA_RATE_SOURCE_LABEL: Record<SsaRateSource, string> = {
+    configured: 'referencia configurada',
+    derived_from_invoice: 'referencia deducida de la propia factura del cliente',
+    assumed: 'referencia por defecto, no medida',
+};
+
 function describeAdjustmentServices(
     treatment: SsaTreatment,
-    marketRateEurMwh: number,
+    rate: { value: number; source: SsaRateSource },
     includedEurMwh?: number,
 ): string {
+    const reference = `${round2(rate.value)} EUR/MWh (${SSA_RATE_SOURCE_LABEL[rate.source]})`;
     switch (treatment) {
         case 'included':
             return 'La comercializadora los incluye en el precio de energia; no se anade importe';
         case 'billed_separately':
-            return `MWh consumidos x ${marketRateEurMwh} EUR/MWh de referencia de mercado, facturados aparte del precio de energia`;
+            return `MWh consumidos x ${reference}, facturados aparte del precio de energia`;
         case 'included_with_cap':
-            return `MWh consumidos x exceso sobre el techo incluido (${includedEurMwh || 0} EUR/MWh) respecto a ${marketRateEurMwh} EUR/MWh de referencia`;
+            return `MWh consumidos x exceso sobre el techo incluido (${includedEurMwh || 0} EUR/MWh) respecto a ${reference}`;
         case 'unknown':
         default:
             return 'Tratamiento no configurado en la tarifa; no se anade importe y la comparativa no esta normalizada';
     }
+}
+
+function round2(value: number): number {
+    return Math.round(value * 100) / 100;
 }
 
 function getSingleEnergyPrice(energyPrice: PeriodValues, activePeriods: ComparisonPeriod[]): number {
