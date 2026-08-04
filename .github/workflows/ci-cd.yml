@@ -182,7 +182,16 @@ jobs:
     runs-on: ubuntu-latest
     name: Deploy Preview
     needs: [build, security]
-    if: github.ref != 'refs/heads/main' && github.event_name == 'push'
+    # Previously `github.event_name == 'push' && github.ref != 'refs/heads/main'`, which
+    # could never be true: this workflow only listens to pushes on main and develop, so a
+    # feature branch never produced a push event and a main push never satisfied the ref
+    # check. The job had therefore never run.
+    #
+    # That is why the broken deploy went unnoticed for two days: the only path that
+    # exercised deployment was production itself, where a failure is silent - main keeps
+    # merging while nothing reaches users. Running it on pull requests puts the deploy path
+    # in front of a reviewer before it can reach production.
+    if: github.event_name == 'pull_request'
     
     steps:
       - name: Checkout code
