@@ -37,6 +37,15 @@ const envSchema = z.object({
     GOOGLE_DRIVE_ROOT_FOLDER_ID: z.string().min(1).optional(),
 
     // CNMC SIPS API OAuth 1.0a credentials. Server-side only.
+    // ZIN-SDD-043. SIPS is opt-in: the integration has no CNMC credentials configured and
+    // no screen calls it, so the honest default is off. Turning it on is a deliberate act
+    // that goes together with provisioning the CNMC_OAUTH_* variables.
+    //
+    // It doubles as the kill path: setting it back to 'false' stops every live and cached
+    // SIPS read without reopening unauthorized access, and hides the consent capture UI.
+    // OCR and manual entry remain the continuity path either way.
+    SIPS_LIVE_ACCESS_ENABLED: z.enum(['true', 'false']).default('false'),
+
     CNMC_OAUTH_CONSUMER_KEY: z.string().min(1).optional(),
     CNMC_OAUTH_CONSUMER_SECRET: z.string().min(1).optional(),
     CNMC_OAUTH_TOKEN: z.string().min(1).optional(),

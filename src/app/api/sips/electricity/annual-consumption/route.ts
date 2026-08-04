@@ -5,6 +5,10 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { getElectricityAnnualConsumption, isValidCups, normalizeCups } from '@/lib/cnmc/sips';
 import { hashCups } from '@/lib/crypto/pii';
 import { rateLimit, getClientKey } from '@/lib/rate-limit';
+import {
+    authorizeSipsConsumption,
+    type SipsAuthorizationReason,
+} from '@/lib/sips/authorization';
 
 const limiter = rateLimit({ windowMs: 60_000, max: 20 });
 const CACHE_TTL_DAYS = 30;
@@ -12,6 +16,13 @@ const CACHE_TTL_DAYS = 30;
 const bodySchema = z.object({
     cups: z.string().min(20).max(24),
 });
+
+/**
+ * One stable message for every authorization denial. It must not let a caller distinguish
+ * "this CUPS is unknown" from "this CUPS exists but is not yours" from "consent was
+ * revoked" - otherwise the denial itself becomes an oracle over third-party supplies.
+ */
+const DENIED_MESSAGE = 'No autorizado para consultar este suministro. Puedes continuar con OCR o entrada manual.';
 
 export async function POST(request: Request) {
     const rl = limiter.check(getClientKey(request));
@@ -39,10 +50,19 @@ export async function POST(request: Request) {
     }
 
     const cupsHash = hashCups(cups);
+
+    // Authorization runs on the caller's own session, before any service client exists and
+    // before any cache or CNMC access. A denial below reads no consumption data at all.
+    const decision = await authorizeSipsConsumption(supabase, cupsHash);
+    if (!decision.allowed) {
+        await auditDenial(user.id, cupsHash, decision.reason);
+        return NextResponse.json({ error: DENIED_MESSAGE }, { status: 403 });
+    }
+
     const service = createServiceClient();
     const cached = await getCachedConsumption(service, cupsHash);
     if (cached) {
-        await logSipsQuery(service, user.id, cupsHash, 'cache_hit', null);
+        await logSipsQuery(service, user.id, cupsHash, 'cache_hit', 'authorized');
         return NextResponse.json({
             annual_kwh: cached.annual_consumption_kwh,
             annual_mwh: cached.annual_consumption_mwh,
@@ -61,7 +81,7 @@ export async function POST(request: Request) {
             annualMwh: result.annualMwh,
             rows: result.rows,
         });
-        await logSipsQuery(service, user.id, cupsHash, 'success', null);
+        await logSipsQuery(service, user.id, cupsHash, 'success', 'authorized');
         return NextResponse.json({
             annual_kwh: result.annualKwh,
             annual_mwh: result.annualMwh,
@@ -70,10 +90,21 @@ export async function POST(request: Request) {
             cached: false,
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'CNMC SIPS request failed';
-        const status = message.includes('Missing CNMC OAuth') ? 503 : 502;
-        await logSipsQuery(service, user.id, cupsHash, 'error', message);
-        return NextResponse.json({ error: message }, { status });
+        // The upstream message is mapped to a stable code before it reaches the audit or the
+        // client, so no third-party free text is persisted or echoed back.
+        const message = error instanceof Error ? error.message : '';
+        const isConfigurationGap = message.includes('Missing CNMC OAuth');
+        await logSipsQuery(
+            service,
+            user.id,
+            cupsHash,
+            'error',
+            isConfigurationGap ? 'upstream_unavailable' : 'upstream_failed',
+        );
+        return NextResponse.json(
+            { error: 'El servicio SIPS no está disponible ahora mismo. Puedes continuar con OCR o entrada manual.' },
+            { status: isConfigurationGap ? 503 : 502 },
+        );
     }
 }
 
@@ -84,6 +115,19 @@ interface CachedConsumptionRow {
     annual_consumption_mwh: number;
     rows_count: number;
     fetched_at: string;
+}
+
+/**
+ * Denials are audited too, otherwise the only observable trace of a probing attempt is its
+ * absence. The service client is created here, after the decision, purely to satisfy the
+ * insert-only audit policy - it never touches cache or CNMC on this path.
+ */
+async function auditDenial(userId: string, cupsHash: string, reason: SipsAuthorizationReason) {
+    try {
+        await logSipsQuery(createServiceClient(), userId, cupsHash, 'denied', reason);
+    } catch {
+        // An audit failure must not turn a denial into a success.
+    }
 }
 
 async function getCachedConsumption(supabase: SupabaseServiceClient, cupsHash: string): Promise<CachedConsumptionRow | null> {
@@ -120,8 +164,8 @@ async function logSipsQuery(
     supabase: SupabaseServiceClient,
     userId: string,
     cupsHash: string,
-    status: 'success' | 'cache_hit' | 'error',
-    errorMessage: string | null,
+    status: 'success' | 'cache_hit' | 'error' | 'denied',
+    reasonCode: string,
 ) {
     await supabase
         .from('sips_query_audit')
@@ -129,6 +173,6 @@ async function logSipsQuery(
             user_id: userId,
             cups_hash: cupsHash,
             status,
-            error_message: errorMessage,
+            reason_code: reasonCode,
         });
 }

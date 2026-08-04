@@ -6,6 +6,8 @@ import { createSupplyPointAction, deleteSupplyPointAction, getSupplyPointsAction
 import { Zap, Flame, Plus, MapPin, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import SipsConsentControl from './SipsConsentControl';
+
 interface Props {
     clientId: string;
 }
@@ -75,7 +77,8 @@ export default function SupplyPointsPanel({ clientId }: Props) {
             )}
 
             {points.map(point => (
-                <div key={point.id} className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200 group">
+                <div key={point.id} className="rounded-xl bg-white border border-slate-200 group">
+                    <div className="flex items-center gap-3 p-3">
                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
                         point.supply_type === 'gas'
                             ? 'bg-orange-50 text-orange-600'
@@ -103,6 +106,11 @@ export default function SupplyPointsPanel({ clientId }: Props) {
                     >
                         <Trash2 size={12} />
                     </button>
+                    </div>
+                    {/* SIPS covers electricity only, so gas supplies get no consent prompt. */}
+                    {point.supply_type === 'electricity' && (
+                        <SipsConsentControl cups={point.cups} clientId={clientId} />
+                    )}
                 </div>
             ))}
 
