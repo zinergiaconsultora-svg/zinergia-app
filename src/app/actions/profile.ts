@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { requireServerRole } from '@/lib/auth/permissions'
 import { z } from 'zod'
+import { updateOwnProfileCommand } from '@/lib/profile-authority/commands'
+import { ownProfileInputSchema, type OwnProfileInput } from '@/lib/profile-authority/schemas'
 
 interface ProfileSettingsInput {
     companyName: string;
@@ -21,10 +23,39 @@ const profileSettingsSchema = z.object({
     defaultVat: z.coerce.number().min(0).max(100),
 });
 
-const agentProfileSchema = z.object({
+const agentProfileSchema = z.strictObject({
     full_name: z.string().trim().min(1).max(200),
     phone: z.string().trim().max(40).optional().or(z.literal('')),
 });
+
+type ProfileActionResult =
+    | { success: true; data: null }
+    | { success: false; error: string };
+
+async function getAuthenticatedUserId() {
+    const supabase = await createClient()
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (error || !user) return null
+    return user.id
+}
+
+export async function updateOwnProfileAction(input: OwnProfileInput): Promise<ProfileActionResult> {
+    const parsed = ownProfileInputSchema.safeParse(input)
+    if (!parsed.success) {
+        return { success: false, error: 'Los datos del perfil no son válidos.' }
+    }
+
+    await requireServerRole(['admin', 'franchise', 'agent'])
+    const actorId = await getAuthenticatedUserId()
+    if (!actorId) return { success: false, error: 'No se pudo actualizar el perfil.' }
+
+    const { error } = await updateOwnProfileCommand(actorId, parsed.data)
+    if (error) return { success: false, error: 'No se pudo actualizar el perfil.' }
+
+    revalidatePath('/dashboard', 'layout')
+    revalidatePath('/dashboard/settings')
+    return { success: true, data: null }
+}
 
 export async function saveProfileSettingsAction(input: ProfileSettingsInput): Promise<void> {
     await requireServerRole(['admin', 'franchise', 'agent'])
@@ -34,14 +65,6 @@ export async function saveProfileSettingsAction(input: ProfileSettingsInput): Pr
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) throw new Error('No autenticado')
-
-    // Update profile full_name
-    const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ full_name: clean.companyName })
-        .eq('id', user.id)
-
-    if (profileError) throw profileError
 
     // Upsert franchise_config with fiscal/commercial data
     const { error: configError } = await supabase
@@ -102,14 +125,13 @@ export async function updateAgentProfileAction(input: {
     await requireServerRole(['admin', 'franchise', 'agent'])
 
     const clean = agentProfileSchema.parse(input)
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('No autenticado')
+    const actorId = await getAuthenticatedUserId()
+    if (!actorId) throw new Error('No autenticado')
 
-    const { error } = await supabase
-        .from('profiles')
-        .update({ full_name: clean.full_name, phone: clean.phone || null })
-        .eq('id', user.id)
+    const { error } = await updateOwnProfileCommand(actorId, {
+        fullName: clean.full_name,
+        phone: clean.phone ?? '',
+    })
 
     if (error) throw error
     revalidatePath('/dashboard', 'layout')

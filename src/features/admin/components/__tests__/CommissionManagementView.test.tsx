@@ -61,6 +61,10 @@ describe('CommissionManagementView', () => {
     it('calculates Zinergia as the direct-plan remainder and keeps franchise at zero', () => {
         render(<CommissionManagementView initialData={configuredData} />);
 
+        expect(
+            screen.getByRole('heading', { name: 'Editar reparto comercial' }),
+        ).toBeTruthy();
+
         const commercialInput = screen.getByRole('spinbutton', {
             name: 'Socio comercial %',
         });

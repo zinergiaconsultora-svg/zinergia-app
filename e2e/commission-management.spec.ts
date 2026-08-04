@@ -76,7 +76,7 @@ test.describe('commission management', () => {
             ).toBeVisible();
             await expect(
                 page.getByRole('heading', {
-                    name: 'Preparar un nuevo reparto',
+                    name: 'Editar reparto comercial',
                 }),
             ).toBeVisible();
             await expect(

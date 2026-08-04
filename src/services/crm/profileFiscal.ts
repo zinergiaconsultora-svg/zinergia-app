@@ -1,36 +1,44 @@
-import { createClient } from '@/lib/supabase/client';
-import { FiscalProfile, isProfileReadyForInvoicing } from '@/types/crm';
+import { FiscalProfile, type CompanyType, isProfileReadyForInvoicing } from '@/types/crm';
+import { getOwnFiscalProfileAction } from '@/app/actions/invoicing';
 
-const FISCAL_FIELDS = [
-    'nif_cif', 'fiscal_address', 'fiscal_city', 'fiscal_province',
-    'fiscal_postal_code', 'fiscal_country', 'iban', 'company_name',
-    'company_type', 'invoice_prefix', 'invoice_next_number',
-    'retention_percent', 'invoice_tax_percent', 'fiscal_verified', 'fiscal_verified_at'
-].join(', ');
+export type ProtectedFiscalProfile = {
+    nif_cif?: string | null;
+    fiscal_address?: string | null;
+    fiscal_city?: string | null;
+    fiscal_province?: string | null;
+    fiscal_postal_code?: string | null;
+    fiscal_country?: string | null;
+    company_name?: string | null;
+    company_type?: CompanyType | null;
+    invoice_prefix?: string | null;
+    retention_percent?: number | null;
+    invoice_tax_percent?: number | null;
+    fiscal_verified?: boolean | null;
+    fiscal_verified_at?: string | null;
+    hasIban: boolean;
+    maskedIban: string | null;
+};
 
 export const profileFiscalService = {
 
-    async getFiscalProfile(): Promise<FiscalProfile | null> {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return null;
-
-        const { data, error } = await supabase
-            .from('profiles')
-            .select(FISCAL_FIELDS)
-            .eq('id', user.id)
-            .single();
-
-        if (error) {
-            console.error('[profileFiscalService] Error fetching:', error);
-            return null;
-        }
-        return data as FiscalProfile;
+    async getFiscalProfile(): Promise<ProtectedFiscalProfile | null> {
+        const result = await getOwnFiscalProfileAction();
+        return result.success ? result.data : null;
     },
 
     async getFiscalReadiness(): Promise<{ ready: boolean; missing: string[] }> {
         const profile = await this.getFiscalProfile();
         if (!profile) return { ready: false, missing: ['Perfil no encontrado'] };
-        return isProfileReadyForInvoicing(profile);
+        const readinessProfile: FiscalProfile = {
+            nif_cif: profile.nif_cif ?? undefined,
+            fiscal_address: profile.fiscal_address ?? undefined,
+            fiscal_city: profile.fiscal_city ?? undefined,
+            fiscal_province: profile.fiscal_province ?? undefined,
+            fiscal_postal_code: profile.fiscal_postal_code ?? undefined,
+            invoice_tax_percent: profile.invoice_tax_percent ?? undefined,
+            fiscal_verified: profile.fiscal_verified ?? undefined,
+            iban: profile.hasIban ? 'configured' : undefined,
+        };
+        return isProfileReadyForInvoicing(readinessProfile);
     }
 };

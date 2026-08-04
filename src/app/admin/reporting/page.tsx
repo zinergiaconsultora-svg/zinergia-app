@@ -1,15 +1,18 @@
 import { getCommissionTimeSeries, getProposalTimeSeries, getAgentPerformanceRanking } from '@/app/actions/admin';
-import ReportingDashboard from '@/features/admin/components/ReportingDashboard';
+import { getBusinessMetricsAction } from '@/app/actions/businessMetrics';
+import { AdminInsightsWorkspace } from '@/features/admin/components/AdminInsightsWorkspace';
 
 export default async function ReportingPage() {
-    const [commissionData, proposalData, agentRanking] = await Promise.all([
+    const [metrics, commissionData, proposalData, agentRanking] = await Promise.all([
+        getBusinessMetricsAction(),
         getCommissionTimeSeries(12),
         getProposalTimeSeries(12),
         getAgentPerformanceRanking(),
     ]);
 
     return (
-        <ReportingDashboard
+        <AdminInsightsWorkspace
+            metrics={metrics}
             commissionData={commissionData}
             proposalData={proposalData}
             agentRanking={agentRanking}

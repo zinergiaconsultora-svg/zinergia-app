@@ -48,17 +48,21 @@ export const gamificationService = {
         const profileMap = new Map((profilesData ?? []).map(p => [p.id, p]));
         const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
 
-        return pointsData.map(row => {
-            const profile = profileMap.get(row.user_id) ?? {};
-            return {
+        return pointsData.flatMap(row => {
+            const profile = profileMap.get(row.user_id);
+            if (
+                !profile
+                || !['admin', 'franchise', 'agent'].includes(profile.role ?? '')
+            ) return [];
+            return [{
                 id: row.user_id,
-                name: (profile as { full_name?: string }).full_name ?? 'Agente',
-                role: (profile as { role?: string }).role ?? 'agent',
+                name: profile.full_name?.trim() || 'Usuario',
+                role: profile.role,
                 points: row.points ?? 0,
                 trend: ((row.updated_at ?? '') >= sevenDaysAgo ? 'up' : 'stable') as 'up' | 'down' | 'stable',
                 avatar_url: '',
                 badges: [] as string[],
-            };
+            }];
         });
     },
 

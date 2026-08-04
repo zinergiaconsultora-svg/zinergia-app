@@ -101,6 +101,8 @@ export class AletheiaEngine {
                 energyPrice: tariff.energy_price,
                 fixedFeeMonthly: tariff.fixed_fee,
                 surplusCompensationPrice: tariff.surplus_compensation_price,
+                ssaTreatment: tariff.ssa_treatment,
+                ssaIncludedEurMwh: tariff.ssa_included_eur_mwh ?? undefined,
             });
 
             const periodPowerCost = invoiceSimulation.lines.find(line => line.label === 'Potencia contratada')?.amount || 0;

@@ -35,6 +35,10 @@ yarn-error.log*
 .next-localhost.log
 .next-localhost.*.log
 
+# isolated build outputs used by local and CI verification (see next.config.ts distDir)
+.next-*/
+.impeccable/
+
 # local audit and generated reports
 .sb-pentest-context.json
 .sb-pentest-audit.log
@@ -75,6 +79,12 @@ resources
 !supabase/scripts/**
 !sdd/scripts/
 !sdd/scripts/**
+# Anchored to the repo root on purpose: the bare `scripts` rule above matches at any
+# depth, so an unanchored negation would also un-ignore .agents/scripts and friends.
+!/scripts/
+/scripts/*
+!/scripts/profile-authority/
+!/scripts/profile-authority/**
 
 nul
 

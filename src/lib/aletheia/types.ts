@@ -56,6 +56,10 @@ export interface TariffCandidate {
     energy_price: Record<TariffPeriod, number>; // €/kWh
     fixed_fee: number; // €/month
     surplus_compensation_price?: number; // €/kWh for autoconsumo excedentes
+    // Adjustment services (servicios de ajuste). Without these the comparison is not
+    // apples-to-apples: see SsaTreatment in @/lib/comparison/invoice-simulator.
+    ssa_treatment?: import('@/lib/comparison/invoice-simulator').SsaTreatment;
+    ssa_included_eur_mwh?: number | null;
     modelo?: string | null;
     estimated_agent_commission?: number | null;
     commission_source?: 'tariff_commissions' | 'missing';

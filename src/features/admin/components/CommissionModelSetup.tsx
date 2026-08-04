@@ -83,8 +83,9 @@ export function CommissionModelSetup({
                         </h2>
                         <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
                             Define el reparto de la comisión del proveedor para
-                            cada canal. Podrás crear nuevas versiones cuando
-                            cambien los porcentajes.
+                            cada canal. Los porcentajes seguirán siendo
+                            editables por administración mediante nuevas
+                            versiones.
                         </p>
                     </div>
                     <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 dark:text-emerald-300">

@@ -4,6 +4,7 @@ import type { BusinessMetrics, FunnelStep, MarketerStat, FranchiseStat } from '@
 
 interface Props {
     metrics: BusinessMetrics;
+    embedded?: boolean;
 }
 
 function formatEur(value: number): string {
@@ -123,18 +124,20 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
 
 // ── Main panel ────────────────────────────────────────────────────────────────
 
-export default function BusinessMetricsPanel({ metrics }: Props) {
+export default function BusinessMetricsPanel({ metrics, embedded = false }: Props) {
     const { funnel, topMarketers, franchiseRanking, last30 } = metrics;
 
     return (
         <div className="space-y-8">
             {/* Header */}
-            <div>
-                <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Business KPIs</h1>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                    Métricas globales del negocio — histórico completo + últimos 30 días
-                </p>
-            </div>
+            {!embedded && (
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Indicadores del negocio</h1>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                        Histórico completo y actividad de los últimos 30 días.
+                    </p>
+                </div>
+            )}
 
             {/* Last 30 days summary */}
             <section>

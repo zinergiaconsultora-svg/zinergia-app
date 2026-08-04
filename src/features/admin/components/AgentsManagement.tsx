@@ -1,377 +1,293 @@
 'use client';
 
-import { useState, useTransition, useMemo } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-    Search, Pencil, Check, X, Loader2, Users,
-    Building2, ChevronDown, UserMinus, Shield,
-} from 'lucide-react';
-import type { AgentProfile, FranchiseWithAgents } from '@/app/actions/admin';
-import {
-    updateAgentAdminAction,
-} from '@/app/actions/admin';
+import { Building2, Check, ChevronDown, KeyRound, Loader2, Pencil, Search, Shield, UserMinus, Users, X } from 'lucide-react';
+import type { FranchiseWithAgents, ProfileAuthoritySummary } from '@/app/actions/admin';
+import { updateTeamMemberNameAction } from '@/app/actions/network';
+import { AuthorityChangeDialog } from './AuthorityChangeDialog';
 
 interface Props {
-    agents: AgentProfile[];
+    agents: ProfileAuthoritySummary[];
     franchises: FranchiseWithAgents[];
 }
 
 const ROLE_META: Record<string, { label: string; cls: string }> = {
-    agent:     { label: 'Agente',    cls: 'bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/25' },
-    franchise: { label: 'Franquicia', cls: 'bg-violet-100 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-500/25' },
-    admin:     { label: 'Admin',     cls: 'bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/25' },
+    agent: { label: 'Agente', cls: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
+    franchise: { label: 'Franquicia', cls: 'bg-violet-100 text-violet-700 border-violet-200' },
+    admin: { label: 'Admin', cls: 'bg-rose-100 text-rose-700 border-rose-200' },
+    pending: { label: 'Pendiente', cls: 'bg-slate-100 text-slate-600 border-slate-200' },
 };
 
-function RoleBadge({ role }: { role: string }) {
-    const meta = ROLE_META[role] ?? { label: role, cls: 'bg-slate-100 text-slate-600 border-slate-200' };
+function RoleBadge({ role }: { role: ProfileAuthoritySummary['role'] }) {
+    const meta = ROLE_META[role ?? 'pending'];
     return (
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${meta.cls}`}>
+        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${meta.cls}`}>
             {meta.label}
         </span>
     );
 }
 
-function AgentAvatar({ name, email }: { name: string | null; email: string }) {
-    const label = name ?? email;
-    const initial = label.charAt(0).toUpperCase();
-    const colors = [
-        'from-indigo-400 to-indigo-600',
-        'from-violet-400 to-violet-600',
-        'from-rose-400 to-rose-600',
-        'from-emerald-400 to-emerald-600',
-        'from-amber-400 to-amber-600',
-        'from-cyan-400 to-cyan-600',
-    ];
-    const color = colors[label.charCodeAt(0) % colors.length];
+function AgentAvatar({ profile }: { profile: ProfileAuthoritySummary }) {
+    const label = profile.fullName ?? profile.email;
     return (
-        <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center text-white text-xs font-black shrink-0 shadow-sm`}>
-            {initial}
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 text-xs font-black text-white shadow-sm">
+            {label.charAt(0).toUpperCase()}
         </div>
     );
 }
 
-interface EditState {
-    agentId: string;
-    fullName: string;
-    role: string;
-    franchiseId: string;
-}
-
 function AgentRow({
-    agent,
+    profile,
     franchises,
+    onAuthority,
     onSaved,
 }: {
-    agent: AgentProfile;
+    profile: ProfileAuthoritySummary;
     franchises: FranchiseWithAgents[];
+    onAuthority: (profile: ProfileAuthoritySummary, opener: HTMLButtonElement) => void;
     onSaved: () => void;
 }) {
-    const [editing, setEditing] = useState(false);
-    const [edit, setEdit] = useState<EditState>({
-        agentId: agent.id,
-        fullName: agent.full_name ?? '',
-        role: agent.role,
-        franchiseId: agent.franchise_id ?? '',
-    });
-    const [isPending, start] = useTransition();
+    const [editingName, setEditingName] = useState(false);
+    const [fullName, setFullName] = useState(profile.fullName ?? '');
     const [error, setError] = useState('');
+    const [pending, startTransition] = useTransition();
+    const displayName = profile.fullName ?? profile.email;
+    const franchiseName = franchises.find(item => item.id === profile.franchiseId)?.name;
 
-    const franchiseName = useMemo(
-        () => franchises.find(f => f.id === agent.franchise_id)?.name ?? null,
-        [franchises, agent.franchise_id],
-    );
-
-    const handleSave = () => {
-        start(async () => {
-            try {
-                await updateAgentAdminAction(agent.id, {
-                    full_name: edit.fullName.trim() || undefined,
-                    role: edit.role,
-                    franchise_id: edit.franchiseId || null,
-                });
-                setEditing(false);
-                onSaved();
-            } catch (e) {
-                setError(e instanceof Error ? e.message : 'Error al guardar');
+    const saveName = () => {
+        startTransition(async () => {
+            setError('');
+            const result = await updateTeamMemberNameAction({
+                targetId: profile.id,
+                fullName,
+            });
+            if (!result.success) {
+                setError(result.error);
+                return;
             }
+            setEditingName(false);
+            onSaved();
         });
     };
 
-    const handleCancel = () => {
-        setEdit({ agentId: agent.id, fullName: agent.full_name ?? '', role: agent.role, franchiseId: agent.franchise_id ?? '' });
-        setEditing(false);
-        setError('');
-    };
-
     return (
-        <motion.tr
-            layout
-            className="border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors group"
-        >
-            {/* Name / email */}
+        <tr className="border-b border-slate-100 transition-colors hover:bg-slate-50/60 dark:border-slate-800/60 dark:hover:bg-slate-800/30">
             <td className="px-4 py-3">
                 <div className="flex items-center gap-2.5">
-                    <AgentAvatar name={agent.full_name} email={agent.email ?? ''} />
-                    {editing ? (
+                    <AgentAvatar profile={profile} />
+                    {editingName ? (
+                        <label className="sr-only" htmlFor={`name-${profile.id}`}>Nombre completo</label>
+                    ) : null}
+                    {editingName ? (
                         <input
-                            type="text"
-                            value={edit.fullName}
-                            onChange={e => setEdit(prev => ({ ...prev, fullName: e.target.value }))}
-                            placeholder="Nombre completo"
-                            className="text-sm border border-indigo-300 dark:border-indigo-600 rounded-lg px-2.5 py-1.5 outline-none bg-white dark:bg-slate-800 text-slate-800 dark:text-white w-44 focus:ring-2 focus:ring-indigo-400/25"
+                            id={`name-${profile.id}`}
+                            aria-label="Nombre completo"
                             autoFocus
+                            value={fullName}
+                            onChange={(event) => setFullName(event.target.value)}
+                            className="w-44 rounded-lg border border-indigo-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-400/25 dark:border-indigo-600 dark:bg-slate-800 dark:text-white"
                         />
                     ) : (
                         <div className="min-w-0">
-                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
-                                {agent.full_name ?? <span className="text-slate-400 italic font-normal">Sin nombre</span>}
-                            </p>
-                            <p className="text-xs text-slate-400 truncate">{agent.email}</p>
+                            <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{profile.fullName ?? 'Sin nombre'}</p>
+                            <p className="truncate text-xs text-slate-400">{profile.email}</p>
                         </div>
                     )}
                 </div>
             </td>
-
-            {/* Role */}
+            <td className="px-4 py-3"><RoleBadge role={profile.role} /></td>
             <td className="px-4 py-3">
-                {editing ? (
-                    <div className="relative w-36">
-                        <select
-                            value={edit.role}
-                            onChange={e => setEdit(prev => ({ ...prev, role: e.target.value }))}
-                            className="w-full appearance-none text-xs border border-slate-300 dark:border-slate-600 rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-400/25 pr-7"
-                        >
-                            <option value="agent">Agente</option>
-                            <option value="franchise">Franquicia</option>
-                            <option value="admin">Admin</option>
-                        </select>
-                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+                {franchiseName ? (
+                    <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                        <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                        {franchiseName}
                     </div>
-                ) : (
-                    <RoleBadge role={agent.role} />
-                )}
+                ) : <span className="text-xs italic text-slate-400">Sin asignar</span>}
             </td>
-
-            {/* Franchise */}
             <td className="px-4 py-3">
-                {editing ? (
-                    <div className="relative w-48">
-                        <select
-                            value={edit.franchiseId}
-                            onChange={e => setEdit(prev => ({ ...prev, franchiseId: e.target.value }))}
-                            className="w-full appearance-none text-xs border border-slate-300 dark:border-slate-600 rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-400/25 pr-7"
-                        >
-                            <option value="">— Sin franquicia —</option>
-                            {franchises.map(f => (
-                                <option key={f.id} value={f.id}>{f.name}</option>
-                            ))}
-                        </select>
-                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
-                    </div>
-                ) : (
-                    <div className="flex items-center gap-1.5">
-                        {franchiseName ? (
-                            <>
-                                <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                <span className="text-xs text-slate-600 dark:text-slate-300">{franchiseName}</span>
-                            </>
-                        ) : (
-                            <span className="text-xs text-slate-400 italic">Sin asignar</span>
-                        )}
-                    </div>
-                )}
-            </td>
-
-            {/* Actions */}
-            <td className="px-4 py-3">
-                <div className="flex items-center gap-1.5 justify-end">
-                    {error && <span className="text-[10px] text-rose-500 mr-1">{error}</span>}
-                    {editing ? (
+                <div className="flex items-center justify-end gap-1.5">
+                    {error ? <span role="alert" className="mr-1 text-[10px] text-rose-500">{error}</span> : null}
+                    {editingName ? (
                         <>
                             <button
                                 type="button"
-                                onClick={handleSave}
-                                disabled={isPending}
-                                title="Guardar cambios"
-                                aria-label="Guardar cambios del agente"
-                                className="w-7 h-7 flex items-center justify-center rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors disabled:opacity-50"
+                                onClick={saveName}
+                                disabled={pending}
+                                aria-label="Guardar nombre"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white disabled:opacity-50"
                             >
-                                {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                             </button>
                             <button
                                 type="button"
-                                onClick={handleCancel}
-                                title="Cancelar edición"
-                                aria-label="Cancelar edición del agente"
-                                className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                                onClick={() => {
+                                    setFullName(profile.fullName ?? '');
+                                    setEditingName(false);
+                                    setError('');
+                                }}
+                                aria-label="Cancelar edición de nombre"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500"
                             >
-                                <X className="w-3.5 h-3.5" />
+                                <X className="h-3.5 w-3.5" />
                             </button>
                         </>
                     ) : (
-                        <button
-                            type="button"
-                            onClick={() => setEditing(true)}
-                            title="Editar agente"
-                            aria-label={`Editar agente ${agent.full_name ?? agent.email}`}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-300 dark:text-slate-600 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 opacity-0 group-hover:opacity-100 transition-all"
-                        >
-                            <Pencil className="w-3.5 h-3.5" />
-                        </button>
+                        <>
+                            <button
+                                type="button"
+                                onClick={() => setEditingName(true)}
+                                aria-label={`Editar nombre de ${displayName}`}
+                                title="Editar nombre"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600"
+                            >
+                                <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={(event) => onAuthority(profile, event.currentTarget)}
+                                aria-label={`Cambiar autoridad de ${displayName}`}
+                                title="Cambiar autoridad"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-700"
+                            >
+                                <KeyRound className="h-3.5 w-3.5" />
+                            </button>
+                        </>
                     )}
                 </div>
             </td>
-        </motion.tr>
+        </tr>
     );
 }
 
 export default function AgentsManagement({ agents, franchises }: Props) {
     const router = useRouter();
     const [query, setQuery] = useState('');
-    const [filterRole, setFilterRole] = useState<string>('all');
-    const [filterFranchise, setFilterFranchise] = useState<string>('all');
+    const [filterRole, setFilterRole] = useState('all');
+    const [filterFranchise, setFilterFranchise] = useState('all');
+    const [authority, setAuthority] = useState<{
+        profile: ProfileAuthoritySummary;
+        requestId: string;
+        opener: HTMLButtonElement;
+    } | null>(null);
 
     const filtered = useMemo(() => {
-        const q = query.toLowerCase();
-        return agents.filter(a => {
-            const matchQ = !q
-                || (a.full_name ?? '').toLowerCase().includes(q)
-                || (a.email ?? '').toLowerCase().includes(q);
-            const matchRole = filterRole === 'all' || a.role === filterRole;
-            const matchFranchise = filterFranchise === 'all'
-                || (filterFranchise === 'none' ? !a.franchise_id : a.franchise_id === filterFranchise);
-            return matchQ && matchRole && matchFranchise;
+        const normalized = query.toLowerCase();
+        return agents.filter(profile => {
+            const matchesQuery = !normalized
+                || (profile.fullName ?? '').toLowerCase().includes(normalized)
+                || profile.email.toLowerCase().includes(normalized);
+            const matchesRole = filterRole === 'all' || (filterRole === 'pending' ? profile.role === null : profile.role === filterRole);
+            const matchesFranchise = filterFranchise === 'all'
+                || (filterFranchise === 'none' ? profile.franchiseId === null : profile.franchiseId === filterFranchise);
+            return matchesQuery && matchesRole && matchesFranchise;
         });
-    }, [agents, query, filterRole, filterFranchise]);
+    }, [agents, filterFranchise, filterRole, query]);
 
-    const unassignedCount = agents.filter(a => !a.franchise_id && a.role === 'agent').length;
+    const unassignedCount = agents.filter(profile => profile.role === 'agent' && !profile.franchiseId).length;
 
     return (
         <div className="space-y-5">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                 <div>
-                    <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                        <Users className="w-5 h-5 text-indigo-500" />
-                        Gestión de Agentes
+                    <h2 className="flex items-center gap-2 text-xl font-bold text-slate-800 dark:text-white">
+                        <Users className="h-5 w-5 text-indigo-500" /> Gestión de Agentes
                     </h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                        {agents.length} usuarios · {unassignedCount > 0 && (
-                            <span className="text-amber-600 dark:text-amber-400 font-medium">
-                                {unassignedCount} sin franquicia
-                            </span>
-                        )}
+                    <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+                        {agents.length} usuarios{unassignedCount > 0 ? ` · ${unassignedCount} sin franquicia` : ''}
                     </p>
                 </div>
             </div>
 
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-2">
-                {/* Search */}
+            <div className="flex flex-col gap-2 sm:flex-row">
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                     <input
                         type="text"
+                        aria-label="Buscar personas"
                         placeholder="Buscar por nombre o email…"
                         value={query}
-                        onChange={e => setQuery(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-400/25 focus:border-indigo-400 transition-all"
+                        onChange={(event) => setQuery(event.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm dark:border-slate-700 dark:bg-slate-800"
                     />
                 </div>
-
-                {/* Role filter */}
-                <div className="relative">
-                    <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                    <select
-                        value={filterRole}
-                        onChange={e => setFilterRole(e.target.value)}
-                        className="pl-8 pr-8 py-2.5 text-sm border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-400/25 appearance-none cursor-pointer"
-                    >
-                        <option value="all">Todos los roles</option>
-                        <option value="agent">Agente</option>
-                        <option value="franchise">Franquicia</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                </div>
-
-                {/* Franchise filter */}
-                <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                    <select
-                        value={filterFranchise}
-                        onChange={e => setFilterFranchise(e.target.value)}
-                        className="pl-8 pr-8 py-2.5 text-sm border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-400/25 appearance-none cursor-pointer"
-                    >
-                        <option value="all">Todas las franquicias</option>
-                        <option value="none">Sin franquicia</option>
-                        {franchises.map(f => (
-                            <option key={f.id} value={f.id}>{f.name}</option>
-                        ))}
-                    </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                </div>
+                <FilterSelect icon={<Shield className="h-3.5 w-3.5" />} label="Filtrar por rol" value={filterRole} onChange={setFilterRole}>
+                    <option value="all">Todos los roles</option>
+                    <option value="agent">Agente</option>
+                    <option value="franchise">Franquicia</option>
+                    <option value="admin">Admin</option>
+                    <option value="pending">Pendiente</option>
+                </FilterSelect>
+                <FilterSelect icon={<Building2 className="h-3.5 w-3.5" />} label="Filtrar por franquicia" value={filterFranchise} onChange={setFilterFranchise}>
+                    <option value="all">Todas las franquicias</option>
+                    <option value="none">Sin franquicia</option>
+                    {franchises.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+                </FilterSelect>
             </div>
 
-            {/* Table */}
-            <div className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border border-white/80 dark:border-white/8 shadow-lg overflow-hidden">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-lg dark:border-slate-800 dark:bg-slate-800/60">
                 {filtered.length === 0 ? (
-                    <div className="py-16 text-center">
-                        <UserMinus className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-                        <p className="text-sm text-slate-500">No hay resultados para esta búsqueda.</p>
-                    </div>
+                    <div className="py-16 text-center"><UserMinus className="mx-auto mb-3 h-10 w-10 text-slate-300" /><p className="text-sm text-slate-500">No hay resultados para esta búsqueda.</p></div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
-                            <thead>
-                                <tr className="border-b border-slate-100 dark:border-slate-800/60">
-                                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                        Agente
-                                    </th>
-                                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                        Rol
-                                    </th>
-                                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                        Franquicia
-                                    </th>
-                                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 text-right">
-                                        Acciones
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <AnimatePresence initial={false}>
-                                    {filtered.map(agent => (
-                                        <AgentRow
-                                            key={agent.id}
-                                            agent={agent}
-                                            franchises={franchises}
-                                            onSaved={() => router.refresh()}
-                                        />
-                                    ))}
-                                </AnimatePresence>
-                            </tbody>
+                            <thead><tr className="border-b border-slate-100 dark:border-slate-800"><th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-400">Persona</th><th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-400">Rol</th><th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-400">Franquicia</th><th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-slate-400">Acciones</th></tr></thead>
+                            <tbody>{filtered.map(profile => (
+                                <AgentRow
+                                    key={profile.id}
+                                    profile={profile}
+                                    franchises={franchises}
+                                    onSaved={() => router.refresh()}
+                                    onAuthority={(selected, opener) => setAuthority({
+                                        profile: selected,
+                                        requestId: crypto.randomUUID(),
+                                        opener,
+                                    })}
+                                />
+                            ))}</tbody>
                         </table>
                     </div>
                 )}
-
-                {/* Footer */}
-                <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-800/40 flex items-center justify-between">
-                    <span className="text-xs text-slate-400">
-                        {filtered.length} de {agents.length} agentes
-                    </span>
-                    {query || filterRole !== 'all' || filterFranchise !== 'all' ? (
-                        <button
-                            type="button"
-                            onClick={() => { setQuery(''); setFilterRole('all'); setFilterFranchise('all'); }}
-                            className="text-xs text-indigo-500 hover:text-indigo-700 font-medium transition-colors"
-                        >
-                            Limpiar filtros
-                        </button>
-                    ) : null}
-                </div>
             </div>
+
+            {authority ? (
+                <AuthorityChangeDialog
+                    profile={authority.profile}
+                    profiles={agents}
+                    franchises={franchises.map(item => ({ id: item.id, name: item.name, isActive: item.is_active }))}
+                    requestId={authority.requestId}
+                    returnFocus={authority.opener}
+                    onClose={() => setAuthority(null)}
+                    onChanged={() => {
+                        setAuthority(null);
+                        router.refresh();
+                    }}
+                />
+            ) : null}
+        </div>
+    );
+}
+
+function FilterSelect({
+    icon,
+    label,
+    value,
+    onChange,
+    children,
+}: {
+    icon: React.ReactNode;
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+    children: React.ReactNode;
+}) {
+    return (
+        <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">{icon}</span>
+            <select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)} className="appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-8 pr-8 text-sm dark:border-slate-700 dark:bg-slate-800">
+                {children}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
         </div>
     );
 }

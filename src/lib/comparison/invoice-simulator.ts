@@ -3,6 +3,24 @@ export type TariffAccessType = '2.0TD' | '3.0TD' | '6.1TD' | string;
 export type EnergyPricingMode = 'single' | 'periods';
 export type QualityAlertLevel = 'info' | 'warning' | 'critical';
 
+/**
+ * How a marketer treats adjustment services (servicios de ajuste, SSA).
+ *
+ * SSA are a variable system cost and the market handles them in three incompatible ways.
+ * Comparing an offer that bundles them against one that bills them on top, without
+ * normalising, overstates the second offer's saving by the whole SSA amount. The client
+ * discovers it on the first invoice, which is the shortest path to an early termination
+ * and the resulting commission clawback.
+ *
+ * - `included`            SSA are inside the energy price. Nothing to add.
+ * - `billed_separately`   SSA are charged on top of energy at the market rate.
+ * - `included_with_cap`   Included up to `ssaIncludedEurMwh`; the excess over that cap is
+ *                         passed through to the client.
+ * - `unknown`             Not configured. Nothing is added and a warning is raised, because
+ *                         a silent zero here is indistinguishable from `included`.
+ */
+export type SsaTreatment = 'included' | 'billed_separately' | 'included_with_cap' | 'unknown';
+
 export type PeriodValues = Record<ComparisonPeriod, number>;
 
 export interface InvoiceSimulationInput {
@@ -23,6 +41,14 @@ export interface InvoiceSimulationInput {
     electricityTaxRate?: number;
     vatRate?: number;
     hasSipsAnnualConsumption?: boolean;
+    /**
+     * Reference market price for adjustment services, in EUR/MWh. Supplied from
+     * configuration; when absent the simulator falls back to DEFAULT_SSA_MARKET_RATE_EUR_MWH
+     * and flags the assumption, rather than silently pricing SSA at zero.
+     */
+    ssaMarketRateEurMwh?: number;
+    /** SSA already billed separately on the current invoice, used only when rebuilding it. */
+    ssaAmount?: number;
 }
 
 export interface TariffSimulationInput {
@@ -34,6 +60,9 @@ export interface TariffSimulationInput {
     energyPrice: PeriodValues;
     fixedFeeMonthly?: number;
     surplusCompensationPrice?: number;
+    ssaTreatment?: SsaTreatment;
+    /** Cap included in the energy price, in EUR/MWh. Only used with `included_with_cap`. */
+    ssaIncludedEurMwh?: number;
 }
 
 export interface SimulationLine {
@@ -77,6 +106,37 @@ const ACCOUNTING_MONTH_DAYS = 30.4167;
 // 11.3 = 365/32 aproximadamente. Mantener constante para que los totales anuales coincidan con la herramienta manual.
 const ANNUAL_FACTOR_EXCEL = 11.3;
 const MONEY_EPSILON = 0.005;
+/**
+ * Fallback reference for adjustment services, in EUR/MWh. Marketer caps observed in the
+ * market cluster around 12-21 EUR/MWh. This is an assumption, not a measurement: whenever
+ * it is used instead of a configured rate the simulator raises `ssa_market_rate_assumed`.
+ */
+export const DEFAULT_SSA_MARKET_RATE_EUR_MWH = 12;
+
+/**
+ * Cost of adjustment services that the client would pay on top of the energy term, for a
+ * given treatment. Returns EUR for the billed period.
+ */
+export function calculateAdjustmentServicesCost(
+    totalEnergyKwh: number,
+    treatment: SsaTreatment,
+    marketRateEurMwh: number,
+    includedEurMwh = 0,
+): number {
+    const megawattHours = Math.max(0, totalEnergyKwh) / 1000;
+    if (megawattHours === 0) return 0;
+
+    switch (treatment) {
+        case 'billed_separately':
+            return megawattHours * Math.max(0, marketRateEurMwh);
+        case 'included_with_cap':
+            return megawattHours * Math.max(0, marketRateEurMwh - Math.max(0, includedEurMwh));
+        case 'included':
+        case 'unknown':
+        default:
+            return 0;
+    }
+}
 
 export function activePeriodsForTariffType(tariffType?: TariffAccessType): ComparisonPeriod[] {
     const normalized = (tariffType || '').toUpperCase();
@@ -127,8 +187,16 @@ export function simulateInvoiceComparison(
     const reactiveEnergy = invoice.reactiveEnergyAmount || 0;
     const surplusCompensation = (invoice.surplusExportKwh || 0) * (tariff.surplusCompensationPrice || 0);
     const meterRental = invoice.meterRentalAmount || 0;
+    const ssaTreatment = tariff.ssaTreatment || 'unknown';
+    const ssaMarketRate = invoice.ssaMarketRateEurMwh ?? DEFAULT_SSA_MARKET_RATE_EUR_MWH;
+    const adjustmentServices = calculateAdjustmentServicesCost(
+        totalEnergyKwh,
+        ssaTreatment,
+        ssaMarketRate,
+        tariff.ssaIncludedEurMwh,
+    );
 
-    const subtotalBeforeTax = powerCost + energyCost + fixedFee + bonoSocial + distributionExcess + reactiveEnergy - surplusCompensation;
+    const subtotalBeforeTax = powerCost + energyCost + fixedFee + bonoSocial + distributionExcess + reactiveEnergy + adjustmentServices - surplusCompensation;
     const electricityTax = subtotalBeforeTax * electricityTaxRate;
     const taxableBase = subtotalBeforeTax + electricityTax + meterRental;
     const vat = taxableBase * vatRate;
@@ -178,6 +246,11 @@ export function simulateInvoiceComparison(
                 label: 'Energia reactiva',
                 amount: reactiveEnergy,
                 formula: 'Importe copiado de la factura original y marcado como alerta tecnica',
+            },
+            {
+                label: 'Servicios de ajuste',
+                amount: adjustmentServices,
+                formula: describeAdjustmentServices(ssaTreatment, ssaMarketRate, tariff.ssaIncludedEurMwh),
             },
             {
                 label: 'Compensacion excedentes',
@@ -274,6 +347,24 @@ export function validateInvoiceSimulationInput(
         });
     }
 
+    const ssaTreatment = tariff.ssaTreatment || 'unknown';
+    if (ssaTreatment === 'unknown') {
+        alerts.push({
+            level: 'warning',
+            code: 'missing_ssa_treatment',
+            message: 'La tarifa no declara como trata los servicios de ajuste. Comparar contra ofertas que los facturan aparte sobrestima el ahorro; confirmar antes de proponer.',
+        });
+    } else if (
+        (ssaTreatment === 'billed_separately' || ssaTreatment === 'included_with_cap')
+        && invoice.ssaMarketRateEurMwh === undefined
+    ) {
+        alerts.push({
+            level: 'info',
+            code: 'ssa_market_rate_assumed',
+            message: `Servicios de ajuste valorados con la referencia por defecto de ${DEFAULT_SSA_MARKET_RATE_EUR_MWH} EUR/MWh. Es un concepto variable: revisar con la referencia de mercado vigente.`,
+        });
+    }
+
     if ((invoice.reactiveEnergyAmount || 0) > 0) {
         alerts.push({
             level: 'warning',
@@ -311,6 +402,24 @@ export function validateInvoiceSimulationInput(
     return alerts;
 }
 
+function describeAdjustmentServices(
+    treatment: SsaTreatment,
+    marketRateEurMwh: number,
+    includedEurMwh?: number,
+): string {
+    switch (treatment) {
+        case 'included':
+            return 'La comercializadora los incluye en el precio de energia; no se anade importe';
+        case 'billed_separately':
+            return `MWh consumidos x ${marketRateEurMwh} EUR/MWh de referencia de mercado, facturados aparte del precio de energia`;
+        case 'included_with_cap':
+            return `MWh consumidos x exceso sobre el techo incluido (${includedEurMwh || 0} EUR/MWh) respecto a ${marketRateEurMwh} EUR/MWh de referencia`;
+        case 'unknown':
+        default:
+            return 'Tratamiento no configurado en la tarifa; no se anade importe y la comparativa no esta normalizada';
+    }
+}
+
 function getSingleEnergyPrice(energyPrice: PeriodValues, activePeriods: ComparisonPeriod[]): number {
     return activePeriods.map(period => energyPrice[period] || 0).find(price => price > 0) || 0;
 }
@@ -325,7 +434,10 @@ function getCurrentInvoiceTotal(invoice: InvoiceSimulationInput, days: number): 
         (invoice.currentEnergyCost || 0) +
         (invoice.bonoSocialAmount || 0) +
         (invoice.distributionExcessAmount || 0) +
-        (invoice.reactiveEnergyAmount || 0);
+        (invoice.reactiveEnergyAmount || 0) +
+        // SSA billed separately on the current invoice are part of what the client pays
+        // today. Omitting them here would understate the current cost and inflate savings.
+        (invoice.ssaAmount || 0);
     const electricityTax = reconstructedBeforeTax * (invoice.electricityTaxRate ?? DEFAULT_ELECTRICITY_TAX_RATE);
     const taxableBase = reconstructedBeforeTax + electricityTax + (invoice.meterRentalAmount || 0);
     const reconstructed = taxableBase * (1 + (invoice.vatRate ?? DEFAULT_VAT_RATE));

@@ -1,0 +1,51 @@
+{
+  "actors": [
+    "anon",
+    "agent_a",
+    "agent_b_same_franchise",
+    "agent_other_franchise",
+    "franchise",
+    "admin_jwt",
+    "neutral_profile",
+    "provisioning_user_blocked",
+    "service_role"
+  ],
+  "payloads": ["benign", "protected", "mixed", "unknown"],
+  "crashWindows": [
+    {
+      "id": "before_auth_create",
+      "stopAfter": "prepared",
+      "expectsAuthUser": false,
+      "expectsBanned": false,
+      "expectsAuthorityCommitted": false
+    },
+    {
+      "id": "after_blocked_auth_create_before_record",
+      "stopAfter": "auth_created_unrecorded",
+      "expectsAuthUser": true,
+      "expectsBanned": true,
+      "expectsAuthorityCommitted": false
+    },
+    {
+      "id": "after_record_before_authority_commit",
+      "stopAfter": "auth_created_blocked",
+      "expectsAuthUser": true,
+      "expectsBanned": true,
+      "expectsAuthorityCommitted": false
+    },
+    {
+      "id": "after_authority_commit_before_unban",
+      "stopAfter": "authority_committed",
+      "expectsAuthUser": true,
+      "expectsBanned": true,
+      "expectsAuthorityCommitted": true
+    },
+    {
+      "id": "after_unban_before_response",
+      "stopAfter": "unbanned_response_lost",
+      "expectsAuthUser": true,
+      "expectsBanned": false,
+      "expectsAuthorityCommitted": true
+    }
+  ]
+}

@@ -13,6 +13,7 @@ interface Props {
     commissionData: TimeSeriesPoint[];
     proposalData: ProposalTimeSeriesPoint[];
     agentRanking: AgentRankingEntry[];
+    embedded?: boolean;
 }
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
@@ -21,7 +22,7 @@ const TABS: { key: TabKey; label: string; icon: string }[] = [
     { key: 'ranking', label: 'Ranking', icon: '🏆' },
 ];
 
-export default function ReportingDashboard({ commissionData, proposalData, agentRanking }: Props) {
+export default function ReportingDashboard({ commissionData, proposalData, agentRanking, embedded = false }: Props) {
     const [activeTab, setActiveTab] = useState<TabKey>('commissions');
 
     // KPI resumen rápido
@@ -33,18 +34,13 @@ export default function ReportingDashboard({ commissionData, proposalData, agent
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                            <path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" />
-                        </svg>
-                    </div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                {!embedded && (
                     <div>
-                        <h2 className="text-xl font-bold text-white">Reporting</h2>
-                        <p className="text-xs text-slate-400">Análisis últimos 12 meses</p>
+                        <h1 className="text-2xl font-bold text-slate-950 dark:text-white">Tendencias</h1>
+                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Análisis de los últimos 12 meses.</p>
                     </div>
-                </div>
+                )}
                 <ExportButton commissions={commissionData} proposals={proposalData} agents={agentRanking} />
             </div>
 

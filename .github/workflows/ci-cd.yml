@@ -35,6 +35,17 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
+      # supabase/functions is excluded from tsconfig.json and eslint.config.mjs because it
+      # is Deno, not Node. Without this step the Edge Function that Supabase Cron actually
+      # invokes would ship with no type check and no lint at all.
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type check and lint Supabase Edge Functions
+        run: npm run lint:functions
+
   # Job 2: Unit Tests
   test:
     runs-on: ubuntu-latest

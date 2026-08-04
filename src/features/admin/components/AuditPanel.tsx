@@ -64,38 +64,31 @@ export default function AuditPanel({ initialData }: Props) {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Audit Log</h1>
+                <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Historial de actividad</h1>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                    Registro de todas las operaciones administrativas • {data.total} entradas
+                    Cambios administrativos sensibles, con autor, fecha y detalle · {data.total} entradas
                 </p>
             </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap gap-2 items-center">
-                <button
-                    onClick={() => reload('', 0)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                        !filter
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                    }`}
+            <label className="block max-w-sm">
+                <span className="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    Tipo de actividad
+                </span>
+                <select
+                    value={filter}
+                    onChange={(event) => reload(event.target.value, 0)}
+                    disabled={isPending}
+                    className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                 >
-                    Todas
-                </button>
-                {data.actions.map(action => (
-                    <button
-                        key={action}
-                        onClick={() => reload(action, 0)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                            filter === action
-                                ? 'bg-indigo-600 text-white'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                        }`}
-                    >
-                        {ACTION_LABELS[action] ?? action}
-                    </button>
-                ))}
-            </div>
+                    <option value="">Todas las actividades</option>
+                    {data.actions.map((action) => (
+                        <option key={action} value={action}>
+                            {ACTION_LABELS[action] ?? action}
+                        </option>
+                    ))}
+                </select>
+            </label>
 
             {/* Table */}
             <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700/50">
@@ -103,6 +96,7 @@ export default function AuditPanel({ initialData }: Props) {
                     <EmptyState
                         icon={ScrollText}
                         tone="indigo"
+                        compact
                         title="Sin entradas de auditoría"
                         description="Aún no se ha registrado ninguna acción. Cuando ocurran cambios sensibles, aparecerán aquí con autor, fecha y detalle."
                     />

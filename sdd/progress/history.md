@@ -1,5 +1,30 @@
 # SDD History
 
+## 2026-08-03 — profile-authority-hardening Slice 0
+
+Status: complete; feature remains in progress.
+
+Implemented:
+
+- Captured guarded staging catalog, grant, policy, trigger, migration, Auth-signup and aggregate data-quality evidence without querying or mutating production.
+- Classified the noncanonical staging Admin tuple, broad profile privileges, enabled signup and missing authority/Auth guards as explicit later-slice blockers.
+- Added 53 reviewed RED application/domain contracts for identity, authority, invitations, provisioning and protected readers.
+- Added fail-closed structural, rollback-only transactional, future 50-case HTTP/PostgREST and five-window Auth/reconciler verifier contracts.
+
+Verification:
+
+- Staging migrations aligned through `20260802110130`; PostgreSQL `17.6`; effective access-token lifetime 3600 seconds.
+- Focused T2 Vitest: 53 expected contractual failures.
+- Focused T3 Vitest: 3 harness tests pass and 3 expected implementation contracts fail.
+- `npx tsc --noEmit`, focused ESLint, `node --check`, `git diff --check` and `node sdd/scripts/validate-sdd.mjs` pass.
+- Independent adversarial agent review returned GO for T2 and T3 after corrective rounds.
+
+Residual notes:
+
+- No migration or production implementation was created during Slice 0.
+- Production was not queried or mutated.
+- The next allowed work is T4-T5 in one unapplied additive expansion migration.
+
 ## 2026-06-30 — public-proposal-acceptance-security
 
 Status: done.
@@ -734,3 +759,130 @@ Residual notes:
 - The internal queue key remains `permanence_due` to preserve existing URLs.
 - The optional email criterion remains out of scope; existing notifications and push remain unchanged.
 - The Supabase migration is committed but not applied from this Codex session because `SUPABASE_ACCESS_TOKEN` is not available here.
+
+## 2026-08-03 — ZIN-SDD-041 profile authority hardening, local expansion checkpoint
+
+- Product owner approved Gate 1, Gate 2 and `tasks.md`; Slice 0 evidence and RED contracts are complete.
+- Implemented one unapplied expansion migration with service-only authority commands, immutable audit, neutral Auth bootstrap, blocked invitation provisioning and durable PII-free rate-limit receipts.
+- Added separate expansion-phase structural and rollback-only transactional verifiers plus a staging-only runner hardened against production refs, libpq overrides, missing TLS and unresolved fixture identifiers.
+- Focused migration/verifier contracts, TypeScript, focused ESLint, Node syntax, SDD validation and diff checks pass; repeated adversarial reviews returned GO for the local artifacts.
+- No migration was applied and neither staging nor production was mutated. T4-T6 remain open pending an explicit first-Admin staging recovery decision, one additional blocked Auth-backed fixture, real PostgreSQL execution and multi-session concurrency evidence.
+
+## 2026-08-03 — ZIN-SDD-041 staging expansion checkpoint
+
+- Applied `20260803150000_profile_authority_expand.sql` only through the explicit `dnzytocmtmnptndeczny` staging DB URL; the repository remained linked to production and no linked command was used.
+- Canonicalized the sole legacy Admin through the reviewed one-off recovery, producing exactly one immutable `authority_changed/security_recovery` event and zero noncanonical Admins.
+- Created one blocked, server-marked neutral Auth fixture, ran structural, rollback-only transactional and deterministic two-client concurrency gates, scanned every FK plus unconstrained authority/provisioning references, and then deleted the fixture from Auth and `profiles`.
+- The structural gate discovered a retained historical execute ACL on `handle_new_user()` from `CREATE OR REPLACE`; additive migration `20260803170000_restrict_handle_new_user_execute.sql` revoked `service_role` while retaining only `supabase_auth_admin` trigger execution. Applied history was not rewritten.
+- Regenerated `src/types/database.types.ts` from the explicit staging DB URL with stdout-only/prefix/content validation. Final staging state is two Auth users, two profiles, one canonical Admin, one recovery event, empty provisioning/rate/receipt tables and `db push --dry-run` up to date.
+- Expansion migration, recovery, ACL fix and every database verifier were staging-only; production was neither queried nor changed. T4-T6 are complete and Slice 2 application convergence remains deliberately RED.
+
+## 2026-08-03 — ZIN-SDD-041 compatible application checkpoint
+
+- Completed T7-T13: canonical strict command boundary, fail-closed actor resolution, pending-account gate, own-profile/onboarding convergence, protected fiscal/IBAN/wallet flows, separate subordinate identity and Admin authority, and the complete role-aware invitation UI/derivation matrix.
+- Added and applied `20260803180000_add_update_own_iban_rpc.sql` only to staging; the live rollback verifier passed, remote types were regenerated and staging migration history is up to date.
+- Implemented T14 blocked provisioning and reconciliation, including recovery when Auth unban succeeds but its response is lost. Fifteen route/cron tests prove ordering, non-enumerable errors, unrelated-account refusal, post-commit evidence and non-PII alerts.
+- Removed legacy public signup actions, disabled signup in local Supabase config and added an eight-character minimum. A live staging Auth verifier proved already-banned creation, neutral bootstrap, denied session/JWT and marker-guarded zero-reference cleanup. Read-only staging preflight still reports `disable_signup=false`; no unsafe whole-config push was attempted without a remote-config diff.
+- T15's AST contract finds zero unexplained protected-profile dependencies and no remaining profile INSERT/DELETE/UPSERT. TypeScript, lint, diff check, build and 759 non-verifier tests pass, so T15 is complete. The full suite retains exactly one deliberate RED for the post-contract T17 HTTP/PostgREST adapter.
+- Production was neither queried nor changed. No contract migration was created or applied.
+
+## 2026-08-03 — ZIN-SDD-041 Slice 2 exit gate
+
+- The operator disabled public signup in the approved `zinergia-staging` Supabase dashboard (ref `dnzytocmtmnptndeczny`); the dashboard reported a successful update.
+- Guarded read-only preflight confirmed `disable_signup=true`, canonical profile quality remains clean and staging migration history remains aligned through `20260803180000`.
+- The staging-only blocked-Auth verifier returned `BLOCKED_AUTH_STAGING_OK neutral=true jwt=false cleanup=true production=false`; its temporary fixture was removed after proving neutral bootstrap, no JWT and zero authority/provisioning/invitation references.
+- T14 and T15 are complete. The next approved work is the reviewed, additive contract migration (T16); production remains out of scope and was not queried or changed.
+
+## 2026-08-03 — ZIN-SDD-041 final profile contract in staging
+
+- Applied `20260803190000_contract_profile_boundary.sql` only through the explicit staging database URL. It removes browser profile writes, grants only the directory projection, replaces the legacy profile policies with a canonical relationship helper, and makes authority context mandatory even for direct service-role updates.
+- Effective structural verification found a missing authority tuple constraint and two untracked legacy policies in staging. Additive migrations `20260803191000_enforce_profile_authority_tuple.sql` and `20260803192000_remove_legacy_profile_policies.sql` corrected them; no applied history was rewritten and the tuple preflight found zero incompatible rows.
+- The final read-only catalog verifier returned `ok`. A separate rollback-only transaction proved that authenticated direct own-profile updates and service-role authority updates without the trusted context both fail; no row persisted. Staging migration dry-run now reports up to date.
+- TypeScript, lint, 39 focused contract tests, SDD validation, diff check and the 45-route production build pass. The generated type command could not run because the local Supabase CLI attempts to reach unavailable Docker; this contract adds no public table/RPC type shape, and T17 retains the type-generation retry plus the full real HTTP/PostgREST matrix.
+- Production was neither queried nor changed.
+
+## 2026-08-03 — ZIN-SDD-041 reusable HTTP staging verification
+
+- Added `npm run test:profile-authority:http-staging`, guarded by an explicit staging opt-in. It discovers the existing synthetic fixture set by server-owned Auth metadata, resets only fixture passwords through Auth Admin, and executes the real Data API matrix without exposing credentials or creating duplicate accounts.
+- The reusable command passed against staging. The former intentional HTTP RED is now a checked-in verifier contract; the full local suite passes with 119 test files and 769 tests, followed by TypeScript, lint and the 45-route production build.
+- Production was neither queried nor changed.
+
+## 2026-08-03 — ZIN-SDD-041 authenticated browser checkpoint
+
+- The staging Playwright suite completed with 63 passing tests and 6 intentional skips. It exercised authenticated Admin and Agent flows on desktop and narrow mobile layouts, plus keyboard/dialog and Axe accessibility assertions.
+- The skipped cases are explicitly conditional or out of this checkpoint: visual snapshot baselines, unavailable OCR behavior, public mutation and onboarding coverage. Negative-path and development-server connection messages did not make the suite fail.
+- Production was neither queried nor changed.
+
+## 2026-08-03 — ZIN-SDD-041 safe auth and invitation errors
+
+- Hardened the login action, session proxy, invitation validation page and invitation modal so raw provider exceptions, invitation details and recipient context do not reach browser logs or UI messages. Server telemetry uses only stable safe codes where needed.
+- Added regression tests for generic login failures and invitation-creation errors. Four focused profile-authority/auth test files pass (21 tests), followed by the complete suite (120 files/772 tests), ESLint, TypeScript, diff check and the 45-route production build.
+- This closes the focused flow-level privacy finding only; the wider T18 observability/retention review remains explicitly open. Production was neither queried nor changed.
+
+## 2026-08-03 — ZIN-SDD-041 final transactional staging verification
+
+- Added a staging-only PowerShell runner that constructs the exact TLS pooler URL from the local environment, refuses any non-staging ref, validates the technical fixture topology and executes the final SQL verifier inside its unconditional rollback.
+- The live run returned `STAGING_FINAL_TRANSACTIONAL_OK rollback=true production=false`. It verified denied direct writes for anon/authenticated/Admin contexts, a valid atomic/idempotent authority transition, denied semantic request-id reuse, and immutable authority-event update/delete/truncate. No data persisted.
+- A distinct valid conflict-parent input prevents the verifier from confusing an intentional no-op with a request-id conflict. Focused verifier contracts and TypeScript pass. Production was neither queried nor changed.
+
+## 2026-08-03 — ZIN-SDD-041 post-contract provisioning verification
+
+- Added a staging-only, explicitly gated verifier that creates one owned blocked Auth fixture, waits for its neutral profile, and runs the full invite provisioning state machine under an unconditional database rollback.
+- The live run returned `STAGING_PROVISIONING_TRANSACTIONAL_OK rollback=true cleanup=true production=false`: rate receipt/claim, preparation, blocked Auth record, authority commit and retry, completion, event evidence and invitation consumption all passed. The temporary Auth/profile fixture was deleted after a zero-reference assertion.
+- The checked-in contract test, final authority verifier and TypeScript pass. Production was neither queried nor changed.
+
+## 2026-08-03 — ZIN-SDD-041 staging type-generation recovery
+
+- Docker Desktop was installed but its Linux engine was stopped. It was started locally, reached readiness, and the guarded official generator completed against the approved staging pooler.
+- `src/types/database.types.ts` now reflects the live authority/provisioning tables and RPCs; staging migration dry-run reports up to date. TypeScript, focused verifier contracts and SDD validation pass.
+- Production was neither queried nor changed.
+
+## 2026-08-03 — ZIN-SDD-041 post-contract concurrency closure
+
+- Added `pg` as a development-only dependency so the checked-in two-session staging verifier is reproducible. The production dependency audit is clean.
+- The guarded provisioning verifier now creates one owned neutral blocked fixture, runs the two-session authority lock/idempotency verifier, runs the full rollback-only provisioning state machine, then proves zero references and deletes the fixture.
+- The two-session gate passed after the final contract and both transactions rolled back. T17 is complete; production was neither queried nor changed.
+
+## 2026-08-03 — ZIN-SDD-041 post-contract REST matrix
+
+- Provisioned three synthetic, Auth-Admin-created `.invalid` fixture identities in staging only: one active Franchise and two direct Agents. Authority was assigned through the audited service-only command; the pre-existing staging Agent supplied the other-franchise case.
+- The real Data API role matrix passed for Admin, Franchise, same-network Agents, other-network Agent and anon. It confirmed the intended row-scoped directory view, denial of fiscal/banking/system columns, and denial of direct profile update, insert and delete operations.
+- The post-contract blocked-Auth verifier also returned `BLOCKED_AUTH_STAGING_OK neutral=true jwt=false cleanup=true production=false`.
+- Production was neither queried nor changed.
+
+## 2026-08-03 — ZIN-SDD-041 release-readiness closure
+
+- Completed T18-T20 for staging and release preparation. Privacy-safe error surfaces, rate-limit/reconciler coverage, immutable authority-event evidence, retained workflow coverage and the documented authenticated staging E2E run remain green.
+- Added the conditional `production-promotion-checklist.md`: it requires a separate product-owner approval, preflight, monitored checkpoint and role canary. Post-contract recovery is strictly a forward-fix or compatible-app kill switch; broad grants and audit guards must never be reopened.
+- The local gates are clean: TypeScript, ESLint, SDD validation, diff check, production dependency audit and the isolated 45-route build. The full Vitest suite and prior authenticated staging E2E are recorded in the task evidence. Production was neither queried, deployed nor changed.
+
+## 2026-08-03 — ZIN-SDD-041 production compatible checkpoint blocked
+
+- Product approval was received and the production Auth settings were verified: public signup, manual linking and anonymous sign-in are disabled; email confirmation remains enabled.
+- Direct database preflight found exactly the reviewed authority migrations pending. The compatible expansion, bootstrap execution correction and own-IBAN command were applied to production through the explicit TLS pooler URL: `20260803150000`, `20260803170000`, `20260803180000` and `20260803214216`.
+- A production-only legacy explicit `service_role` execute grant survived `CREATE OR REPLACE` on `handle_new_user`. It was corrected by the new reviewed migration `20260803214216_revoke_legacy_handle_new_user_service_role.sql`, first proven in staging. Both staging and production now deny `service_role` and allow `supabase_auth_admin` for that bootstrap; staging remote types were regenerated.
+- The isolated Vercel production deployment was rejected before aliasing because the account is Hobby and refuses the required `*/5 * * * *` reconciliation cron. No application deployment, final-contract migration, canary or domain promotion occurred. The production database remains in the intentionally compatible phase; do not apply `20260803190000`, `20260803191000` or `20260803192000` until a compatible deployment is live and healthy.
+
+## 2026-08-02 — ZIN-SDD-040 CRM core flow simplification
+
+Status: done.
+
+Implemented:
+
+- Established the canonical client, supply point and opportunity model from invoice OCR through proposal, acceptance, activation, contract and renewal.
+- Added one commercial work queue driven by opportunity stage and next action, plus role-aware client and opportunity workspaces.
+- Hardened proposal acceptance, activation and reconciliation as idempotent, auditable server workflows.
+- Completed the commission lifecycle, immutable allocation snapshots, proportional decommission, supplier-statement foundations and fiscal invoicing lifecycle.
+- Simplified commercial navigation around `Trabajo`, `Clientes`, `Comisiones`, `Ajustes` and the persistent `Nueva factura` action.
+
+Verification:
+
+- The closure record in `sdd/progress/current.md` documents staging, production, TypeScript, lint, unit, build, migration, RLS and authenticated desktop/mobile evidence.
+- `sdd/specs/crm-core-flow-simplification/tasks.md` records T1 through T20 as complete.
+- `sdd/feature_list.json` records the feature as `done`.
+
+Residual notes:
+
+- Legacy `tasks`, `next_actions` and `renewal_opportunities` paths still require explicit expand/contract cutovers before removal.
+- SIPS authorization must enforce active consent and portfolio scope before cache or CNMC access.
+- Catalog identity and eligible-first querying require a separate scale feature; accepted proposal price snapshots remain immutable.

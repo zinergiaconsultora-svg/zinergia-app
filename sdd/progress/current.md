@@ -1,8 +1,24 @@
 # Current SDD Work
 
-Active feature: `ZIN-SDD-040 crm-core-flow-simplification`
+Active implementation feature: `ZIN-SDD-041 profile-authority-hardening`. No separate design feature is active.
 
-Status: `in_progress`
+Requirements candidates, ordered by security priority:
+
+1. `ZIN-SDD-041 profile-authority-hardening`.
+2. `ZIN-SDD-042 ocr-pii-and-tenant-boundary`.
+3. `ZIN-SDD-043 sips-consent-and-portfolio-gate`.
+
+Status: Gate 1, Gate 2 and `tasks.md` approved on 2026-08-03. ZIN-SDD-041 is in `verification`: T1-T20 are complete for staging and release readiness. Staging has expansion `20260803150000`, ACL correction `20260803170000`, own-IBAN command `20260803180000`, final boundary `20260803190000`, tuple constraint `20260803191000`, legacy-policy correction `20260803192000`, Auth-bootstrap ACL correction `20260803214216` and the disabled-by-default Supabase Cron schedule `20260803220752`; final catalog, REST role matrix, blocked-Auth/no-JWT, transactional authority/audit, full provisioning and post-contract two-session concurrency gates all pass and roll back safely. The operator disabled public Auth signup in staging and production. Docker Desktop is available, remote staging types were regenerated, and migration dry-run is up to date; TypeScript, lint, SDD validation, 121 test files/773 tests, the isolated 45-page production build and authenticated staging E2E (63 passed; 6 intentional skips) pass. Production now has only the compatible expansion (`20260803150000`, `20260803170000`, `20260803180000`, `20260803214216`) and its Auth bootstrap ACL has been verified. A Vercel production deployment containing the compatible app and reconciler route is ready; Vercel Hobby no longer receives the five-minute cron configuration. Direct Vercel deployment URLs are protected before they reach the API, so the reconciler has been moved to a Supabase Edge Function plus Supabase Cron design. Its production function deployment, secret provisioning, schedule activation and the final contract migrations (`20260803190000`, `20260803191000`, `20260803192000`, `20260803220752`) remain blocked only on a valid local Supabase CLI session. ZIN-SDD-042 and ZIN-SDD-043 remain `requirements_ready`.
+
+ZIN-SDD-041 task-plan evidence: 20 sequential tasks cover read-only preflight, RED contracts, one additive expansion migration, compatible application convergence, one contract migration, staging REST/Auth/transaction verification, desktop/mobile accessibility, rollback rehearsal and a production package that remains separately unauthorized. Database/Auth, product/UX and security/testing agent reviews all returned GO.
+
+ZIN-SDD-041 Gate 2 draft evidence: the design closes all direct authenticated writes to `profiles`, limits direct reads to a safe identity/relationship projection, preserves dedicated fiscal/banking/system workflows, derives invitation authority from locked server records, centralizes Admin authority transitions in one versioned atomic command, records append-only database evidence and uses an expand -> compatible app -> contract rollout that never restores broad self-update authority.
+
+Privacy checkpoint (2026-08-03): profile-authority login, session middleware and invitation error paths now return safe generic messages and omit raw provider exceptions, codes and recipient context from logs. The focused source scan found only the safe generic missing-mail-provider warning. Focused tests, the complete 120-file/772-test suite, ESLint, TypeScript and the 45-route production build pass; the broader T18 observability and retention assessment remains open. Production was not queried or changed.
+
+Last completed feature: `ZIN-SDD-040 crm-core-flow-simplification` (`done`). The
+point-in-time implementation notes below are retained as closure evidence; any
+older `in progress` wording inside that record is historical, not current state.
 
 Slice 1 status: completed and verified in staging on 2026-07-31.
 
