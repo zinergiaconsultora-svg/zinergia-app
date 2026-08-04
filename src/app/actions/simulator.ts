@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { AletheiaEngine } from '@/lib/aletheia/engine';
 import { Normalizer } from '@/lib/aletheia/normalizer';
 import { AletheiaResult, TariffCandidate } from '@/lib/aletheia/types';
+import type { SsaTreatment } from '@/lib/comparison/invoice-simulator';
 import { Result, ok, err } from '@/lib/result';
 import { normalizeInvoiceData } from '@/lib/invoices/normalization';
 import { buildConversionMemory, type ConversionMemory, type ProposalOutcome } from '@/lib/supervised/conversionMemory';
@@ -50,6 +51,8 @@ interface TariffRow {
     offer_type: string | null;
     fixed_fee: number | null;
     surplus_compensation_price?: number | null;
+    ssa_treatment?: string | null;
+    ssa_included_eur_mwh?: number | null;
     modelo?: string | null;
     power_price_p1: number;
     power_price_p2: number;
@@ -93,7 +96,7 @@ export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: R
         // We use the same query as crmService but adapted for internal use
         // Note: Using 'lv_zinergia_tarifas' as the source of truth
         const baseTariffSelect = 'id, company, tariff_name, tariff_type, modelo, logo_color, offer_type, fixed_fee, power_price_p1, power_price_p2, power_price_p3, power_price_p4, power_price_p5, power_price_p6, energy_price_p1, energy_price_p2, energy_price_p3, energy_price_p4, energy_price_p5, energy_price_p6';
-        const snapshotTariffSelect = `${baseTariffSelect}, surplus_compensation_price, catalog_version, effective_from, effective_to, price_fingerprint`;
+        const snapshotTariffSelect = `${baseTariffSelect}, surplus_compensation_price, ssa_treatment, ssa_included_eur_mwh, catalog_version, effective_from, effective_to, price_fingerprint`;
 
         // Filtrar el catálogo por el segmento elegido por el usuario (RESIDENCIAL/PYME),
         // que coincide con lv_zinergia_tarifas.tipo_cliente. Sustituye la heurística
@@ -187,6 +190,10 @@ export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: R
             energy_price: energyPrice,
             fixed_fee: Number(t.fixed_fee || 0),
             surplus_compensation_price: Number(t.surplus_compensation_price || 0),
+            // Absent column (migration not applied yet) degrades to 'unknown', which adds
+            // no cost and makes the comparator flag the missing normalisation.
+            ssa_treatment: normalizeSsaTreatment(t.ssa_treatment),
+            ssa_included_eur_mwh: Number(t.ssa_included_eur_mwh || 0),
             estimated_agent_commission: estimatedCommission,
             commission_source: estimatedCommission === null ? 'missing' : 'tariff_commissions',
             catalog_version: t.catalog_version ?? null,
@@ -218,9 +225,17 @@ export async function calculateAletheiaSavings(ocrData: any, manualMaxDemand?: R
     }
 }
 
+function normalizeSsaTreatment(value?: string | null): SsaTreatment {
+    return value === 'included' || value === 'billed_separately' || value === 'included_with_cap'
+        ? value
+        : 'unknown';
+}
+
 function isMissingOptionalTariffColumn(message: string): boolean {
     return [
         'surplus_compensation_price',
+        'ssa_treatment',
+        'ssa_included_eur_mwh',
         'catalog_version',
         'effective_from',
         'effective_to',
