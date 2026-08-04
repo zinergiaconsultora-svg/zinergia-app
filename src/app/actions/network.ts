@@ -4,15 +4,75 @@ import { logger } from '@/lib/utils/logger'
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { requireServerRole } from '@/lib/auth/permissions'
+import { getTrustedActorProfile, requireServerRole } from '@/lib/auth/permissions'
 import { resend } from '@/lib/resend'
+import { z } from 'zod'
+import { changeProfileAuthorityCommand, updateTeamMemberNameCommand } from '@/lib/profile-authority/commands'
+import { teamMemberNameInputSchema } from '@/lib/profile-authority/schemas'
+import { getProfileAuthoritySnapshot } from '@/lib/profile-authority/authoritySnapshot'
 
 // ─── Types ────────────────────────────────────────────────────────────
 
 interface CreateInvitationResult {
+    invitationId: string
     code: string
     inviteUrl: string
     emailSent: boolean
+}
+
+type InvitationActionResult =
+    | { success: true; data: CreateInvitationResult }
+    | { success: false; error: string }
+
+const createInvitationSchema = z.object({
+    email: z.string().trim().email().max(200).transform((value) => value.toLowerCase()),
+    role: z.enum(['agent', 'franchise']),
+    targetFranchiseId: z.uuid().optional(),
+}).strict()
+
+export type InvitationCreationContext =
+    | {
+        role: 'admin'
+        activeFranchises: Array<{ id: string; name: string }>
+    }
+    | {
+        role: 'franchise'
+        activeFranchises: []
+    }
+
+export async function getInvitationCreationContextAction(): Promise<
+    | { success: true; data: InvitationCreationContext }
+    | { success: false; error: string }
+> {
+    try {
+        await requireServerRole(['admin', 'franchise'])
+        const actor = await getTrustedActorProfile()
+        if (actor.role === 'franchise') {
+            return { success: true, data: { role: 'franchise', activeFranchises: [] } }
+        }
+        if (actor.role !== 'admin') {
+            return { success: false, error: 'No puedes crear invitaciones con esta cuenta.' }
+        }
+
+        const service = createServiceClient()
+        const { data, error } = await service
+            .from('franchises')
+            .select('id, name')
+            .eq('is_active', true)
+            .order('name')
+        if (error) {
+            return { success: false, error: 'No se pudieron cargar las franquicias activas.' }
+        }
+        return {
+            success: true,
+            data: {
+                role: 'admin',
+                activeFranchises: (data ?? []).map((item) => ({ id: item.id, name: item.name })),
+            },
+        }
+    } catch {
+        return { success: false, error: 'No puedes crear invitaciones con esta cuenta.' }
+    }
 }
 
 // ─── Server Actions ───────────────────────────────────────────────────
@@ -25,40 +85,96 @@ interface CreateInvitationResult {
  * Email: Automatically sends an invitation email via Resend.
  */
 export async function createInvitationAction(
-    email: string,
-    role: 'agent' | 'franchise'
-): Promise<CreateInvitationResult> {
-    // Guard: only admin/franchise can invite
+    inputOrEmail: { email: string; role: 'agent' | 'franchise'; targetFranchiseId?: string } | string,
+    legacyRole?: 'agent' | 'franchise'
+): Promise<InvitationActionResult> {
+    const parsed = createInvitationSchema.safeParse(
+        typeof inputOrEmail === 'string'
+            ? { email: inputOrEmail, role: legacyRole }
+            : inputOrEmail,
+    )
+    if (!parsed.success) {
+        const attemptedRole: unknown = typeof inputOrEmail === 'object'
+            ? (inputOrEmail as { role?: unknown }).role
+            : legacyRole
+        return {
+            success: false,
+            error: attemptedRole === 'admin'
+                ? 'El tipo de invitación no es válido.'
+                : 'Revisa los datos de la invitación.',
+        }
+    }
+
     await requireServerRole(['admin', 'franchise'])
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('No autenticado')
+    if (!user) return { success: false, error: 'No puedes crear invitaciones con esta cuenta.' }
 
-    // Get creator's profile for context in the email
-    const { data: creatorProfile } = await supabase
+    const service = createServiceClient()
+
+    const { data: creatorProfile } = await service
         .from('profiles')
-        .select('full_name, franchise_id')
+        .select('id, full_name, role, parent_id, franchise_id')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
 
-    // Generate a short, memorable invitation code
+    if (!creatorProfile) {
+        return { success: false, error: 'No puedes crear invitaciones con esta cuenta.' }
+    }
+
+    let targetFranchiseId: string | null = null
+    if (
+        creatorProfile.role === 'admin'
+        && creatorProfile.parent_id === null
+        && creatorProfile.franchise_id === null
+    ) {
+        if (!parsed.data.targetFranchiseId) {
+            return { success: false, error: 'Selecciona una franquicia activa.' }
+        }
+        targetFranchiseId = parsed.data.targetFranchiseId
+    } else if (
+        creatorProfile.role === 'franchise'
+        && creatorProfile.parent_id
+        && creatorProfile.franchise_id
+    ) {
+        if (parsed.data.role !== 'agent') {
+            return { success: false, error: 'Una franquicia solo puede invitar colaboradores.' }
+        }
+        targetFranchiseId = creatorProfile.franchise_id
+    } else {
+        return { success: false, error: 'No puedes crear invitaciones con esta cuenta.' }
+    }
+
+    const { data: activeFranchise } = await service
+        .from('franchises')
+        .select('id, is_active')
+        .eq('id', targetFranchiseId)
+        .eq('is_active', true)
+        .maybeSingle()
+    if (!activeFranchise || activeFranchise.is_active !== true) {
+        return creatorProfile.role === 'admin'
+            ? { success: false, error: 'Selecciona una franquicia activa.' }
+            : { success: false, error: 'No puedes crear invitaciones con esta cuenta.' }
+    }
+
     const code = crypto.randomUUID().replace(/-/g, '').substring(0, 8).toUpperCase()
+    const invitationId = crypto.randomUUID()
 
-    const { error: insertError } = await supabase
+    const { error: insertError } = await service
         .from('network_invitations')
         .insert({
+            id: invitationId,
             creator_id: user.id,
-            email,
-            role,
+            email: parsed.data.email,
+            role: parsed.data.role,
             code,
+            target_franchise_id: creatorProfile.role === 'admin' ? targetFranchiseId : null,
+            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         })
 
     if (insertError) {
-        if (insertError.message.includes('chk_valid_invitation_role')) {
-            throw new Error(`El rol "${role}" no es válido para invitaciones.`)
-        }
-        throw new Error(`Error al crear invitación: ${insertError.message}`)
+        return { success: false, error: 'No se pudo crear la invitación.' }
     }
 
     // Build the invite URL
@@ -69,17 +185,17 @@ export async function createInvitationAction(
     let emailSent = false
     try {
         emailSent = await sendInvitationEmail({
-            to: email,
+            to: parsed.data.email,
             inviteUrl,
-            role,
+            role: parsed.data.role,
             inviterName: creatorProfile?.full_name ?? 'Zinergia',
         })
-    } catch (e) {
-        // Non-blocking: log the error but don't fail the invitation creation
-        logger.error('[createInvitationAction] Email send failed', e)
+    } catch {
+        // The durable invitation remains usable; never include recipient data in telemetry.
+        logger.error('[createInvitationAction] Email delivery failed')
     }
 
-    return { code, inviteUrl, emailSent }
+    return { success: true, data: { invitationId, code, inviteUrl, emailSent } }
 }
 
 // ─── Update User ─────────────────────────────────────────────────────
@@ -91,17 +207,37 @@ export async function createInvitationAction(
 export async function updateNetworkUserAction(
     userId: string,
     updates: { full_name?: string; email?: string }
-): Promise<void> {
+): Promise<{ success: true; data: null } | { success: false; error: string }> {
+    if (updates.email !== undefined) {
+        return { success: false, error: 'El email no se puede editar desde la red.' }
+    }
+    if (typeof updates.full_name !== 'string') {
+        return { success: false, error: 'La corrección de nombre no es válida.' }
+    }
+    return updateTeamMemberNameAction({ targetId: userId, fullName: updates.full_name })
+}
+
+export async function updateTeamMemberNameAction(
+    input: { targetId: string; fullName: string },
+): Promise<{ success: true; data: null } | { success: false; error: string }> {
+    const parsed = teamMemberNameInputSchema.safeParse(input)
+    if (!parsed.success) {
+        return { success: false, error: 'La corrección de nombre no es válida.' }
+    }
+
     await requireServerRole(['admin', 'franchise'])
-
     const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+        return { success: false, error: 'No se pudo actualizar el nombre.' }
+    }
 
-    const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', userId)
+    const { error } = await updateTeamMemberNameCommand(user.id, parsed.data)
+    if (error) {
+        return { success: false, error: 'No se pudo actualizar el nombre.' }
+    }
 
-    if (error) throw new Error(`Error al actualizar el perfil: ${error.message}`)
+    return { success: true, data: null }
 }
 
 // ─── Delete / Deactivate User ────────────────────────────────────────
@@ -127,19 +263,28 @@ export async function deleteProfileAction(userId: string): Promise<void> {
  * Deactivates a user by removing their role (keeps data intact).
  * Only admin can deactivate.
  */
-export async function deactivateProfileAction(userId: string): Promise<void> {
+export async function deactivateProfileAction(
+    userId: string,
+): Promise<{ success: true; data: { eventId: string } } | { success: false; error: string }> {
     await requireServerRole(['admin'])
 
     const supabase = await createClient()
-    const { data: { user: me } } = await supabase.auth.getUser()
-    if (me?.id === userId) throw new Error('No puedes desactivar tu propia cuenta')
+    const { data: { user: me }, error: authError } = await supabase.auth.getUser()
+    const target = await getProfileAuthoritySnapshot(userId)
+    if (authError || !me || me.id === userId || !target) {
+        return { success: false, error: 'No se pudo desactivar el perfil.' }
+    }
 
-    const { error } = await supabase
-        .from('profiles')
-        .update({ role: null })
-        .eq('id', userId)
-
-    if (error) throw new Error(`Error al desactivar el perfil: ${error.message}`)
+    const result = await changeProfileAuthorityCommand(me.id, {
+        targetId: target.id,
+        desiredRole: null,
+        parentId: null,
+        franchiseId: null,
+        expectedAuthorityVersion: target.authority_version,
+        reasonCode: 'deactivation',
+        requestId: crypto.randomUUID(),
+    })
+    return mapLegacyAuthorityResult(result.data, result.error)
 }
 
 /**
@@ -148,18 +293,54 @@ export async function deactivateProfileAction(userId: string): Promise<void> {
  */
 export async function reactivateProfileAction(
     userId: string,
-    role: 'agent' | 'franchise'
-): Promise<void> {
+    authority: {
+        desiredRole: 'agent' | 'franchise'
+        parentId: string
+        franchiseId: string
+    } | 'agent' | 'franchise'
+): Promise<{ success: true; data: { eventId: string } } | { success: false; error: string }> {
+    const parsed = z.strictObject({
+        desiredRole: z.enum(['agent', 'franchise']),
+        parentId: z.uuid(),
+        franchiseId: z.uuid(),
+    }).safeParse(authority)
+    if (!parsed.success) {
+        return { success: false, error: 'La reactivación requiere una autoridad completa.' }
+    }
+
     await requireServerRole(['admin'])
-
     const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const target = await getProfileAuthoritySnapshot(userId)
+    if (authError || !user || !target) {
+        return { success: false, error: 'No se pudo reactivar el perfil.' }
+    }
 
-    const { error } = await supabase
-        .from('profiles')
-        .update({ role })
-        .eq('id', userId)
+    const result = await changeProfileAuthorityCommand(user.id, {
+        targetId: target.id,
+        desiredRole: parsed.data.desiredRole,
+        parentId: parsed.data.parentId,
+        franchiseId: parsed.data.franchiseId,
+        expectedAuthorityVersion: target.authority_version,
+        reasonCode: 'reactivation',
+        requestId: crypto.randomUUID(),
+    })
+    return mapLegacyAuthorityResult(result.data, result.error)
+}
 
-    if (error) throw new Error(`Error al reactivar el perfil: ${error.message}`)
+function mapLegacyAuthorityResult(
+    data: unknown,
+    error: { message?: string } | null,
+): { success: true; data: { eventId: string } } | { success: false; error: string } {
+    if (error) {
+        return { success: false, error: 'No se pudo actualizar la autoridad.' }
+    }
+    const eventId = data && typeof data === 'object' && !Array.isArray(data)
+        ? (data as Record<string, unknown>).event_id
+        : undefined
+    return typeof eventId === 'string'
+        ? { success: true, data: { eventId } }
+        : { success: false, error: 'No se pudo actualizar la autoridad.' }
 }
 
 // ─── Email Template ───────────────────────────────────────────────────
@@ -183,7 +364,11 @@ async function sendInvitationEmail({ to, inviteUrl, role, inviterName }: Invitat
     }
 
     const roleLabel = ROLE_LABELS[role] ?? role
-    const subject = `${inviterName} te invita a unirte a Zinergia como ${roleLabel}`
+    const safeInviterName = escapeHtml(inviterName)
+    const safeRecipient = escapeHtml(to)
+    const safeInviteUrl = escapeHtml(inviteUrl)
+    const safeRoleLabel = escapeHtml(roleLabel)
+    const subject = `${inviterName.replace(/[\r\n]+/g, ' ').slice(0, 120)} te invita a unirte a Zinergia como ${roleLabel}`
 
     const html = `
 <div style="font-family:'Segoe UI',system-ui,sans-serif;max-width:560px;margin:0 auto;padding:32px;background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;">
@@ -198,7 +383,7 @@ async function sendInvitationEmail({ to, inviteUrl, role, inviterName }: Invitat
     Te han invitado a la Red Zinergia
   </h1>
   <p style="text-align:center;color:#64748b;font-size:14px;margin:0 0 32px;">
-    <strong>${inviterName}</strong> quiere que te unas como <strong style="color:#4f46e5;">${roleLabel}</strong>
+    <strong>${safeInviterName}</strong> quiere que te unas como <strong style="color:#4f46e5;">${safeRoleLabel}</strong>
   </p>
 
   <!-- Info Card -->
@@ -206,11 +391,11 @@ async function sendInvitationEmail({ to, inviteUrl, role, inviterName }: Invitat
     <table style="width:100%;font-size:13px;border-collapse:collapse;">
       <tr>
         <td style="color:#94a3b8;padding:4px 0;">Tu email</td>
-        <td style="font-weight:600;color:#0f172a;text-align:right;">${to}</td>
+        <td style="font-weight:600;color:#0f172a;text-align:right;">${safeRecipient}</td>
       </tr>
       <tr>
         <td style="color:#94a3b8;padding:4px 0;">Rol asignado</td>
-        <td style="font-weight:600;color:#4f46e5;text-align:right;">${roleLabel}</td>
+        <td style="font-weight:600;color:#4f46e5;text-align:right;">${safeRoleLabel}</td>
       </tr>
       <tr>
         <td style="color:#94a3b8;padding:4px 0;">Válida durante</td>
@@ -221,7 +406,7 @@ async function sendInvitationEmail({ to, inviteUrl, role, inviterName }: Invitat
 
   <!-- CTA Button -->
   <div style="text-align:center;margin:0 0 28px;">
-    <a href="${inviteUrl}" style="display:inline-block;padding:14px 40px;background:#4f46e5;color:#ffffff;border-radius:14px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 14px rgba(79,70,229,0.25);">
+    <a href="${safeInviteUrl}" style="display:inline-block;padding:14px 40px;background:#4f46e5;color:#ffffff;border-radius:14px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 14px rgba(79,70,229,0.25);">
       Unirme a Zinergia
     </a>
   </div>
@@ -229,7 +414,7 @@ async function sendInvitationEmail({ to, inviteUrl, role, inviterName }: Invitat
   <!-- Fallback link -->
   <p style="text-align:center;font-size:11px;color:#94a3b8;word-break:break-all;margin:0 0 28px;">
     Si el botón no funciona, copia este enlace: <br/>
-    <a href="${inviteUrl}" style="color:#6366f1;">${inviteUrl}</a>
+    <a href="${safeInviteUrl}" style="color:#6366f1;">${safeInviteUrl}</a>
   </p>
 
   <!-- Footer -->
@@ -249,9 +434,19 @@ async function sendInvitationEmail({ to, inviteUrl, role, inviterName }: Invitat
     })
 
     if (error) {
-        logger.error('[sendInvitationEmail] Resend error', error)
+        logger.error('[sendInvitationEmail] Provider rejected delivery')
         return false
     }
 
     return true
+}
+
+function escapeHtml(value: string): string {
+    return value.replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+    })[character]!)
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { AgentProfile, FranchiseWithAgents } from '@/app/actions/admin';
+import type { FranchiseWithAgents, ProfileAuthoritySummary } from '@/app/actions/admin';
 import { ManageNetworkView } from '@/features/network/components/ManageNetworkView';
 import AgentsManagement from './AgentsManagement';
 
@@ -11,7 +11,7 @@ export function TeamAdminWorkspace({
     agents,
     franchises,
 }: {
-    agents: AgentProfile[];
+    agents: ProfileAuthoritySummary[];
     franchises: FranchiseWithAgents[];
 }) {
     const [section, setSection] = useState<TeamSection>('people');

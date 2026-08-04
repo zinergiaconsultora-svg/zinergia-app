@@ -4,9 +4,19 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { requireServerRole } from '@/lib/auth/permissions';
 import { revalidatePath } from 'next/cache';
-import { uuidSchema, updateAgentSchema, createFranchiseSchema } from '@/lib/validation/schemas';
+import { uuidSchema, createFranchiseSchema } from '@/lib/validation/schemas';
 import { z } from 'zod';
 import { logAdminAction } from '@/lib/audit/logger';
+import { changeProfileAuthorityCommand, updateTeamMemberNameCommand } from '@/lib/profile-authority/commands';
+import {
+    authorityChangeInputSchema,
+    authorityReasonCodeSchema,
+    authoritySummarySchema,
+    type AuthorityChangeInput,
+    type AuthoritySummary,
+} from '@/lib/profile-authority/schemas';
+import { teamMemberNameInputSchema } from '@/lib/profile-authority/schemas';
+import { getProfileAuthoritySnapshot } from '@/lib/profile-authority/authoritySnapshot';
 
 // ─── Types ────────────────────────────────────────────────────────────
 export interface AdminStats {
@@ -37,6 +47,12 @@ export interface AgentProfile {
     role: string;
     franchise_id: string | null;
 }
+
+export type ProfileAuthoritySummary = AuthoritySummary;
+
+type ActionResult<T> =
+    | { success: true; data: T }
+    | { success: false; error: string };
 
 // ─── Queries ──────────────────────────────────────────────────────────
 
@@ -133,36 +149,65 @@ export async function toggleFranchiseActive(franchiseId: string, isActive: boole
     if (error) throw new Error(`Error actualizando franquicia: ${error.message}`);
 }
 
-export async function assignAgentToFranchise(agentId: string, franchiseId: string): Promise<void> {
+export async function assignAgentToFranchise(
+    agentId: string,
+    franchiseId: string,
+): Promise<ActionResult<{ eventId: string }>> {
     await requireServerRole(['admin']);
-    const parsedAgentId = uuidSchema.parse(agentId);
-    const parsedFranchiseId = uuidSchema.parse(franchiseId);
-    const supabase = createServiceClient();
+    const ids = z.object({ agentId: z.uuid(), franchiseId: z.uuid() }).safeParse({ agentId, franchiseId });
+    if (!ids.success) return { success: false, error: 'No se pudo asignar la franquicia.' };
 
-    const { error } = await supabase
-        .from('profiles')
-        .update({ franchise_id: parsedFranchiseId })
-        .eq('id', parsedAgentId);
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const target = await getProfileAuthoritySnapshot(ids.data.agentId);
+    if (authError || !user || !target || target.role !== 'agent') {
+        return { success: false, error: 'No se pudo asignar la franquicia.' };
+    }
 
-    if (error) throw new Error(`Error asignando agente: ${error.message}`);
-    revalidatePath('/admin');
-    revalidatePath('/admin/agents');
-    logAdminAction('assign_agent_franchise', 'profiles', parsedAgentId, { franchise_id: parsedFranchiseId }).catch(() => {});
+    const result = await changeProfileAuthorityCommand(user.id, {
+        targetId: target.id,
+        desiredRole: 'agent',
+        parentId: user.id,
+        franchiseId: ids.data.franchiseId,
+        expectedAuthorityVersion: target.authority_version,
+        reasonCode: 'franchise_assignment',
+        requestId: crypto.randomUUID(),
+    });
+    const mapped = mapAuthorityCommandResult(result.data, result.error);
+    if (mapped.success) {
+        revalidatePath('/admin');
+        revalidatePath('/admin/agents');
+    }
+    return mapped;
 }
 
-export async function removeAgentFromFranchise(agentId: string): Promise<void> {
+export async function removeAgentFromFranchise(agentId: string): Promise<ActionResult<{ eventId: string }>> {
     await requireServerRole(['admin']);
-    const id = uuidSchema.parse(agentId);
-    const supabase = createServiceClient();
+    const id = z.uuid().safeParse(agentId);
+    if (!id.success) return { success: false, error: 'No se pudo desvincular el perfil.' };
 
-    const { error } = await supabase
-        .from('profiles')
-        .update({ franchise_id: null })
-        .eq('id', id);
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const target = await getProfileAuthoritySnapshot(id.data);
+    if (authError || !user || !target) {
+        return { success: false, error: 'No se pudo desvincular el perfil.' };
+    }
 
-    if (error) throw new Error(`Error desvinculando agente: ${error.message}`);
-    revalidatePath('/admin');
-    revalidatePath('/admin/agents');
+    const result = await changeProfileAuthorityCommand(user.id, {
+        targetId: target.id,
+        desiredRole: null,
+        parentId: null,
+        franchiseId: null,
+        expectedAuthorityVersion: target.authority_version,
+        reasonCode: 'franchise_removal',
+        requestId: crypto.randomUUID(),
+    });
+    const mapped = mapAuthorityCommandResult(result.data, result.error);
+    if (mapped.success) {
+        revalidatePath('/admin');
+        revalidatePath('/admin/agents');
+    }
+    return mapped;
 }
 
 export async function createFranchiseAction(name: string): Promise<void> {
@@ -200,24 +245,110 @@ export async function getAllAgentsAction(): Promise<AgentProfile[]> {
     return data ?? [];
 }
 
+export async function getAdminProfileAuthoritySummariesAction(): Promise<ActionResult<ProfileAuthoritySummary[]>> {
+    await requireServerRole(['admin']);
+    const service = createServiceClient();
+    const { data, error } = await service
+        .from('profiles')
+        .select('id, email, full_name, role, parent_id, franchise_id, authority_version')
+        .order('full_name', { ascending: true });
+
+    if (error) {
+        return { success: false, error: 'No se pudieron cargar los perfiles.' };
+    }
+
+    const parsed = z.array(authoritySummarySchema).safeParse((data ?? []).map(profile => ({
+        id: profile.id,
+        email: profile.email,
+        fullName: profile.full_name,
+        role: profile.role,
+        parentId: profile.parent_id,
+        franchiseId: profile.franchise_id,
+        authorityVersion: profile.authority_version,
+    })));
+    if (!parsed.success) {
+        return { success: false, error: 'No se pudieron cargar los perfiles.' };
+    }
+
+    return { success: true, data: parsed.data };
+}
+
+const AUTHORITY_ERROR_MESSAGES: Record<string, string> = {
+    LAST_ADMIN: 'Debe permanecer al menos un administrador activo.',
+    AUTHORITY_CYCLE: 'La jerarquía propuesta no es válida.',
+    STALE_AUTHORITY_VERSION: 'El perfil ha cambiado. Actualiza e inténtalo de nuevo.',
+    REQUEST_ID_CONFLICT: 'La solicitud ya se utilizó con otros datos.',
+};
+
+function mapAuthorityCommandResult(
+    data: unknown,
+    error: { message?: string } | null,
+): ActionResult<{ eventId: string }> {
+    if (error) {
+        const safeMessage = Object.entries(AUTHORITY_ERROR_MESSAGES)
+            .find(([code]) => error.message?.includes(code))?.[1]
+            ?? 'No se pudo actualizar la autoridad.';
+        return { success: false, error: safeMessage };
+    }
+
+    const eventId = data && typeof data === 'object' && !Array.isArray(data)
+        ? (data as Record<string, unknown>).event_id
+        : undefined;
+    return typeof eventId === 'string'
+        ? { success: true, data: { eventId } }
+        : { success: false, error: 'No se pudo actualizar la autoridad.' };
+}
+
+export async function changeProfileAuthorityAdminAction(
+    input: AuthorityChangeInput,
+): Promise<ActionResult<{ eventId: string }>> {
+    const inputRecord = input as unknown as Record<string, unknown>;
+    if (!authorityReasonCodeSchema.safeParse(inputRecord.reasonCode).success) {
+        return { success: false, error: 'Selecciona un motivo válido.' };
+    }
+    const parsed = authorityChangeInputSchema.safeParse(input);
+    if (!parsed.success) {
+        return { success: false, error: 'La solicitud de autoridad no es válida.' };
+    }
+
+    await requireServerRole(['admin']);
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+        return { success: false, error: 'No se pudo actualizar la autoridad.' };
+    }
+
+    const { data, error } = await changeProfileAuthorityCommand(user.id, parsed.data);
+    const result = mapAuthorityCommandResult(data, error);
+    if (!result.success) return result;
+
+    revalidatePath('/admin');
+    revalidatePath('/admin/agents');
+    return result;
+}
+
 export async function updateAgentAdminAction(
     agentId: string,
     updates: { full_name?: string; role?: string; franchise_id?: string | null },
-): Promise<void> {
+): Promise<ActionResult<null>> {
+    if (updates.role !== undefined || updates.franchise_id !== undefined) {
+        return { success: false, error: 'Guarda identidad y autoridad por separado.' };
+    }
+    if (typeof updates.full_name !== 'string') {
+        return { success: false, error: 'La corrección de nombre no es válida.' };
+    }
+    const parsed = teamMemberNameInputSchema.safeParse({ targetId: agentId, fullName: updates.full_name });
+    if (!parsed.success) return { success: false, error: 'La corrección de nombre no es válida.' };
+
     await requireServerRole(['admin']);
-    const id = uuidSchema.parse(agentId);
-    const safeUpdates = updateAgentSchema.parse(updates);
-    const supabase = createServiceClient();
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) return { success: false, error: 'No se pudo actualizar el nombre.' };
 
-    const { error } = await supabase
-        .from('profiles')
-        .update(safeUpdates)
-        .eq('id', id);
-
-    if (error) throw new Error(`Error actualizando agente: ${error.message}`);
-    revalidatePath('/admin');
-    revalidatePath('/admin/agents');
-    logAdminAction('update_agent', 'profiles', id, safeUpdates as Record<string, unknown>).catch(() => {});
+    const { error } = await updateTeamMemberNameCommand(user.id, parsed.data);
+    return error
+        ? { success: false, error: 'No se pudo actualizar el nombre.' }
+        : { success: true, data: null };
 }
 
 // ─── Reporting Queries ────────────────────────────────────────────────

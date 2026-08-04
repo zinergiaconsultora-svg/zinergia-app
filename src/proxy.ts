@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { resolveTrustedActor } from '@/lib/profile-authority/trustedActor'
 
 /**
  * Proxy de Autenticación Zinergia
@@ -42,6 +43,7 @@ export async function proxy(request: NextRequest) {
 
         // 4. Lógica de Redirección Proactiva
         const isPublicRoute = pathname === '/' || pathname.startsWith('/join') || pathname.startsWith('/p/') || pathname.startsWith('/auth/callback')
+        const isPendingRoute = pathname === '/account-pending'
 
         // Caso A: No autenticado intentando entrar a ruta privada
         if (!user && !isPublicRoute) {
@@ -57,20 +59,45 @@ export async function proxy(request: NextRequest) {
             return NextResponse.redirect(new URL('/dashboard', request.url))
         }
 
-        // Caso C: Rutas de administración protegidas por Rol
-        if (user && pathname.startsWith('/admin')) {
-            const { data: profile, error } = await supabase
+        // Caso C: una cuenta no canónica nunca llega a cargar rutas de tenant.
+        let trustedRole: 'admin' | 'franchise' | 'agent' | null = null
+        if (user && !isPublicRoute && !isPendingRoute) {
+            const profileResult = await supabase
                 .from('profiles')
-                .select('role')
+                .select('id, role, parent_id, franchise_id')
                 .eq('id', user.id)
-                .single()
+                .maybeSingle()
+            let franchise = null
+            if (profileResult.data?.franchise_id) {
+                const franchiseResult = await supabase
+                    .from('franchises')
+                    .select('id, is_active')
+                    .eq('id', profileResult.data.franchise_id)
+                    .maybeSingle()
+                if (franchiseResult.error) {
+                    return NextResponse.redirect(new URL('/account-pending', request.url))
+                }
+                franchise = franchiseResult.data
+            }
 
-            if (error || !profile || profile.role !== 'admin') {
+            try {
+                if (profileResult.error) throw profileResult.error
+                trustedRole = resolveTrustedActor(profileResult.data, franchise).role
+            } catch {
+                return NextResponse.redirect(new URL('/account-pending', request.url))
+            }
+        }
+
+        // Caso D: Rutas de administración protegidas por autoridad canónica.
+        if (user && pathname.startsWith('/admin')) {
+            if (trustedRole !== 'admin') {
                 return NextResponse.redirect(new URL('/dashboard', request.url))
             }
         }
-    } catch (e) {
-        console.error('Middleware: Supabase auth check failed.', e)
+    } catch {
+        // An Auth/provider exception may embed request or account data. Keep
+        // the edge log diagnostic but never serialize the raw error object.
+        console.error('Middleware: Supabase auth check failed.')
         if (pathname.startsWith('/admin')) {
             return NextResponse.redirect(new URL('/dashboard', request.url))
         }

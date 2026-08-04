@@ -1,20 +1,27 @@
 import React from 'react';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { NavigationTop } from '@/components/NavigationTop';
 import { OnboardingWizard } from '@/features/onboarding/OnboardingWizard';
 import { NotificationProvider } from '@/contexts/NotificationContext';
-import { getUserRole } from '@/lib/auth/permissions';
+import { getTrustedActorProfile } from '@/lib/auth/permissions';
 
 export default async function DashboardLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    const role = await getUserRole();
+    let actor;
+    try {
+        actor = await getTrustedActorProfile();
+    } catch (error) {
+        unstable_rethrow(error);
+        redirect('/account-pending');
+    }
 
     return (
         <NotificationProvider>
-            <div className={`relative min-h-[100dvh] bg-slate-50 pt-16 pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] font-sans text-slate-900 selection:bg-indigo-100 xl:pb-0 dark:bg-slate-950 dark:text-slate-100 dark:selection:bg-indigo-900 ${role === 'admin' ? 'xl:pl-64' : ''}`}>
-                <NavigationTop role={role ?? 'agent'} />
+            <div className={`relative min-h-[100dvh] bg-slate-50 pt-16 pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] font-sans text-slate-900 selection:bg-indigo-100 xl:pb-0 dark:bg-slate-950 dark:text-slate-100 dark:selection:bg-indigo-900 ${actor.role === 'admin' ? 'xl:pl-64' : ''}`}>
+                <NavigationTop role={actor.role} />
                 <OnboardingWizard />
                 <main>
                     <div className="mx-auto max-w-[1700px] px-0 py-0 md:px-6 md:py-5 lg:px-8 lg:py-6">

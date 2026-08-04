@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import { formatCurrency, formatDate } from '@/lib/utils/format';
 import { saveIbanAction } from '@/app/actions/withdrawals';
 import { Commission } from '@/types/crm';
-import { maskIban } from './walletShared';
 
 export function WithdrawModal({
     iban,
@@ -140,7 +139,7 @@ export function WithdrawModal({
                         <div className="p-6 border-t border-slate-100 space-y-3">
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-slate-500">IBAN destino</span>
-                                <span className="text-sm font-mono text-slate-700">{iban ? maskIban(iban) : 'No configurado'}</span>
+                                <span className="text-sm font-mono text-slate-700">{iban ? iban : 'No configurado'}</span>
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-sm font-bold text-slate-900">Total a retirar</span>

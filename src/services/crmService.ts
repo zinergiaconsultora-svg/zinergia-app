@@ -15,7 +15,7 @@ import { tasksService } from './crm/tasks';
 import { documentsService } from './crm/documents';
 import { contractsService } from './crm/contracts';
 import { analyticsService } from './crm/analytics';
-import { ensureProfile, getFranchiseId } from './crm/shared';
+import { getFranchiseId } from './crm/shared';
 
 // Re-export atomic services for direct use (tree-shakeable)
 export { clientService, proposalService, networkService, gamificationService, dashboardService, activitiesService, tasksService, documentsService, contractsService, analyticsService };
@@ -31,7 +31,6 @@ export { clientService, proposalService, networkService, gamificationService, da
 export const crmService = {
     // Shared / Internal
     _getFranchiseId: getFranchiseId,
-    ensureProfile: ensureProfile,
 
     // Dashboard
     getDashboardStats: dashboardService.getDashboardStats,

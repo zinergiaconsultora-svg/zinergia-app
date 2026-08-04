@@ -8,6 +8,7 @@ import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 import {
     createWithdrawalRequestAction,
+    getOwnWalletIdentityAction,
     getWithdrawalHistoryAction,
     getWithdrawalGrowthAction,
 } from '@/app/actions/withdrawals';
@@ -26,14 +27,12 @@ export function useWallet() {
             setLoading(true);
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
-
-            if (user) {
-                setUserId(user.id);
-                const { data: profile } = await supabase.from('profiles').select('role, iban').eq('id', user.id).single();
-                if (profile) {
-                    setUserRole(profile.role as 'agent' | 'franchise');
-                    setIban(profile.iban ?? null);
-                }
+            setUserId(user?.id ?? '');
+            const identityResult = await getOwnWalletIdentityAction();
+            if (identityResult.success) {
+                const { role, maskedIban } = identityResult.data;
+                if (role === 'agent' || role === 'franchise') setUserRole(role);
+                setIban(maskedIban);
             }
 
             const [data, withdrawalData, growthData] = await Promise.all([

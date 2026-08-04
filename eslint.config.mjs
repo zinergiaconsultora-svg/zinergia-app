@@ -9,6 +9,8 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    // Isolated build outputs used by local and CI verification.
+    ".next-*/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
@@ -19,6 +21,7 @@ const eslintConfig = defineConfig([
     ".agents/**",
     ".vercel/**",
     "scripts/**",
+    "supabase/functions/**",
     "playwright-report/**",
     "test-results/**",
     "coverage/**",

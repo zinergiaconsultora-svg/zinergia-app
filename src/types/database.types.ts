@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.1"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -257,6 +252,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_activities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "client_activities_franchise_id_fkey"
             columns: ["franchise_id"]
             isOneToOne: false
@@ -328,6 +330,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_documents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "client_documents_franchise_id_fkey"
             columns: ["franchise_id"]
             isOneToOne: false
@@ -384,6 +393,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_status_transitions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
             referencedColumns: ["id"]
           },
           {
@@ -1366,6 +1382,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
             referencedColumns: ["id"]
           },
           {
@@ -2429,6 +2452,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "network_commissions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "network_commissions_commission_plan_id_fkey"
             columns: ["commission_plan_id"]
             isOneToOne: false
@@ -2551,6 +2581,7 @@ export type Database = {
           expires_at: string | null
           id: string
           role: string
+          target_franchise_id: string | null
           used: boolean | null
         }
         Insert: {
@@ -2561,6 +2592,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           role: string
+          target_franchise_id?: string | null
           used?: boolean | null
         }
         Update: {
@@ -2571,6 +2603,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           role?: string
+          target_franchise_id?: string | null
           used?: boolean | null
         }
         Relationships: [
@@ -2587,6 +2620,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_franchise_client_stats"
             referencedColumns: ["franchise_id"]
+          },
+          {
+            foreignKeyName: "network_invitations_target_franchise_id_fkey"
+            columns: ["target_franchise_id"]
+            isOneToOne: false
+            referencedRelation: "franchises"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2648,6 +2688,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "next_actions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
             referencedColumns: ["id"]
           },
           {
@@ -2848,6 +2895,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocr_jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
             referencedColumns: ["id"]
           },
           {
@@ -3110,6 +3164,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "opportunities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "opportunities_franchise_id_fkey"
             columns: ["franchise_id"]
             isOneToOne: false
@@ -3215,8 +3276,173 @@ export type Database = {
           },
         ]
       }
+      profile_authority_events: {
+        Row: {
+          actor_id: string
+          after_state: Json
+          after_version: number
+          before_state: Json
+          before_version: number
+          created_at: string
+          event_type: string
+          id: string
+          reason_code: string
+          request_id: string
+          source_id: string | null
+          source_type: string | null
+          target_profile_id: string
+        }
+        Insert: {
+          actor_id: string
+          after_state: Json
+          after_version: number
+          before_state: Json
+          before_version: number
+          created_at?: string
+          event_type: string
+          id?: string
+          reason_code: string
+          request_id: string
+          source_id?: string | null
+          source_type?: string | null
+          target_profile_id: string
+        }
+        Update: {
+          actor_id?: string
+          after_state?: Json
+          after_version?: number
+          before_state?: Json
+          before_version?: number
+          created_at?: string
+          event_type?: string
+          id?: string
+          reason_code?: string
+          request_id?: string
+          source_id?: string | null
+          source_type?: string | null
+          target_profile_id?: string
+        }
+        Relationships: []
+      }
+      profile_invitation_provisioning: {
+        Row: {
+          attempt_count: number
+          auth_user_id: string | null
+          authority_committed_at: string | null
+          banned_until: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          invitation_id: string
+          last_attempt_at: string | null
+          request_id: string
+          safe_error_code: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          auth_user_id?: string | null
+          authority_committed_at?: string | null
+          banned_until?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          invitation_id: string
+          last_attempt_at?: string | null
+          request_id: string
+          safe_error_code?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          auth_user_id?: string | null
+          authority_committed_at?: string | null
+          banned_until?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          invitation_id?: string
+          last_attempt_at?: string | null
+          request_id?: string
+          safe_error_code?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_invitation_provisioning_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: true
+            referencedRelation: "network_invitations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_join_rate_limit_receipts: {
+        Row: {
+          claimed_at: string | null
+          expires_at: string
+          id: string
+          identity_key_hash: string
+          invitation_id: string | null
+          issued_at: string
+          payload_hash: string | null
+          request_id: string | null
+          source_key_hash: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          expires_at?: string
+          id?: string
+          identity_key_hash: string
+          invitation_id?: string | null
+          issued_at?: string
+          payload_hash?: string | null
+          request_id?: string | null
+          source_key_hash: string
+        }
+        Update: {
+          claimed_at?: string | null
+          expires_at?: string
+          id?: string
+          identity_key_hash?: string
+          invitation_id?: string | null
+          issued_at?: string
+          payload_hash?: string | null
+          request_id?: string | null
+          source_key_hash?: string
+        }
+        Relationships: []
+      }
+      profile_join_rate_limits: {
+        Row: {
+          expires_at: string
+          id: string
+          identifier_hash: string
+          occurred_at: string
+          scope_type: string
+        }
+        Insert: {
+          expires_at?: string
+          id?: string
+          identifier_hash: string
+          occurred_at?: string
+          scope_type: string
+        }
+        Update: {
+          expires_at?: string
+          id?: string
+          identifier_hash?: string
+          occurred_at?: string
+          scope_type?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          authority_version: number
           bio: string | null
           company_name: string | null
           company_type: string | null
@@ -3246,6 +3472,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          authority_version?: number
           bio?: string | null
           company_name?: string | null
           company_type?: string | null
@@ -3275,6 +3502,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          authority_version?: number
           bio?: string | null
           company_name?: string | null
           company_type?: string | null
@@ -3397,6 +3625,7 @@ export type Database = {
           followup_7d_at: string | null
           franchise_id: string | null
           id: string
+          notes: string | null
           ocr_job_id: string | null
           offer_annual_cost: number
           offer_snapshot: Json
@@ -3450,6 +3679,7 @@ export type Database = {
           followup_7d_at?: string | null
           franchise_id?: string | null
           id?: string
+          notes?: string | null
           ocr_job_id?: string | null
           offer_annual_cost: number
           offer_snapshot: Json
@@ -3503,6 +3733,7 @@ export type Database = {
           followup_7d_at?: string | null
           franchise_id?: string | null
           id?: string
+          notes?: string | null
           ocr_job_id?: string | null
           offer_annual_cost?: number
           offer_snapshot?: Json
@@ -3538,6 +3769,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
             referencedColumns: ["id"]
           },
           {
@@ -3728,6 +3966,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "renewal_opportunities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "renewal_opportunities_original_proposal_id_fkey"
             columns: ["original_proposal_id"]
             isOneToOne: false
@@ -3891,6 +4136,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "sips_consents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
         ]
       }
       sips_consumption_cache: {
@@ -4025,6 +4277,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "supply_points_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
         ]
       }
       switch_events: {
@@ -4097,6 +4356,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "switch_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
             referencedColumns: ["id"]
           },
           {
@@ -4237,6 +4503,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
             referencedColumns: ["id"]
           },
           {
@@ -4606,6 +4879,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contracts_franchise_id_fkey"
             columns: ["franchise_id"]
             isOneToOne: false
@@ -4646,6 +4926,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
             referencedColumns: ["id"]
           },
           {
@@ -4812,6 +5099,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_expiring_soon"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "proposals_franchise_id_fkey"
             columns: ["franchise_id"]
             isOneToOne: false
@@ -4916,6 +5210,33 @@ export type Database = {
         }
         Relationships: []
       }
+      v_clients_expiring_soon: {
+        Row: {
+          email: string | null
+          id: string | null
+          name: string | null
+          purge_date: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          email?: string | null
+          id?: string | null
+          name?: string | null
+          purge_date?: never
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          email?: string | null
+          id?: string | null
+          name?: string | null
+          purge_date?: never
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       v_franchise_client_stats: {
         Row: {
           active_clients: number | null
@@ -4984,6 +5305,38 @@ export type Database = {
         }
         Returns: string
       }
+      begin_profile_invitation_provisioning: {
+        Args: {
+          p_expected_email: string
+          p_invitation_id: string
+          p_payload_hash: string
+          p_rate_limit_receipt_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      change_profile_authority: {
+        Args: {
+          p_actor_id: string
+          p_desired_role: string
+          p_expected_authority_version: number
+          p_franchise_id: string
+          p_parent_id: string
+          p_reason_code: string
+          p_request_id: string
+          p_target_id: string
+        }
+        Returns: Json
+      }
+      claim_profile_join_rate_limit_receipt: {
+        Args: {
+          p_invitation_id: string
+          p_payload_hash: string
+          p_receipt_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
       complete_crm_activation: {
         Args: {
           p_actor_id: string
@@ -5000,6 +5353,14 @@ export type Database = {
           opportunity_id: string
           proposal_id: string
         }[]
+      }
+      complete_profile_invitation_provisioning: {
+        Args: {
+          p_auth_user_id: string
+          p_observed_banned_until: string
+          p_provisioning_id: string
+        }
+        Returns: Json
       }
       configure_commission_model: {
         Args: {
@@ -5104,6 +5465,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      consume_profile_join_rate_limit: {
+        Args: { p_identity_key_hash: string; p_source_key_hash: string }
+        Returns: Json
+      }
       create_commission_invoice_draft: {
         Args: {
           p_actor_id: string
@@ -5115,6 +5480,14 @@ export type Database = {
       create_rectifying_invoice_draft: {
         Args: { p_actor_id: string; p_request_id: string }
         Returns: string
+      }
+      finalize_profile_invitation_authority: {
+        Args: {
+          p_full_name: string
+          p_observed_banned_until: string
+          p_provisioning_id: string
+        }
+        Returns: Json
       }
       generate_invoice_number: { Args: { p_agent_id: string }; Returns: string }
       get_conversion_funnel: {
@@ -5264,6 +5637,31 @@ export type Database = {
           supply_point_id: string
         }[]
       }
+      reconcile_profile_invitation_provisioning: {
+        Args: {
+          p_limit?: number
+          p_mark_provisioning_id?: string
+          p_safe_error_code?: string
+        }
+        Returns: {
+          auth_user_id: string
+          banned_until: string
+          created_at: string
+          invitation_id: string
+          provisioning_id: string
+          request_id: string
+          status: string
+          updated_at: string
+        }[]
+      }
+      record_profile_invitation_auth_user: {
+        Args: {
+          p_auth_user_id: string
+          p_banned_until: string
+          p_provisioning_id: string
+        }
+        Returns: Json
+      }
       resolve_commission_adjustment: {
         Args: {
           p_actor_id: string
@@ -5351,6 +5749,24 @@ export type Database = {
           p_to_status: string
         }
         Returns: string
+      }
+      update_own_iban: {
+        Args: { p_actor_id: string; p_iban: string }
+        Returns: undefined
+      }
+      update_own_profile: {
+        Args: {
+          p_actor_id: string
+          p_bio?: string
+          p_full_name: string
+          p_phone: string
+          p_timezone?: string
+        }
+        Returns: undefined
+      }
+      update_team_member_name: {
+        Args: { p_actor_id: string; p_full_name: string; p_target_id: string }
+        Returns: undefined
       }
       version_commission_plan: {
         Args: {

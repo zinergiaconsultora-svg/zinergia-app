@@ -18,6 +18,7 @@ export const tasksService = {
         if (!user) return null;
 
         const franchiseId = await getFranchiseId(supabase);
+        if (!franchiseId) return null;
 
         const { data, error } = await supabase
             .from('tasks')
@@ -144,6 +145,7 @@ export const tasksService = {
         if (!user) return;
 
         const franchiseId = await getFranchiseId(supabase);
+        if (!franchiseId) return;
 
         const tasks: Partial<Task>[] = [];
 

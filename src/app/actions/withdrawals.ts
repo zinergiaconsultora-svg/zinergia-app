@@ -1,10 +1,19 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { requireServerRole } from '@/lib/auth/permissions';
 import { revalidatePath } from 'next/cache';
 import { createNotificationInternal } from './notifications';
 import { UserRole, WithdrawalRequest, WithdrawalGrowth } from '@/types/crm';
+import { maskIbanForDisplay } from '@/lib/profile-authority/iban';
+import { updateOwnIbanCommand } from '@/lib/profile-authority/banking';
+
+export interface WalletIdentity {
+    role: UserRole;
+    hasIban: boolean;
+    maskedIban: string | null;
+}
 
 interface WithdrawalActor {
     id: string;
@@ -59,19 +68,21 @@ function validateSpanishIBAN(iban: string): boolean {
 }
 
 export async function saveIbanAction(iban: string): Promise<{ success: boolean; error?: string }> {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) return { success: false, error: 'No autenticado' };
+    if (/[•*]/.test(iban)) {
+        return { success: false, error: 'Introduce el IBAN completo para sustituir el actual.' };
+    }
 
     const cleaned = iban.replace(/\s/g, '').toUpperCase();
     if (!validateSpanishIBAN(cleaned)) {
         return { success: false, error: 'IBAN no válido. Debe ser un IBAN español (ES + 22 caracteres)' };
     }
 
-    const { error } = await supabase
-        .from('profiles')
-        .update({ iban: cleaned })
-        .eq('id', user.id);
+    await requireServerRole(['admin', 'franchise', 'agent']);
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) return { success: false, error: 'No autenticado' };
+
+    const { error } = await updateOwnIbanCommand(user.id, cleaned);
 
     if (error) return { success: false, error: 'Error al guardar IBAN' };
     revalidatePath('/dashboard/commissions');
@@ -79,31 +90,51 @@ export async function saveIbanAction(iban: string): Promise<{ success: boolean; 
     return { success: true };
 }
 
-export async function getIbanAction(): Promise<string | null> {
+export async function getOwnWalletIdentityAction(): Promise<
+    { success: true; data: WalletIdentity } | { success: false; error: string }
+> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) return { success: false, error: 'No se pudo cargar la identidad de pagos.' };
 
-    const { data } = await supabase
+    const { data, error } = await createServiceClient()
         .from('profiles')
-        .select('iban')
+        .select('role, iban')
         .eq('id', user.id)
         .single();
 
-    return data?.iban ?? null;
+    if (error || !data || !['admin', 'franchise', 'agent'].includes(data.role ?? '')) {
+        return { success: false, error: 'No se pudo cargar la identidad de pagos.' };
+    }
+
+    return {
+        success: true,
+        data: {
+            role: data.role as UserRole,
+            hasIban: Boolean(data.iban),
+            maskedIban: maskIbanForDisplay(data.iban),
+        },
+    };
+}
+
+export async function getIbanAction(): Promise<WalletIdentity | null> {
+    const result = await getOwnWalletIdentityAction();
+    return result.success ? result.data : null;
 }
 
 export async function createWithdrawalRequestAction(
     amount: number,
     commissionIds: string[]
-): Promise<{ success: boolean; error?: string; withdrawal?: WithdrawalRequest }> {
+): Promise<{ success: boolean; error?: string }> {
+    await requireServerRole(['admin', 'franchise', 'agent']);
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return { success: false, error: 'No autenticado' };
     if (amount <= 0) return { success: false, error: 'El importe debe ser mayor que 0' };
     if (commissionIds.length === 0) return { success: false, error: 'Selecciona al menos una comisión' };
 
-    const { data: profile } = await supabase
+    const { data: profile } = await createServiceClient()
         .from('profiles')
         .select('iban')
         .eq('id', user.id)
@@ -133,7 +164,7 @@ export async function createWithdrawalRequestAction(
         return { success: false, error: `El importe solicitado (${amount.toFixed(2)}€) supera el disponible (${totalAvailable.toFixed(2)}€)` };
     }
 
-    const { data, error } = await supabase
+    const { error } = await supabase
         .from('withdrawal_requests')
         .insert({
             user_id: user.id,
@@ -147,7 +178,7 @@ export async function createWithdrawalRequestAction(
 
     if (error) return { success: false, error: 'Error al crear la solicitud' };
     revalidatePath('/dashboard/commissions');
-    return { success: true, withdrawal: data as WithdrawalRequest };
+    return { success: true };
 }
 
 export async function getWithdrawalHistoryAction(): Promise<WithdrawalRequest[]> {

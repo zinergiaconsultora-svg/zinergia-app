@@ -44,6 +44,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Allows a clean local/CI build without deleting an in-use `.next` cache.
+  // Production keeps Next.js's default output directory unless explicitly set.
+  distDir: process.env.NEXT_BUILD_DIST_DIR || '.next',
   env: {
     NEXT_PUBLIC_APP_VERSION: APP_VERSION,
   },

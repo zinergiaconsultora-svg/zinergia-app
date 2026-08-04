@@ -663,6 +663,57 @@
         "external_integration": true,
         "business_critical_calculation": true
       }
+    },
+    {
+      "id": "ZIN-SDD-041",
+      "slug": "profile-authority-hardening",
+      "description": "Impedir autoescalado de rol, jerarquia, franquicia o atributos protegidos del perfil y centralizar esos cambios en workflows admin auditados.",
+      "status": "verification",
+      "sdd": true,
+      "priority": "critical",
+      "risk": {
+        "data_schema": true,
+        "pii": true,
+        "auth_rls": true,
+        "public_surface": false,
+        "cron_or_service_role": true,
+        "external_integration": false,
+        "business_critical_calculation": false
+      }
+    },
+    {
+      "id": "ZIN-SDD-042",
+      "slug": "ocr-pii-and-tenant-boundary",
+      "description": "Eliminar CUPS/DNI en claro del payload OCR persistido y aplicar aislamiento Agent propio, Franchise de red y Admin global con verificacion de grants y RLS.",
+      "status": "requirements_ready",
+      "sdd": true,
+      "priority": "critical",
+      "risk": {
+        "data_schema": true,
+        "pii": true,
+        "auth_rls": true,
+        "public_surface": false,
+        "cron_or_service_role": true,
+        "external_integration": true,
+        "business_critical_calculation": false
+      }
+    },
+    {
+      "id": "ZIN-SDD-043",
+      "slug": "sips-consent-and-portfolio-gate",
+      "description": "Exigir consentimiento SIPS vigente y acceso de cartera antes de leer cache o consultar CNMC, con auditoria sin PII y fallback operativo.",
+      "status": "requirements_ready",
+      "sdd": true,
+      "priority": "critical",
+      "risk": {
+        "data_schema": true,
+        "pii": true,
+        "auth_rls": true,
+        "public_surface": false,
+        "cron_or_service_role": true,
+        "external_integration": true,
+        "business_critical_calculation": false
+      }
     }
   ]
 }

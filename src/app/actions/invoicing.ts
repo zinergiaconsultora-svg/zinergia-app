@@ -6,6 +6,7 @@ import { requireServerRole } from '@/lib/auth/permissions';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import type { InvoiceStatus, PaymentMethod, UserRole } from '@/types/crm';
+import { maskIbanForDisplay } from '@/lib/profile-authority/iban';
 
 type RpcError = { message: string } | null;
 type FiscalRpc = (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: RpcError }>;
@@ -22,8 +23,6 @@ const fiscalProfileSchema = z.object({
     fiscal_province: z.string().trim().min(2).max(120),
     fiscal_postal_code: z.string().trim().min(3).max(16),
     fiscal_country: z.string().trim().min(2).max(80).default('España'),
-    iban: z.string().transform((value) => value.replace(/\s/g, '').toUpperCase())
-        .refine((value) => /^[A-Z]{2}\d{22}$/.test(value), 'IBAN no válido'),
     company_name: z.string().trim().max(160).optional(),
     company_type: z.enum(['autonomo', 'sociedad_limitada', 'sociedad_anonima', 'cooperativa', 'otros']).optional(),
     retention_percent: z.coerce.number().min(0).max(100).default(0),
@@ -85,6 +84,32 @@ const selfBillingStatusSchema = z.object({
     acceptedAt: z.string().nullable(),
 }).nullable();
 
+const FISCAL_PROFILE_FIELDS = [
+    'nif_cif', 'fiscal_address', 'fiscal_city', 'fiscal_province',
+    'fiscal_postal_code', 'fiscal_country', 'company_name', 'company_type',
+    'invoice_prefix', 'retention_percent', 'invoice_tax_percent',
+    'fiscal_verified', 'fiscal_verified_at', 'iban',
+].join(', ');
+
+const fiscalProfileRowSchema = z.object({
+    nif_cif: z.string().nullable(),
+    fiscal_address: z.string().nullable(),
+    fiscal_city: z.string().nullable(),
+    fiscal_province: z.string().nullable(),
+    fiscal_postal_code: z.string().nullable(),
+    fiscal_country: z.string().nullable(),
+    company_name: z.string().nullable(),
+    company_type: z.enum([
+        'autonomo', 'sociedad_limitada', 'sociedad_anonima', 'cooperativa', 'otros',
+    ]).nullable(),
+    invoice_prefix: z.string().nullable(),
+    retention_percent: z.number().nullable(),
+    invoice_tax_percent: z.number().nullable(),
+    fiscal_verified: z.boolean().nullable(),
+    fiscal_verified_at: z.string().nullable(),
+    iban: z.string().nullable(),
+}).partial();
+
 async function getActor(allowed: UserRole[]) {
     await requireServerRole(allowed);
     const supabase = await createClient();
@@ -138,6 +163,30 @@ export async function updateFiscalProfileAction(formData: FormData) {
     revalidatePath('/dashboard/settings');
     revalidatePath('/dashboard/invoicing');
     return { success: true };
+}
+
+export async function getOwnFiscalProfileAction() {
+    const actorId = await getActor(['admin', 'franchise', 'agent']);
+    const { data, error } = await createServiceClient()
+        .from('profiles')
+        .select(FISCAL_PROFILE_FIELDS)
+        .eq('id', actorId)
+        .single();
+
+    const parsed = fiscalProfileRowSchema.safeParse(data);
+    if (error || !parsed.success) {
+        return { success: false as const, error: 'No se pudo cargar el perfil fiscal.' };
+    }
+
+    const { iban, ...fiscalProfile } = parsed.data;
+    return {
+        success: true as const,
+        data: {
+            ...fiscalProfile,
+            hasIban: Boolean(iban),
+            maskedIban: maskIbanForDisplay(iban),
+        },
+    };
 }
 
 export async function verifyFiscalProfileAction(userId: string) {
@@ -398,8 +447,7 @@ export async function getInvoiceStatsAction() {
 
 export async function getInvoicingWorkspaceAction() {
     const actorId = await getActor(['admin', 'franchise', 'agent']);
-    const server = await createClient();
-    const { data: profile, error: profileError } = await server
+    const { data: profile, error: profileError } = await createServiceClient()
         .from('profiles')
         .select('role, fiscal_verified, invoice_tax_percent, nif_cif, fiscal_address, fiscal_city, fiscal_postal_code, iban')
         .eq('id', actorId)

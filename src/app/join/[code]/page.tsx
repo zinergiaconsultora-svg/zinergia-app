@@ -5,30 +5,19 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { User, Lock, CheckCircle2, AlertCircle, Mail, ArrowRight, Loader2 } from 'lucide-react';
 import { ZinergiaLogo } from '@/components/ui/ZinergiaLogo';
-import { registerWithInvitationAction, validateInvitationCode } from '@/app/actions/join';
-
-const ROLE_LABEL: Record<string, string> = {
-    agent: 'Colaborador Comercial',
-    franchise: 'Franquicia',
-    admin: 'Administrador',
-};
-
-const ROLE_COLOR: Record<string, string> = {
-    agent: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-    franchise: 'bg-indigo-50 text-indigo-700 border-indigo-100',
-    admin: 'bg-slate-100 text-slate-700 border-slate-200',
-};
+import { validateInvitationCode } from '@/app/actions/join';
 
 export default function JoinNetworkPage() {
     const params = useParams();
     const router = useRouter();
     const code = params?.code as string;
 
-    const [invitation, setInvitation] = useState<{ email: string; role: string; id: string; creator_id: string } | null>(null);
+    const [invitation, setInvitation] = useState<{ valid: true; emailHint: string; roleLabel: string } | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const [fullName, setFullName] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -41,8 +30,9 @@ export default function JoinNetworkPage() {
                 } else {
                     setInvitation(data);
                 }
-            } catch (err) {
-                console.error('validateInvitationCode error:', err);
+            } catch {
+                // Invitation errors can include the token or recipient context;
+                // neither belongs in browser telemetry.
                 setError('Error al validar el código. Inténtalo de nuevo.');
             } finally {
                 setLoading(false);
@@ -57,22 +47,33 @@ export default function JoinNetworkPage() {
         setIsSubmitting(true);
 
         try {
-            // 1. Create user + complete invitation server-side (no confirmation email)
-            await registerWithInvitationAction(invitation.id, invitation.email, fullName, password);
+            const response = await fetch('/api/join/provision', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                    invitationCode: code,
+                    email,
+                    fullName,
+                    password,
+                    requestId: crypto.randomUUID(),
+                }),
+            });
+            const result = await response.json() as { success?: boolean; error?: string };
+            if (!response.ok || result.success !== true) {
+                throw new Error(result.error || 'No se pudo completar el alta.');
+            }
 
-            // 2. Sign in client-side now that the user exists and is confirmed
             const { createClient } = await import('@/lib/supabase/client');
             const supabase = createClient();
             const { error: signInError } = await supabase.auth.signInWithPassword({
-                email: invitation.email,
+                email,
                 password,
             });
             if (signInError) throw signInError;
 
             router.push('/dashboard');
-        } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : 'Error al registrarse. Inténtalo de nuevo.';
-            setError(message);
+        } catch {
+            setError('No se pudo completar el alta. Inténtalo de nuevo o contacta con soporte.');
         } finally {
             setIsSubmitting(false);
         }
@@ -118,8 +119,7 @@ export default function JoinNetworkPage() {
 
     if (!invitation) return null;
 
-    const roleLabel = ROLE_LABEL[invitation.role] ?? invitation.role;
-    const roleBadge = ROLE_COLOR[invitation.role] ?? ROLE_COLOR.agent;
+    const roleLabel = invitation.roleLabel;
 
     // ── Form ─────────────────────────────────────────────────────────────────
     return (
@@ -148,9 +148,9 @@ export default function JoinNetworkPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-xs text-slate-400 mb-0.5">Email de acceso</p>
-                            <p className="text-sm font-semibold text-slate-800 truncate">{invitation.email}</p>
+                            <p className="text-sm font-semibold text-slate-800 truncate">{invitation.emailHint}</p>
                         </div>
-                        <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${roleBadge}`}>
+                        <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-indigo-50 text-indigo-700 border-indigo-100">
                             {roleLabel}
                         </span>
                     </div>
@@ -164,6 +164,24 @@ export default function JoinNetworkPage() {
                     )}
 
                     <form onSubmit={handleSignUp} className="space-y-4">
+                        <div>
+                            <label htmlFor="email" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                Email invitado
+                            </label>
+                            <div className="relative">
+                                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
+                                <input
+                                    id="email"
+                                    type="email"
+                                    required
+                                    value={email}
+                                    onChange={(event) => setEmail(event.target.value)}
+                                    className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-800 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                                    placeholder={invitation.emailHint}
+                                    autoComplete="email"
+                                />
+                            </div>
+                        </div>
                         {/* Full name */}
                         <div>
                             <label htmlFor="fullname" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
@@ -194,11 +212,11 @@ export default function JoinNetworkPage() {
                                     id="password"
                                     type="password"
                                     required
-                                    minLength={6}
+                                    minLength={8}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-800 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
-                                    placeholder="Mínimo 6 caracteres"
+                                    placeholder="Mínimo 8 caracteres"
                                 />
                             </div>
                         </div>
@@ -206,7 +224,7 @@ export default function JoinNetworkPage() {
                         {/* Submit */}
                         <button
                             type="submit"
-                            disabled={isSubmitting || !fullName || !password}
+                            disabled={isSubmitting || !email || !fullName || !password}
                             className="w-full mt-2 py-4 bg-indigo-600 text-white rounded-2xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-100"
                         >
                             {isSubmitting ? (

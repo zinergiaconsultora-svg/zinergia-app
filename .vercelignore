@@ -1,6 +1,7 @@
 node_modules
 .git
 .next
+.next-*
 opencode
 
 # Local environment and runtime artifacts

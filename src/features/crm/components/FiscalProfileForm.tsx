@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Save, CheckCircle, AlertCircle, Loader2, Building2, MapPin, CreditCard, FileText } from 'lucide-react';
-import { FiscalProfile } from '@/types/crm';
-import { profileFiscalService } from '@/services/crm/profileFiscal';
+import { profileFiscalService, type ProtectedFiscalProfile } from '@/services/crm/profileFiscal';
 import { updateFiscalProfileAction } from '@/app/actions/invoicing';
+import { saveIbanAction } from '@/app/actions/withdrawals';
 
 export const FiscalProfileForm: React.FC = () => {
-    const [profile, setProfile] = useState<Partial<FiscalProfile>>({});
+    const [profile, setProfile] = useState<Partial<ProtectedFiscalProfile>>({});
+    const [ibanReplacement, setIbanReplacement] = useState('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -32,23 +33,34 @@ export const FiscalProfileForm: React.FC = () => {
         const formData = new FormData();
         const fields = [
             'nif_cif', 'fiscal_address', 'fiscal_city', 'fiscal_province',
-            'fiscal_postal_code', 'fiscal_country', 'iban', 'company_name',
+            'fiscal_postal_code', 'fiscal_country', 'company_name',
             'company_type', 'retention_percent', 'invoice_tax_percent', 'invoice_prefix'
         ];
         fields.forEach(f => {
-            const val = profile[f as keyof FiscalProfile];
+            const val = profile[f as keyof ProtectedFiscalProfile];
             if (val !== undefined && val !== null) {
                 formData.append(f, String(val));
             }
         });
 
         const result = await updateFiscalProfileAction(formData);
+        const ibanResult = result.success && ibanReplacement.trim()
+            ? await saveIbanAction(ibanReplacement)
+            : { success: true as const };
         setSaving(false);
 
-        if (result.success) {
+        if (result.success && ibanResult.success) {
             setMessage({ type: 'success', text: 'Datos fiscales guardados. Pendientes de verificación.' });
+            setIbanReplacement('');
+            if (ibanReplacement.trim()) {
+                const refreshed = await profileFiscalService.getFiscalProfile();
+                if (refreshed) setProfile(refreshed);
+            }
         } else {
-            setMessage({ type: 'error', text: result.error || 'Error al guardar' });
+            setMessage({
+                type: 'error',
+                text: (!result.success ? result.error : ibanResult.error) || 'Error al guardar',
+            });
         }
     };
 
@@ -195,15 +207,18 @@ export const FiscalProfileForm: React.FC = () => {
                     <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Datos Bancarios</h3>
                 </div>
                 <div>
-                    <label className={labelClass}>IBAN *</label>
+                    <label className={labelClass}>Sustituir IBAN{profile.hasIban ? '' : ' *'}</label>
+                    {profile.maskedIban && (
+                        <p className="text-xs text-slate-500 mb-2">IBAN actual: {profile.maskedIban}</p>
+                    )}
                     <input
                         type="text"
-                        value={profile.iban || ''}
-                        onChange={e => handleChange('iban', e.target.value.toUpperCase())}
-                        placeholder="ES00 0000 0000 0000 0000 0000"
+                        value={ibanReplacement}
+                        onChange={e => setIbanReplacement(e.target.value.toUpperCase())}
+                        placeholder={profile.maskedIban ?? 'ES00 0000 0000 0000 0000 0000'}
                         className={inputClass}
                         maxLength={27}
-                        required
+                        required={!profile.hasIban}
                     />
                     <p className="text-xs text-slate-400 mt-1">Cuenta bancaria para recibir los pagos de comisiones</p>
                 </div>

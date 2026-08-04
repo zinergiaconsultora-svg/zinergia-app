@@ -108,7 +108,11 @@ export default function FranchiseList({ franchises, unassignedAgents }: Franchis
         setError(null);
         startTransition(async () => {
             try {
-                await assignAgentToFranchise(agentId, franchiseId);
+                const result = await assignAgentToFranchise(agentId, franchiseId);
+                if (!result.success) {
+                    setError(result.error);
+                    return;
+                }
                 setAssigningTo(null);
                 router.refresh();
             } catch (e) {
@@ -122,7 +126,11 @@ export default function FranchiseList({ franchises, unassignedAgents }: Franchis
         setRemovingId(agentId);
         startTransition(async () => {
             try {
-                await removeAgentFromFranchise(agentId);
+                const result = await removeAgentFromFranchise(agentId);
+                if (!result.success) {
+                    setError(result.error);
+                    return;
+                }
                 router.refresh();
             } catch (e) {
                 setError(e instanceof Error ? e.message : 'Error desconocido');
