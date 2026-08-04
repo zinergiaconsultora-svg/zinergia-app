@@ -434,13 +434,16 @@ export default function TarifasAgentView({ electricity, gas, commissions, collab
             <CommissionSimulator electricity={electricity} gas={gas} commissions={commissions} collaboratorPct={collaboratorPct} />
 
             {/* Tabs */}
-            <div className="flex gap-1 bg-white border border-slate-200 p-1 rounded-2xl w-fit">
+            {/* Same fix as the admin view: w-fit on its own would let this bar exceed a
+                phone viewport and stretch the document, which drags the fixed header and
+                bottom nav sideways. Agents are the ones on mobile, so it matters more here. */}
+            <div className="flex gap-1 bg-white border border-slate-200 p-1 rounded-2xl w-fit max-w-full overflow-x-auto">
                 {tabs.map(t => (
                     <button
                         key={t.id}
                         type="button"
                         onClick={() => setTab(t.id)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                        className={`flex shrink-0 items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
                             tab === t.id
                                 ? 'bg-indigo-600 text-white shadow-md'
                                 : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'

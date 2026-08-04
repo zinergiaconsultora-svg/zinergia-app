@@ -76,13 +76,17 @@ export default function TarifasAdminView({ initialElectricity, initialGas, initi
             </div>
 
             {/* Tabs */}
-            <div className="flex p-1.5 bg-white/60 backdrop-blur-xl border border-white/80 rounded-[1.5rem] w-fit shadow-lg shadow-slate-200/50 relative">
+            {/* w-fit alone lets this bar grow to its intrinsic ~500px, which on a phone
+                stretches the document and drags the fixed header and bottom nav out of
+                alignment with the viewport. max-w-full plus its own horizontal scroll keeps
+                the pill look on desktop without the page ever scrolling sideways. */}
+            <div className="flex p-1.5 bg-white/60 backdrop-blur-xl border border-white/80 rounded-[1.5rem] w-fit max-w-full overflow-x-auto shadow-lg shadow-slate-200/50 relative">
                 {tabs.map(t => (
                     <button
                         key={t.id}
                         type="button"
                         onClick={() => setTab(t.id)}
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold transition-all duration-300 relative z-10 ${
+                        className={`flex shrink-0 items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold transition-all duration-300 relative z-10 ${
                             tab === t.id
                                 ? 'text-white shadow-md bg-indigo-600'
                                 : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'
