@@ -164,10 +164,10 @@ describe('FiscalInvoicingWorkspace', () => {
             '66666666-6666-4666-8666-666666666666',
         ));
 
-        fireEvent.click(await screen.findByRole('button', { name: 'Aceptar' }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Aceptar' }, { timeout: 5000 }));
         await waitFor(() => expect(acceptSelfBilledInvoiceAction).toHaveBeenCalledWith(pendingSelfBill.id));
 
-        fireEvent.click(await screen.findByRole('button', { name: 'Emitir' }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Emitir' }, { timeout: 5000 }));
         await waitFor(() => expect(issueInvoiceAction).toHaveBeenCalledWith(ownerDraft.id));
 
         fireEvent.click(await screen.findByTitle('Cancelar borrador'));

@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "lint:functions": "deno check supabase/functions/reconcile-invitation-provisioning/index.ts && deno lint supabase/functions",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -16,6 +17,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:public-mutating": "playwright test e2e/proposal-public-mutating.spec.ts --project=chromium --no-deps --reporter=list",
+    "test:profile-authority:http-staging": "node scripts/profile-authority/verify-contract-http-staging.mjs",
     "test:e2e:seed-public-proposal": "node scripts/ensure-e2e-public-proposal.mjs",
     "supabase:verify": "node scripts/verify-supabase.js",
     "supabase:check": "node scripts/check-setup.js"
@@ -67,6 +69,7 @@
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.10",
     "jsdom": "^28.0.0",
+    "pg": "^8.22.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.18"

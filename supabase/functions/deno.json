@@ -1,0 +1,13 @@
+{
+    "//": "Supabase Edge Functions run on Deno, not Node. They are excluded from tsconfig.json and eslint.config.mjs because the Node toolchain cannot resolve Deno globals or npm: specifiers. This config is what gives them an equivalent gate: `npm run lint:functions`.",
+    "lint": {
+        "rules": {
+            "tags": ["recommended"]
+        }
+    },
+    "fmt": {
+        "indentWidth": 4,
+        "lineWidth": 100,
+        "singleQuote": true
+    }
+}
