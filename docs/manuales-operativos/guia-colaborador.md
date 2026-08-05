@@ -33,7 +33,7 @@ FACTURA  →  ANÁLISIS  →  COMPARATIVA  →  PROPUESTA  →  ACEPTACIÓN  →
 
 Pídele al cliente **su última factura de luz completa** (todas las páginas). Requisitos para que valga:
 
-- **Menos de 2 meses** de antigüedad
+- **Menos de 3 meses** de antigüedad
 - El **titular** se lee con claridad
 - El **CUPS** completo y legible (empieza por `ES00…`)
 
@@ -91,7 +91,7 @@ Para que la venta sea válida y genere comisión hacen falta (cláusula 4ª de t
 
 - **Contrato firmado**
 - **DNI/CIF en vigor**
-- **Factura reciente** (máx. 2 meses)
+- **Factura reciente** (máx. 3 meses)
 - **Acreditación de representación**, si firma alguien en nombre de una empresa
 
 Sin esos documentos, el alta no se valida y **no se paga**.

@@ -69,7 +69,9 @@ El contrato se va a firmar electrónicamente. Conviene una cláusula donde ambas
 
 - **"SINGERGIA PRISMA SL"** — verificar contra la escritura. Puede ser un error por "SINERGIA".
 - **"ZINERGI"** en el título del borrador.
-- **Criterio de antigüedad de factura**: el contrato exige **máximo 2 meses**; el competidor usa 6. Conviene decidir uno y que **el mismo criterio esté en el contrato, en las guías y en la validación de la app**.
+- **Criterio de antigüedad de factura**: fijado en **3 meses** (decisión de Zinergia, 05/08/2026). El borrador original decía 2 y el competidor usa 6. Ya está aplicado en el contrato v2 y en ambas guías.
+
+  **La aplicación todavía no lo comprueba.** El OCR no persiste la fecha de la factura en un campo tipado —`ocr_jobs.extracted_data` es JSON libre—, así que no hay nada contra lo que validar. Mientras tanto es una comprobación manual del administrador. Construirla exige extraer y almacenar la fecha; queda anotado como trabajo pendiente.
 
 ---
 

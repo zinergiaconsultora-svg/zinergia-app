@@ -49,7 +49,9 @@ El diálogo **"Cambiar autoridad"** muestra el estado ACTUAL y la PROPUESTA, y e
 - **`/admin/ocr`** — panel de trabajos de OCR: estado de cada factura subida, errores y precisión del motor. `[CAPTURA 6]`
 - Desde **Hoy → Analizar** se abre la factura con los datos extraídos para **confirmarlos o corregirlos** antes de generar la comparativa. Revisa siempre: titular, CUPS, periodo (días), consumos por periodo y potencias.
 
-**Criterio de calidad** (alineado con el contrato de colaboración): factura de menos de 2 meses, titular legible y CUPS completo. Si no se cumple, pídesela de nuevo al colaborador en vez de tramitarla.
+**Criterio de calidad** (alineado con el contrato de colaboración): factura de **menos de 3 meses**, titular legible y CUPS completo. Si no se cumple, pídesela de nuevo al colaborador en vez de tramitarla.
+
+> ⚠️ **Este criterio hoy lo aplicas tú, no la aplicación.** El sistema no comprueba la fecha de la factura: la lectura automática no guarda un campo de fecha con el que validarla. Hasta que se construya esa comprobación, revisarlo es parte de tu trabajo.
 
 ## 5 · Propuestas
 
