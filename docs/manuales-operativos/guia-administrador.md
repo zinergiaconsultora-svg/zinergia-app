@@ -16,22 +16,28 @@ El administrador ve toda la red, valida operaciones y es el único que puede cam
 
 ## 2 · El día a día: el panel "Hoy"
 
-Al entrar, el panel **Hoy** lista las operaciones que necesitan revisión: `[CAPTURA 2]`
+Al entrar, el panel **Hoy** lista las operaciones que necesitan revisión, en **dos colas**: `[CAPTURA 2]`
 
-- **Preparar propuestas** — facturas ya analizadas por la IA que aún no tienen propuesta. Cada tarjeta muestra el cliente, la tarifa detectada, los días sin procesar y el botón **Analizar**, que abre el comparador con los datos de esa factura.
+**1 · Preparar propuestas** — *"Facturas analizadas que todavía no tienen una propuesta."*
+Arriba, dos cifras: cuántas hay **pendientes** y la **facturación/año** que suman. Cada tarjeta muestra el cliente, el peaje detectado (2.0TD…), **los días que lleva sin procesar** en ámbar, el colaborador que la subió, el CUPS, el coste anual, y el botón **Analizar**, que abre el comparador con esos datos.
 
-**Rutina diaria recomendada:** vaciar esta cola. Una factura subida por un colaborador no debería pasar de 24-48 h sin propuesta.
+**2 · Tramitar altas** — *"Propuestas aceptadas pendientes de cambio de comercializadora."*
+Cuando no hay nada, muestra *"Sin expedientes pendientes"*.
+
+**Rutina diaria recomendada:** vaciar ambas colas. Una factura subida por un colaborador no debería pasar de 24-48 h sin propuesta. El contador de días en ámbar es justamente para que salte a la vista cuando eso deja de cumplirse.
 
 ## 3 · Alta de un colaborador (de la invitación al primer acceso)
 
-1. **Equipo → Mi Red** (`/dashboard/network`) → botón **"Invitar a la Red"**. `[CAPTURA 3]`
+1. **Equipo** (`/admin/agents`) → pestaña **"Estructura comercial"** → botón **"Invitar a la Red"**, arriba a la derecha. `[CAPTURA 3]`
 2. Rellena el email del colaborador y envía. La invitación caduca si no se usa.
 3. El colaborador recibe el enlace, se registra y **queda pendiente hasta que el sistema confirma el alta** (el aprovisionamiento se reconcilia solo; si un alta se queda atascada más de 15 minutos, queda registrada para revisión).
 4. Cuando aparezca en la red, comprueba en **Equipo y red → Personas** (`/admin/agents`) que tiene el rol correcto.
 
 ### Cambiar el rol o la franquicia de alguien
 
-En `/admin/agents`, cada persona tiene dos iconos: **lápiz** (editar nombre) y **llave** (cambiar autoridad). `[CAPTURA 4]`
+En **Equipo → pestaña "Personas"** (`/admin/agents`), cada persona tiene dos iconos a la derecha: **lápiz** (editar nombre) y **llave** (cambiar autoridad). Arriba hay buscador por nombre o email y filtros por rol y franquicia. `[CAPTURA 4]`
+
+> **Sobre el vocabulario:** en esta tabla el rol sale escrito **"AGENTE"**, pero en el organigrama, en el diálogo de autoridad y en el resto de la aplicación la misma persona es **"Colaborador"**. Son lo mismo.
 
 El diálogo **"Cambiar autoridad"** muestra el estado ACTUAL y la PROPUESTA, y exige cuatro cosas: `[CAPTURA 5]`
 
@@ -44,10 +50,15 @@ El diálogo **"Cambiar autoridad"** muestra el estado ACTUAL y la PROPUESTA, y e
 
 **Todo cambio queda registrado de forma inmutable** (quién, cuándo, qué y por qué). Si al confirmar da error de "versión obsoleta", alguien tocó a esa persona a la vez: recarga y repite.
 
+> Los recuadros ACTUAL y PROPUESTA muestran hoy el responsable y la franquicia **como identificadores largos** (`8ec36524-22b8-…`) en vez de por su nombre. Fíate de los desplegables de abajo, que sí van con nombres.
+
 ## 4 · Revisión de facturas (OCR)
 
-- **`/admin/ocr`** — panel de trabajos de OCR: estado de cada factura subida, errores y precisión del motor. `[CAPTURA 6]`
-- Desde **Hoy → Analizar** se abre la factura con los datos extraídos para **confirmarlos o corregirlos** antes de generar la comparativa. Revisa siempre: titular, CUPS, periodo (días), consumos por periodo y potencias.
+**Tu cola de trabajo es "Hoy", no esta pantalla.** Desde **Hoy → Analizar** se abre la factura con los datos extraídos para **confirmarlos o corregirlos** antes de generar la comparativa. Revisa siempre: titular, CUPS, periodo (días), consumos por periodo y potencias.
+
+**`/admin/ocr` — "Observabilidad OCR"** es otra cosa: mide la **salud del sistema**, no las facturas concretas. De hecho avisa de que funciona *"sin mostrar datos extraídos de facturas"*. Verás: trabajos de las últimas 24 h, % de fallos a 30 días, cuántos hay atascados, agentes con reintentos, y el desglose por ventanas de 24 h / 7 días / 30 días. `[CAPTURA 6]`
+
+Míralo cuando **sospeches que algo va mal** —facturas que no aparecen, colaboradores que se quejan de que no se procesa—, no como rutina diaria. Todo a cero con facturas pendientes antiguas significa que nadie está subiendo nada nuevo, no que haya un fallo.
 
 **Criterio de calidad** (alineado con el contrato de colaboración): factura de **menos de 3 meses**, titular legible y CUPS completo. Si no se cumple, pídesela de nuevo al colaborador en vez de tramitarla.
 
@@ -63,7 +74,9 @@ El diálogo **"Cambiar autoridad"** muestra el estado ACTUAL y la PROPUESTA, y e
 
 ## 6 · Tarifas y comisiones (el catálogo)
 
-**`/dashboard/tariffs`** — tres pestañas: **Electricidad · Gas · Comisiones**. `[CAPTURA 7]`
+**`/dashboard/tariffs`** — *"Gestión de Tarifas · Panel administrador — edición completa"*. Tres pestañas con su recuento: **Electricidad (62) · Gas (3) · Comisiones (352)**, y arriba a la derecha el total: *65 tarifas · 352 reglas*. Debajo, filtros rápidos por compañía. `[CAPTURA 7]`
+
+Cada tarifa lleva una etiqueta de estado de comisión: **"COMISIÓN OK"** en verde, o **"SIN COMISIÓN"** en ámbar con un triángulo de aviso. Las que están en ámbar aparecen atenuadas porque están desactivadas.
 
 - **Crear/editar tarifa**: botón "Nueva tarifa" o lápiz en la fila. Campos clave: compañía, nombre, tipo (fijo/indexado), ATR (2.0TD…), precios por periodo P1-P6, cuota fija, **precio de compensación de excedentes** (autoconsumo) y **tratamiento de servicios de ajuste**.
 - **Importar Excel**: botón "Excel" para cargar tarifas en bloque.
@@ -76,7 +89,7 @@ El diálogo **"Cambiar autoridad"** muestra el estado ACTUAL y la PROPUESTA, y e
 
 ## 7 · Control económico
 
-**`/admin/commissions`** — tres pestañas: **Operaciones · Modelo económico · Fiscal**, con tres colas: `[CAPTURA 8]`
+**`/admin/commissions`** — *"Control económico · Comisiones"*. Tres pestañas: **Operaciones · Modelo económico · Fiscal**. Dentro de Operaciones, bajo el título *"Trabajo pendiente — cada cola tiene una única decisión operativa"*, están las tres colas con su contador: `[CAPTURA 8]`
 
 ```
 VALIDAR  →  LIQUIDAR  →  AJUSTES Y CONCILIACIÓN
@@ -88,8 +101,10 @@ VALIDAR  →  LIQUIDAR  →  AJUSTES Y CONCILIACIÓN
 
 ## 8 · Equipo y estructura
 
-- **`/admin/agents`** — todas las personas con rol y franquicia, con filtros.
-- **`/dashboard/network`** — organigrama visual de la red con cartera y volumen por persona. `[CAPTURA 9]`
+Todo vive en **Equipo** (`/admin/agents`), en dos pestañas:
+
+- **Personas** — todas las personas con rol y franquicia, con buscador y filtros.
+- **Estructura comercial** — *"Mi Red"*: cuatro indicadores (colaboradores activos, franquicias activas, volumen total de red y royalty estimado), el botón **Invitar a la Red**, y debajo el **organigrama** con la cartera y el volumen de cada persona. Tiene además tres vistas: Estructura · Mapa · Inteligencia. `[CAPTURA 9]`
 - Traspaso de clientes entre colaboradores: es una operación gobernada — el colaborador puede **solicitarlo**, y lo apruebas tú o la franquicia. Todo traspaso queda registrado con motivo.
 
 ## 9 · Otras zonas del admin
@@ -117,14 +132,18 @@ VALIDAR  →  LIQUIDAR  →  AJUSTES Y CONCILIACIÓN
 
 ## Lista de capturas para insertar
 
+Rutas verificadas contra la aplicación en producción el 05/08/2026.
+
 | # | Ruta | Qué encuadrar |
 |---|---|---|
-| 1 | `/admin/agents` | La fila del admin con franquicia "Sin asignar" |
-| 2 | `/admin` | El panel Hoy con la cola "Preparar propuestas" |
-| 3 | `/dashboard/network` | El botón "Invitar a la Red" arriba a la derecha |
-| 4 | `/admin/agents` | Una fila de colaborador con los iconos lápiz y llave |
-| 5 | `/admin/agents` → llave | El diálogo "Cambiar autoridad" completo (ACTUAL/PROPUESTA/Motivo) |
-| 6 | `/admin/ocr` | El panel de trabajos OCR |
-| 7 | `/dashboard/tariffs` | Las tres pestañas con la tabla de electricidad |
-| 8 | `/admin/commissions` | Las colas Validar/Liquidar/Ajustes |
-| 9 | `/dashboard/network` | El organigrama con los colaboradores |
+| 1 | `/admin/agents` → Personas | La fila de **Admin Zinergia** con el rol ADMIN y la franquicia *"Sin asignar"* |
+| 2 | `/admin` | El panel Hoy entero: las dos colas, con los contadores de "Preparar propuestas" arriba |
+| 3 | `/admin/agents` → Estructura comercial | Los cuatro indicadores y el botón **"Invitar a la Red"** |
+| 4 | `/admin/agents` → Personas | Una fila de colaborador con los iconos lápiz y llave a la derecha |
+| 5 | `/admin/agents` → icono llave | El diálogo **"Cambiar autoridad"** completo: ACTUAL / PROPUESTA / Rol / Franquicia / Responsable / Motivo |
+| 6 | `/admin/ocr` | Los cuatro indicadores de cabecera de **Observabilidad OCR** |
+| 7 | `/dashboard/tariffs` | Las tres pestañas con sus recuentos y varias filas, **incluyendo una con la etiqueta ámbar "SIN COMISIÓN"** |
+| 8 | `/admin/commissions` | "Trabajo pendiente" con las tres colas y sus contadores |
+| 9 | `/admin/agents` → Estructura comercial, abajo | El organigrama: el admin arriba y los colaboradores colgando, con cartera y volumen |
+
+> ⚠️ **Antes de guardar cada imagen, tapa los datos personales.** Estas pantallas muestran nombres reales de clientes, CUPS y correos de colaboradores. Difumina o recorta lo que sea identificable: la guía va a circular entre personas que no tienen por qué ver la cartera.
