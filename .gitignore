@@ -55,36 +55,27 @@ public/auditoria/
 # vercel
 .vercel
 
-# irrelevant folders
+# A vendored clone of the opencode project, node_modules and all: ~105k files that
+# have nothing to do with this app.
+#
+# `docs`, `scripts` and `resources` used to be listed here too. They are real folders
+# of this project, and ignoring them did not remove what was already committed - it
+# only made *new* files invisible. The result was a repo where 18 of 27 files under
+# docs/ were versioned and the other 9 silently were not, including the deploy runbook
+# and the Google Drive setup guide. Anything added there has to be versioned.
 opencode
-.claude/
-scripts
-docs
-resources
-!supabase/scripts/
-!supabase/scripts/**
+
+# Local Claude Code state, not shared configuration: settings.local.json holds
+# per-machine permissions and worktrees/ holds full checkouts. launch.json and
+# skills/ are shared and belong in the repo.
+.claude/settings.local.json
+.claude/worktrees/
 
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 
-
-# irrelevant folders
-opencode
-scripts
-docs
-resources
-!supabase/scripts/
-!supabase/scripts/**
-!sdd/scripts/
-!sdd/scripts/**
-# Anchored to the repo root on purpose: the bare `scripts` rule above matches at any
-# depth, so an unanchored negation would also un-ignore .agents/scripts and friends.
-!/scripts/
-/scripts/*
-!/scripts/profile-authority/
-!/scripts/profile-authority/**
 
 nul
 
