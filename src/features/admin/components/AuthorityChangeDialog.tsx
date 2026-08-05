@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { changeProfileAuthorityAdminAction } from '@/app/actions/admin';
+import { CommissionRateField } from './CommissionRateField';
 import type {
     AuthorityReasonCode,
     AuthoritySummary,
@@ -201,6 +202,16 @@ export function AuthorityChangeDialog({
                             {REASONS.map(reason => <option key={reason.value} value={reason.value}>{reason.label}</option>)}
                         </select>
                     </label>
+
+                    {/*
+                      * La comisión se guarda por su cuenta, con su propio botón. Va aquí
+                      * porque es el momento en que se configura a una persona, pero no
+                      * comparte el envío con el cambio de autoridad: si una fallara, la
+                      * otra no debe quedar aplicada a medias.
+                      */}
+                    {desiredRole === 'agent' ? (
+                        <CommissionRateField profileId={profile.id} />
+                    ) : null}
 
                     {error ? <p role="alert" className="text-sm text-red-600">{error}</p> : null}
 
