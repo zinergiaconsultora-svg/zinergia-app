@@ -1,0 +1,36 @@
+# PLANTILLA DE POLITICAS DE DECOMISION
+#
+# Una fila por TRAMO. Las filas de una misma comercializadora (y producto) forman
+# una politica. Las lineas que empiezan por # se ignoran: borra los ejemplos de
+# abajo y escribe encima.
+#
+# COLUMNAS
+#   comercializadora      Nombre tal y como aparece en el catalogo. Obligatorio.
+#   producto              Deja vacio si la regla vale para todos sus productos.
+#   dias_consolidacion    Dias que el contrato debe aguantar para que la comision
+#                         se considere firme. Antes de eso no se liquida.
+#   dias_clawback         Ultimo dia en que la comercializadora puede reclamar.
+#                         Igual o mayor que dias_consolidacion.
+#   tramo_desde_dia       Primer dia del tramo. El primer tramo empieza en 0.
+#   tramo_hasta_dia       Ultimo dia del tramo, incluido.
+#   porcentaje_devolucion Cuanto se devuelve si la baja cae en ese tramo (0-100).
+#
+# TRES REGLAS QUE EL CARGADOR COMPRUEBA
+#   1. Los tramos empiezan en el dia 0, sin huecos ni solapes.
+#   2. Llegan exactamente hasta dias_clawback.
+#   3. El porcentaje nunca sube al avanzar los dias: cuanto mas aguanta el
+#      contrato, menos se devuelve.
+#
+# Los dias se cuentan desde la FECHA DE ACTIVACION en la distribuidora.
+#
+# EJEMPLOS (borralos)
+#   LOGOS devuelve todo los 3 primeros meses, la mitad hasta el sexto, y nada despues:
+comercializadora,producto,dias_consolidacion,dias_clawback,tramo_desde_dia,tramo_hasta_dia,porcentaje_devolucion
+LOGOS,,90,365,0,89,100
+LOGOS,,90,365,90,179,50
+LOGOS,,90,365,180,365,0
+#   NATURGY devuelve todo durante el primer ano, sin escalones:
+NATURGY,,0,365,0,365,100
+#   Una regla distinta solo para un producto concreto:
+GANA ENERGIA,TARIFA PLANA,30,180,0,89,100
+GANA ENERGIA,TARIFA PLANA,30,180,90,180,50

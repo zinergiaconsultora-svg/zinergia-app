@@ -27,7 +27,7 @@ Las guías marcan cada imagen con `[CAPTURA n]` y llevan al final una tabla con 
 | # | Decisión | Bloquea |
 |---|---|---|
 | ~~1~~ | ~~Antigüedad máxima de factura~~ → **3 meses**, decidido el 05/08/2026 | Resuelto. Aplicado en contrato y guías. Falta construir la comprobación en la app: el OCR no guarda la fecha de factura en un campo tipado |
-| 2 | Valores de decomisión por comercializadora | Publicar el Anexo II y cargar `commission_decommission_policies` |
+| 2 | Valores de decomisión por comercializadora | Publicar el Anexo II. **La herramienta de carga ya está lista**: rellena `scripts/decomisiones/plantilla-decomisiones.csv` y ejecuta `npm run decomisiones` |
 | 3 | Importes de comisión de GANA PYME | Reactivar las 2 tarifas desactivadas |
 | 4 | Tratamiento de servicios de ajuste por tarifa | Que el comparador deje de avisar de "no configurado" |
 | 5 | Precio de compensación de excedentes | Comparar correctamente clientes con autoconsumo |

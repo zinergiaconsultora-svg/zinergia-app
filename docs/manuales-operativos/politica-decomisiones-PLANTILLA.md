@@ -112,4 +112,19 @@ Cualquier duda sobre una decomisión concreta, a través de [· canal] indicando
 | 5 | Criterio en cambio de titular, fallecimiento y cese | Decisión de Zinergia, revisada por el abogado |
 | 6 | Canal de consultas | Decisión de Zinergia |
 
-**Cuando tengas 1 y 2, cargo las reglas como datos en la app** (`commission_decommission_policies` y `commission_decommission_bands`, hoy vacías) **y este documento se genera desde la base de datos** — con lo que nunca podrá desincronizarse de lo que la app aplica de verdad. Ahí es donde le sacas ventaja a la competencia, cuya política es un PDF a mano con un descargo de "puede contener errores".
+**Cuando tengas 1 y 2, las reglas se cargan como datos** en `commission_decommission_policies` y `commission_decommission_bands` (hoy vacías) **y este documento se genera desde la base de datos** — con lo que nunca podrá desincronizarse de lo que la app aplica de verdad. Ahí es donde le sacas ventaja a la competencia, cuya política es un PDF a mano con un descargo de "puede contener errores".
+
+### Cómo se cargan (ya está listo)
+
+1. Copia `scripts/decomisiones/plantilla-decomisiones.csv`, borra los ejemplos y escribe tus condiciones: **una fila por tramo**.
+2. Compruébalo sin tocar nada:
+
+```bash
+npm run decomisiones mis-decomisiones.csv
+```
+
+Te enseña cada política en castellano y, si algo no cuadra, **te dice en qué línea**: huecos entre tramos, solapes, porcentajes que suben con el tiempo, tramos que no cubren la ventana completa.
+
+3. Cuando el resumen sea correcto, añade `--aplicar`.
+
+Dos cosas que conviene saber: **sin `--aplicar` no se escribe nada**, y **las políticas son inmutables** — cada carga crea una versión nueva en lugar de corregir la anterior, así que siempre queda registro de qué regla estaba vigente cuando se liquidó cada comisión.
