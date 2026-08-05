@@ -43,9 +43,12 @@ Cada fase se despliega y se comprueba antes de la siguiente. Ninguna deja el sis
 ### Fase 2 · Comisión por colaborador
 *Base de datos y alta de usuarios. Es una función nueva, no una limpieza.*
 
-- Guardar la comisión de cada colaborador, con historial: cambiarla no puede reescribir lo ya liquidado.
-- Poder fijarla **al invitar**, y cambiarla después dejando rastro de quién y cuándo.
-- Que el cálculo de comisiones use ese valor en lugar del reparto a tres bandas.
+- Guardar el **porcentaje** de cada colaborador, con historial: cambiarlo no puede reescribir lo ya liquidado.
+- Poder fijarlo **al invitar**, y cambiarlo después dejando rastro de quién y cuándo.
+- Añadir el **extra por cliente** en la pantalla donde un lead pasa a cliente, con su motivo y su autor.
+- Que el cálculo de comisiones use porcentaje + extra en lugar del reparto a tres bandas.
+
+**Tres detalles que hay que cerrar antes de escribir el esquema** (ver más abajo): si el extra es en euros o en puntos de porcentaje, si es de una vez o se repite cada mes, y si el colaborador lo ve.
 
 ### Fase 3 · Retirar la franquicia de la interfaz
 *Solo pantallas. Reversible.*
@@ -66,17 +69,20 @@ Cada fase se despliega y se comprueba antes de la siguiente. Ninguna deja el sis
 
 ---
 
-## Lo que hay que decidir antes de la fase 2
+## Cómo es la comisión de un colaborador (decidido 05/08/2026)
 
-**¿Cómo es "la comisión" de un colaborador?** Cambia el diseño entero:
+**Dos piezas que se suman:**
 
-**A · Un porcentaje sobre la comisión de la operación.** El catálogo dice que esa tarifa paga 120 €; el colaborador tiene un 60 % y se lleva 72 €. Simple, y encaja con las 324 reglas de comisión que ya existen por tarifa y tramo de consumo.
+1. **Un porcentaje fijo por colaborador**, que se fija **al crear su perfil**. Se aplica sobre lo que la operación genera según el catálogo: si la tarifa paga 120 € y el colaborador tiene un 60 %, le corresponden 72 €.
+2. **Un extra por cliente**, que el administrador puede añadir **en el momento en que un lead pasa a ser cliente**, en un campo editable de esa misma pantalla.
 
-**B · Importes propios por tarifa.** Cada colaborador con su tabla. Mucho más flexible y mucho más trabajo de mantener: cada tarifa nueva hay que darla de alta para cada persona.
+Así el porcentaje cubre el caso normal sin tener que tocar nada, y el extra permite reconocer una captación concreta sin renegociar el acuerdo entero.
 
-**C · Un porcentaje por defecto, con excepciones puntuales.** Lo de A, más la posibilidad de pactar algo distinto en casos concretos.
+### Tres reglas que el diseño debe respetar
 
-**Recomendación: A.** Es lo que hace la competencia, aprovecha las 324 reglas ya cargadas y se explica en una frase al colaborador. Si más adelante hace falta, C se construye encima de A sin rehacer nada; al revés no.
+- **Lo ya liquidado no se reescribe.** Cambiar el porcentaje de alguien afecta a lo que venga después, nunca a lo cobrado. La comisión se congela en la operación en el momento de validarla, como ya se hace con los precios de las propuestas.
+- **El extra deja rastro.** Quién lo puso, cuándo y por qué. Es dinero que sale de una decisión manual, y esas son las que hay que poder explicar seis meses después.
+- **El colaborador ve su porcentaje, no el de los demás.** Lo contrario es la fuga que se cerró hoy con la pestaña "Red".
 
 ---
 
