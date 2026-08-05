@@ -36,11 +36,20 @@ export const authorityChangeInputSchema = z.strictObject({
 }).superRefine((input, context) => {
     const isInactive = input.desiredRole === null;
     const isAdmin = input.desiredRole === 'admin';
-    const requiresTenant = input.desiredRole === 'franchise' || input.desiredRole === 'agent';
+    const needsParent = input.desiredRole === 'franchise' || input.desiredRole === 'agent';
+    // La franquicia sigue necesitando las dos mientras el rol exista; el
+    // colaborador ya no, desde que el modelo dejó de tener franquicias. La
+    // administración sigue sin ninguna de las dos: es lo que impide que la cuenta
+    // que gobierna la aplicación quede colgando de otra.
+    const needsFranchise = input.desiredRole === 'franchise';
+
     if ((isInactive || isAdmin) && (input.parentId !== null || input.franchiseId !== null)) {
         context.addIssue({ code: 'custom', message: 'Authority tuple is not canonical.' });
     }
-    if (requiresTenant && (input.parentId === null || input.franchiseId === null)) {
+    if (needsParent && input.parentId === null) {
+        context.addIssue({ code: 'custom', message: 'Authority tuple is incomplete.' });
+    }
+    if (needsFranchise && input.franchiseId === null) {
         context.addIssue({ code: 'custom', message: 'Authority tuple is incomplete.' });
     }
 });

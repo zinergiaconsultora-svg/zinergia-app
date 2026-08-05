@@ -14,6 +14,10 @@ const legacyPolicyCorrectionMigration = readFileSync(
     resolve(process.cwd(), 'supabase/migrations/20260803192000_remove_legacy_profile_policies.sql'),
     'utf8',
 );
+const franchiseOptionalMigration = readFileSync(
+    resolve(process.cwd(), 'supabase/migrations/20260806010000_collaborator_without_franchise.sql'),
+    'utf8',
+);
 
 describe('ZIN-SDD-041 T16 final profile contract', () => {
     it('removes all browser writes while retaining an explicit directory-only read contract', () => {
@@ -62,5 +66,40 @@ describe('ZIN-SDD-041 T16 final profile contract', () => {
         expect(tupleCorrectionMigration).toMatch(/role\s+IS\s+NULL[\s\S]*?parent_id\s+IS\s+NULL[\s\S]*?franchise_id\s+IS\s+NULL/i);
         expect(tupleCorrectionMigration).toMatch(/role\s*=\s*'admin'[\s\S]*?parent_id\s+IS\s+NULL[\s\S]*?franchise_id\s+IS\s+NULL/i);
         expect(tupleCorrectionMigration).toMatch(/role\s+IN\s*\('franchise',\s*'agent'\)[\s\S]*?parent_id\s+IS\s+NOT\s+NULL[\s\S]*?franchise_id\s+IS\s+NOT\s+NULL/i);
+    });
+});
+
+/**
+ * El modelo pasó a ser un administrador y colaboradores, así que la exigencia de
+ * franquicia se relajó. Estos casos existen para que quede claro qué se relajó y,
+ * sobre todo, qué NO: la garantía sobre la cuenta de administración es la que
+ * impide perder el control de la aplicación, y no se toca al simplificar el
+ * modelo.
+ */
+describe('el colaborador ya no necesita franquicia', () => {
+    it('reemplaza la regla en lugar de añadir una segunda', () => {
+        expect(franchiseOptionalMigration).toContain('DROP CONSTRAINT IF EXISTS profiles_authority_tuple_check');
+        expect(franchiseOptionalMigration).toContain('ADD CONSTRAINT profiles_authority_tuple_check');
+    });
+
+    it('mantiene que la administración no cuelga de nadie', () => {
+        expect(franchiseOptionalMigration).toMatch(
+            /role\s*=\s*'admin'\s+AND\s+parent_id\s+IS\s+NULL\s+AND\s+franchise_id\s+IS\s+NULL/i,
+        );
+    });
+
+    it('sigue exigiendo las dos cosas a la franquicia mientras el rol exista', () => {
+        expect(franchiseOptionalMigration).toMatch(
+            /role\s*=\s*'franchise'\s+AND\s+parent_id\s+IS\s+NOT\s+NULL\s+AND\s+franchise_id\s+IS\s+NOT\s+NULL/i,
+        );
+    });
+
+    // Lo único que cambia: el colaborador conserva el responsable y pierde la
+    // exigencia de franquicia.
+    it('deja al colaborador con responsable y sin franquicia obligatoria', () => {
+        expect(franchiseOptionalMigration).toMatch(/role\s*=\s*'agent'\s+AND\s+parent_id\s+IS\s+NOT\s+NULL\s*\)/i);
+        expect(franchiseOptionalMigration).not.toMatch(
+            /role\s*=\s*'agent'\s+AND\s+parent_id\s+IS\s+NOT\s+NULL\s+AND\s+franchise_id\s+IS\s+NOT\s+NULL/i,
+        );
     });
 });

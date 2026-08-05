@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { ExternalLink, CheckCircle2, Clock3, X, Euro, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { closeInvoiceAction, type InvoiceProcessStatus, type InvoiceRegistryRow } from '@/app/actions/invoices';
+import { CommissionPreview } from './CommissionPreview';
 
 /** Closes a dialog/overlay when Escape is pressed. */
 export function useEscapeKey(onEscape: () => void) {
@@ -121,6 +122,7 @@ export function CloseInvoiceModal({
     const [hasPermanence, setHasPermanence] = useState(Boolean(invoice.permanencia_hasta));
     const [permanenceUntil, setPermanenceUntil] = useState(invoice.permanencia_hasta ?? '');
     const [commission, setCommission] = useState(invoice.commission_amount === null ? '' : String(invoice.commission_amount));
+    const [extra, setExtra] = useState(0);
     const [saving, setSaving] = useState(false);
     useEscapeKey(onClose);
 
@@ -243,7 +245,7 @@ export function CloseInvoiceModal({
                 </div>
 
                 <label className="block">
-                    <span className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Comisión del comercial (€)</span>
+                    <span className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Comisión de la operación (€)</span>
                     <div className="mt-1 relative">
                         <Euro size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
@@ -258,7 +260,22 @@ export function CloseInvoiceModal({
                             className={cn(inputCls, 'mt-0 pl-9')}
                         />
                     </div>
+                    <span className="mt-1 block text-[11px] text-slate-400">
+                        Lo que paga la comercializadora por esta venta.
+                    </span>
                 </label>
+
+                {/*
+                  * De ese importe sale lo del colaborador: su porcentaje más el extra
+                  * que se decida aquí. Se enseña desglosado porque un total que nadie
+                  * sabe de dónde sale es lo que acaba en una reclamación.
+                  */}
+                <CommissionPreview
+                    agentId={invoice.agent_id}
+                    grossCommission={commission === '' ? 0 : Number(commission)}
+                    extraAmount={extra}
+                    onExtraChange={setExtra}
+                />
 
                 <button type="submit" disabled={saving} className="w-full py-3 rounded-2xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50">
                     {saving ? 'Guardando…' : isEditingClosure ? 'Guardar cambios' : 'Confirmar cliente'}
