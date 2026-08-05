@@ -3,6 +3,7 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { SupplyPoint, SupplyType } from '@/types/energy';
 import { createSupplyPointAction, deleteSupplyPointAction, getSupplyPointsAction } from '@/app/actions/energy';
+import { getDistributorForCups } from '@/lib/cnmc/distributors';
 import { Zap, Flame, Plus, MapPin, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -96,6 +97,16 @@ export default function SupplyPointsPanel({ clientId }: Props) {
                         <div className="flex items-center gap-2 text-[10px] text-slate-400">
                             {point.address && <span className="flex items-center gap-0.5 truncate"><MapPin size={9} /> {point.address}</span>}
                             {point.current_marketer && <span className="truncate">{point.current_marketer}</span>}
+                            {/*
+                              * La distribuidora sale del propio CUPS, no de un dato que
+                              * nadie teclee. Solo aparece para electricidad: la tabla de
+                              * prefijos es de distribuidoras eléctricas.
+                              */}
+                            {point.supply_type === 'electricity' && getDistributorForCups(point.cups) && (
+                                <span className="truncate" title="Distribuidora, deducida del CUPS">
+                                    {getDistributorForCups(point.cups)}
+                                </span>
+                            )}
                         </div>
                     </div>
                     <button
