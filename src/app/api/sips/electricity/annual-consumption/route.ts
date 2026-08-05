@@ -11,7 +11,16 @@ import {
 } from '@/lib/sips/authorization';
 
 const limiter = rateLimit({ windowMs: 60_000, max: 20 });
-const CACHE_TTL_DAYS = 30;
+
+/**
+ * Siete días, la ventana con la que trabaja el SIPS.
+ *
+ * Se usa solo al escribir. La lectura pregunta por `expires_at`, que es lo que
+ * decide si una fila sirve: recalcular la ventana también al leer daba dos
+ * fuentes para la misma decisión, y bastaba cambiar una para que la caché
+ * empezara a servir datos que se creían caducados.
+ */
+const CACHE_TTL_DAYS = 7;
 
 const bodySchema = z.object({
     cups: z.string().min(20).max(24),
@@ -131,12 +140,14 @@ async function auditDenial(userId: string, cupsHash: string, reason: SipsAuthori
 }
 
 async function getCachedConsumption(supabase: SupabaseServiceClient, cupsHash: string): Promise<CachedConsumptionRow | null> {
-    const validAfter = new Date(Date.now() - CACHE_TTL_DAYS * 86_400_000).toISOString();
+    // Se pregunta por `expires_at`, que es lo que la fila declara sobre sí misma.
+    // Antes se restaban días a `fetched_at` aquí, de modo que la caducidad escrita
+    // en la base de datos no llegaba a consultarse nunca.
     const { data, error } = await supabase
         .from('sips_consumption_cache')
         .select('annual_consumption_kwh, annual_consumption_mwh, rows_count, fetched_at')
         .eq('cups_hash', cupsHash)
-        .gte('fetched_at', validAfter)
+        .gt('expires_at', new Date().toISOString())
         .maybeSingle();
 
     if (error) return null;
