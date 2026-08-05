@@ -6,6 +6,25 @@
 
 ---
 
+## 0 · Las diez palabras que hay que saber
+
+Si vienes de otra comercializadora, algunas se dicen distinto. Esta columna te vale para las dos.
+
+| Palabra | Qué es, en cristiano |
+|---|---|
+| **CUPS** | El código del punto de luz. Empieza por `ES` y no cambia aunque cambies de compañía. Es como el DNI del contador |
+| **Comercializadora** (o *compañía*) | La empresa que le vende la luz al cliente y le manda la factura: LOGOS, NATURGY, Plenitude, GANA |
+| **Distribuidora** | La dueña del cable y del contador. **No se elige**: te toca la de tu zona. Es quien da de alta el cambio |
+| **Peaje** (o *ATR*, o *tarifa de acceso*) | El "tamaño" de la conexión: 2.0TD casas y comercios pequeños, 3.0TD y 6.1TD negocios grandes |
+| **Potencia** | Los kW contratados. Se paga aunque no consumas |
+| **Periodos** (P1, P2, P3…) | Las franjas horarias. La luz no cuesta lo mismo por la mañana que de madrugada |
+| **Captación** | Traer un cliente nuevo. Lo normal es *cambio de comercializadora* |
+| **Cartera** | Los clientes que ya son tuyos y siguen dando comisión mes a mes |
+| **Activación** | El día que la distribuidora hace efectivo el cambio. **Desde ahí se cuenta todo**: cuándo cobras y hasta cuándo te lo pueden quitar |
+| **Decomisión** (verás *clawback* o *baja < 1 año*) | Que te retiren una comisión ya cobrada porque el cliente se fue antes de tiempo |
+
+---
+
 ## 1 · Tu pantalla: cómo se mueve la app
 
 Abajo (móvil) o arriba (ordenador) tienes cuatro botones fijos:
@@ -63,21 +82,21 @@ Corrige lo que esté mal y confirma.
 
 La app compara la factura contra todo el catálogo de tarifas y te ordena las ofertas. `[CAPTURA 4]`
 
-**Cómo leer el resultado:**
+**Qué mirar de cada oferta:**
 
-- **Ahorro anual** — cuánto se ahorraría el cliente en un año
-- **Tres criterios de recomendación**: máximo ahorro para el cliente · equilibrado · mejor comisión viable. La app **nunca** te ofrece como "mejor comisión" algo que le quite al cliente un ahorro razonable: hay un suelo ético incorporado.
-- **Comisión estimada** de cada oferta
+- **Ahorro anual** — lo que se ahorra el cliente en un año
+- **Comisión estimada** — lo que ganas tú
+- **Tres formas de ordenar**: *más ahorro para el cliente*, *equilibrado*, y *mejor comisión*. Esta última **nunca te enseña una oferta que deje al cliente sin un ahorro decente**. Está puesto a propósito: una venta que solo te conviene a ti se cae a los tres meses y te la quitan.
 
-**Los avisos en ámbar — qué significan y qué hacer:**
+**Si sale un aviso en ámbar:**
 
-| Aviso | Qué significa | Qué haces |
+| Dice | Significa | Qué haces |
 |---|---|---|
-| **Comisión "Sin configurar"** | Esa tarifa **no tiene comisión configurada**: si la cierras, no cobras | No la ofrezcas. Avisa al administrador |
-| **Servicios de ajuste** | Un coste del sistema eléctrico (unos pocos €/MWh) que **cada comercializadora factura de forma distinta**: unas lo llevan incluido, otras lo cobran aparte. Si no está configurado, la comparativa puede quedarse corta | Menciónaselo al cliente como coste variable; no prometas el importe exacto |
-| **Energía reactiva / faltan datos** | La factura tiene conceptos que no se han podido leer | Vuelve a la factura y complétalos |
+| **Comisión "Sin configurar"** | Esa tarifa no tiene comisión puesta. Si la cierras, **no cobras nada** | No la ofrezcas. Dile al administrador que la configure |
+| **Servicios de ajuste** | Un coste del sistema (unos pocos euros al mes). Cada comercializadora lo cobra a su manera: unas lo llevan dentro del precio y otras lo ponen aparte. Si no está configurado, la comparativa puede quedarse corta | Avísale al cliente de que es un coste que varía. No le des una cifra exacta |
+| **Faltan datos / energía reactiva** | Hay conceptos de la factura que no se han podido leer | Vuelve atrás y complétalos a mano |
 
-> **Regla de oro (y está en tu contrato):** no prometas nada que no esté en los anexos oficiales de la comercializadora. El precio simulado **no es vinculante**.
+> **La regla que no se salta nadie:** no prometas nada que no esté por escrito en la oferta oficial de la comercializadora. Lo que ves en pantalla es una simulación, **no un precio cerrado**. Está en tu contrato, cláusula CUARTA.
 
 ### Paso 5 — Genera y envía la propuesta
 
@@ -121,11 +140,15 @@ GENERADA  →  VALIDADA  →  LIQUIDADA  →  PAGADA
 
 **Autofactura:** Zinergia emite la factura de tus comisiones en tu nombre, con tu acuerdo previo. Tú solo revisas y aceptas cada factura.
 
-### Decomisiones (importante)
+### Decomisiones: cuándo te quitan una comisión
 
-Si un cliente que has traído **se da de baja pronto**, la comercializadora le retira la comisión a Zinergia, y esa retirada te llega a ti. Se descuenta de liquidaciones posteriores.
+Si un cliente tuyo **se da de baja pronto**, la comercializadora le retira el dinero a Zinergia, y esa retirada te llega a ti. Se te descuenta de la siguiente liquidación.
 
-**Consulta siempre la Política de Decomisiones vigente** — es el Anexo II de tu contrato — para saber cuánto tiempo tiene que aguantar cada contrato y en qué proporción se devuelve. La mejor defensa contra una decomisión es **una venta bien hecha**: cliente informado, sin promesas falsas, con documentación correcta.
+En otras empresas lo verás escrito como ***clawback*** o ***baja < 1 año***. Es lo mismo.
+
+**Cuánto tiene que aguantar cada contrato está en el Anexo II de tu contrato** (la Política de Decomisiones), y cambia según la comercializadora. El plazo **se cuenta desde la fecha de activación**, no desde que firmas.
+
+La mejor defensa es una venta bien hecha: cliente informado, sin promesas de más, y papeles correctos a la primera.
 
 ---
 
@@ -156,10 +179,13 @@ Solo se pueden ofrecer las del catálogo. Si falta una comercializadora, comént
 **¿Puedo pasarle un cliente a otro compañero?**
 Sí, pero es una operación controlada: la solicitas y la aprueba el administrador o tu franquicia. Queda registrada con motivo.
 
-**¿Qué es el CUPS?**
-El código único del punto de suministro (`ES00…`). Los 4 dígitos que van detrás de `ES` identifican a la **distribuidora**: la empresa que mantiene el cable y el contador, distinta de la comercializadora con la que el cliente contrata.
+**¿Cómo sé la distribuidora de un cliente?**
+Te la dice el propio CUPS: los 4 números que van justo detrás de `ES`. **No tienes que buscarla** — la app la saca sola y te la enseña en la ficha del punto de suministro.
 
-**No tienes que buscarla:** la app la deduce sola del CUPS y te la muestra en la ficha del punto de suministro. Si no aparece, es que ese prefijo no consta en el catálogo — la app prefiere no decir nada antes que decirte una distribuidora equivocada.
+Si no aparece ninguna, es que ese código no está en la lista. La app prefiere no decirte nada antes que decirte una distribuidora equivocada en una propuesta.
+
+**Me da error al meter el CUPS.**
+Tiene que empezar por `ES` y llevar 18-22 caracteres detrás. No valen abreviaturas, ni "pendiente", ni el número a medias: un CUPS mal metido se guarda cifrado y luego no sirve para nada.
 
 **¿Y si el cliente tiene placas solares?**
 Díselo a administración antes de cerrar: la compensación de excedentes todavía no está configurada en el catálogo y la comparativa saldría incompleta.
