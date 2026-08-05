@@ -1,8 +1,8 @@
 # Guía del Colaborador — App Zinergia
 
 **Para:** comerciales y colaboradores de la red.
-**Versión:** 2026-08-05 · basada en la aplicación en producción.
-**Capturas:** los puntos marcados `[CAPTURA n]` tienen al final la ruta exacta y qué encuadrar.
+**Versión:** 2026-08-05
+**Capturas:** tomadas del entorno de pruebas, con datos ficticios y correos difuminados. La aplicación es la misma. Se regeneran con `node scripts/capturas/generar-capturas.mjs colaborador`.
 
 ---
 
@@ -38,7 +38,10 @@ Abajo (móvil) o arriba (ordenador) tienes cuatro botones fijos:
 
 En **"Más"** están: **Facturas subidas · Propuestas · Tarifas · Tareas**.
 
-Y arriba a la derecha, siempre visible, el botón verde **"Nueva factura"** — es por donde empieza todo. `[CAPTURA 1]`
+Y arriba a la derecha, siempre visible, el botón verde **"Nueva factura"** — es por donde empieza todo. 
+
+![La barra de navegacion y el boton Nueva factura](img/c1-navegacion.png)
+
 
 ---
 
@@ -60,7 +63,10 @@ Pídele al cliente **su última factura de luz completa** (todas las páginas). 
 
 ### Paso 2 — Súbela
 
-**Nueva factura** → arrastra el archivo o hazle una foto. Vale PDF y foto. `[CAPTURA 2]`
+**Nueva factura** → arrastra el archivo o hazle una foto. Vale PDF y foto. 
+
+![Pantalla de subir factura](img/c2-subir-factura.png)
+
 
 La app la lee sola (OCR) y extrae: titular, CUPS, tarifa de acceso, potencias contratadas, consumos por periodo y el importe.
 
@@ -68,7 +74,7 @@ La app la lee sola (OCR) y extrae: titular, CUPS, tarifa de acceso, potencias co
 
 **Esto es lo más importante de tu trabajo.** La lectura automática es buena, pero no infalible: si un dato entra mal, la comparativa saldrá mal y la propuesta será falsa.
 
-Comprueba uno a uno: `[CAPTURA 3]`
+Comprueba uno a uno:
 
 - **Titular y CUPS** — que coincidan con la factura
 - **Días del periodo** — si son 30, 31 o los que sean
@@ -80,7 +86,9 @@ Corrige lo que esté mal y confirma.
 
 ### Paso 4 — La comparativa
 
-La app compara la factura contra todo el catálogo de tarifas y te ordena las ofertas. `[CAPTURA 4]`
+La app compara la factura contra todo el catálogo de tarifas y te ordena las ofertas.
+
+> Las pantallas de los pasos 3 y 4 solo existen mientras se trabaja una factura de verdad, así que no hay captura: aparecen solas al subir la primera.
 
 **Qué mirar de cada oferta:**
 
@@ -100,7 +108,10 @@ La app compara la factura contra todo el catálogo de tarifas y te ordena las of
 
 ### Paso 5 — Genera y envía la propuesta
 
-Elige la oferta y genera la propuesta. La app crea un **enlace público** para el cliente: él lo abre, ve su comparativa y la **acepta desde ahí**, quedando registrada la aceptación con fecha y evidencia. `[CAPTURA 5]`
+Elige la oferta y genera la propuesta. La app crea un **enlace público** para el cliente: él lo abre, ve su comparativa y la **acepta desde ahí**, quedando registrada la aceptación con fecha y evidencia. 
+
+![Listado de propuestas](img/c5-propuestas.png)
+
 
 En **Más → Propuestas** ves todas las tuyas y en qué estado están.
 
@@ -117,13 +128,19 @@ Sin esos documentos, el alta no se valida y **no se paga**.
 
 ### Paso 7 — Seguimiento
 
-**Clientes** (`/dashboard/clients`) — tu cartera, con sus puntos de suministro y su estado. `[CAPTURA 6]`
+**Clientes** (`/dashboard/clients`) — tu cartera, con sus puntos de suministro y su estado. 
+
+![Cartera de clientes](img/c6-clientes.png)
+
 
 ---
 
 ## 3 · Tus comisiones
 
-**Comisiones** (`/dashboard/commissions`) — cuánto llevas, qué está pendiente y qué ya se ha liquidado. `[CAPTURA 7]`
+**Comisiones** (`/dashboard/commissions`) — cuánto llevas, qué está pendiente y qué ya se ha liquidado. 
+
+![Resumen de comisiones](img/c7-comisiones.png)
+
 
 Los estados por los que pasa tu dinero:
 
@@ -136,7 +153,10 @@ GENERADA  →  VALIDADA  →  LIQUIDADA  →  PAGADA
 - **Liquidada**: entra en la liquidación mensual
 - **Pagada**: cobrada
 
-**Lo que tienes que hacer tú:** tener completos tus **datos fiscales** en **Ajustes → Datos Fiscales para Facturación** (NIF, domicilio fiscal, IBAN, régimen de IVA/IRPF). Sin ellos no se te puede liquidar. `[CAPTURA 8]`
+**Lo que tienes que hacer tú:** tener completos tus **datos fiscales** en **Ajustes → Datos Fiscales para Facturación** (NIF, domicilio fiscal, IBAN, régimen de IVA/IRPF). Sin ellos no se te puede liquidar. 
+
+![Datos fiscales para facturacion](img/c8-datos-fiscales.png)
+
 
 **Autofactura:** Zinergia emite la factura de tus comisiones en tu nombre, con tu acuerdo previo. Tú solo revisas y aceptas cada factura.
 
@@ -191,18 +211,3 @@ Tiene que empezar por `ES` y llevar 18-22 caracteres detrás. No valen abreviatu
 Díselo a administración antes de cerrar: la compensación de excedentes todavía no está configurada en el catálogo y la comparativa saldría incompleta.
 
 ---
-
-## Lista de capturas para insertar
-
-| # | Dónde | Qué encuadrar |
-|---|---|---|
-| 1 | `/dashboard` | La barra de navegación con los 4 botones y el botón verde "Nueva factura" |
-| 2 | `/dashboard/simulator` | La zona de subir factura |
-| 3 | `/dashboard/simulator` tras subir | La pantalla de confirmar datos leídos |
-| 4 | Comparativa | La lista de ofertas con ahorro, comisión y un aviso ámbar |
-| 5 | `/dashboard/proposals` | La lista de propuestas con sus estados |
-| 6 | `/dashboard/clients` | La cartera de clientes |
-| 7 | `/dashboard/commissions` | El resumen de comisiones |
-| 8 | `/dashboard/settings` | La pestaña "Datos Fiscales para Facturación" |
-
-> Para capturar la vista de colaborador hay que iniciar sesión con una cuenta de colaborador (no con la de administrador, que ve otras pantallas).

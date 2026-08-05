@@ -1,22 +1,40 @@
 # Guía del Administrador — App Zinergia
 
 **Para:** el técnico responsable de altas, revisión de facturas y propuestas.
-**Versión:** 2026-08-05 · basada en la aplicación en producción (`zinergia.vercel.app`).
-**Capturas:** los puntos marcados `[CAPTURA n]` tienen al final una lista con la ruta exacta y qué encuadrar. Se insertan en 15 minutos con Win+Mayús+S.
+**Versión:** 2026-08-05 · pantallas recorridas y comprobadas en la aplicación real.
+**Capturas:** tomadas del entorno de pruebas, por eso los nombres son "E2E Admin", "Fixture…" y los correos salen difuminados. La aplicación es la misma; **las cifras que veas en las imágenes no son las reales de Zinergia**. Se regeneran con `node scripts/capturas/generar-capturas.mjs admin`.
 
 ---
 
 ## 1 · Acceso y qué significa ser administrador
 
-Entra en **zinergia.vercel.app** con la cuenta de administrador. La navegación inferior tiene 5 zonas: **Hoy · Clientes · Comisiones · Equipo · Más**.
+Entra en **zinergia.vercel.app** con la cuenta de administrador.
+
+**En ordenador** tienes una barra lateral a la izquierda con todo agrupado:
+
+| Grupo | Qué hay dentro |
+|---|---|
+| **Hoy** | Tu cola de trabajo del día |
+| **Comercial** | Oportunidades · Clientes |
+| **Economía** | Comisiones · Facturación · Tarifas |
+| **Organización** | Equipo · Formación |
+| **Control** | Informes · Procesamiento de facturas · Documentos · Protección de datos · Historial de actividad |
+
+**En móvil** esa barra desaparece y quedan cinco botones abajo: **Hoy · Clientes · Comisiones · Equipo · Más**. Lo demás vive dentro de "Más".
 
 El administrador ve toda la red, valida operaciones y es el único que puede cambiar roles y franquicias.
 
-> ⚠️ **Regla que no se puede romper:** la cuenta de administrador **nunca debe tener franquicia ni responsable asignados**. Si alguien se los asigna, el sistema deja de reconocerla como administrador y no podrá gestionar la red (y ya no es recuperable desde la propia app). En "Equipo y red" el admin debe aparecer siempre con franquicia *"Sin asignar"*. `[CAPTURA 1]`
+> ⚠️ **Regla que no se puede romper:** la cuenta de administrador **nunca debe tener franquicia ni responsable asignados**. Si alguien se los asigna, el sistema deja de reconocerla como administrador y no podrá gestionar la red (y ya no es recuperable desde la propia app). En "Equipo y red" el admin debe aparecer siempre con franquicia *"Sin asignar"*. 
+
+![Personas: el administrador con franquicia Sin asignar](img/01-admin-sin-franquicia.png)
+
 
 ## 2 · El día a día: el panel "Hoy"
 
-Al entrar, el panel **Hoy** lista las operaciones que necesitan revisión, en **dos colas**: `[CAPTURA 2]`
+Al entrar, el panel **Hoy** lista las operaciones que necesitan revisión, en **dos colas**: 
+
+![Panel Hoy con sus dos colas](img/02-panel-hoy.png)
+
 
 **1 · Preparar propuestas** — *"Facturas analizadas que todavía no tienen una propuesta."*
 Arriba, dos cifras: cuántas hay **pendientes** y la **facturación/año** que suman. Cada tarjeta muestra el cliente, el peaje detectado (2.0TD…), **los días que lleva sin procesar** en ámbar, el colaborador que la subió, el CUPS, el coste anual, y el botón **Analizar**, que abre el comparador con esos datos.
@@ -28,18 +46,27 @@ Cuando no hay nada, muestra *"Sin expedientes pendientes"*.
 
 ## 3 · Alta de un colaborador (de la invitación al primer acceso)
 
-1. **Equipo** (`/admin/agents`) → pestaña **"Estructura comercial"** → botón **"Invitar a la Red"**, arriba a la derecha. `[CAPTURA 3]`
+1. **Equipo** (`/admin/agents`) → pestaña **"Estructura comercial"** → botón **"Invitar a la Red"**, arriba a la derecha. 
+
+![Estructura comercial: indicadores y el boton Invitar a la Red](img/03-invitar-red.png)
+
 2. Rellena el email del colaborador y envía. La invitación caduca si no se usa.
 3. El colaborador recibe el enlace, se registra y **queda pendiente hasta que el sistema confirma el alta** (el aprovisionamiento se reconcilia solo; si un alta se queda atascada más de 15 minutos, queda registrada para revisión).
 4. Cuando aparezca en la red, comprueba en **Equipo y red → Personas** (`/admin/agents`) que tiene el rol correcto.
 
 ### Cambiar el rol o la franquicia de alguien
 
-En **Equipo → pestaña "Personas"** (`/admin/agents`), cada persona tiene dos iconos a la derecha: **lápiz** (editar nombre) y **llave** (cambiar autoridad). Arriba hay buscador por nombre o email y filtros por rol y franquicia. `[CAPTURA 4]`
+En **Equipo → pestaña "Personas"** (`/admin/agents`), cada persona tiene dos iconos a la derecha: **lápiz** (editar nombre) y **llave** (cambiar autoridad). Arriba hay buscador por nombre o email y filtros por rol y franquicia. 
+
+![Fila de colaborador con los iconos de lapiz y llave](img/04-fila-colaborador.png)
+
 
 > **Sobre el vocabulario:** en esta tabla el rol sale escrito **"AGENTE"**, pero en el organigrama, en el diálogo de autoridad y en el resto de la aplicación la misma persona es **"Colaborador"**. Son lo mismo.
 
-El diálogo **"Cambiar autoridad"** muestra el estado ACTUAL y la PROPUESTA, y exige cuatro cosas: `[CAPTURA 5]`
+El diálogo **"Cambiar autoridad"** muestra el estado ACTUAL y la PROPUESTA, y exige cuatro cosas: 
+
+![Dialogo Cambiar autoridad](img/05-cambiar-autoridad.png)
+
 
 | Campo | Qué poner |
 |---|---|
@@ -56,7 +83,10 @@ El diálogo **"Cambiar autoridad"** muestra el estado ACTUAL y la PROPUESTA, y e
 
 **Tu cola de trabajo es "Hoy", no esta pantalla.** Desde **Hoy → Analizar** se abre la factura con los datos extraídos para **confirmarlos o corregirlos** antes de generar la comparativa. Revisa siempre: titular, CUPS, periodo (días), consumos por periodo y potencias.
 
-**`/admin/ocr` — "Observabilidad OCR"** es otra cosa: mide la **salud del sistema**, no las facturas concretas. De hecho avisa de que funciona *"sin mostrar datos extraídos de facturas"*. Verás: trabajos de las últimas 24 h, % de fallos a 30 días, cuántos hay atascados, agentes con reintentos, y el desglose por ventanas de 24 h / 7 días / 30 días. `[CAPTURA 6]`
+**`/admin/ocr` — "Observabilidad OCR"** es otra cosa: mide la **salud del sistema**, no las facturas concretas. De hecho avisa de que funciona *"sin mostrar datos extraídos de facturas"*. Verás: trabajos de las últimas 24 h, % de fallos a 30 días, cuántos hay atascados, agentes con reintentos, y el desglose por ventanas de 24 h / 7 días / 30 días. 
+
+![Observabilidad OCR](img/06-observabilidad-ocr.png)
+
 
 Míralo cuando **sospeches que algo va mal** —facturas que no aparecen, colaboradores que se quejan de que no se procesa—, no como rutina diaria. Todo a cero con facturas pendientes antiguas significa que nadie está subiendo nada nuevo, no que haya un fallo.
 
@@ -74,7 +104,10 @@ Míralo cuando **sospeches que algo va mal** —facturas que no aparecen, colabo
 
 ## 6 · Tarifas y comisiones (el catálogo)
 
-**`/dashboard/tariffs`** — *"Gestión de Tarifas · Panel administrador — edición completa"*. Tres pestañas con su recuento: **Electricidad (62) · Gas (3) · Comisiones (352)**, y arriba a la derecha el total: *65 tarifas · 352 reglas*. Debajo, filtros rápidos por compañía. `[CAPTURA 7]`
+**`/dashboard/tariffs`** — *"Gestión de Tarifas · Panel administrador — edición completa"*. Tres pestañas, cada una con su recuento: **Electricidad · Gas · Comisiones**, y arriba a la derecha el total de tarifas y reglas. Debajo, filtros rápidos por compañía. En producción, a día de hoy: 62 de luz, 3 de gas y 352 reglas de comisión.
+
+![Gestion de Tarifas](img/07-tarifas.png)
+
 
 Cada tarifa lleva una etiqueta de estado de comisión: **"COMISIÓN OK"** en verde, o **"SIN COMISIÓN"** en ámbar con un triángulo de aviso. Las que están en ámbar aparecen atenuadas porque están desactivadas.
 
@@ -89,7 +122,10 @@ Cada tarifa lleva una etiqueta de estado de comisión: **"COMISIÓN OK"** en ver
 
 ## 7 · Control económico
 
-**`/admin/commissions`** — *"Control económico · Comisiones"*. Tres pestañas: **Operaciones · Modelo económico · Fiscal**. Dentro de Operaciones, bajo el título *"Trabajo pendiente — cada cola tiene una única decisión operativa"*, están las tres colas con su contador: `[CAPTURA 8]`
+**`/admin/commissions`** — *"Control económico · Comisiones"*. Tres pestañas: **Operaciones · Modelo económico · Fiscal**. Dentro de Operaciones, bajo el título *"Trabajo pendiente — cada cola tiene una única decisión operativa"*, están las tres colas con su contador: 
+
+![Control economico: las tres colas](img/08-comisiones.png)
+
 
 ```
 VALIDAR  →  LIQUIDAR  →  AJUSTES Y CONCILIACIÓN
@@ -104,7 +140,10 @@ VALIDAR  →  LIQUIDAR  →  AJUSTES Y CONCILIACIÓN
 Todo vive en **Equipo** (`/admin/agents`), en dos pestañas:
 
 - **Personas** — todas las personas con rol y franquicia, con buscador y filtros.
-- **Estructura comercial** — *"Mi Red"*: cuatro indicadores (colaboradores activos, franquicias activas, volumen total de red y royalty estimado), el botón **Invitar a la Red**, y debajo el **organigrama** con la cartera y el volumen de cada persona. Tiene además tres vistas: Estructura · Mapa · Inteligencia. `[CAPTURA 9]`
+- **Estructura comercial** — *"Mi Red"*: cuatro indicadores (colaboradores activos, franquicias activas, volumen total de red y royalty estimado), el botón **Invitar a la Red**, y debajo el **organigrama** con la cartera y el volumen de cada persona. Tiene además tres vistas: Estructura · Mapa · Inteligencia. 
+
+![Organigrama de la red](img/09-organigrama.png)
+
 - Traspaso de clientes entre colaboradores: es una operación gobernada — el colaborador puede **solicitarlo**, y lo apruebas tú o la franquicia. Todo traspaso queda registrado con motivo.
 
 ## 9 · Otras zonas del admin
@@ -129,21 +168,3 @@ Todo vive en **Equipo** (`/admin/agents`), en dos pestañas:
 | Un admin aparece con franquicia asignada | **No debe pasar.** No lo guardes; si ya pasó, avisar a soporte técnico antes de tocar nada |
 
 ---
-
-## Lista de capturas para insertar
-
-Rutas verificadas contra la aplicación en producción el 05/08/2026.
-
-| # | Ruta | Qué encuadrar |
-|---|---|---|
-| 1 | `/admin/agents` → Personas | La fila de **Admin Zinergia** con el rol ADMIN y la franquicia *"Sin asignar"* |
-| 2 | `/admin` | El panel Hoy entero: las dos colas, con los contadores de "Preparar propuestas" arriba |
-| 3 | `/admin/agents` → Estructura comercial | Los cuatro indicadores y el botón **"Invitar a la Red"** |
-| 4 | `/admin/agents` → Personas | Una fila de colaborador con los iconos lápiz y llave a la derecha |
-| 5 | `/admin/agents` → icono llave | El diálogo **"Cambiar autoridad"** completo: ACTUAL / PROPUESTA / Rol / Franquicia / Responsable / Motivo |
-| 6 | `/admin/ocr` | Los cuatro indicadores de cabecera de **Observabilidad OCR** |
-| 7 | `/dashboard/tariffs` | Las tres pestañas con sus recuentos y varias filas, **incluyendo una con la etiqueta ámbar "SIN COMISIÓN"** |
-| 8 | `/admin/commissions` | "Trabajo pendiente" con las tres colas y sus contadores |
-| 9 | `/admin/agents` → Estructura comercial, abajo | El organigrama: el admin arriba y los colaboradores colgando, con cartera y volumen |
-
-> ⚠️ **Antes de guardar cada imagen, tapa los datos personales.** Estas pantallas muestran nombres reales de clientes, CUPS y correos de colaboradores. Difumina o recorta lo que sea identificable: la guía va a circular entre personas que no tienen por qué ver la cartera.

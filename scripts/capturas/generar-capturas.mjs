@@ -160,12 +160,13 @@ async function capturasAdmin(browser) {
 
     // Se abre y se cierra con Cancelar: no se guarda ningún cambio.
     await paso('cambiar autoridad', async () => {
-        const llave = page.locator('button:has(svg), [aria-label*="autoridad" i]').last();
-        await llave.click({ timeout: 15_000 });
-        if (await page.getByText(/Cambiar autoridad/i).isVisible().catch(() => false)) {
-            await capturar(page, '05-cambiar-autoridad');
-            await page.getByRole('button', { name: /Cancelar/i }).click();
-        }
+        // El botón se identifica por su etiqueta accesible, "Cambiar autoridad de
+        // <nombre>". Buscarlo por "el último botón con un icono" dependía del orden
+        // de la tabla y fallaba en silencio.
+        await page.getByRole('button', { name: /Cambiar autoridad de/i }).first().click({ timeout: 20_000 });
+        await page.getByRole('heading', { name: /Cambiar autoridad/i }).waitFor({ timeout: 15_000 });
+        await capturar(page, '05-cambiar-autoridad');
+        await page.getByRole('button', { name: /^Cancelar$/i }).click();
     });
 
     await paso('estructura comercial', async () => {

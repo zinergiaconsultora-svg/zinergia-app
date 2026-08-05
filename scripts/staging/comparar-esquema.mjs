@@ -46,12 +46,34 @@ const TABLAS = [
     'tariff_commissions',
 ];
 
-// Funciones añadidas por las migraciones de agosto.
+// Funciones que el código actual necesita.
+//
+// Hay que llamarlas con sus parámetros reales: PostgREST resuelve por nombre de
+// argumento, así que invocar una función de seis parámetros sin ninguno devuelve
+// "no se encuentra" aunque exista. Comprobarlo mal daba dos falsos negativos.
+//
+// Los valores están elegidos para que la función se rechace a sí misma —actor sin
+// permisos, identificadores inexistentes— antes de escribir nada.
+const UUID_NULO = '00000000-0000-0000-0000-000000000000';
 const FUNCIONES = [
     ['authorize_sips_consumption', { p_cups_hash: '0'.repeat(64) }],
     ['get_sips_consent_status', { p_cups_hash: '0'.repeat(64) }],
-    ['configure_decommission_policy', null],
-    ['transfer_client_ownership', null],
+    ['configure_decommission_policy', {
+        p_actor_id: UUID_NULO,
+        p_marketer_name: '',
+        p_product_code: null,
+        p_consolidation_days: 0,
+        p_clawback_days: 0,
+        p_bands: [],
+    }],
+    ['transfer_client_ownership', {
+        p_client_id: UUID_NULO,
+        p_to_owner_id: UUID_NULO,
+        p_expected_ownership_version: 0,
+        p_reason_code: '',
+        p_request_id: UUID_NULO,
+        p_notes: null,
+    }],
 ];
 
 console.log(`\n  Staging: ${new URL(url).host}\n`);
