@@ -483,6 +483,15 @@ export default function SettingsView({
                                     )}
                                     {networkNodes.map((node) => {
                                         const isFranchise = node.role === 'franchise';
+                                        // Había una sola pregunta —"¿es franquicia?"— y todo lo demás
+                                        // se etiquetaba como colaborador, así que la cuenta de
+                                        // administración aparecía como un colaborador más. Los roles
+                                        // son tres, no dos.
+                                        const roleLabel = node.role === 'franchise'
+                                            ? 'Franquicia'
+                                            : node.role === 'admin'
+                                                ? 'Administración'
+                                                : 'Colaborador';
                                         const royalty = node.franchise_config?.royalty_percent ?? 0;
                                         const childCount = (node.children || []).length;
                                         return (
@@ -501,9 +510,11 @@ export default function SettingsView({
                                                 <td className="px-6 py-4">
                                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${isFranchise
                                                         ? 'bg-indigo-50 text-indigo-700 border-indigo-100'
-                                                        : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                                        : node.role === 'admin'
+                                                            ? 'bg-rose-50 text-rose-700 border-rose-100'
+                                                            : 'bg-emerald-50 text-emerald-700 border-emerald-100'
                                                         }`}>
-                                                        {isFranchise ? 'Franquicia' : 'Colaborador'}
+                                                        {roleLabel}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">

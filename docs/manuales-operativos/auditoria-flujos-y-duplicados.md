@@ -81,13 +81,31 @@ Componentes exportados que **ningún fichero importa**:
 
 ---
 
-## 4 · Lo arreglado hoy
+## 3 bis · La tabla de la red llamaba "Colaborador" al administrador · MEDIA
 
-- **Pestaña "Red" fuera del perfil de colaborador.** Mismo permiso que su pestaña hermana de Comisiones. Quien configura comisiones la sigue viendo. Con test que lo fija en las dos direcciones.
+En la pestaña "Red", la columna **Tipo** hacía **una sola pregunta**: *¿es franquicia?* Todo lo que no lo fuera se etiquetaba **Colaborador** — incluida la cuenta de administración, que aparecía listada como un colaborador más.
+
+Los roles son **tres**, no dos. Y precisamente el administrador es el que no debe confundirse con un colaborador: su autoridad se sostiene sobre no tener franquicia ni responsable, que es el invariante que blindamos en agosto. Una pantalla que lo presenta como colaborador contradice por escrito lo que el sistema garantiza por dentro.
+
+**Arreglado**, con test que comprueba las tres etiquetas a la vez.
+
+> En esa misma fila hay un **"Canon Entrada: 3.000 €" escrito a mano en el código**, no leído de ningún sitio. Mismo patrón que los repartos 100/80/50 de las tarjetas de arriba: cifras que parecen datos y no lo son. No lo he tocado, pero conviene saberlo antes de tomar una decisión mirando esa pantalla.
+
+## 4 · Lo arreglado
+
+**Pestaña "Red" fuera del perfil de colaborador.** Mismo permiso que su pestaña hermana de Comisiones. Quien configura comisiones la sigue viendo. Con test que lo fija en las dos direcciones.
+
+**Control de duplicados unificado.** Los dos controles comparten ahora una sola pieza (`src/lib/ocr/invoiceIdentity.ts`) que decide qué es la misma factura y contra qué facturas comparar:
+
+- **El agujero del administrador, cerrado.** Quien no tiene franquicia ya no se da por bueno sin comprobar nada: se busca entre sus propias facturas. Hay test, y comprobé que **falla si se reintroduce el fallo**.
+- **Una sola forma de leer la fecha.** Había dos copias de las mismas expresiones regulares; ahora hay una. Dos copias de una regla acaban divergiendo.
+- **Los clientes se buscan por su columna correcta** (`owner_id` cuando no hay franquicia), que es donde el arreglo anterior se habría quedado corto sin encontrar nada.
+
+**Lo que queda de este punto:** que el aviso de duplicado **bloquee** en vez de solo avisar. Hoy es una alerta más en una lista, y se puede ignorar tantas veces como haga falta — que es literalmente lo que pasó doce veces. Es un cambio en el flujo de venta y prefiero que lo veas antes de tocarlo.
 
 ## Orden sugerido para lo demás
 
-1. **Unificar el control de duplicados** (punto 2) — es lo que dejó entrar los doce
+1. **Que el duplicado bloquee** con opción consciente de continuar — la otra mitad del punto 2
 2. **Quitar Perfil/Operativa rotas** del colaborador (punto 1) — decisión de producto, dos horas
 3. **Borrar el código muerto** (punto 3) — media hora, y evita el próximo susto
 4. La validación de 3 meses, ahora que se sabe que la fecha ya viene extraída

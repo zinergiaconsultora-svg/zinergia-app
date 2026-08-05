@@ -5,6 +5,7 @@ import { logger } from '@/lib/utils/logger';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { requireServerRole, getUserRole } from '@/lib/auth/permissions';
+import { isSameInvoice, parseInvoiceYearMonth } from '@/lib/ocr/invoiceIdentity';
 import { env } from '@/lib/env';
 
 export interface OcrJobRecord {
@@ -229,16 +230,10 @@ export async function checkDuplicateInvoice(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
-    // Extraer año y mes de la fecha de factura (formatos: YYYY-MM-DD, DD/MM/YYYY, MM/YYYY)
-    let yearMonth: string | null = null;
-    const iso = invoiceDate?.match(/(\d{4})-(\d{2})/);
-    const dmy = invoiceDate?.match(/\d{2}\/(\d{2})\/(\d{4})/);
-    const my  = invoiceDate?.match(/(\d{2})\/(\d{4})/);
-    if (iso)      yearMonth = `${iso[1]}-${iso[2]}`;
-    else if (dmy) yearMonth = `${dmy[2]}-${dmy[1]}`;
-    else if (my)  yearMonth = `${my[2]}-${my[1]}`;
-
-    if (!yearMonth) return null;
+    // El periodo se lee con el mismo analizador que usa el resto de la aplicación.
+    // Antes había aquí una segunda copia de estas expresiones regulares, y dos
+    // copias de la misma regla acaban divergiendo.
+    if (parseInvoiceYearMonth(invoiceDate) === null) return null;
 
     // Buscar jobs completados del mismo agente con el mismo CUPS
     const { data, error } = await supabase
@@ -257,20 +252,12 @@ export async function checkDuplicateInvoice(
         const ext = job.extracted_data as Record<string, unknown> | null;
         if (!ext) continue;
 
-        const jobCups = String(ext.cups ?? '').trim().toUpperCase();
-        if (jobCups !== cups.trim().toUpperCase()) continue;
+        const esLaMisma = isSameInvoice(
+            { cups, invoiceDate },
+            { cups: ext.cups as string | null, invoiceDate: ext.invoice_date as string | null },
+        );
 
-        // Mismo CUPS — comprobar si es el mismo mes/año según invoice_date del job
-        const jobDate = String(ext.invoice_date ?? '');
-        const jIso = jobDate.match(/(\d{4})-(\d{2})/);
-        const jDmy = jobDate.match(/\d{2}\/(\d{2})\/(\d{4})/);
-        const jMy  = jobDate.match(/(\d{2})\/(\d{4})/);
-        let jobYearMonth: string | null = null;
-        if (jIso)      jobYearMonth = `${jIso[1]}-${jIso[2]}`;
-        else if (jDmy) jobYearMonth = `${jDmy[2]}-${jDmy[1]}`;
-        else if (jMy)  jobYearMonth = `${jMy[2]}-${jMy[1]}`;
-
-        if (jobYearMonth === yearMonth) {
+        if (esLaMisma) {
             return {
                 jobId: job.id,
                 createdAt: job.created_at,
