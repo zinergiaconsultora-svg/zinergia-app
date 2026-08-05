@@ -1,8 +1,27 @@
 # Guía del Colaborador — App Zinergia
 
 **Para:** comerciales y colaboradores de la red.
-**Versión:** 2026-08-05 · basada en la aplicación en producción.
-**Capturas:** los puntos marcados `[CAPTURA n]` tienen al final la ruta exacta y qué encuadrar.
+**Versión:** 2026-08-05
+**Capturas:** tomadas del entorno de pruebas, con datos ficticios y correos difuminados. La aplicación es la misma. Se regeneran con `node scripts/capturas/generar-capturas.mjs colaborador`.
+
+---
+
+## 0 · Las diez palabras que hay que saber
+
+Si vienes de otra comercializadora, algunas se dicen distinto. Esta columna te vale para las dos.
+
+| Palabra | Qué es, en cristiano |
+|---|---|
+| **CUPS** | El código del punto de luz. Empieza por `ES` y no cambia aunque cambies de compañía. Es como el DNI del contador |
+| **Comercializadora** (o *compañía*) | La empresa que le vende la luz al cliente y le manda la factura: LOGOS, NATURGY, Plenitude, GANA |
+| **Distribuidora** | La dueña del cable y del contador. **No se elige**: te toca la de tu zona. Es quien da de alta el cambio |
+| **Peaje** (o *ATR*, o *tarifa de acceso*) | El "tamaño" de la conexión: 2.0TD casas y comercios pequeños, 3.0TD y 6.1TD negocios grandes |
+| **Potencia** | Los kW contratados. Se paga aunque no consumas |
+| **Periodos** (P1, P2, P3…) | Las franjas horarias. La luz no cuesta lo mismo por la mañana que de madrugada |
+| **Captación** | Traer un cliente nuevo. Lo normal es *cambio de comercializadora* |
+| **Cartera** | Los clientes que ya son tuyos y siguen dando comisión mes a mes |
+| **Activación** | El día que la distribuidora hace efectivo el cambio. **Desde ahí se cuenta todo**: cuándo cobras y hasta cuándo te lo pueden quitar |
+| **Decomisión** (verás *clawback* o *baja < 1 año*) | Que te retiren una comisión ya cobrada porque el cliente se fue antes de tiempo |
 
 ---
 
@@ -19,7 +38,10 @@ Abajo (móvil) o arriba (ordenador) tienes cuatro botones fijos:
 
 En **"Más"** están: **Facturas subidas · Propuestas · Tarifas · Tareas**.
 
-Y arriba a la derecha, siempre visible, el botón verde **"Nueva factura"** — es por donde empieza todo. `[CAPTURA 1]`
+Y arriba a la derecha, siempre visible, el botón verde **"Nueva factura"** — es por donde empieza todo. 
+
+![La barra de navegacion y el boton Nueva factura](img/c1-navegacion.png)
+
 
 ---
 
@@ -41,7 +63,10 @@ Pídele al cliente **su última factura de luz completa** (todas las páginas). 
 
 ### Paso 2 — Súbela
 
-**Nueva factura** → arrastra el archivo o hazle una foto. Vale PDF y foto. `[CAPTURA 2]`
+**Nueva factura** → arrastra el archivo o hazle una foto. Vale PDF y foto. 
+
+![Pantalla de subir factura](img/c2-subir-factura.png)
+
 
 La app la lee sola (OCR) y extrae: titular, CUPS, tarifa de acceso, potencias contratadas, consumos por periodo y el importe.
 
@@ -49,7 +74,7 @@ La app la lee sola (OCR) y extrae: titular, CUPS, tarifa de acceso, potencias co
 
 **Esto es lo más importante de tu trabajo.** La lectura automática es buena, pero no infalible: si un dato entra mal, la comparativa saldrá mal y la propuesta será falsa.
 
-Comprueba uno a uno: `[CAPTURA 3]`
+Comprueba uno a uno:
 
 - **Titular y CUPS** — que coincidan con la factura
 - **Días del periodo** — si son 30, 31 o los que sean
@@ -61,27 +86,32 @@ Corrige lo que esté mal y confirma.
 
 ### Paso 4 — La comparativa
 
-La app compara la factura contra todo el catálogo de tarifas y te ordena las ofertas. `[CAPTURA 4]`
+La app compara la factura contra todo el catálogo de tarifas y te ordena las ofertas.
 
-**Cómo leer el resultado:**
+> Las pantallas de los pasos 3 y 4 solo existen mientras se trabaja una factura de verdad, así que no hay captura: aparecen solas al subir la primera.
 
-- **Ahorro anual** — cuánto se ahorraría el cliente en un año
-- **Tres criterios de recomendación**: máximo ahorro para el cliente · equilibrado · mejor comisión viable. La app **nunca** te ofrece como "mejor comisión" algo que le quite al cliente un ahorro razonable: hay un suelo ético incorporado.
-- **Comisión estimada** de cada oferta
+**Qué mirar de cada oferta:**
 
-**Los avisos en ámbar — qué significan y qué hacer:**
+- **Ahorro anual** — lo que se ahorra el cliente en un año
+- **Comisión estimada** — lo que ganas tú
+- **Tres formas de ordenar**: *más ahorro para el cliente*, *equilibrado*, y *mejor comisión*. Esta última **nunca te enseña una oferta que deje al cliente sin un ahorro decente**. Está puesto a propósito: una venta que solo te conviene a ti se cae a los tres meses y te la quitan.
 
-| Aviso | Qué significa | Qué haces |
+**Si sale un aviso en ámbar:**
+
+| Dice | Significa | Qué haces |
 |---|---|---|
-| **Comisión "Sin configurar"** | Esa tarifa **no tiene comisión configurada**: si la cierras, no cobras | No la ofrezcas. Avisa al administrador |
-| **Servicios de ajuste** | Un coste del sistema eléctrico (unos pocos €/MWh) que **cada comercializadora factura de forma distinta**: unas lo llevan incluido, otras lo cobran aparte. Si no está configurado, la comparativa puede quedarse corta | Menciónaselo al cliente como coste variable; no prometas el importe exacto |
-| **Energía reactiva / faltan datos** | La factura tiene conceptos que no se han podido leer | Vuelve a la factura y complétalos |
+| **Comisión "Sin configurar"** | Esa tarifa no tiene comisión puesta. Si la cierras, **no cobras nada** | No la ofrezcas. Dile al administrador que la configure |
+| **Servicios de ajuste** | Un coste del sistema (unos pocos euros al mes). Cada comercializadora lo cobra a su manera: unas lo llevan dentro del precio y otras lo ponen aparte. Si no está configurado, la comparativa puede quedarse corta | Avísale al cliente de que es un coste que varía. No le des una cifra exacta |
+| **Faltan datos / energía reactiva** | Hay conceptos de la factura que no se han podido leer | Vuelve atrás y complétalos a mano |
 
-> **Regla de oro (y está en tu contrato):** no prometas nada que no esté en los anexos oficiales de la comercializadora. El precio simulado **no es vinculante**.
+> **La regla que no se salta nadie:** no prometas nada que no esté por escrito en la oferta oficial de la comercializadora. Lo que ves en pantalla es una simulación, **no un precio cerrado**. Está en tu contrato, cláusula CUARTA.
 
 ### Paso 5 — Genera y envía la propuesta
 
-Elige la oferta y genera la propuesta. La app crea un **enlace público** para el cliente: él lo abre, ve su comparativa y la **acepta desde ahí**, quedando registrada la aceptación con fecha y evidencia. `[CAPTURA 5]`
+Elige la oferta y genera la propuesta. La app crea un **enlace público** para el cliente: él lo abre, ve su comparativa y la **acepta desde ahí**, quedando registrada la aceptación con fecha y evidencia. 
+
+![Listado de propuestas](img/c5-propuestas.png)
+
 
 En **Más → Propuestas** ves todas las tuyas y en qué estado están.
 
@@ -98,13 +128,19 @@ Sin esos documentos, el alta no se valida y **no se paga**.
 
 ### Paso 7 — Seguimiento
 
-**Clientes** (`/dashboard/clients`) — tu cartera, con sus puntos de suministro y su estado. `[CAPTURA 6]`
+**Clientes** (`/dashboard/clients`) — tu cartera, con sus puntos de suministro y su estado. 
+
+![Cartera de clientes](img/c6-clientes.png)
+
 
 ---
 
 ## 3 · Tus comisiones
 
-**Comisiones** (`/dashboard/commissions`) — cuánto llevas, qué está pendiente y qué ya se ha liquidado. `[CAPTURA 7]`
+**Comisiones** (`/dashboard/commissions`) — cuánto llevas, qué está pendiente y qué ya se ha liquidado. 
+
+![Resumen de comisiones](img/c7-comisiones.png)
+
 
 Los estados por los que pasa tu dinero:
 
@@ -117,15 +153,22 @@ GENERADA  →  VALIDADA  →  LIQUIDADA  →  PAGADA
 - **Liquidada**: entra en la liquidación mensual
 - **Pagada**: cobrada
 
-**Lo que tienes que hacer tú:** tener completos tus **datos fiscales** en **Ajustes → Datos Fiscales para Facturación** (NIF, domicilio fiscal, IBAN, régimen de IVA/IRPF). Sin ellos no se te puede liquidar. `[CAPTURA 8]`
+**Lo que tienes que hacer tú:** tener completos tus **datos fiscales** en **Ajustes → Datos Fiscales para Facturación** (NIF, domicilio fiscal, IBAN, régimen de IVA/IRPF). Sin ellos no se te puede liquidar. 
+
+![Datos fiscales para facturacion](img/c8-datos-fiscales.png)
+
 
 **Autofactura:** Zinergia emite la factura de tus comisiones en tu nombre, con tu acuerdo previo. Tú solo revisas y aceptas cada factura.
 
-### Decomisiones (importante)
+### Decomisiones: cuándo te quitan una comisión
 
-Si un cliente que has traído **se da de baja pronto**, la comercializadora le retira la comisión a Zinergia, y esa retirada te llega a ti. Se descuenta de liquidaciones posteriores.
+Si un cliente tuyo **se da de baja pronto**, la comercializadora le retira el dinero a Zinergia, y esa retirada te llega a ti. Se te descuenta de la siguiente liquidación.
 
-**Consulta siempre la Política de Decomisiones vigente** — es el Anexo II de tu contrato — para saber cuánto tiempo tiene que aguantar cada contrato y en qué proporción se devuelve. La mejor defensa contra una decomisión es **una venta bien hecha**: cliente informado, sin promesas falsas, con documentación correcta.
+En otras empresas lo verás escrito como ***clawback*** o ***baja < 1 año***. Es lo mismo.
+
+**Cuánto tiene que aguantar cada contrato está en el Anexo II de tu contrato** (la Política de Decomisiones), y cambia según la comercializadora. El plazo **se cuenta desde la fecha de activación**, no desde que firmas.
+
+La mejor defensa es una venta bien hecha: cliente informado, sin promesas de más, y papeles correctos a la primera.
 
 ---
 
@@ -156,27 +199,15 @@ Solo se pueden ofrecer las del catálogo. Si falta una comercializadora, comént
 **¿Puedo pasarle un cliente a otro compañero?**
 Sí, pero es una operación controlada: la solicitas y la aprueba el administrador o tu franquicia. Queda registrada con motivo.
 
-**¿Qué es el CUPS?**
-El código único del punto de suministro (`ES00…`). Los 4 dígitos que van detrás de `ES` identifican a la **distribuidora**: la empresa que mantiene el cable y el contador, distinta de la comercializadora con la que el cliente contrata.
+**¿Cómo sé la distribuidora de un cliente?**
+Te la dice el propio CUPS: los 4 números que van justo detrás de `ES`. **No tienes que buscarla** — la app la saca sola y te la enseña en la ficha del punto de suministro.
 
-**No tienes que buscarla:** la app la deduce sola del CUPS y te la muestra en la ficha del punto de suministro. Si no aparece, es que ese prefijo no consta en el catálogo — la app prefiere no decir nada antes que decirte una distribuidora equivocada.
+Si no aparece ninguna, es que ese código no está en la lista. La app prefiere no decirte nada antes que decirte una distribuidora equivocada en una propuesta.
+
+**Me da error al meter el CUPS.**
+Tiene que empezar por `ES` y llevar 18-22 caracteres detrás. No valen abreviaturas, ni "pendiente", ni el número a medias: un CUPS mal metido se guarda cifrado y luego no sirve para nada.
 
 **¿Y si el cliente tiene placas solares?**
 Díselo a administración antes de cerrar: la compensación de excedentes todavía no está configurada en el catálogo y la comparativa saldría incompleta.
 
 ---
-
-## Lista de capturas para insertar
-
-| # | Dónde | Qué encuadrar |
-|---|---|---|
-| 1 | `/dashboard` | La barra de navegación con los 4 botones y el botón verde "Nueva factura" |
-| 2 | `/dashboard/simulator` | La zona de subir factura |
-| 3 | `/dashboard/simulator` tras subir | La pantalla de confirmar datos leídos |
-| 4 | Comparativa | La lista de ofertas con ahorro, comisión y un aviso ámbar |
-| 5 | `/dashboard/proposals` | La lista de propuestas con sus estados |
-| 6 | `/dashboard/clients` | La cartera de clientes |
-| 7 | `/dashboard/commissions` | El resumen de comisiones |
-| 8 | `/dashboard/settings` | La pestaña "Datos Fiscales para Facturación" |
-
-> Para capturar la vista de colaborador hay que iniciar sesión con una cuenta de colaborador (no con la de administrador, que ve otras pantallas).

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireServerRole } from '@/lib/auth/permissions';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { isValidCups } from '@/lib/cnmc/sips';
 import { decryptNullable, encryptNullable, hashCups, normalizeCups } from '@/lib/crypto/pii';
 import type { ClientEnergyData, MyDayTask, SupplyPoint, SwitchEvent, SwitchReason } from '@/types/energy';
 import { computeEnergyStage } from '@/lib/crm/energyStage';
@@ -310,7 +311,15 @@ export async function getMyDayAction(): Promise<MyDayTask[]> {
 
 const supplyPointInputSchema = z.object({
     clientId: z.uuid(),
-    cups: z.string().trim().min(5, 'El CUPS es obligatorio').max(60, 'El CUPS es demasiado largo'),
+    // Comprobamos el formato, no solo que haya algo escrito. Con un mínimo de
+    // longitud entraban valores que no son un CUPS: se cifran, se indexan y luego
+    // no sirven para nada — ni resuelven distribuidora, ni permiten consultar el
+    // SIPS, ni casan con la factura del cliente. Y como el valor queda cifrado,
+    // el error no se ve hasta mucho después.
+    cups: z.string()
+        .trim()
+        .min(1, 'El CUPS es obligatorio')
+        .refine(value => isValidCups(value), 'El CUPS no tiene un formato válido (debe empezar por ES seguido de 18 a 22 letras o números)'),
     supplyType: z.enum(['electricity', 'gas']),
     address: z.string().trim().max(300).optional().or(z.literal('')),
     currentMarketer: z.string().trim().max(120).optional().or(z.literal('')),
