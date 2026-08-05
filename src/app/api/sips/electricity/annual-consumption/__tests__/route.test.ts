@@ -45,20 +45,31 @@ function serviceSpy() {
     const insert = vi.fn().mockResolvedValue({ error: null });
     const upsert = vi.fn().mockResolvedValue({ error: null });
     const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+    // Which column the cache read filters on, and how. The freshness rule lives in
+    // that filter, so the test has to be able to see it.
+    const cacheFilters: Array<{ operador: string; columna: string; valor: string }> = [];
 
     const service = {
         from: vi.fn((table: string) => {
             touched.push(table);
+            const registrar = (operador: string) => vi.fn((columna: string, valor: string) => {
+                cacheFilters.push({ operador, columna, valor });
+                return { maybeSingle };
+            });
             return {
                 insert,
                 upsert,
                 select: vi.fn(() => ({
-                    eq: vi.fn(() => ({ gte: vi.fn(() => ({ maybeSingle })) })),
+                    eq: vi.fn(() => ({
+                        gt: registrar('gt'),
+                        gte: registrar('gte'),
+                        maybeSingle,
+                    })),
                 })),
             };
         }),
     };
-    return { service, touched, insert, upsert, maybeSingle };
+    return { service, touched, insert, upsert, maybeSingle, cacheFilters };
 }
 
 beforeEach(() => {
@@ -161,6 +172,43 @@ describe('POST /api/sips/electricity/annual-consumption', () => {
             status: 'success',
             reason_code: 'authorized',
         }));
+    });
+
+    // La caché guarda el consumo anual de un suministro. Servir uno viejo hace que
+    // una propuesta se calcule sobre datos que ya no valen, sin que nada lo indique.
+    it('decides the cache freshness by expires_at, not by recomputing from fetched_at', async () => {
+        const spy = serviceSpy();
+        createServiceClientMock.mockReturnValue(spy.service);
+
+        await POST(request());
+
+        const filtro = spy.cacheFilters.at(0);
+        expect(filtro?.columna).toBe('expires_at');
+        expect(filtro?.operador).toBe('gt');
+        expect(spy.cacheFilters.some(f => f.columna === 'fetched_at')).toBe(false);
+    });
+
+    it('compares expires_at against the present moment', async () => {
+        const spy = serviceSpy();
+        createServiceClientMock.mockReturnValue(spy.service);
+        const antes = Date.now();
+
+        await POST(request());
+
+        const instante = Date.parse(spy.cacheFilters[0].valor);
+        expect(instante).toBeGreaterThanOrEqual(antes - 1000);
+        expect(instante).toBeLessThanOrEqual(Date.now() + 1000);
+    });
+
+    it('writes a cache entry that expires seven days after it was fetched', async () => {
+        const spy = serviceSpy();
+        createServiceClientMock.mockReturnValue(spy.service);
+
+        await POST(request());
+
+        const guardado = spy.upsert.mock.calls.at(-1)?.[0];
+        const vencimiento = Date.parse(guardado.expires_at) - Date.parse(guardado.fetched_at);
+        expect(Math.round(vencimiento / 86_400_000)).toBe(7);
     });
 
     it('maps an upstream failure to a stable code without persisting the raw message', async () => {
