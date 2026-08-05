@@ -33,6 +33,8 @@ Es decir: **la capa de franquicias ya está sin usar en la práctica**. Se retir
 
 Cada fase se despliega y se comprueba antes de la siguiente. Ninguna deja el sistema a medias.
 
+> **Por dónde empezar: por la fase 2, no por la 1.** La comisión por colaborador **no necesita** que las franquicias desaparezcan: se añade encima de lo que hay, no rompe nada y se puede deshacer. La fase 1 toca permisos y visibilidad de datos, que es lo que conviene hacer con tiempo y probado en pruebas antes de acercarse a producción. Además la fase 2 es la que de verdad hace falta para dar de alta colaboradores de verdad.
+
 ### Fase 1 · Que un colaborador pueda existir sin franquicia
 *Base de datos. Sin cambios visibles.*
 
@@ -48,7 +50,7 @@ Cada fase se despliega y se comprueba antes de la siguiente. Ninguna deja el sis
 - Añadir el **extra por cliente** en la pantalla donde un lead pasa a cliente, con su motivo y su autor.
 - Que el cálculo de comisiones use porcentaje + extra en lugar del reparto a tres bandas.
 
-**Tres detalles que hay que cerrar antes de escribir el esquema** (ver más abajo): si el extra es en euros o en puntos de porcentaje, si es de una vez o se repite cada mes, y si el colaborador lo ve.
+El diseño está cerrado (ver arriba): euros, por operación, opcional, con historial de porcentajes por fecha y congelación al cerrar.
 
 ### Fase 3 · Retirar la franquicia de la interfaz
 *Solo pantallas. Reversible.*
@@ -78,11 +80,22 @@ Cada fase se despliega y se comprueba antes de la siguiente. Ninguna deja el sis
 
 Así el porcentaje cubre el caso normal sin tener que tocar nada, y el extra permite reconocer una captación concreta sin renegociar el acuerdo entero.
 
-### Tres reglas que el diseño debe respetar
+### Cómo se comporta cada pieza
 
-- **Lo ya liquidado no se reescribe.** Cambiar el porcentaje de alguien afecta a lo que venga después, nunca a lo cobrado. La comisión se congela en la operación en el momento de validarla, como ya se hace con los precios de las propuestas.
-- **El extra deja rastro.** Quién lo puso, cuándo y por qué. Es dinero que sale de una decisión manual, y esas son las que hay que poder explicar seis meses después.
-- **El colaborador ve su porcentaje, no el de los demás.** Lo contrario es la fuga que se cerró hoy con la pestaña "Red".
+**El porcentaje se puede cambiar, y el cambio mira hacia delante.**
+Todo lo que se cierre **a partir de la fecha del cambio** usa el porcentaje nuevo; lo cerrado antes se queda con el que tenía. Eso significa guardar el porcentaje **con su fecha de entrada en vigor** y conservar los anteriores, no sobrescribirlos: la pregunta "¿por qué esta operación pagó un 55 % si ahora tiene 65 %?" tiene que poder responderse sola.
+
+En la práctica: cuando una operación se cierra, se **congela** en ella el porcentaje vigente en ese momento, igual que ya se hace con los precios de una propuesta. A partir de ahí, nada de lo que pase con el perfil la altera.
+
+**El extra es en euros, por operación, y opcional.**
+No es un premio único por traer al cliente: **cada operación de ese cliente puede llevar el suyo, o ninguno**. Se añade en la pantalla donde el lead pasa a cliente, en un campo editable, y lo normal es dejarlo vacío.
+
+Va en euros y no en puntos de porcentaje a propósito: "a este le sumo 50 €" se entiende de un vistazo, y no cambia de valor según lo que pague la tarifa.
+
+**El extra deja rastro y el colaborador lo ve.**
+Queda registrado quién lo puso y cuándo. Y el colaborador lo ve en su operación, desglosado del porcentaje: es dinero que sale de una decisión manual, y un importe que no cuadra y que nadie explica genera más preguntas que el propio importe.
+
+**Cada uno ve su porcentaje, no el de los demás.** Lo contrario es la fuga que se cerró con la pestaña "Red".
 
 ---
 
