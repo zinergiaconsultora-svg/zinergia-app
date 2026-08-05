@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { hashCups } from '@/lib/crypto/pii';
 import { requireServerRole } from '@/lib/auth/permissions';
+import { resolveDedupScope } from '@/lib/ocr/invoiceIdentity';
 
 interface DedupResult {
     isDuplicate: boolean;
@@ -27,12 +28,15 @@ export async function checkDuplicateAction(
         .eq('id', user.id)
         .single();
 
-    if (!profile?.franchise_id) return { isDuplicate: false };
+    // Sin franquicia se devolvía "no es duplicado" sin mirar nada, y quien no
+    // tiene franquicia es el administrador: la comprobación se apagaba sola justo
+    // para el perfil que más facturas sube. Ahora ese caso busca entre las suyas.
+    const scope = resolveDedupScope({ franchiseId: profile?.franchise_id, userId: user.id });
 
     const { data: byHash } = await supabase
         .from('ocr_jobs')
         .select('id, extracted_data')
-        .eq('franchise_id', profile.franchise_id)
+        .eq(scope.column, scope.value)
         .eq('file_content_hash', fileContentHash)
         .eq('status', 'completed')
         .limit(1)
@@ -49,11 +53,17 @@ export async function checkDuplicateAction(
     }
 
     if (cups) {
+        // Los clientes no se agrupan por `agent_id` sino por `owner_id`, así que
+        // el ámbito se traduce aquí en vez de complicar el ayudante compartido.
+        const clientScope = scope.column === 'franchise_id'
+            ? { column: 'franchise_id' as const, value: scope.value }
+            : { column: 'owner_id' as const, value: scope.value };
+
         const cupsHash = hashCups(cups);
         const { data: byCups } = await supabase
             .from('clients')
             .select('id, name')
-            .eq('franchise_id', profile.franchise_id)
+            .eq(clientScope.column, clientScope.value)
             .eq('cups_hash', cupsHash)
             .maybeSingle();
 
