@@ -111,16 +111,24 @@ export default function SettingsView({
                                 <CreditCard size={16} />
                                 Datos Fiscales
                             </button>
-                            <button
-                                onClick={() => setActiveTab('network')}
-                                className={`shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'network'
-                                    ? 'bg-white text-energy-600 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
-                                    }`}
-                            >
-                                <Network size={16} />
-                                Red
-                            </button>
+                            {/*
+                              * Solo para quien configura comisiones. Esta pestaña enseña el
+                              * reparto económico de la casa (venta directa/franquicia/colaborador
+                              * y rápeles): un colaborador no tiene nada que hacer aquí, y verlo
+                              * es darle la estructura de márgenes de la empresa.
+                              */}
+                            {canManageCommissions && (
+                                <button
+                                    onClick={() => setActiveTab('network')}
+                                    className={`shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'network'
+                                        ? 'bg-white text-energy-600 shadow-sm'
+                                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                                        }`}
+                                >
+                                    <Network size={16} />
+                                    Red
+                                </button>
+                            )}
                             {canManageCommissions && (
                                 <button
                                     type="button"
@@ -337,8 +345,8 @@ export default function SettingsView({
                     </motion.div>
                 )}
 
-                {/* TAB 3: NETWORK */}
-                {activeTab === 'network' && (
+                {/* TAB 3: NETWORK — mismo permiso que la pestaña que lo abre */}
+                {activeTab === 'network' && canManageCommissions && (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}

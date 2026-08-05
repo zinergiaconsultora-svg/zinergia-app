@@ -26,7 +26,7 @@ Esto es lo que separa a la aplicación de operar de verdad. **Nada de esto lo pu
 | Qué | Por qué | Estado |
 |---|---|---|
 | **Migración de la caché SIPS a producción** | Producción sigue caducando a 30 días: puede servir consumos de hace un mes. Staging ya está a 7 | Preparado, falta aplicarlo |
-| **Validación de antigüedad de factura (3 meses)** | Decidido y escrito en contrato y guías, pero **la app no lo comprueba**: el OCR no guarda la fecha de la factura en un campo con el que validar | Requiere extraer y almacenar esa fecha |
+| **Validación de antigüedad de factura (3 meses)** | Decidido y escrito en contrato y guías, pero **la app no lo comprueba** | Más barata de lo documentado al principio: la fecha **ya viene extraída** por el OCR (el control de duplicados la usa); falta solo la comprobación |
 | **DocuSeal en un servidor público** | Está instalado en local, con el contrato de colaboración subido. Un firmante externo no puede abrir un enlace `localhost` | ~5-10 €/mes en Railway o Render, más la integración por API |
 | **Etiqueta "Franquicias activas"** | Cuenta personas con rol de franquicia, no franquicias. Marca 0 aunque exista Zinergia Central | Cambio de una línea |
 | **Vocabulario "AGENTE" vs "Colaborador"** | La misma persona aparece con dos nombres según la pantalla | Cosmético, pero confunde al leer la guía |
