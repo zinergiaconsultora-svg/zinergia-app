@@ -1,6 +1,27 @@
 # Estado y pendientes
 
-**Actualizado:** 2026-08-05
+**Actualizado:** 2026-08-06
+
+> ## Modelo nuevo: en producción desde el 06/08/2026
+>
+> Un administrador y colaboradores. Cada colaborador con **su propio porcentaje**
+> de comisión, más un **extra en euros** opcional por operación. Se pueden **dar de
+> baja y reactivar**, y ya **no necesitan franquicia**.
+>
+> Aplicado y verificado desde fuera: el administrador sigue canónico (12 de 12
+> comprobaciones), las funciones de comisión rechazan a quien no es
+> administración, y la caché del SIPS caduca a 7 días.
+>
+> **Lo que queda de la simplificación** son las fases 3, 4 y 5 del
+> [plan](./plan-simplificar-modelo.md): quitar la franquicia de las pantallas,
+> colgar a los colaboradores del administrador, y retirar el rol. Ninguna urge:
+> las franquicias ya no molestan a nadie.
+>
+> **Para comprobar producción en cualquier momento:**
+> ```bash
+> powershell -ExecutionPolicy Bypass -File supabase/scripts/profile_authority_contract_gate.ps1 -ConfirmProduction
+> node scripts/produccion/verificar-modelo.mjs
+> ```
 
 Qué está hecho, qué falta, y quién puede desbloquear cada cosa. Si vuelves a esto después de un tiempo, empieza por aquí.
 
@@ -25,7 +46,9 @@ Esto es lo que separa a la aplicación de operar de verdad. **Nada de esto lo pu
 
 | Qué | Por qué | Estado |
 |---|---|---|
-| **Migración de la caché SIPS a producción** | Producción sigue caducando a 30 días: puede servir consumos de hace un mes. Staging ya está a 7 | Preparado, falta aplicarlo |
+| ~~Caché SIPS a producción~~ | | ✅ aplicado el 06/08 |
+| **Fases 3, 4 y 5** de la simplificación | Quitar la franquicia de las pantallas, colgar a los colaboradores del administrador, retirar el rol | Pendiente, sin urgencia |
+| **La comisión al invitar** | Hoy se pone cuando configuras a la persona, no en la propia invitación. Meterla ahí toca la provisión de perfiles, que es maquinaria delicada | Pendiente, decisión de producto |
 | **Validación de antigüedad de factura (3 meses)** | Decidido y escrito en contrato y guías, pero **la app no lo comprueba** | Más barata de lo documentado al principio: la fecha **ya viene extraída** por el OCR (el control de duplicados la usa); falta solo la comprobación |
 | **DocuSeal en un servidor público** | Está instalado en local, con el contrato de colaboración subido. Un firmante externo no puede abrir un enlace `localhost` | ~5-10 €/mes en Railway o Render, más la integración por API |
 | **Etiqueta "Franquicias activas"** | Cuenta personas con rol de franquicia, no franquicias. Marca 0 aunque exista Zinergia Central | Cambio de una línea |
