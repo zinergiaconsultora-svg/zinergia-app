@@ -30,9 +30,12 @@ export function CommissionRateField({ profileId }: { profileId: string }) {
 
     useEffect(() => {
         let active = true;
-        void getCollaboratorRatesAction(profileId).then(result => {
-            if (active) setRates(result);
-        });
+        // Si la carga falla, este campo se queda sin historial pero el diálogo de
+        // autoridad sigue funcionando. Es un añadido a esa pantalla, no debe
+        // poder tumbarla.
+        getCollaboratorRatesAction(profileId)
+            .then(result => { if (active) setRates(result); })
+            .catch(() => { if (active) setRates([]); });
         return () => { active = false; };
     }, [profileId]);
 

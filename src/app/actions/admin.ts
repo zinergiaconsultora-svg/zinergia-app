@@ -273,11 +273,24 @@ export async function getAdminProfileAuthoritySummariesAction(): Promise<ActionR
     return { success: true, data: parsed.data };
 }
 
+/**
+ * Los códigos del mando de autoridad, en algo que un administrador pueda usar.
+ *
+ * "No se pudo actualizar la autoridad" era la respuesta a casi todo: quien
+ * dejaba la franquicia vacía leía lo mismo que quien elegía un responsable
+ * imposible, y no había forma de saber qué corregir. Cada motivo dice ahora qué
+ * hacer.
+ */
 const AUTHORITY_ERROR_MESSAGES: Record<string, string> = {
     LAST_ADMIN: 'Debe permanecer al menos un administrador activo.',
-    AUTHORITY_CYCLE: 'La jerarquía propuesta no es válida.',
-    STALE_AUTHORITY_VERSION: 'El perfil ha cambiado. Actualiza e inténtalo de nuevo.',
-    REQUEST_ID_CONFLICT: 'La solicitud ya se utilizó con otros datos.',
+    AUTHORITY_CYCLE: 'Esa persona ya está por encima en la jerarquía: se crearía un bucle.',
+    STALE_AUTHORITY_VERSION: 'El perfil ha cambiado mientras editabas. Cierra, recarga e inténtalo de nuevo.',
+    REQUEST_ID_CONFLICT: 'La solicitud ya se utilizó con otros datos. Cierra y vuelve a abrir el diálogo.',
+    AUTHORITY_TUPLE_INVALID: 'Falta el responsable, o la franquicia elegida no existe o está inactiva.',
+    AUTHORITY_PARENT_INVALID: 'Ese responsable no vale para esta combinación. Sin franquicia, el responsable debe ser la cuenta de administración.',
+    ACTOR_NOT_ADMIN: 'Solo la cuenta de administración puede cambiar la autoridad de un perfil.',
+    TARGET_NOT_FOUND: 'No se ha encontrado ese perfil.',
+    AUTHORITY_INPUT_INVALID: 'Faltan datos obligatorios o el motivo no es válido.',
 };
 
 function mapAuthorityCommandResult(
