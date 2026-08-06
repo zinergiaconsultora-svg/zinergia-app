@@ -36,11 +36,20 @@ export function CommissionPreview({
 
     useEffect(() => {
         let active = true;
-        void getCollaboratorRatesAction(agentId).then(rates => {
-            if (!active) return;
-            setRateBps(rates[0]?.rateBps ?? null);
-            setLoading(false);
-        });
+        // Si no se puede leer el porcentaje, esta pieza se queda sin él y avisa,
+        // pero el cierre del lead sigue funcionando. Es un desglose informativo
+        // dentro de un formulario que existía antes, no un requisito suyo.
+        getCollaboratorRatesAction(agentId)
+            .then(rates => {
+                if (!active) return;
+                setRateBps(rates[0]?.rateBps ?? null);
+                setLoading(false);
+            })
+            .catch(() => {
+                if (!active) return;
+                setRateBps(null);
+                setLoading(false);
+            });
         return () => { active = false; };
     }, [agentId]);
 
@@ -81,6 +90,7 @@ export function CommissionPreview({
                 </span>
                 <input
                     type="number"
+                    name="extraCommission"
                     inputMode="decimal"
                     min="0"
                     step="0.01"

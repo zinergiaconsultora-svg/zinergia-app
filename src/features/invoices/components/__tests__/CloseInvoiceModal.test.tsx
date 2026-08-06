@@ -53,7 +53,10 @@ describe('CloseInvoiceModal accessibility', () => {
         const company = screen.getByLabelText(/compañía contratada/i);
         const tariff = screen.getByLabelText(/^tarifa$/i);
         const permanence = screen.getByLabelText(/revisar el/i);
-        const commission = screen.getByLabelText(/comisión del comercial/i);
+        // El campo pasó a llamarse "Comisión de la operación": es lo que paga la
+        // comercializadora, y de ahí sale la parte del colaborador. El nombre
+        // anterior daba a entender que era lo que se lleva el comercial.
+        const commission = screen.getByLabelText(/comisión de la operación/i);
 
         expect(company.getAttribute('name')).toBe('company');
         expect(company.getAttribute('autoComplete')).toBe('organization');

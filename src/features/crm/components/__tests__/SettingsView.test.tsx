@@ -105,7 +105,10 @@ describe('SettingsView — pestañas del colaborador', () => {
         await renderizar({ canManageCommissions: false });
 
         expect(screen.getByText(/Datos de empresa/i)).toBeTruthy();
-        expect(screen.getByDisplayValue('Zinergia')).toBeTruthy();
+        // Se espera al valor, no a que la carga se haya llamado: entre lo segundo
+        // y lo primero hay un cambio de estado, y en una máquina rápida el test
+        // miraba antes de que llegara.
+        expect(await screen.findByDisplayValue('Zinergia')).toBeTruthy();
     });
 
     it('lleva a Datos Fiscales, que es donde se factura', async () => {
@@ -130,7 +133,7 @@ describe('SettingsView — guardar', () => {
     it('envía los ajustes editados', async () => {
         await renderizar({ canManageCommissions: false });
 
-        fireEvent.change(screen.getByDisplayValue('Zinergia'), { target: { value: 'Zinergia Sur' } });
+        fireEvent.change(await screen.findByDisplayValue('Zinergia'), { target: { value: 'Zinergia Sur' } });
         fireEvent.click(screen.getByRole('button', { name: /Guardar/ }));
 
         await waitFor(() => expect(saveSettingsMock).toHaveBeenCalledWith(

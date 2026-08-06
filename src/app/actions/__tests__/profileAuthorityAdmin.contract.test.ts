@@ -120,11 +120,15 @@ describe('ZIN-SDD-041 Admin authority application boundary (RED)', () => {
         expect(result).toEqual({ success: true, data: { eventId } });
     });
 
+    // Los textos se reescribieron para decir qué corregir: "la jerarquía no es
+    // válida" no le decía a nadie qué hacer. Lo que este caso protege sigue
+    // siendo lo mismo: un mensaje fijo por código, sin datos personales y sin
+    // detalle de la base de datos.
     it.each([
         ['LAST_ADMIN', 'Debe permanecer al menos un administrador activo.'],
-        ['AUTHORITY_CYCLE', 'La jerarquía propuesta no es válida.'],
-        ['STALE_AUTHORITY_VERSION', 'El perfil ha cambiado. Actualiza e inténtalo de nuevo.'],
-        ['REQUEST_ID_CONFLICT', 'La solicitud ya se utilizó con otros datos.'],
+        ['AUTHORITY_CYCLE', 'Esa persona ya está por encima en la jerarquía: se crearía un bucle.'],
+        ['STALE_AUTHORITY_VERSION', 'El perfil ha cambiado mientras editabas. Cierra, recarga e inténtalo de nuevo.'],
+        ['REQUEST_ID_CONFLICT', 'La solicitud ya se utilizó con otros datos. Cierra y vuelve a abrir el diálogo.'],
     ])('maps database code %s to a stable non-PII message', async (databaseCode, safeMessage) => {
         const rpc = vi.fn().mockResolvedValue({
             data: null,
