@@ -162,23 +162,6 @@ export function AuthorityChangeDialog({
                     {needsScope ? (
                         <div className="grid gap-4 sm:grid-cols-2">
                             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
-                                Franquicia
-                                <select
-                                    aria-label="Franquicia propuesta"
-                                    value={franchiseId}
-                                    onChange={(event) => {
-                                        setFranchiseId(event.target.value);
-                                        setParentId('');
-                                    }}
-                                    className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950"
-                                >
-                                    <option value="">Selecciona…</option>
-                                    {franchises.filter(item => item.isActive).map(item => (
-                                        <option key={item.id} value={item.id}>{item.name}</option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
                                 Responsable
                                 <select
                                     aria-label="Responsable propuesto"
@@ -189,6 +172,44 @@ export function AuthorityChangeDialog({
                                     <option value="">Selecciona…</option>
                                     {parentOptions.map(item => (
                                         <option key={item.id} value={item.id}>{item.fullName ?? item.email}</option>
+                                    ))}
+                                </select>
+                            </label>
+                            {/*
+                              * La franquicia dejó de ser obligatoria para un colaborador. El
+                              * desplegable decía "Selecciona…", que se lee como un hueco por
+                              * rellenar, y quien lo dejaba vacío recibía un error genérico. Ahora
+                              * la opción sin franquicia se llama por su nombre y va primero.
+                              */}
+                            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                Franquicia
+                                {needsFranchise ? null : (
+                                    <span className="ml-1 font-normal text-slate-400">(opcional)</span>
+                                )}
+                                <select
+                                    aria-label="Franquicia propuesta"
+                                    value={franchiseId}
+                                    onChange={(event) => {
+                                        const siguiente = event.target.value;
+                                        setFranchiseId(siguiente);
+                                        // Antes se vaciaba el responsable en cada cambio, lo que
+                                        // obligaba a elegirlo dos veces. Solo se limpia si el que
+                                        // había deja de encajar con la franquicia nueva.
+                                        const sigueValiendo = profiles.some(candidate =>
+                                            candidate.id === parentId
+                                            && (
+                                                (candidate.role === 'admin' && candidate.parentId === null && candidate.franchiseId === null)
+                                                || candidate.franchiseId === (siguiente || null)
+                                            ));
+                                        if (!sigueValiendo) setParentId('');
+                                    }}
+                                    className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950"
+                                >
+                                    <option value="">
+                                        {needsFranchise ? 'Selecciona…' : 'Sin franquicia'}
+                                    </option>
+                                    {franchises.filter(item => item.isActive).map(item => (
+                                        <option key={item.id} value={item.id}>{item.name}</option>
                                     ))}
                                 </select>
                             </label>

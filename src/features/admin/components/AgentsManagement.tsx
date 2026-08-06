@@ -2,10 +2,11 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, Check, ChevronDown, KeyRound, Loader2, Pencil, Search, Shield, UserMinus, Users, X } from 'lucide-react';
+import { Building2, Check, ChevronDown, KeyRound, Loader2, Pencil, Search, Shield, UserCheck, UserMinus, Users, X } from 'lucide-react';
 import type { FranchiseWithAgents, ProfileAuthoritySummary } from '@/app/actions/admin';
 import { updateTeamMemberNameAction } from '@/app/actions/network';
 import { AuthorityChangeDialog } from './AuthorityChangeDialog';
+import { DeactivateMemberDialog } from './DeactivateMemberDialog';
 
 interface Props {
     agents: ProfileAuthoritySummary[];
@@ -41,11 +42,13 @@ function AgentRow({
     profile,
     franchises,
     onAuthority,
+    onDeactivate,
     onSaved,
 }: {
     profile: ProfileAuthoritySummary;
     franchises: FranchiseWithAgents[];
     onAuthority: (profile: ProfileAuthoritySummary, opener: HTMLButtonElement) => void;
+    onDeactivate: (profile: ProfileAuthoritySummary, opener: HTMLButtonElement) => void;
     onSaved: () => void;
 }) {
     const [editingName, setEditingName] = useState(false);
@@ -152,6 +155,31 @@ function AgentRow({
                             >
                                 <KeyRound className="h-3.5 w-3.5" />
                             </button>
+                            {/*
+                              * Dar de baja solo se podía haciendo un cambio de autoridad y
+                              * eligiendo el rol "Pendiente / desactivado". La operación
+                              * existía y era invisible. La administración no se puede dar
+                              * de baja a sí misma: quedaría la aplicación sin gobierno.
+                              */}
+                            {profile.role !== 'admin' ? (
+                                <button
+                                    type="button"
+                                    onClick={(event) => onDeactivate(profile, event.currentTarget)}
+                                    aria-label={profile.role === null
+                                        ? `Reactivar a ${displayName}`
+                                        : `Dar de baja a ${displayName}`}
+                                    title={profile.role === null ? 'Reactivar' : 'Dar de baja'}
+                                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 ${
+                                        profile.role === null
+                                            ? 'hover:bg-emerald-50 hover:text-emerald-700'
+                                            : 'hover:bg-rose-50 hover:text-rose-700'
+                                    }`}
+                                >
+                                    {profile.role === null
+                                        ? <UserCheck className="h-3.5 w-3.5" />
+                                        : <UserMinus className="h-3.5 w-3.5" />}
+                                </button>
+                            ) : null}
                         </>
                     )}
                 </div>
@@ -166,6 +194,11 @@ export default function AgentsManagement({ agents, franchises }: Props) {
     const [filterRole, setFilterRole] = useState('all');
     const [filterFranchise, setFilterFranchise] = useState('all');
     const [authority, setAuthority] = useState<{
+        profile: ProfileAuthoritySummary;
+        requestId: string;
+        opener: HTMLButtonElement;
+    } | null>(null);
+    const [deactivating, setDeactivating] = useState<{
         profile: ProfileAuthoritySummary;
         requestId: string;
         opener: HTMLButtonElement;
@@ -243,6 +276,11 @@ export default function AgentsManagement({ agents, franchises }: Props) {
                                         requestId: crypto.randomUUID(),
                                         opener,
                                     })}
+                                    onDeactivate={(selected, opener) => setDeactivating({
+                                        profile: selected,
+                                        requestId: crypto.randomUUID(),
+                                        opener,
+                                    })}
                                 />
                             ))}</tbody>
                         </table>
@@ -260,6 +298,19 @@ export default function AgentsManagement({ agents, franchises }: Props) {
                     onClose={() => setAuthority(null)}
                     onChanged={() => {
                         setAuthority(null);
+                        router.refresh();
+                    }}
+                />
+            ) : null}
+
+            {deactivating ? (
+                <DeactivateMemberDialog
+                    profile={deactivating.profile}
+                    requestId={deactivating.requestId}
+                    returnFocus={deactivating.opener}
+                    onClose={() => setDeactivating(null)}
+                    onChanged={() => {
+                        setDeactivating(null);
                         router.refresh();
                     }}
                 />
