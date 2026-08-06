@@ -63,11 +63,16 @@ export function AuthorityChangeDialog({
 
     const desiredRole = role === 'deactivated' ? null : role;
     const needsScope = desiredRole === 'agent' || desiredRole === 'franchise';
+    // El colaborador ya no necesita franquicia: el modelo pasó a ser un
+    // administrador y colaboradores. La franquicia sigue exigiéndola mientras
+    // el rol exista.
+    const needsFranchise = desiredRole === 'franchise';
     const proposedParentId = needsScope ? (parentId || null) : null;
     const proposedFranchiseId = needsScope ? (franchiseId || null) : null;
     const canSubmit = !pending
         && reasonCode !== ''
-        && (!needsScope || (proposedParentId !== null && proposedFranchiseId !== null));
+        && (!needsScope || proposedParentId !== null)
+        && (!needsFranchise || proposedFranchiseId !== null);
 
     const parentOptions = useMemo(() => profiles.filter((candidate) => {
         if (candidate.id === profile.id) return false;
